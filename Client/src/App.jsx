@@ -27,6 +27,8 @@ import {Tasks} from './components/Worker/Tasks'
 import {History} from './components/Worker/History'
 import {WorkerProfile} from './components/Worker/Profile'
 
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 function App() {
 

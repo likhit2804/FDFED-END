@@ -3,6 +3,7 @@
   flex-direction: row;
   gap: 2rem;
   align-items: flex-start;
+  padding: 1rem;
 }
 .A > div:first-child {
   flex: 1;

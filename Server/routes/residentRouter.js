@@ -24,6 +24,8 @@ import multer from "multer";
 import cron from "node-cron";
 import checkSubscriptionStatus from '../middleware/subcriptionStatus.js'
 residentRouter.use(checkSubscriptionStatus);
+
+
 function getPaymentRemainders(pending, notifications) {
   const now = new Date();
   const reminders = [];
@@ -178,7 +180,18 @@ residentRouter.get("/ad", async (req, res) => {
   res.render("resident/Advertisement", { path: "ad", ads });
 });
 
-residentRouter.get("/commonSpace", getCommonSpace);
+residentRouter.get("/commonSpace", async (req,res)=>{
+    try{
+        const bookings = await CommonSpaces.find({ bookedBy: '68eb3a9eeea837fdb79aba39' }).sort({ createdAt: -1 });
+        ;
+        console.log(bookings);
+        
+        return res.json({ success: true, bookings: bookings });
+    }catch(err){
+        console.log(err);
+        return res.status(500).json({ success: false, message: "Internal server error" });
+    }
+});
 
 residentRouter.post("/commonSpace/:id", async (req, res) => {
   try {
@@ -203,7 +216,7 @@ residentRouter.post("/commonSpace/:id", async (req, res) => {
 
 residentRouter.post("/commonSpace", async (req, res) => {
   try {
-    const uid = req.user.id;
+    const uid = '68eb3a9eeea837fdb79aba39';
     const { facility, purpose, date, from, to } = req.body;
     console.log("Received booking data:", {
       facility,
@@ -249,10 +262,9 @@ residentRouter.post("/commonSpace", async (req, res) => {
       status: "Pending",
       availability: null,
       bookedBy: uid,
-      community: req.user.community,
+      community: new mongoose.Types.ObjectId('68eb31f33b437b684cabfa94'),
     });
 
-    // Generate unique ID
     const uniqueId = generateCustomID(space._id.toString(), "CS", null);
     space.ID = uniqueId;
     await space.save();

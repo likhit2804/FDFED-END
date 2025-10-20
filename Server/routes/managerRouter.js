@@ -46,25 +46,24 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 managerRouter.get("/commonSpace", async (req, res) => {
-  const c = req.user.community;
-  const csb = await CommonSpaces.find({ community: c });
-  const ads = await Ad.find({
-    community: req.user.community,
-    status: "Active",
-  });
+  try{
+    const c = '68eb31f33b437b684cabfa94';
+    const bookings = await CommonSpaces.find({ community: c , status : {$ne : "Rejected"} }).sort({
+      createdAt: -1,
+    });
 
-  const community = await Community.findById(req.user.community)
-    .select("commonSpaces")
-    .lean();
+    const communityDetails = await Community.findById(c).select(
+      "commonSpaces bookingRules"
+    );
 
-  console.log(community);
+    res.status(200).json({
+      bookings,
+      commonSpaces: communityDetails.commonSpaces,
+      bookingRules: communityDetails.bookingRules,
+    });
+  }catch(err){
 
-  res.render("communityManager/CSB", {
-    path: "cbs",
-    csb,
-    community: community,
-    ads,
-  });
+  }
 });
 
 // API endpoint to fetch bookings data for auto-refresh
@@ -410,7 +409,6 @@ managerRouter.put("/spaces/:id", async (req, res) => {
   console.log(req.body);
   
   try {
-    // Validate space ID
     const spaceId = req.params.id;
     if (!spaceId) {
       return res.status(400).json({
@@ -419,15 +417,14 @@ managerRouter.put("/spaces/:id", async (req, res) => {
       });
     }
 
-    // Check if user has community access
-    if (!req.user || !req.user.community) {
-      return res.status(401).json({
-        success: false,
-        message: "Unauthorized access",
-      });
-    }
+    // if (!req.user || !req.user.community) {
+    //   return res.status(401).json({
+    //     success: false,
+    //     message: "Unauthorized access",
+    //   });
+    // }
 
-    const community = await Community.findById(req.user.community);
+    const community = await Community.findById('68eb31f33b437b684cabfa94');
     if (!community) {
       return res.status(404).json({
         success: false,
@@ -529,15 +526,15 @@ managerRouter.delete("/spaces/:id", async (req, res) => {
       });
     }
 
-    // Check if user has community access
-    if (!req.user || !req.user.community) {
-      return res.status(401).json({
-        success: false,
-        message: "Unauthorized access",
-      });
-    }
+    // // Check if user has community access
+    // if (!req.user || !req.user.community) {
+    //   return res.status(401).json({
+    //     success: false,
+    //     message: "Unauthorized access",
+    //   });
+    // }
 
-    const community = await Community.findById(req.user.community);
+    const community = await Community.findById('68eb31f33b437b684cabfa94');
     if (!community) {
       return res.status(404).json({
         success: false,

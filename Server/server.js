@@ -159,10 +159,6 @@ app.use(cors({
   credentials: true
 }));
 
-app.use((req, res, next) => {
-  res.locals.alert = req.flash("alert-msg");
-  next();
-});
 
 app.use("/uploads", express.static("uploads"));
 
@@ -191,13 +187,13 @@ import interestRouter from "./routes/InterestRouter.js"
 import Ad from "./models/Ad.js";
 
 app.use("/admin", auth, authorizeA, AdminRouter);
-app.use("/resident", auth, authorizeR, residentRouter);
+app.use("/resident", residentRouter);
 
 app.use("/security", auth, authorizeS, securityRouter);
 
 app.use("/worker", auth, authorizeW, workerRouter);
 
-app.use("/manager", auth, authorizeC, managerRouter);
+app.use("/manager",managerRouter);
 
 app.use("/interest",interestRouter)
 
