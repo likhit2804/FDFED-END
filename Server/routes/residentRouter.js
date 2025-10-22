@@ -4,7 +4,7 @@ import bcrypt from "bcrypt";
 import mongoose from "mongoose";
 // move them to controller when requried as they are serving only post of preapproval
 import QRCode from "qrcode";
-import jwt from 'jsonwebtoken';
+import jwt from "jsonwebtoken";
 
 import Issue from "../models/issues.js";
 import Resident from "../models/resident.js";
@@ -18,13 +18,20 @@ import Ad from "../models/Ad.js";
 import communities from "../models/communities.js";
 import PaymentController from "../controllers/payments.js";
 import { OTP } from "../controllers/OTP.js";
-import { getPreApprovals, getCommonSpace, getIssueData, getPaymentData, getQRcode } from "../controllers/Resident.js";
+import {
+  getPreApprovals,
+  getCommonSpace,
+  getIssueData,
+  getPaymentData,
+  getQRcode,
+} from "../controllers/Resident.js";
 
 import multer from "multer";
 import cron from "node-cron";
-import checkSubscriptionStatus from '../middleware/subcriptionStatus.js'
+import checkSubscriptionStatus from "../middleware/subcriptionStatus.js";
+import { populate } from "dotenv";
+import Amenity from "../models/Amenities.js";
 residentRouter.use(checkSubscriptionStatus);
-
 
 function getPaymentRemainders(pending, notifications) {
   const now = new Date();
@@ -44,19 +51,17 @@ function getPaymentRemainders(pending, notifications) {
 
     const hoursLeft = diffMs / (1000 * 60 * 60);
 
-
     if (diffDays === 1 || (diffDays === 0 && hoursLeft > 0)) {
-      
       reminders.push({
         n: `Your payment for ${I} of amount ₹${amount} is due tomorrow.`,
         createdAt: new Date(),
         belongs: "Payment",
       });
     } else if (diffDays < 0) {
- 
-
       reminders.push({
-        n: `Your payment for ${I} of amount ₹${amount} was due ${Math.abs(diffDays)} day(s) ago.`,
+        n: `Your payment for ${I} of amount ₹${amount} was due ${Math.abs(
+          diffDays
+        )} day(s) ago.`,
         createdAt: new Date(),
         belongs: "Payment",
       });
@@ -64,16 +69,14 @@ function getPaymentRemainders(pending, notifications) {
   }
 
   const newReminders = reminders.filter((newR) => {
-  const newWords = newR.n.split(" ").slice(0, 5).join(" ");
-  return !notifications.some((existingR) => {
-    const existingWords = existingR.n.split(" ").slice(0, 5).join(" ");
-    return existingWords === newWords;
+    const newWords = newR.n.split(" ").slice(0, 5).join(" ");
+    return !notifications.some((existingR) => {
+      const existingWords = existingR.n.split(" ").slice(0, 5).join(" ");
+      return existingWords === newWords;
+    });
   });
-});
-
 
   console.log(reminders);
-  
 
   // Push new reminders into notifications
   notifications.push(...newReminders);
@@ -81,26 +84,25 @@ function getPaymentRemainders(pending, notifications) {
   return reminders;
 }
 
-
-async function setPenalties(overdues){
+async function setPenalties(overdues) {
   console.log("setting penalties");
-  
-  for(const o of overdues){
+
+  for (const o of overdues) {
     const deadline = new Date(o.paymentDeadline);
     const diffMs = deadline.getTime() - new Date().getTime();
 
     const I = o.ID || o.title;
     const amount = o.amount;
-    const penalty = amount*0.1;
+    const penalty = amount * 0.1;
 
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
     const hoursLeft = diffMs / (1000 * 60 * 60);
 
-    const is = (new Date(o.penalty.changedOn)  - new Date())
+    const is = new Date(o.penalty.changedOn) - new Date();
     const is24 = Math.floor(is / (1000 * 60 * 60 * 24));
-    
-    if(!o.penalty || is24 ){
+
+    if (!o.penalty || is24) {
       o.penalty.p = penalty;
       o.penalty.changedOn = new Date();
       o.amount = Math.floor(amount + penalty);
@@ -110,10 +112,9 @@ async function setPenalties(overdues){
   }
 }
 
-
 function generateCustomID(userEmail, facility, countOrRandom = null) {
   console.log("userEmail:", userEmail);
-  
+
   const emailPrefix = userEmail.toUpperCase().slice(-4);
 
   const facilityCode = facility.toUpperCase().slice(0, 2);
@@ -141,7 +142,6 @@ function getTimeAgo(date) {
   const diffMs = now - new Date(date);
   const diffSeconds = Math.floor(diffMs / 1000);
 
-
   if (diffSeconds < 60)
     return `${diffSeconds} second${diffSeconds !== 1 ? "s" : ""} ago`;
 
@@ -158,46 +158,62 @@ function getTimeAgo(date) {
 }
 
 residentRouter.get("/payment/community", async (req, res) => {
-   try {
-        
-            const user = await Community.findById(req.user.community)
-            
-            if (!user) {
-                return res.status(404).json({ message: 'community not found' });
-            }
-            
-            return res.status(200).json(user);
-        } catch (error) {
-            console.error('Error fetching current user:', error);
-            return res.status(500).json({ message: 'Error fetching user data', error: error.message });
-        }
+  try {
+    const user = await Community.findById(req.user.community);
+
+    if (!user) {
+      return res.status(404).json({ message: "community not found" });
+    }
+
+    return res.status(200).json(user);
+  } catch (error) {
+    console.error("Error fetching current user:", error);
+    return res
+      .status(500)
+      .json({ message: "Error fetching user data", error: error.message });
+  }
 });
 
-
 residentRouter.get("/ad", async (req, res) => {
-  const ads = await Ad.find({ community: req.user.community,startDate: { $lte: new Date() }, endDate: { $gte: new Date() } });
+  const ads = await Ad.find({
+    community: req.user.community,
+    startDate: { $lte: new Date() },
+    endDate: { $gte: new Date() },
+  });
 
   res.render("resident/Advertisement", { path: "ad", ads });
 });
 
-residentRouter.get("/commonSpace", async (req,res)=>{
-    try{
-        const bookings = await CommonSpaces.find({ bookedBy: '68eb3a9eeea837fdb79aba39' }).sort({ createdAt: -1 });
-        ;
-        console.log(bookings);
-        
-        return res.json({ success: true, bookings: bookings });
-    }catch(err){
-        console.log(err);
-        return res.status(500).json({ success: false, message: "Internal server error" });
-    }
+residentRouter.get("/commonSpace", async (req, res) => {
+  try {
+    const bookings = await CommonSpaces.find({
+      bookedBy: "68eb3a9eeea837fdb79aba39",
+    }).populate('payment').sort({ createdAt: -1 });
+    const spaces = await Community.findById(
+      "68f74d38c06f8c9e8ab68c80"
+    ).populate("commonSpaces");
+
+
+    return res.json({
+      success: true,
+      bookings: bookings,
+      spaces: spaces.commonSpaces,
+    });
+  } catch (err) {
+    console.log(err);
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
+  }
 });
 
 residentRouter.post("/commonSpace/:id", async (req, res) => {
   try {
     const bookingId = req.params.id;
 
-    const commonspace = await CommonSpaces.findById(bookingId).populate("payment");
+    const commonspace = await CommonSpaces.findById(bookingId).populate(
+      "payment"
+    );
     if (!commonspace) {
       return res.status(404).json({ error: "Booking not found" });
     }
@@ -216,22 +232,15 @@ residentRouter.post("/commonSpace/:id", async (req, res) => {
 
 residentRouter.post("/commonSpace", async (req, res) => {
   try {
-    const uid = '68eb3a9eeea837fdb79aba39';
-    const { facility, purpose, date, from, to } = req.body;
-    console.log("Received booking data:", {
-      facility,
-      purpose,
-      date,
-      from,
-      to,
-    });
+    const uid = "68eb3a9eeea837fdb79aba39";
+    const { facility, fid, purpose, date, from, to } = req.body;
 
-    // Validation
+    const Space = await Amenity.findById(fid);
+
     if (!facility || !date || !from || !to) {
       return res.json({ success: false, message: "Facility, date, and time are required fields." });
     }
 
-    // Validate date is not in the past
     const bookingDate = new Date(date);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -240,60 +249,117 @@ residentRouter.post("/commonSpace", async (req, res) => {
       return res.json({ success: false, message: "Cannot book for past dates." });
     }
 
-    // Validate time format and logic
     const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
     if (!timeRegex.test(from) || !timeRegex.test(to)) {
       return res.json({ success: false, message: "Invalid time format." });
     }
 
-    // Check if end time is after start time
     const [fromHour, fromMin] = from.split(":").map(Number);
     const [toHour, toMin] = to.split(":").map(Number);
     const fromMinutes = fromHour * 60 + fromMin;
     const toMinutes = toHour * 60 + toMin;
 
-    // Create the booking
-    const space = await CommonSpaces.create({
+    if (toMinutes <= fromMinutes) {
+      return res.json({ success: false, message: "End time must be after start time." });
+    }
+
+    const b = await CommonSpaces.create({
       name: facility,
       description: purpose || "No purpose specified",
-      Date: date,
+      Date: new Date(date),
       from,
       to,
-      status: "Pending",
+      status: "Approved",
       availability: null,
       bookedBy: uid,
-      community: new mongoose.Types.ObjectId('68eb31f33b437b684cabfa94'),
+      community: new mongoose.Types.ObjectId("68f74d38c06f8c9e8ab68c80"),
     });
 
-    const uniqueId = generateCustomID(space._id.toString(), "CS", null);
-    space.ID = uniqueId;
-    await space.save();
+    let uniqueId = generateCustomID(b._id.toString(), "CS", null);
+    b.ID = uniqueId;
+    await b.save();
 
-    console.log("New Common Space Booking Created:", space);
+    const bookingDateStr = new Date(date).toISOString().split("T")[0];
+    const startHour = parseInt(from.split(":")[0]);
+    const endHour = parseInt(to.split(":")[0]);
 
-    // Update user's booked spaces
+    const timeSlots = [];
+    for (let i = startHour; i < endHour; i++) {
+      timeSlots.push(String(i).padStart(2, "0") + ":00");
+    }
+
+    if (timeSlots.length === 0) {
+      return res.json({ success: false, message: "Selected time range is invalid." });
+    }
+
+    let existingBooking = Space.bookedSlots.find(
+      (b) => new Date(b.date).toISOString().split("T")[0] === bookingDateStr
+    );
+
+    if (existingBooking) {
+      const newSlots = timeSlots.filter((slot) => !existingBooking.slots.includes(slot));
+      existingBooking.slots.push(...newSlots);
+    } else {
+      Space.bookedSlots.push({ date: new Date(date), slots: timeSlots });
+    }
+
+    await Space.save();
+
+    b.paymentStatus = "Pending";
+    b.status = "Pending Payment";
+
+    uniqueId = generateCustomID(b._id.toString(), "PY", null);
+
+    const fromTime = new Date(`2000/01/01 ${b.from}`);
+    const toTime = new Date(`2000/01/01 ${b.to}`);
+    const diffMs = toTime - fromTime;
+    const noOfHours = diffMs / (1000 * 60 * 60);
+    const rent = parseInt(Space.rent);
+    const totalAmount = rent * noOfHours;
+
+    const payment = await Payment.create({
+      title: b._id,
+      sender: b.bookedBy._id,
+      receiver: new mongoose.Types.ObjectId("68eb31f33b437b684cabfa92"),
+      amount: totalAmount,
+      paymentDeadline: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
+      paymentDate: null,
+      paymentMethod: "None",
+      status: "Pending",
+      remarks: null,
+      ID: uniqueId,
+      belongTo: "CommonSpaces",
+      community: new mongoose.Types.ObjectId("68f74d38c06f8c9e8ab68c80"),
+      belongToId: b._id,
+    });
+
+    b.payment = payment._id;
+    await b.save();
+
     const user = await Resident.findById(uid);
     if (user) {
-      user.bookedCommonSpaces.push(space._id);
+      user.bookedCommonSpaces.push(b._id);
       await user.save();
     }
 
-    return res.json({ success: true, message: "Booking request submitted successfully!",space });
+    await b.populate("payment");
+
+    return res.json({ success: true, message: "Booking request submitted successfully!", space: b });
   } catch (error) {
     console.error("Error creating booking:", error);
     res.json({ success: false, message: "Something went wrong. Please try again." });
   }
 });
 
-residentRouter.get("/commonSpace/cancelled/:id", async (req, res) => {
+
+
+residentRouter.put("/booking/cancel/:id", async (req, res) => {
   try {
     const bookingId = req.params.id;
 
-    // First verify the booking exists and belongs to the user
     const booking = await CommonSpaces.findOne({
       _id: bookingId,
-      bookedBy: req.user.id,
-      status: "Pending", // Only allow cancellation of pending bookings
+      bookedBy: '68eb3a9eeea837fdb79aba39', 
     });
 
     if (!booking) {
@@ -302,38 +368,32 @@ residentRouter.get("/commonSpace/cancelled/:id", async (req, res) => {
         .json({ error: "Booking not found or cannot be cancelled" });
     }
 
-    // Update status to cancelled instead of deleting
     await CommonSpaces.findByIdAndUpdate(bookingId, {
       status: "Cancelled",
-      cancelledBy: req.user.id,
+      cancelledBy: '68eb3a9eeea837fdb79aba39',
       cancelledAt: new Date(),
       cancellationReason: "Cancelled by resident",
     });
 
-    // Remove from user's booked spaces
-    await Resident.findByIdAndUpdate(req.user.id, {
+    await Resident.findByIdAndUpdate('68eb3a9eeea837fdb79aba39', {
       $pull: { bookedCommonSpaces: bookingId },
     });
 
-    console.log("Booking cancelled:", bookingId, "by user:", req.user.id);
-    return res.json({ result: "Booking cancelled successfully" });
+    return res.json({ success:true,result: "Booking cancelled successfully" });
   } catch (error) {
     console.error("Error cancelling booking:", error);
     res.status(500).json({ error: "Server error" });
   }
 });
 
-
 residentRouter.get("/api/facilities", async (req, res) => {
   try {
-    // Fetch facilities from your database
-    // Replace this with your actual database query
-    const community = await Community.findById(req.user.community).select(
-      "commonSpaces"
-    );
+    const community = await Community.findById(
+      "68eb31f33b437b684cabfa94"
+    ).select("commonSpaces");
     const facilities = community.commonSpaces || [];
 
-    console.log("Raw facilities from database:", facilities); 
+    console.log("Raw facilities from database:", facilities);
 
     res.json({
       success: true,
@@ -348,15 +408,14 @@ residentRouter.get("/api/facilities", async (req, res) => {
   }
 });
 
-residentRouter.get("/api/bookings",async (req,res) => {
-  try{
-    const bookings = await CommonSpaces.find({bookedBy:req.user.id});
-    return res.json({success:true,bookings})
-  }catch(err){
+residentRouter.get("/api/bookings", async (req, res) => {
+  try {
+    const bookings = await CommonSpaces.find({ bookedBy: req.user.id });
+    return res.json({ success: true, bookings });
+  } catch (err) {
     console.log(err);
   }
-})
-
+});
 
 const formatDate = (rawDate) => {
   return new Date(rawDate).toLocaleDateString("en-IN", {
@@ -371,9 +430,12 @@ residentRouter.get("/dashboard", async (req, res) => {
   const recents = [];
   const notifications = [];
 
- const ads = await Ad.find({ community: req.user.community,startDate: { $lte: new Date() }, endDate: { $gte: new Date() } });
+  const ads = await Ad.find({
+    community: req.user.community,
+    startDate: { $lte: new Date() },
+    endDate: { $gte: new Date() },
+  });
 
-  
   const issues = await Issue.find({ resident: req.user.id });
   const commonSpaces = await CommonSpaces.find({ bookedBy: req.user.id });
   const payments = await Payment.find({ sender: req.user.id });
@@ -406,39 +468,37 @@ residentRouter.get("/dashboard", async (req, res) => {
 
   const pendingPayments = await Payment.find({
     sender: req.user.id,
-    status: {$in:["Pending","Overdue"]},
+    status: { $in: ["Pending", "Overdue"] },
   });
 
-  pendingPayments.forEach(async (p)=>{
-    if(new Date(p.paymentDeadline) < new Date()){
-      p.status = "Overdue"
+  pendingPayments.forEach(async (p) => {
+    if (new Date(p.paymentDeadline) < new Date()) {
+      p.status = "Overdue";
     }
     await p.save();
-  })
+  });
 
-  const overdues = pendingPayments.filter((p)=>p.status==="Overdue")
+  const overdues = pendingPayments.filter((p) => p.status === "Overdue");
   setPenalties(overdues);
-  
 
   recents.sort((a, b) => b.updatedAt - a.updatedAt);
 
   const not = getPaymentRemainders(pendingPayments, resi.notifications);
-  
+
   resi.notifications.forEach((n) => {
     n.timeAgo = getTimeAgo(n.createdAt);
   });
 
-
   resi.notifications.sort((a, b) => b.createdAt - a.createdAt);
-  
+
   const now = new Date();
   const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
-  resi.notifications = resi.notifications.filter((n) => { 
+  resi.notifications = resi.notifications.filter((n) => {
     const notificationDate = new Date(n.createdAt);
     return notificationDate >= twentyFourHoursAgo;
   });
-  
+
   await resi.save();
 
   res.render("resident/dashboard", {
@@ -447,7 +507,6 @@ residentRouter.get("/dashboard", async (req, res) => {
     ads,
     resi,
     pendingPayments,
-    
   });
 });
 
@@ -455,7 +514,7 @@ residentRouter.get("/", (req, res) => {
   res.redirect("dashboard");
 });
 
-residentRouter.get('/issueRaising',getIssueData);
+residentRouter.get("/issueRaising", getIssueData);
 
 residentRouter.post("/issueRaising", async (req, res) => {
   try {
@@ -498,7 +557,11 @@ residentRouter.post("/issueRaising", async (req, res) => {
     await resident.save();
     console.log("Resident's raisedIssues updated:", resident.raisedIssues);
 
-    return res.json({ success: true, message: "Issue raised successfully!", issue: newIssue });
+    return res.json({
+      success: true,
+      message: "Issue raised successfully!",
+      issue: newIssue,
+    });
   } catch (error) {
     console.error("Error raising issue:", error);
     req.flash("message", "Something went wrong.");
@@ -513,19 +576,25 @@ residentRouter.post("/deleteIssue/:issueID", async (req, res) => {
     const issue = await Issue.findOneAndDelete({ _id: issueID });
 
     if (!issue) {
-      return res.status(404).json({ success: false, message: "Issue not found." });
+      return res
+        .status(404)
+        .json({ success: false, message: "Issue not found." });
     }
 
     const resident = await Resident.findById(req.user.id);
     if (!resident) {
-      return res.status(404).json({ success: false, message: "Resident not found." });
+      return res
+        .status(404)
+        .json({ success: false, message: "Resident not found." });
     }
 
-    resident.raisedIssues = resident.raisedIssues.filter((id) => id.toString() !== issueID);
+    resident.raisedIssues = resident.raisedIssues.filter(
+      (id) => id.toString() !== issueID
+    );
 
     await resident.save();
 
-    res.json({success: true, message: "Issue deleted successfully." });
+    res.json({ success: true, message: "Issue deleted successfully." });
   } catch (error) {
     console.error("Error deleting issue:", error);
     res.status(500).json({ error: "Internal server error." });
@@ -570,10 +639,15 @@ residentRouter.post("/submitFeedback", async (req, res) => {
   console.log("Feedback Data Received:", req.body);
 
   try {
-    const issue = await Issue.findById(id).populate("community", "communityManager");
+    const issue = await Issue.findById(id).populate(
+      "community",
+      "communityManager"
+    );
 
     if (!issue) {
-      return res.status(404).json({ success: false, message: "Issue not found." });
+      return res
+        .status(404)
+        .json({ success: false, message: "Issue not found." });
     }
 
     const payment = await Payment.create({
@@ -605,20 +679,20 @@ residentRouter.post("/submitFeedback", async (req, res) => {
     });
   } catch (error) {
     console.error("Error submitting feedback:", error);
-    return res.status(500).json({ success: false, message: "Internal server error." });
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error." });
   }
 });
 
 // Payment routes - corrected version
-residentRouter.get('/payments', getPaymentData);
+residentRouter.get("/payments", getPaymentData);
 
 // residentRouter.get("/payments", async (req, res) => {
 //   try {
 //     const userId = req.user.id;
 
 //    const ads = await Ad.find({ community: req.user.community,startDate: { $lte: new Date() }, endDate: { $gte: new Date() } });
-
-  
 
 //     console.log(ads);
 
@@ -631,11 +705,9 @@ residentRouter.get('/payments', getPaymentData);
 //       if (statusOrder[a.status] !== statusOrder[b.status]) {
 //         return statusOrder[a.status] - statusOrder[b.status];
 //       }
-      
+
 //       return new Date(a.paymentDeadline) - new Date(b.paymentDeadline);
 //     });
-    
-    
 
 //     console.log(payments);
 
@@ -697,11 +769,14 @@ residentRouter.post("/payment/post", async (req, res) => {
       cvv,
     } = req.body;
 
+    console.log(req.body);
+    
+
     const payment = await Payment.findById(paymentId).populate("");
     if (!payment) {
-      req.flash("message", "Payment not found.");
       console.log("Payment not found for ID:", paymentId);
-      return res.redirect("/resident/payments");
+      return res.json ({ success: false, message: "Payment not found." });
+      
     }
 
     payment.status = "Completed";
@@ -718,27 +793,26 @@ residentRouter.post("/payment/post", async (req, res) => {
 
     if (type === "Issue") {
       ob = await Issue.findById(payment.belongToId);
-       ob.status = "Resolved";
+      ob.status = "Resolved";
     } else if (type === "CommonSpaces") {
       ob = await CommonSpaces.findById(payment.belongToId);
-       ob.status = "Booked";
-    } 
-   
+      ob.status = "Booked";
+    }
+
     ob.paymentStatus = "Completed";
     ob.payment = payment._id;
     await ob.save();
 
     console.log("Payment updated successfully:", payment);
 
-    res.redirect("/resident/payments");
+    res.json({Id:ob._id ,success:true,message:"Payment Successful"})
   } catch (error) {
     console.error("Error in payment processing:", error);
-    req.flash("message", "Something went wrong.");
-    return res.redirect("/resident/payments");
+    return res.json({success:false,message:"Error Processing Payment"})
   }
 });
 
-residentRouter.get('/preApprovals',auth, authorizeR ,getPreApprovals);
+residentRouter.get("/preApprovals", auth, authorizeR, getPreApprovals);
 
 //pre approval routes
 // residentRouter.post("/preapproval", auth, authorizeR, async (req, res) => {
@@ -843,14 +917,22 @@ residentRouter.post("/preapproval", auth, authorizeR, async (req, res) => {
   session.startTransaction();
 
   try {
-    const { visitorName, contactNumber, dateOfVisit, timeOfVisit, purpose } = req.body;
+    const { visitorName, contactNumber, dateOfVisit, timeOfVisit, purpose } =
+      req.body;
 
-    if (!visitorName || !contactNumber || !dateOfVisit || !timeOfVisit || !purpose) {
+    if (
+      !visitorName ||
+      !contactNumber ||
+      !dateOfVisit ||
+      !timeOfVisit ||
+      !purpose
+    ) {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
     const resident = await Resident.findById(req.user.id).populate("community");
-    if (!resident) return res.status(404).json({ message: "Resident not found" });
+    if (!resident)
+      return res.status(404).json({ message: "Resident not found" });
 
     const date = formatDate(dateOfVisit);
     const scheduledAt = new Date(`${dateOfVisit}T${timeOfVisit}`);
@@ -878,7 +960,9 @@ residentRouter.post("/preapproval", auth, authorizeR, async (req, res) => {
       purpose,
       scheduledAt,
     };
-    const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "24h" });
+    const token = jwt.sign(payload, process.env.JWT_SECRET, {
+      expiresIn: "24h",
+    });
     newVisitor.qrToken = token;
     newVisitor.qrCode = await QRCode.toDataURL(token);
 
@@ -909,10 +993,11 @@ residentRouter.post("/preapproval", auth, authorizeR, async (req, res) => {
     await session.abortTransaction();
     session.endSession();
     console.error("Error in pre-approving visitor:", err);
-    return res.status(500).json({ message: "Internal server error", error: err.message });
+    return res
+      .status(500)
+      .json({ message: "Internal server error", error: err.message });
   }
 });
-
 
 residentRouter.delete("/preapproval/cancel/:id", async (req, res) => {
   const requestId = req.params.id;
@@ -937,9 +1022,11 @@ residentRouter.delete("/preapproval/cancel/:id", async (req, res) => {
 residentRouter.get("/preapproval/qr/:id", auth, authorizeR, getQRcode);
 
 residentRouter.get("/profile", async (req, res) => {
- const ads = await Ad.find({ community: req.user.community,startDate: { $lte: new Date() }, endDate: { $gte: new Date() } });
-
-  
+  const ads = await Ad.find({
+    community: req.user.community,
+    startDate: { $lte: new Date() },
+    endDate: { $gte: new Date() },
+  });
 
   const r = await Resident.findById(req.user.id);
 
@@ -950,7 +1037,6 @@ residentRouter.post("/profile", upload.single("image"), async (req, res) => {
   const { firstName, lastName, contact, email, address } = req.body;
 
   console.log("Profile update data:", req.body);
-  
 
   const r = await Resident.findById(req.user.id);
 
@@ -972,7 +1058,11 @@ residentRouter.post("/profile", upload.single("image"), async (req, res) => {
 
   await r.save();
 
-  return res.json({success:true,message:"Profile updated successfully",r});
+  return res.json({
+    success: true,
+    message: "Profile updated successfully",
+    r,
+  });
 });
 
 residentRouter.post("/change-password", async (req, res) => {

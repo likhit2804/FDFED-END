@@ -24,7 +24,7 @@ const commonSpacesSchema = new mongoose.Schema({
     required: true,
   },
   status: {type: String,
-    enum :["Pending","Available","Booked","Pending Payment","Paid","Rejected"], 
+    enum :["Pending","Available","Approved","Booked","Pending Payment","Paid","Rejected"], 
     default: "Pending"},
   paymentStatus: String,
   payment: {
@@ -46,6 +46,16 @@ const commonSpacesSchema = new mongoose.Schema({
   community: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Community",
+  },
+  cancelledAt: {
+    type: Date,
+  },
+  cancelledBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Resident",
+  },
+  cancellationReason: {
+    type: String,
   },
 });
 

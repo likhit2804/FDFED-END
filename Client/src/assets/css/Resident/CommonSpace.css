@@ -14,6 +14,20 @@
   min-width: 350px;
 }
 
+
+.timer-box {
+    background-color: rgba(255, 0, 0, 0.116); 
+    border: 2px dashed red;
+    color: red;
+    font-weight: bold;
+    font-size: 0.9rem;
+    margin-bottom: 10px;
+    padding: 10px 10px;
+    border-radius: 5px;
+    text-align: center;
+}
+
+
 .section-title {
   position: relative;
   padding-bottom: 1rem;
@@ -69,6 +83,7 @@
   padding: 1.5rem;
   transition: var(--transition);
   border-left: 4px solid var(--primary);
+  max-height: 315px;
 }
 .booking-card:hover {
   transform: translateY(-5px);
@@ -352,6 +367,8 @@
   margin-bottom: 12px;
 }
 
+
+
 /* Animation */
 @keyframes fadeIn {
   from {
@@ -537,6 +554,14 @@
   box-shadow: 0 8px 25px rgba(0, 123, 255, 0.15);
   color: #0056b3;
 }
+
+.time-slot .booked{
+  background-color: #d1e7dd;
+  color: #047857;
+  
+}
+
+
 .time-slot.selected {
   background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
   border-color: #004085;

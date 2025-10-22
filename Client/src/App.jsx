@@ -57,6 +57,7 @@ function App() {
           <Route path='preApproval' element={< PreApproval />} />
           <Route path='commonSpace' element={<CommonSpaceBooking/>} />
           <Route path='issueRaising' element={<IssueRaising/>} />
+          <Route path='payments' element={<Payments/>} />
           <Route path='profile' element={<ResidentProfile/>} />
 
         </Route>

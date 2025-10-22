@@ -235,22 +235,7 @@ managerRouter.get("/commonSpace/approve/:id", async (req, res) => {
 
     b.status = "available";
     b.availability = "NO";
-    b.paymentStatus = "Pending";
-    b.status = "Pending Payment";
-
-    console.log("Booking Data after update:", b);
-
-    const uniqueId = generateCustomID(b._id.toString(), "PY", null);
-
-    const amount = b.community.commonSpaces.filter((c) => c.name === b.name);
-
-    const fromTime = new Date(`2000/01/01 ${b.from}`);
-    const toTime = new Date(`2000/01/01 ${b.to}`);
-    const diffMs = toTime - fromTime;
-    const noOfHours = diffMs / (1000 * 60 * 60);
-
-    const rent = parseInt(amount[0].rent);
-    const totalAmount = rent * noOfHours;
+    
 
     if (isNaN(totalAmount)) {
       console.error("Calculated totalAmount is NaN. Check rent and noOfHours.");
@@ -259,23 +244,7 @@ managerRouter.get("/commonSpace/approve/:id", async (req, res) => {
         .json({ success: false, message: "Error calculating payment amount." });
     }
 
-    const payment = await Payment.create({
-      title: b._id,
-      sender: b.bookedBy._id,
-      receiver: req.user.community,
-      amount: totalAmount,
-      paymentDeadline: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
-      paymentDate: null,
-      paymentMethod: "None",
-      status: "Pending",
-      remarks: null,
-      ID: uniqueId,
-      belongTo: "CommonSpaces",
-      community: req.user.community,
-      belongToId: b._id,
-    });
-
-    b.payment = payment._id;
+    
 
     b.bookedBy.notifications.push({
       belongs: "CS",

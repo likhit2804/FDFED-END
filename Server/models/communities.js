@@ -1,4 +1,6 @@
 import mongoose from "mongoose";
+import Amenity from "./Amenities.js";
+
 const CommunitySchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true },
   location: { type: String, required: true },
@@ -63,35 +65,7 @@ const CommunitySchema = new mongoose.Schema({
       ipAddress: String
     }
   }],
-  commonSpaces: [{
-    type: {
-      type: String,
-      enum: [ 
-        "Clubhouse",
-        "Gym",
-        "Banquet Hall",
-        "Community Hall",
-        "Swimming Pool",
-        "Tennis Court",
-        "Badminton Court",
-        "Basketball Court",
-        "Amphitheatre",
-        "Guest Room",
-        "Other" // ← used when they type custom name
-      ],
-      required: true
-    },
-    name: {
-      type: String,
-      required: true,
-      trim: true,
-      minlength: 2
-    },
-    bookable: { type: Boolean, default: true },
-    maxHours: { type: Number },
-    bookingRules: { type: String },
-    rent:Number
-  }],
+  commonSpaces: [{ type: mongoose.Schema.Types.ObjectId, ref: "Amenity" }],
   // Reference to community manager
   communityManager: {
     type: mongoose.Schema.Types.ObjectId,
