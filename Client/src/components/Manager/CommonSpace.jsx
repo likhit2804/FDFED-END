@@ -2,16 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useSelector, useDispatch } from 'react-redux';
 import '../../assets/css/Manager/commonSpace.css';
-import { EditSpace, fetchDataforManager } from '../../Slices/CommonSpaceSlice';
-import { ToastContainer,toast } from 'react-toastify';
-
-
+import { optimisticDeleteSpace, AddSpace, DeleteSpace, EditSpace, fetchDataforManager } from '../../Slices/CommonSpaceSlice';
+import { ToastContainer, toast } from 'react-toastify';
 
 export const CommonSpace = () => {
-    
-
     const dispatch = useDispatch();
-    const {avalaibleSpaces, Bookings} = useSelector((state)=>state.CommonSpace)
+    const { avalaibleSpaces, Bookings } = useSelector((state) => state.CommonSpace);
 
     const [isManagementVisible, setIsManagementVisible] = useState(false);
     const [isSpaceFormOpen, setIsSpaceFormOpen] = useState(false);
@@ -19,28 +15,24 @@ export const CommonSpace = () => {
     const [isRejectionPopupOpen, setIsRejectionPopupOpen] = useState(false);
     const [bookingToReject, setBookingToReject] = useState(null);
     const [rejectionReason, setRejectionReason] = useState('');
-    const [BookingDetailsopen,setBookingDetailsOpen] = useState(false);
+    const [BookingDetailsopen, setBookingDetailsOpen] = useState(false);
+    const [currentBooking, setCurrentBooking] = useState({});
 
-
-    useEffect(()=>{
-      dispatch(fetchDataforManager());
-    },[dispatch])
-    
+    useEffect(() => {
+        dispatch(fetchDataforManager());
+    }, [dispatch]);
 
     const { register, handleSubmit, reset, setValue } = useForm({
         defaultValues: {
             spaceType: '',
             spaceName: '',
             bookable: 'true',
-            maxHours: 4,
             bookingRent: '',
             bookingRules: '',
-        }
+        },
     });
 
-    const handleToggleManagement = () => {
-        setIsManagementVisible(prev => !prev);
-    };
+    const handleToggleManagement = () => setIsManagementVisible((prev) => !prev);
 
     const handleOpenAddForm = () => {
         setIsEditing(false);
@@ -53,25 +45,23 @@ export const CommonSpace = () => {
         setValue('spaceType', space.type);
         setValue('spaceName', space.name);
         setValue('bookable', String(space.bookable));
-        setValue('maxHours', space.maxHours || 4);
         setValue('bookingRent', space.rent || '');
         setValue('bookingRules', space.bookingRules || '');
-        setValue('id',space._id)
+        setValue('id', space._id);
         setIsSpaceFormOpen(true);
     };
 
     const handleDeleteSpace = (space) => {
         if (window.confirm(`Are you sure you want to delete the space "${space.name}"?`)) {
-            dispatch(DeleteSpace(space._id));
+            dispatch(optimisticDeleteSpace(space._id));
+            dispatch(DeleteSpace(space._id))
+                .unwrap()
+                .then(() => toast.success('Space deleted successfully'));
         }
-        
-
-        toast.success("Space deleted successfully");
-        
-    }
+    };
 
     const handleApprove = (bookingId) => {
-        console.log("Approving booking:", bookingId);
+        console.log('Approving booking:', bookingId);
     };
 
     const openRejectPopup = (bookingId) => {
@@ -81,38 +71,30 @@ export const CommonSpace = () => {
 
     const handleRejectionSubmit = () => {
         if (!rejectionReason.trim()) {
-            alert("Please provide a reason for rejection.");
+            alert('Please provide a reason for rejection.');
             return;
         }
         console.log(`Rejecting booking ${bookingToReject} with reason: ${rejectionReason}`);
-        
         setIsRejectionPopupOpen(false);
         setRejectionReason('');
         setBookingToReject(null);
     };
 
     const onSubmit = (data) => {
-        const payload = {
-            ...data,
-            bookable: data.bookable === 'true',
-            maxHours: Number(data.maxHours)
-        };
-
+        const payload = { ...data, bookable: data.bookable === 'true' };
         if (isEditing) {
             dispatch(EditSpace({ id: data.id, updatedData: payload }));
-            toast.success("Space updated successfully")
+            toast.success('Space updated successfully');
         } else {
-            dispatch(AddSpace(payload)); 
+            dispatch(AddSpace(payload));
         }
-        
-
         setIsSpaceFormOpen(false);
         reset();
     };
 
     return (
         <>
-        <ToastContainer position="top-center" autoClose={1500} />
+            <ToastContainer position="top-center" autoClose={1500} />
             <div className="section-title">
                 <h1>Common Space Bookings</h1>
             </div>
@@ -142,8 +124,7 @@ export const CommonSpace = () => {
                                     </div>
                                     <form onSubmit={handleSubmit(onSubmit)} id="spaceFormElement">
                                         <div className="form-row">
-                                            <input className="d-none"  type="hidden" {...register('id')} />
-                                             
+                                            <input className="d-none" type="hidden" {...register('id')} />
                                             <div className="form-group">
                                                 <label htmlFor="spaceType">Space Type</label>
                                                 <select className="form-control" id="spaceType" {...register('spaceType', { required: true })}>
@@ -171,14 +152,9 @@ export const CommonSpace = () => {
                                                 </select>
                                             </div>
                                             <div className="form-group">
-                                                <label htmlFor="maxHours">Max Booking Duration (hours)</label>
-                                                <input type="number" className="form-control" id="maxHours" {...register('maxHours', { valueAsNumber: true, min: 1 })} min="1" />
+                                                <label htmlFor="bookingRent">Rent (per hour)</label>
+                                                <input type="text" className="form-control" id="bookingRent" {...register('bookingRent')} />
                                             </div>
-                                        </div>
-
-                                        <div className="form-group">
-                                            <label htmlFor="bookingRent">Rent (per hour)</label>
-                                            <input type="text" className="form-control" id="bookingRent" {...register('bookingRent')} />
                                         </div>
 
                                         <div className="form-group">
@@ -201,20 +177,20 @@ export const CommonSpace = () => {
 
                         <div className="space-list" id="spacesList">
                             {avalaibleSpaces?.length > 0 ? (
-                                avalaibleSpaces?.map(space => (
+                                avalaibleSpaces.map((space) => (
                                     <div key={space._id} className="space-item">
                                         <div className="space-actions">
                                             <button className="edit-space-btn" onClick={() => handleEditSpace(space)}>
                                                 <i className="bi bi-pencil"></i>
                                             </button>
-                                            <button className="delete-space-btn" onClick={() => handleDeleteSpace(space)} >
+                                            <button className="delete-space-btn" onClick={() => handleDeleteSpace(space)}>
                                                 <i className="bi bi-trash"></i>
                                             </button>
                                         </div>
                                         <h4>{space.name}</h4>
                                         <p><strong>Type:</strong> {space.type}</p>
                                         <p><strong>Bookable:</strong> {space.bookable ? 'Yes' : 'No'}</p>
-                                        {space.bookable && <p><strong>Max Hours:</strong> {space.maxHours || 'Not specified'}</p>}
+                                        <p><strong>Rent:</strong> {space.rent}</p>
                                         {space.bookingRules && <p><strong>Rules:</strong> {space.bookingRules.substring(0, 50)}...</p>}
                                     </div>
                                 ))
@@ -237,11 +213,11 @@ export const CommonSpace = () => {
                 </div>
                 <div className="stat-card" style={{ borderLeft: '6px solid var(--danger)' }}>
                     <h3>Pending Approvals</h3>
-                    <span className="stat-number" style={{ color: 'var(--danger)' }}>{Bookings.filter(c => c.status === "Pending").length}</span>
+                    <span className="stat-number" style={{ color: 'var(--danger)' }}>{Bookings.filter(c => c.status === 'Pending').length}</span>
                 </div>
                 <div className="stat-card" style={{ borderLeft: '6px solid var(--success)' }}>
                     <h3>Approved</h3>
-                    <span className="stat-number" style={{ color: 'var(--success)' }}>{Bookings.filter(c => c.status === "Approved").length}</span>
+                    <span className="stat-number" style={{ color: 'var(--success)' }}>{Bookings.filter(c => c.status === 'Approved').length}</span>
                 </div>
             </div>
 
@@ -252,8 +228,8 @@ export const CommonSpace = () => {
 
             <div className="bookings-container" id="bookingsContainer">
                 {Bookings.length > 0 ? (
-                    Bookings.map(c => (
-                        <div key={c._id} className="booking-card d-flex flex-column ">
+                    Bookings.map((c) => (
+                        <div key={c._id} className="booking-card d-flex flex-column">
                             <div className="booking-card-header">
                                 <span className="booking-id">ID: {c.ID}</span>
                                 <span className={`booking-status status-${c.status}`}>{c.status}</span>
@@ -261,21 +237,20 @@ export const CommonSpace = () => {
                             <h3 className="booking-space">{c.name}</h3>
                             <div className="booking-datetime">
                                 <i className="bi bi-calendar-event"></i>
-                                <span> {c.Date}, {c.from} - {c.to} </span>
+                                <span>{new Date(c.Date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}, {c.from} - {c.to}</span>
                             </div>
                             <div className="booking-actions">
-                                {c.status === "Pending" ? (
+                                {c.status === 'Pending' ? (
+                                    <button className="available-btn" data-id={c._id}><i className="bi bi-eye"></i> Check Availability</button>
+                                ) : c.status === 'Avalaible' ? (
                                     <>
-                                        <button className="available-btn" data-id={c._id}><i className="bi bi-eye"></i> Check Availability</button>
-                                        
+                                        <button className="approve-btn" onClick={() => handleApprove(c._id)}><i className="bi bi-check-circle-fill"></i> Approve</button>
+                                        <button className="reject-btn" onClick={() => openRejectPopup(c._id)}><i className="bi bi-x-circle-fill"></i> Reject</button>
                                     </>
-                                ) : c.status === "Avalaible" ? (
-                                  <>
-                                      <button className="approve-btn" onClick={() => handleApprove(c._id)}><i className="bi bi-check-circle-fill"></i> Approve</button>
-                                      <button className="reject-btn" onClick={() => openRejectPopup(c._id)}><i className="bi bi-x-circle-fill"></i> Reject</button>
-                                  </>
                                 ) : (
-                                    <button className="view-btn" onClick={() => {setBookingDetailsOpen(true)}}><i className="bi bi-eye"></i> View Details</button>
+                                    <button className="view-btn" onClick={() => { setCurrentBooking(c); setBookingDetailsOpen(true); }}>
+                                        <i className="bi bi-eye"></i> View Details
+                                    </button>
                                 )}
                             </div>
                         </div>
@@ -296,12 +271,7 @@ export const CommonSpace = () => {
                         <textarea
                             id="rejectionReason"
                             rows="4"
-                            style={{
-                                width: '100%',
-                                padding: '10px',
-                                border: '1px solid #ddd',
-                                borderRadius: '5px',
-                            }}
+                            style={{ width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '5px' }}
                             placeholder="Enter reason for rejection..."
                             value={rejectionReason}
                             onChange={(e) => setRejectionReason(e.target.value)}
@@ -339,9 +309,7 @@ export const CommonSpace = () => {
                     </div>
                 </div>
             )}
-            
-            
-              
+
             {BookingDetailsopen && (
                 <div className="popup">
                     <div className="popup-content">
@@ -352,6 +320,7 @@ export const CommonSpace = () => {
                                 </span>
                                 Booking Details
                             </h2>
+
                             <button className="close-btn" onClick={() => setBookingDetailsOpen(false)}>
                                 <i className="bi bi-x-lg"></i>
                             </button>
@@ -359,92 +328,76 @@ export const CommonSpace = () => {
                         <div className="popup-body">
                             <div className="details-grid">
                                 <div className="detail-item">
-                                    <div>
-                                        <div className="detail-label">Booking ID</div>
-                                        <div className="detail-value">#BK78901</div>
+                                    <div className="detail-label">Booking ID</div>
+                                    <div className="detail-value">{currentBooking?.ID}</div>
+                                </div>
+                                <div className="detail-item">
+                                    <div className="detail-label">Booking Status</div>
+                                    <div className="detail-value">
+                                        <span className={`status-badge status-${currentBooking?.status}`}>{currentBooking?.status}</span>
                                     </div>
                                 </div>
                                 <div className="detail-item">
-                                    <div>
-                                        <div className="detail-label">Space Name</div>
-                                        <div className="detail-value">Clubhouse Main</div>
-                                    </div>
+                                    <div className="detail-label">Space Name</div>
+                                    <div className="detail-value">{currentBooking?.name}</div>
                                 </div>
                                 <div className="detail-item">
-                                    <div>
-                                        <div className="detail-label">Booked By</div>
-                                        <div className="detail-value">John Doe</div>
-                                    </div>
+                                    <div className="detail-label">Booked By</div>
+                                    <div className="detail-value">{currentBooking?.bookedBy?.residentFirstname} {currentBooking?.bookedBy?.residentLastname}</div>
                                 </div>
                                 <div className="detail-item">
-                                    <div>
-                                        <div className="detail-label">Contact Email</div>
-                                        <div className="detail-value">john.doe@example.com</div>
-                                    </div>
+                                    <div className="detail-label">Contact Email</div>
+                                    <div className="detail-value">{currentBooking?.bookedBy?.email}</div>
                                 </div>
                                 <div className="detail-item">
-                                    <div>
-                                        <div className="detail-label">Booking Date</div>
-                                        <div className="detail-value">2024-11-20</div>
-                                    </div>
+                                    <div className="detail-label">Booking Date</div>
+                                    <div className="detail-value">{new Date(currentBooking.Date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</div>
                                 </div>
                                 <div className="detail-item">
-                                    <div>
-                                        <div className="detail-label">Time Slot</div>
-                                        <div className="detail-value">10:00 AM - 02:00 PM</div>
-                                    </div>
-                                </div>
-                                <div className="detail-item">
-                                    <div>
-                                        <div className="detail-label">Total Hours</div>
-                                        <div className="detail-value">4 hours
-                                        </div>
-                                    </div>
+                                    <div className="detail-label">Time Slot</div>
+                                    <div className="detail-value">{currentBooking?.from} - {currentBooking?.to}</div>
                                 </div>
                                 <div className="detail-item col-span-2">
-                                    <div>
-                                        <div className="detail-label">Purpose</div>
-                                        <div className="detail-value">Birthday Party for my son.</div>
-                                    </div>
+                                    <div className="detail-label">Purpose</div>
+                                    <div className="detail-value">{currentBooking?.description}</div>
                                 </div>
-                                <div className="detail-item">
-                                    <div>
-                                        <div className="detail-label">Booking Status</div>
-                                        <div className="detail-value">
-                                            <span className="status-badge status-Approved">Approved</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="detail-item">
-                                    <div>
-                                        <div className="detail-label">Requested On</div>
-                                        <div className="detail-value">2024-11-15</div>
-                                    </div>
-                                </div>
+
                             </div>
 
-                            <div className="payment-box">
-                                <h4>Payment Information</h4>
-                                <div className="detail-item">
-                                    <div>
-                                        <div className="detail-label">Amount</div>
-                                        <div className="detail-value">₹500</div>
-                                    </div>
-                                </div>
-                                <div className="detail-item">
-                                    <div>
-                                        <div className="detail-label">Payment Status</div>
-                                        <div className="detail-value">
-                                            <span className="status-badge status-Completed">Paid</span>
+                            {
+                                currentBooking?.payment && currentBooking.status !== 'Cancelled' && (
+                                    <div className="payment-box">
+                                        <h4>Payment Information</h4>
+                                        <div className="detail-item">
+                                            <div className="detail-label">Amount</div>
+                                            <div className="detail-value">₹{currentBooking?.payment?.amount || 0}</div>
+                                        </div>
+                                        <div className="detail-item">
+                                            <div className="detail-label">Payment Status</div>
+                                            <div className="detail-value">
+                                                <span className="status-badge status-Completed">{currentBooking?.payment?.status}</span>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            </div>
+                                )
+                            }
+
+                            {
+                                currentBooking?.status === 'Cancelled' && (
+                                    <div className="cancellation-box">
+                                        <h4>Cancellation Details</h4>
+                                        <div className="detail-item">
+                                            <div className="detail-label">Cancellation Reason : </div>
+                                            <div className="detail-value"> {currentBooking?.cancellationReason || 'N/A'}</div>
+                                        </div>
+                                    </div>
+                                )
+                            }
+
                         </div>
                     </div>
                 </div>
             )}
-            
         </>
     );
 };

@@ -189,15 +189,15 @@ residentRouter.get("/commonSpace", async (req, res) => {
     const bookings = await CommonSpaces.find({
       bookedBy: "68eb3a9eeea837fdb79aba39",
     }).populate('payment').sort({ createdAt: -1 });
-    const spaces = await Community.findById(
-      "68f74d38c06f8c9e8ab68c80"
-    ).populate("commonSpaces");
+    const spaces = await Amenity.find({
+      community :"68f74d38c06f8c9e8ab68c80"
+  });
 
 
     return res.json({
       success: true,
       bookings: bookings,
-      spaces: spaces.commonSpaces,
+      spaces: spaces,
     });
   } catch (err) {
     console.log(err);

@@ -7,6 +7,7 @@ import passport from "passport";
 import session from "express-session";
 import bcrypt from "bcrypt";
 import multer from "multer";
+import mongoose from "mongoose";
 
 import Issue from "../models/issues.js";
 import Worker from "../models/workers.js";
@@ -47,26 +48,27 @@ const upload = multer({ storage: storage });
 
 managerRouter.get("/commonSpace", async (req, res) => {
   try{
-    const c = '68eb31f33b437b684cabfa94';
-    const bookings = await CommonSpaces.find({ community: c , status : {$ne : "Rejected"} }).sort({
+    const c = '68f74d38c06f8c9e8ab68c80';
+    const bookings = await CommonSpaces.find({ community: c , status : {$ne : "Rejected"} }).populate('payment').populate("bookedBy", "residentFirstname residentLastname email").sort({
       createdAt: -1,
     });
 
-    const communityDetails = await Community.findById(c).select(
-      "commonSpaces bookingRules"
-    );
+    const commonSpaces = await Amenity.find({community:c});
 
     res.status(200).json({
       bookings,
-      commonSpaces: communityDetails.commonSpaces,
-      bookingRules: communityDetails.bookingRules,
+      commonSpaces,
     });
   }catch(err){
-
+    console.error("Error fetching common spaces and bookings:", err);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch common spaces and bookings",
+      error: process.env.NODE_ENV === "development" ? err.message : undefined,
+    });
   }
 });
 
-// API endpoint to fetch bookings data for auto-refresh
 managerRouter.get("/commonSpace/api/bookings", async (req, res) => {
   try {
     const c = req.user.community;
@@ -86,6 +88,7 @@ managerRouter.get("/commonSpace/api/bookings", async (req, res) => {
     });
   }
 });
+
 managerRouter.get("/commonSpace/details/:id", async (req, res) => {
   try {
     const booking = await CommonSpaces.findById(req.params.id)
@@ -129,137 +132,6 @@ managerRouter.get("/commonSpace/details/:id", async (req, res) => {
   }
 });
 
-function mergeBusySlots(slots) {
-  // Convert time strings to minutes
-  const toMinutes = (time) => {
-    const [h, m] = time.split(":").map(Number);
-    return h * 60 + m;
-  };
-
-  const toTimeStr = (minutes) => {
-    const h = String(Math.floor(minutes / 60)).padStart(2, "0");
-    const m = String(minutes % 60).padStart(2, "0");
-    return `${h}:${m}`;
-  };
-
-  // Step 1: Sort slots by start time
-  const sorted = slots
-    .map((s) => ({ from: toMinutes(s.from), to: toMinutes(s.to) }))
-    .sort((a, b) => a.from - b.from);
-
-  const merged = [];
-
-  for (const slot of sorted) {
-    if (!merged.length || merged[merged.length - 1].to < slot.from) {
-      merged.push(slot);
-    } else {
-      merged[merged.length - 1].to = Math.max(
-        merged[merged.length - 1].to,
-        slot.to
-      );
-    }
-  }
-
-  // Convert back to time strings
-  return merged.map((s) => ({
-    from: toTimeStr(s.from),
-    to: toTimeStr(s.to),
-  }));
-}
-managerRouter.get("/commonSpace/checkAvailability/:id", async (req, res) => {
-  const id = req.params.id;
-  const current = await CommonSpaces.findById(id).populate("bookedBy");
-  const date = current.Date;
-  const from = current.from;
-  const to = current.to;
-  try {
-    const result = await CommonSpaces.find({
-      Date: date,
-      $or: [
-        { from: { $lt: to }, to: { $gt: from } },
-        { from: { $lte: from }, to: { $gt: from } },
-        { from: { $lt: to }, to: { $gte: to } },
-      ],
-      _id: { $ne: id },
-      name: current.name,
-      status: "Booked",
-    });
-
-    console.log("Conflicting Bookings:", result);
-
-    const busySlots = result.map((conflict) => ({
-      from: conflict.from,
-      to: conflict.to,
-    }));
-
-    const busy = mergeBusySlots(busySlots);
-    const busyTimes = busy
-      .map((slot) => `${slot.from} - ${slot.to}`)
-      .join(", ");
-
-    console.log("Busy Slots:", busy);
-
-    if (result.length > 0) {
-      current.availability = "NO";
-      current.feedback = `Booking was rejected due to conflicting booking . ${current.name} is reserved between ${busyTimes} .`;
-      current.status = "Rejected";
-      current.availability = "YES";
-      await current.save();
-      return res.status(200).json({ success: true, available: false });
-    } else {
-      current.availability = "YES";
-      current.status = "available";
-      await current.save();
-      return res.status(200).json({ success: true, available: true });
-    }
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, message: "Server error" });
-  }
-});
-
-managerRouter.get("/commonSpace/approve/:id", async (req, res) => {
-  const id = req.params.id;
-  console.log(id);
-
-  try {
-    const b = await CommonSpaces.findById(id)
-      .populate("bookedBy")
-      .populate("community");
-
-    if (!b) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Booking not found" });
-    }
-
-    b.status = "available";
-    b.availability = "NO";
-    
-
-    if (isNaN(totalAmount)) {
-      console.error("Calculated totalAmount is NaN. Check rent and noOfHours.");
-      return res
-        .status(500)
-        .json({ success: false, message: "Error calculating payment amount." });
-    }
-
-    
-
-    b.bookedBy.notifications.push({
-      belongs: "CS",
-      n: `You have successfully booked the ${b.name} from ${b.from} to ${b.to}.`,
-    });
-
-    await b.save();
-    await b.bookedBy.save();
-
-    res.status(200).json({ success: true });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, message: "Internal server error" });
-  }
-});
 
 managerRouter.post("/commonSpace/reject/:id", async (req, res) => {
   const id = req.params.id;
@@ -298,71 +170,57 @@ managerRouter.post("/commonSpace/reject/:id", async (req, res) => {
 managerRouter.post("/spaces", async (req, res) => {
   try {
     // Validate required fields
-    const { spaceType, spaceName, bookingRent , maxHours } = req.body;
+    const { spaceType, spaceName, bookingRent } = req.body;
     console.log("req.body : ", req.body);
 
     if (!spaceType || !spaceName) {
+      console.log("no space name or type");
+      
       return res.status(400).json({
         success: false,
         message: "Space type and name are required",
       });
     }
 
-    // Check if user has community access
-    if (!req.user || !req.user.community) {
-      return res.status(401).json({
-        success: false,
-        message: "Unauthorized access",
-      });
-    }
 
-    const community = await Community.findById(req.user.community);
-    if (!community) {
-      return res.status(404).json({
-        success: false,
-        message: "Community not found",
-      });
-    }
+    // if (!req.user || !req.user.community) {
+    //   return res.status(401).json({
+    //     success: false,
+    //     message: "Unauthorized access",
+    //   });
+    // }
+
 
     // Check for duplicate space names
-    const existingSpace = community.commonSpaces.find(
-      (space) => space.name.toLowerCase() === spaceName.toLowerCase()
-    );
-    if (existingSpace) {
+    const existingSpace = await Amenity.find({spaceName,community:'68f74d38c06f8c9e8ab68c80'})
+    if (existingSpace.length > 0) {
+      console.log("there is already existing",existingSpace);
+      
       return res.status(400).json({
         success: false,
         message: "A space with this name already exists",
       });
     }
 
-    const newSpace = {
+    const newSpace = await Amenity.create({
       type: spaceType.trim(),
       name: spaceName.trim(),
       bookable:
         req.body.bookable !== undefined ? Boolean(req.body.bookable) : true,
-      maxHours: req.body.maxHours
-        ? Math.max(1, parseInt(req.body.maxHours))
-        : null,
       bookingRules: req.body.bookingRules ? req.body.bookingRules.trim() : "",
       rent: bookingRent,
+      community: new mongoose.Types.ObjectId("68f74d38c06f8c9e8ab68c80"),
       createdAt: new Date(),
       updatedAt: new Date(),
-    };
+    })
 
     console.log("new space:",newSpace);
     
 
-    community.commonSpaces.push(newSpace);
-    await community.save();
-
-    // get space id of the newly added space
-    const addedSpace =
-      community.commonSpaces[community.commonSpaces.length - 1];
-
     res.status(201).json({
       success: true,
       message: "Space created successfully",
-      space: addedSpace,
+      space: newSpace,
     });
   } catch (error) {
     console.error("Error creating space:", error);
@@ -386,6 +244,8 @@ managerRouter.put("/spaces/:id", async (req, res) => {
       });
     }
 
+    const space = await Amenity.findById(spaceId)
+
     // if (!req.user || !req.user.community) {
     //   return res.status(401).json({
     //     success: false,
@@ -393,30 +253,11 @@ managerRouter.put("/spaces/:id", async (req, res) => {
     //   });
     // }
 
-    const community = await Community.findById('68eb31f33b437b684cabfa94');
-    if (!community) {
-      return res.status(404).json({
-        success: false,
-        message: "Community not found",
-      });
-    }
 
-    const spaceIndex = community.commonSpaces.findIndex(
-      (s) => s._id.toString() === spaceId
-    );
-
-    if (spaceIndex === -1) {
-      return res.status(404).json({
-        success: false,
-        message: "Space not found",
-      });
-    }
-
-    // Validate required fields if provided
-    const { type, name } = req.body;
+    const { spaceType, spaceName , bookingRules, bookable, bookingRent } = req.body;
     if (
-      (type !== undefined && !type.trim()) ||
-      (name !== undefined && !name.trim())
+      (spaceType !== undefined && !spaceType.trim()) ||
+      (spaceName !== undefined && !spaceName.trim())
     ) {
       return res.status(400).json({
         success: false,
@@ -424,14 +265,10 @@ managerRouter.put("/spaces/:id", async (req, res) => {
       });
     }
 
-    // Check for duplicate names (excluding current space)
-    if (name && name.trim()) {
-      const duplicateSpace = community.commonSpaces.find(
-        (space, index) =>
-          index !== spaceIndex &&
-          space.name.toLowerCase() === name.trim().toLowerCase()
-      );
-      if (duplicateSpace) {
+
+    if (spaceName && spaceName.trim()) {
+      const duplicateSpace = await Amenity.find({spaceName , community:'68f74d38c06f8c9e8ab68c80'})
+      if (duplicateSpace[0]) {
         return res.status(400).json({
           success: false,
           message: "A space with this name already exists",
@@ -439,39 +276,21 @@ managerRouter.put("/spaces/:id", async (req, res) => {
       }
     }
 
-    // Prepare update data
-    const updateData = {
-      updatedAt: new Date(),
-    };
 
-    if (type !== undefined) updateData.type = type.trim();
-    if (name !== undefined) updateData.name = name.trim();
-    if (req.body.bookable !== undefined)
-      updateData.bookable = Boolean(req.body.bookable);
-    if (req.body.maxHours !== undefined) {
-      updateData.maxHours = req.body.maxHours
-        ? Math.max(1, parseInt(req.body.maxHours))
-        : null;
-    }
-    if (req.body.bookingRules !== undefined) {
-      updateData.bookingRules = req.body.bookingRules
-        ? req.body.bookingRules.trim()
-        : "";
-    }
+    space.name = spaceName;
+    space.type = spaceType;
+    space.bookingRules = bookingRules;
+    space.bookable = bookable;
+    space.rent = bookingRent;
+    space.updatedAt = new Date();
 
-    if (req.body.bookingRent) {
-      updateData.rent = req.body.bookingRent ? req.body.bookingRent : "";
-    }
-
-    // Update the space
-    Object.assign(community.commonSpaces[spaceIndex], updateData);
-
-    await community.save();
+    await space.save();
+    
 
     res.json({
       success: true,
       message: "Space updated successfully",
-      space: community.commonSpaces[spaceIndex],
+      space
     });
   } catch (error) {
     console.error("Error updating space:", error);
@@ -503,50 +322,21 @@ managerRouter.delete("/spaces/:id", async (req, res) => {
     //   });
     // }
 
-    const community = await Community.findById('68eb31f33b437b684cabfa94');
-    if (!community) {
+
+
+    const space = await Amenity.findByIdAndDelete(spaceId);
+    if (!space) {
       return res.status(404).json({
         success: false,
         message: "Community not found",
       });
     }
 
-    const originalCount = community.commonSpaces.length;
-
-    // Find the space to be deleted for additional checks
-    console.log(spaceId);
-
-    const spaceToDelete = community.commonSpaces.find(
-      (space) => space._id.toString() === spaceId
-    );
-
-    if (!spaceToDelete) {
-      return res.status(404).json({
-        success: false,
-        message: "Common space not found",
-      });
-    }
-
-    community.commonSpaces = community.commonSpaces.filter(
-      (space) => space._id.toString() !== spaceId
-    );
-
-    if (community.commonSpaces.length === originalCount) {
-      return res.status(500).json({
-        success: false,
-        message: "Failed to delete space",
-      });
-    }
-
-    await community.save();
-
     res.json({
       success: true,
       message: "Common space deleted successfully",
       deletedSpace: {
-        id: spaceId,
-        name: spaceToDelete.name,
-        type: spaceToDelete.type,
+        id: spaceId
       },
     });
   } catch (error) {
@@ -971,6 +761,7 @@ managerRouter.get("/subscription-status", async (req, res) => {
   }
 });
 import fs from "fs";
+import Amenity from "../models/Amenities.js";
 
 const storage2 = multer.diskStorage({
   destination: (req, file, cb) => {

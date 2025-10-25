@@ -187,7 +187,8 @@ export const cancelUserBooking = createAsyncThunk(
     }
   }
 );
-  
+
+
 
 
 const CommonSpaceSlice = createSlice({
@@ -230,6 +231,11 @@ const CommonSpaceSlice = createSlice({
             bookingToUpdate.payment.paymentStatus = 'Processing...';
             state.loading = true;
         }
+    },
+
+    optimisticDeleteSpace : (state,action) => {
+      state.avalaibleSpaces = state.avalaibleSpaces.filter(b => b._id !== action.payload.id )
+      state.loading = false
     },
 
     // A cleanup reducer for failed optimistic requests
@@ -380,6 +386,6 @@ const CommonSpaceSlice = createSlice({
 });
 
 
-export const { optimisticAddBooking, optimisticCancelBooking, optimisticProceedPayment, removeOptimisticBooking, revertBookingStatus } = CommonSpaceSlice.actions;
+export const { optimisticDeleteSpace, optimisticAddBooking, optimisticCancelBooking, optimisticProceedPayment, removeOptimisticBooking, revertBookingStatus } = CommonSpaceSlice.actions;
 
 export default CommonSpaceSlice.reducer;
