@@ -17,20 +17,34 @@ export const CommonSpace = () => {
     const [rejectionReason, setRejectionReason] = useState('');
     const [BookingDetailsopen, setBookingDetailsOpen] = useState(false);
     const [currentBooking, setCurrentBooking] = useState({});
+    const [toggleRent,setToggleRent] = useState(false);
 
-    useEffect(() => {
-        dispatch(fetchDataforManager());
-    }, [dispatch]);
-
-    const { register, handleSubmit, reset, setValue } = useForm({
+    const { register, handleSubmit, reset, setValue , watch } = useForm({
         defaultValues: {
             spaceType: '',
             spaceName: '',
             bookable: 'true',
             bookingRent: '',
             bookingRules: '',
+            Type : ''
         },
     });
+
+    useEffect(() => {
+        dispatch(fetchDataforManager());
+    }, [dispatch]);
+
+    const Type = watch('Type');
+
+    useEffect(()=>{
+        if(Type==='Slot'){
+            setToggleRent(false)
+        }else if(Type === 'Subscription'){
+            setToggleRent(true);
+        }
+    },[watch('Type')])
+
+    
 
     const handleToggleManagement = () => setIsManagementVisible((prev) => !prev);
 
@@ -143,6 +157,16 @@ export const CommonSpace = () => {
                                             </div>
                                         </div>
 
+                                        <div className="form-group">
+                                            <label htmlFor="Type">Space booking Type</label>
+                                            <select className="form-control" id="Type" {...register('Type', { required: true })}>
+                                                    <option value="">Select Type</option>
+                                                    <option value="Slot">Slots based</option>
+                                                    <option value="Subscription">Subscription based</option>
+                                                    
+                                            </select>
+                                        </div>
+
                                         <div className="form-row">
                                             <div className="form-group">
                                                 <label htmlFor="bookable">Bookable</label>
@@ -152,7 +176,7 @@ export const CommonSpace = () => {
                                                 </select>
                                             </div>
                                             <div className="form-group">
-                                                <label htmlFor="bookingRent">Rent (per hour)</label>
+                                                <label htmlFor="bookingRent">{toggleRent ? 'subscription fee :' : 'Rent (per hour)' }</label>
                                                 <input type="text" className="form-control" id="bookingRent" {...register('bookingRent')} />
                                             </div>
                                         </div>
@@ -161,6 +185,7 @@ export const CommonSpace = () => {
                                             <label htmlFor="bookingRules">Booking Rules</label>
                                             <textarea className="form-control" id="bookingRules" {...register('bookingRules')} rows="3"></textarea>
                                         </div>
+
 
                                         <div className="form-actions">
                                             <button type="button" className="btn btn-secondary" onClick={() => setIsSpaceFormOpen(false)}>

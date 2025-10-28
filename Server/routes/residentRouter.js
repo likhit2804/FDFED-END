@@ -188,11 +188,12 @@ residentRouter.get("/commonSpace", async (req, res) => {
   try {
     const bookings = await CommonSpaces.find({
       bookedBy: "68eb3a9eeea837fdb79aba39",
-    }).populate('payment').sort({ createdAt: -1 });
+    })
+      .populate("payment")
+      .sort({ createdAt: -1 });
     const spaces = await Amenity.find({
-      community :"68f74d38c06f8c9e8ab68c80"
-  });
-
+      community: "68f74d38c06f8c9e8ab68c80",
+    });
 
     return res.json({
       success: true,
@@ -233,24 +234,44 @@ residentRouter.post("/commonSpace/:id", async (req, res) => {
 residentRouter.post("/commonSpace", async (req, res) => {
   try {
     const uid = "68eb3a9eeea837fdb79aba39";
-    const { facility, fid, purpose, date, from, to } = req.body;
+    console.log(req.body);
+
+    const {
+      facility,
+      fid,
+      purpose,
+      Date: dateString,
+      from,
+      to,
+      Type,
+    } = req.body.newBooking;
+    const { bill, amount, paymentMethod } = req.body.data;
 
     const Space = await Amenity.findById(fid);
 
-    if (!facility || !date || !from || !to) {
-      return res.json({ success: false, message: "Facility, date, and time are required fields." });
+    if (!facility || !dateString) {
+      return res.json({
+        success: false,
+        message: "Facility, date, and time are required fields.",
+      });
     }
 
-    const bookingDate = new Date(date);
+    // Use the new variable name here
+    const bookingDate = new Date(dateString);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
     if (bookingDate < today) {
-      return res.json({ success: false, message: "Cannot book for past dates." });
+      return res.json({
+        success: false,
+        message: "Cannot book for past dates.",
+      });
     }
 
     const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
-    if (!timeRegex.test(from) || !timeRegex.test(to)) {
+    if ((!timeRegex.test(from) || !timeRegex.test(to)) && Type === 'Slot' ) {
+      console.log("invalid time format");
+
       return res.json({ success: false, message: "Invalid time format." });
     }
 
@@ -259,17 +280,22 @@ residentRouter.post("/commonSpace", async (req, res) => {
     const fromMinutes = fromHour * 60 + fromMin;
     const toMinutes = toHour * 60 + toMin;
 
-    if (toMinutes <= fromMinutes) {
-      return res.json({ success: false, message: "End time must be after start time." });
+    if (toMinutes && fromMinutes && toMinutes <= fromMinutes) {
+      return res.json({
+        success: false,
+        message: "End time must be after start time.",
+      });
     }
 
     const b = await CommonSpaces.create({
       name: facility,
       description: purpose || "No purpose specified",
-      Date: new Date(date),
+      Date: new Date(dateString),
       from,
       to,
-      status: "Approved",
+      Type,
+      amount,
+      status: Type === "Slot" ? "Booked" : "Active",
       availability: null,
       bookedBy: uid,
       community: new mongoose.Types.ObjectId("68f74d38c06f8c9e8ab68c80"),
@@ -279,53 +305,47 @@ residentRouter.post("/commonSpace", async (req, res) => {
     b.ID = uniqueId;
     await b.save();
 
-    const bookingDateStr = new Date(date).toISOString().split("T")[0];
-    const startHour = parseInt(from.split(":")[0]);
-    const endHour = parseInt(to.split(":")[0]);
+    if (Type === "Slot") {
+      const bookingDateStr = new Date(dateString).toISOString().split("T")[0];
+      const requestTimeSlots = req.body.newBooking.timeSlots;
 
-    const timeSlots = [];
-    for (let i = startHour; i < endHour; i++) {
-      timeSlots.push(String(i).padStart(2, "0") + ":00");
+      if (requestTimeSlots.length === 0) {
+        return res.json({
+          success: false,
+          message: "Selected time range is invalid.",
+        });
+      }
+
+      let existingBooking = Space.bookedSlots.find(
+        (b) => new Date(b.date).toISOString().split("T")[0] === bookingDateStr
+      );
+
+      if (existingBooking) {
+        const newSlots = requestTimeSlots.filter(
+          (slot) => !existingBooking.slots.includes(slot)
+        );
+        existingBooking.slots.push(...newSlots);
+      } else {
+        // Use the new variable name here
+        Space.bookedSlots.push({
+          date: new Date(dateString),
+          slots: requestTimeSlots,
+        });
+      }
+
+      await Space.save();
     }
-
-    if (timeSlots.length === 0) {
-      return res.json({ success: false, message: "Selected time range is invalid." });
-    }
-
-    let existingBooking = Space.bookedSlots.find(
-      (b) => new Date(b.date).toISOString().split("T")[0] === bookingDateStr
-    );
-
-    if (existingBooking) {
-      const newSlots = timeSlots.filter((slot) => !existingBooking.slots.includes(slot));
-      existingBooking.slots.push(...newSlots);
-    } else {
-      Space.bookedSlots.push({ date: new Date(date), slots: timeSlots });
-    }
-
-    await Space.save();
-
-    b.paymentStatus = "Pending";
-    b.status = "Pending Payment";
 
     uniqueId = generateCustomID(b._id.toString(), "PY", null);
-
-    const fromTime = new Date(`2000/01/01 ${b.from}`);
-    const toTime = new Date(`2000/01/01 ${b.to}`);
-    const diffMs = toTime - fromTime;
-    const noOfHours = diffMs / (1000 * 60 * 60);
-    const rent = parseInt(Space.rent);
-    const totalAmount = rent * noOfHours;
 
     const payment = await Payment.create({
       title: b._id,
       sender: b.bookedBy._id,
       receiver: new mongoose.Types.ObjectId("68eb31f33b437b684cabfa92"),
-      amount: totalAmount,
-      paymentDeadline: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
-      paymentDate: null,
-      paymentMethod: "None",
-      status: "Pending",
+      amount: amount,
+      paymentDate: new Date(),
+      paymentMethod: paymentMethod,
+      status: "Completed",
       remarks: null,
       ID: uniqueId,
       belongTo: "CommonSpaces",
@@ -333,6 +353,7 @@ residentRouter.post("/commonSpace", async (req, res) => {
       belongToId: b._id,
     });
 
+    b.paymentstatus = "Paid";
     b.payment = payment._id;
     await b.save();
 
@@ -344,47 +365,90 @@ residentRouter.post("/commonSpace", async (req, res) => {
 
     await b.populate("payment");
 
-    return res.json({ success: true, message: "Booking request submitted successfully!", space: b });
+    return res.json({
+      success: true,
+      message: "Booking request submitted successfully!",
+      space: b,
+    });
   } catch (error) {
     console.error("Error creating booking:", error);
-    res.json({ success: false, message: "Something went wrong. Please try again." });
+    res.json({
+      success: false,
+      message: "Something went wrong. Please try again.",
+    });
   }
 });
-
-
 
 residentRouter.put("/booking/cancel/:id", async (req, res) => {
   try {
     const bookingId = req.params.id;
+    const residentId = "68eb3a9eeea837fdb79aba39";
 
     const booking = await CommonSpaces.findOne({
       _id: bookingId,
-      bookedBy: '68eb3a9eeea837fdb79aba39', 
+      bookedBy: residentId,
     });
 
     if (!booking) {
-      return res
-        .status(404)
-        .json({ error: "Booking not found or cannot be cancelled" });
+      return res.status(404).json({ error: "Booking not found or unauthorized cancellation." });
     }
 
+    const bookingDate = new Date(booking.Date);
+    const now = new Date();
+
+    if (bookingDate < now) {
+      return res.status(400).json({ error: "Cannot cancel past or ongoing bookings." });
+    }
+
+    const diffHours = Math.abs((bookingDate - now) / (1000 * 60 * 60));
+    const amount = Number(booking?.amount || 0);
+    console.log("booking : ",booking);
+    
+
+    if (isNaN(amount)) {
+      return res.status(400).json({ error: "Invalid booking amount." });
+    }
+
+    console.log(diffHours);
+    
+
+
+    let refundAmount = booking?.amount;
+    if (diffHours >= 48){ 
+     refundAmount = amount;console.log("greater than 48",refundAmount);}
+    else if (diffHours >= 24) {refundAmount = amount * 0.75;console.log("greater than 24",refundAmount);}
+    else if (diffHours >= 4) {refundAmount = amount * 0.25;console.log("greater than 4",refundAmount);}
+    else {console.log("greater than 0");refundAmount = 0;}
+
+    const refundId = generateCustomID(String(booking._id), "RF", null);
+    console.log("After block : ",refundAmount);
+    
+
     await CommonSpaces.findByIdAndUpdate(bookingId, {
+      refundId,
       status: "Cancelled",
-      cancelledBy: '68eb3a9eeea837fdb79aba39',
+      cancelledBy: residentId,
       cancelledAt: new Date(),
       cancellationReason: "Cancelled by resident",
+      refundAmount: Math.round(refundAmount),
     });
 
-    await Resident.findByIdAndUpdate('68eb3a9eeea837fdb79aba39', {
+    await Resident.findByIdAndUpdate(residentId, {
       $pull: { bookedCommonSpaces: bookingId },
     });
 
-    return res.json({ success:true,result: "Booking cancelled successfully" });
+    return res.json({
+      success: true,
+      message: "Booking cancelled successfully",
+      refundAmount: Math.round(refundAmount),
+      refundId,
+    });
   } catch (error) {
     console.error("Error cancelling booking:", error);
-    res.status(500).json({ error: "Server error" });
+    return res.status(500).json({ error: "Internal Server Error" });
   }
 });
+
 
 residentRouter.get("/api/facilities", async (req, res) => {
   try {
@@ -754,61 +818,6 @@ residentRouter.get("/payment/:paymentId", async (req, res) => {
   } catch (error) {
     console.error("Error fetching receipt:", error);
     res.status(500).json({ error: "Failed to fetch receipt" });
-  }
-});
-
-residentRouter.post("/payment/post", async (req, res) => {
-  try {
-    const {
-      paymentId,
-      bill,
-      amount,
-      paymentMethod,
-      cardNumber,
-      expiryDate,
-      cvv,
-    } = req.body;
-
-    console.log(req.body);
-    
-
-    const payment = await Payment.findById(paymentId).populate("");
-    if (!payment) {
-      console.log("Payment not found for ID:", paymentId);
-      return res.json ({ success: false, message: "Payment not found." });
-      
-    }
-
-    payment.status = "Completed";
-    payment.paymentMethod = paymentMethod;
-    payment.amount = amount;
-
-    payment.paymentDate = new Date();
-
-    await payment.save();
-
-    const type = payment.belongTo;
-
-    let ob = null;
-
-    if (type === "Issue") {
-      ob = await Issue.findById(payment.belongToId);
-      ob.status = "Resolved";
-    } else if (type === "CommonSpaces") {
-      ob = await CommonSpaces.findById(payment.belongToId);
-      ob.status = "Booked";
-    }
-
-    ob.paymentStatus = "Completed";
-    ob.payment = payment._id;
-    await ob.save();
-
-    console.log("Payment updated successfully:", payment);
-
-    res.json({Id:ob._id ,success:true,message:"Payment Successful"})
-  } catch (error) {
-    console.error("Error in payment processing:", error);
-    return res.json({success:false,message:"Error Processing Payment"})
   }
 });
 

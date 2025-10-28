@@ -5,7 +5,6 @@ import { ToastContainer, toast } from 'react-toastify';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   fetchuserBookings,
-  sendUserRequest,
   cancelUserBooking,
   optimisticAddBooking,
   optimisticCancelBooking,
@@ -21,44 +20,6 @@ const formatTime = (hour) => {
   return `${hour - 12}:00 PM`;
 };
 
-const PaymentTimer = ({ bookingId, onTimeout, booking }) => {
-  const [remaining, setRemaining] = useState(0);
-
-  useEffect(() => {
-    const key = `booking_timer_${bookingId}`;
-    let endTime = localStorage.getItem(key);
-    if (!endTime) {
-      endTime = Date.now() + 10 * 60 * 1000;
-      localStorage.setItem(key, endTime);
-    }
-    const intervalId = setInterval(() => {
-      const newRemaining = endTime - Date.now();
-      if (newRemaining <= 1000) {
-        clearInterval(intervalId);
-        localStorage.removeItem(key);
-        onTimeout(bookingId);
-        setRemaining(0);
-      } else {
-        setRemaining(newRemaining);
-      }
-    }, 1000);
-    return () => clearInterval(intervalId);
-  }, [bookingId, onTimeout]);
-
-  const minutes = Math.floor((remaining / 1000 / 60) % 60);
-  const seconds = Math.floor((remaining / 1000) % 60);
-  if (booking?.payment?.paymentStatus === 'Paid') {
-    localStorage.removeItem(`booking_timer_${bookingId}`);
-    return null;
-  }
-  if (remaining <= 0) return null;
-  return (
-    <div className="timer-box">
-      Make your payment in {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
-    </div>
-  );
-};
-
 export const CommonSpaceBooking = () => {
   const dispatch = useDispatch();
   const { Bookings: bookings, loading: bookingLoading, avalaibleSpaces } = useSelector((state) => state.CommonSpace);
@@ -67,18 +28,21 @@ export const CommonSpaceBooking = () => {
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [selectedFacility, setSelectedFacility] = useState(null);
   const [selectedSlots, setSelectedSlots] = useState([]);
-  const [isDateEnabled, setIsDateEnabled] = useState(false);
+  const [isDateEnabled, setIsDateEnabled] = useState(true);
   const [isSlotEnabled, setIsSlotEnabled] = useState(false);
   const [availableSlots, setAvailableSlots] = useState([]);
   const [onClose, setonClose] = useState(false);
   const [paymentDetails, setpaymentDetails] = useState({});
   const [formSubmitting, setFormSubmitting] = useState(false);
+  const [newBooking, setNewBooking] = useState({});
+  const [isSubscriptionBased, setIsSubscriptionBased] = useState(false);
 
-  const { register, handleSubmit, watch, reset } = useForm({
+  const { register, handleSubmit, setValue, watch, reset } = useForm({
     defaultValues: {
       facility: '',
       date: new Date().toISOString().split('T')[0],
       purpose: '',
+      Type: ''
     },
   });
 
@@ -90,19 +54,8 @@ export const CommonSpaceBooking = () => {
   }, [dispatch]);
 
   useEffect(() => {
-    bookings.forEach((b) => {
-      if (['Pending', 'Pending Payment'].includes(b?.status) && b.payment?.amount > 0 && b._id) {
-        const timerKey = `booking_timer_${b._id}`;
-        if (!localStorage.getItem(timerKey)) {
-          localStorage.setItem(timerKey, Date.now() + 10 * 60 * 1000);
-        }
-      }
-    });
-  }, [bookings]);
-
-  useEffect(() => {
     const date = watch('date');
-    if (selectedFacility && date) {
+    if (selectedFacility && date && selectedFacility.Type === 'Slot') {
       const bookedForDate = selectedFacility.bookedSlots?.find((b) => new Date(b.date).toISOString().split('T')[0] === date);
       const bookedSlots = bookedForDate?.slots || [];
       const allSlots = Array.from({ length: 22 - 6 }, (_, i) => String(i + 6).padStart(2, '0') + ':00');
@@ -115,11 +68,12 @@ export const CommonSpaceBooking = () => {
       setSelectedSlots([]);
       setIsSlotEnabled(false);
     }
+    setValue('Type', selectedFacility?.Type)
   }, [selectedFacility, watch('date')]);
 
   useEffect(() => {
     const latestBookingWithPayment = bookings
-      ?.filter((b) => !b.isOptimistic && b.payment)
+      ?.filter((b) => b?.payment)
       ?.sort((a, b) => new Date(b.createdAt || '1970/01/01') - new Date(a.createdAt || '1970/01/01'))?.[0];
     if (latestBookingWithPayment && latestBookingWithPayment.payment.amount > 0 && latestBookingWithPayment.payment.paymentStatus !== 'Paid') {
       setpaymentDetails(latestBookingWithPayment.payment);
@@ -139,14 +93,35 @@ export const CommonSpaceBooking = () => {
       setAvailableSlots([]);
       setIsDateEnabled(false);
       setIsSlotEnabled(false);
+      setIsSubscriptionBased(false);
     }
   }, [bookingLoading]);
+
+  const clearBookingFormState = () => {
+    setNewBooking({});
+    reset();
+    setSelectedFacility(null);
+    setSelectedSlots([]);
+    setAvailableSlots([]);
+    setIsSlotEnabled(false);
+    setIsBookingFormOpen(false);
+    setIsSubscriptionBased(false);
+  }
 
   const handleFacilityChange = (e) => {
     const facilityName = e.target.value;
     const selected = avalaibleSpaces?.find((s) => s.name === facilityName);
     setSelectedFacility(selected);
-    setIsDateEnabled(!!facilityName);
+
+    if (selected) {
+      const isSub = selected.Type !== 'Slot';
+      setIsSubscriptionBased(isSub);
+      setIsDateEnabled(true);
+    } else {
+      setIsSubscriptionBased(false);
+      setIsDateEnabled(false);
+    }
+
     setSelectedSlots([]);
     setAvailableSlots([]);
     setIsSlotEnabled(false);
@@ -182,37 +157,52 @@ export const CommonSpaceBooking = () => {
   };
 
   const onSubmit = (data) => {
-    if (selectedSlots.length === 0) {
+    if (selectedFacility.Type === 'Slot' && selectedSlots.length === 0) {
       toast.error('Please select at least one time slot.');
       return;
     }
-    const fromTime = selectedSlots[0];
-    const toHour = parseInt(selectedSlots[selectedSlots.length - 1].split(':')[0]) + 1;
-    const toTime = String(toHour).padStart(2, '0') + ':00';
-    const newBooking = {
+
+    let fromTime = 'N/A';
+    let toTime = 'N/A';
+    let amount = selectedFacility.rent;
+    let timeSlots = [];
+
+    if (selectedFacility.Type === 'Slot') {
+      fromTime = selectedSlots[0];
+      const toHour = parseInt(selectedSlots[selectedSlots.length - 1].split(':')[0]) + 1;
+      toTime = String(toHour).padStart(2, '0') + ':00';
+      timeSlots = selectedSlots;
+      amount = selectedSlots.length * selectedFacility.rent;
+    }
+
+    // For Subscription type, we assume a base amount is already set as 'rent' and slots are N/A.
+
+    const newBookingData = {
       ...data,
       fid: selectedFacility._id,
+      name: selectedFacility.name,
+      Type: selectedFacility.Type,
       from: fromTime,
       to: toTime,
-      timeSlots: selectedSlots,
+      timeSlots: timeSlots,
       Date: data.date,
     };
-    const requestId = 'optimistic-' + Date.now();
-    setFormSubmitting(true);
-    dispatch(optimisticAddBooking({ bookingData: newBooking, requestId }));
-    dispatch(sendUserRequest({ bookingData: newBooking, requestId }))
-      .unwrap()
-      .then(() => {
-        toast.success('Booking request submitted successfully!');
-      })
-      .catch((error) => {
-        dispatch(removeOptimisticBooking({ requestId }));
-        toast.error(error.message || 'Booking failed.');
-      });
+
+    setNewBooking(newBookingData);
+
+    const payment = {
+      belongTo: selectedFacility.Type === 'Slot' ? "Common Space Booking" : "Common Space Subscription",
+      amount: amount
+    }
+
+    setpaymentDetails(payment);
+    setIsBookingFormOpen(false);
+    setonClose(true);
   };
 
   const cancelBooking = (data) => {
-    const originalStatus = data.status;
+    if(window.confirm("Do you want to cancel booking")){
+      const originalStatus = data.status;
     dispatch(optimisticCancelBooking({ bookingId: data._id, originalStatus }));
     dispatch(cancelUserBooking({ bookingId: data._id, originalStatus }))
       .unwrap()
@@ -220,8 +210,10 @@ export const CommonSpaceBooking = () => {
         toast.success('Booking cancelled successfully!');
       })
       .catch((error) => {
-        toast.error(error.error?.message || 'Failed to cancel booking.');
+        
+        toast.error(error.error.error || 'Failed to cancel booking.');
       });
+    }
   };
 
   const showDetails = (booking) => {
@@ -232,7 +224,7 @@ export const CommonSpaceBooking = () => {
         booking.status === 'Approved' || booking.payment?.paymentStatus === 'Paid'
           ? 'Paid'
           : booking.payment?.paymentStatus || 'Pending',
-      amount: booking.payment?.amount || 500,
+      amount: booking.payment?.amount || 0,
       created: new Date(booking.createdAt || Date.now()).toLocaleDateString('en-IN'),
     };
     setSelectedBooking(mockDetailBooking);
@@ -254,7 +246,7 @@ export const CommonSpaceBooking = () => {
   };
 
   const isCancelled = mockDetailBooking.isCancelled || false;
-  const paymentRequired = mockDetailBooking.paymentStatus !== 'Completed';
+  const paymentRequired = mockDetailBooking.paymentStatus !== 'Completed' && mockDetailBooking.amount > 0;
 
   return (
     <>
@@ -279,7 +271,7 @@ export const CommonSpaceBooking = () => {
         </div>
         <div className="stat-card" style={{ borderLeftColor: 'blue' }}>
           <p className="card-label">Total Facilities</p>
-          <h2 className="card-value text-primary">10</h2>
+          <h2 className="card-value text-primary">{avalaibleSpaces.length}</h2>
         </div>
       </div>
 
@@ -297,13 +289,10 @@ export const CommonSpaceBooking = () => {
               .map((b) => (
                 <div key={b?._id} className={`booking-card ${b?.status || ''}`}>
                   <div className="booking-card-header">
-                    <span className="booking-id">#{b?._id?.slice(-6)}</span>
+                    <span className="booking-id">#{b?._id}</span>
                     <span className={`status-badge status-${b?.status || ''}`}>{b?.status || 'Unknown'}</span>
                   </div>
                   <div className="booking-details">
-                    {['Pending', 'Pending Payment'].includes(b?.status) && b.payment?.amount > 0 && b._id && (
-                      <PaymentTimer bookingId={b._id} booking={b} onTimeout={(id) => cancelBooking(b)} />
-                    )}
                     <div className="booking-detail">
                       <span className="detail-label">Facility:</span>
                       <span className="detail-value">{b?.name || '-'}</span>
@@ -315,10 +304,23 @@ export const CommonSpaceBooking = () => {
                       </span>
                     </div>
                     <div className="booking-detail">
-                      <span className="detail-label">Time:</span>
-                      <span className="detail-value">
-                        {b?.from || '-'} - {b?.to || '-'}
-                      </span>
+                      {
+                        b?.status === "Active" ? (
+                          <>
+                            <span className="detail-label">Valid till:</span>
+                            <span className="detail-value">
+                              {new Date(new Date(b.Date).setMonth(new Date(b.Date).getMonth() + 1)).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="detail-label">Time:</span>
+                            <span className="detail-value">
+                              {b?.from || '-'} - {b?.to || '-'}
+                            </span>
+                          </>
+                        )
+                      }
                     </div>
                     {b?.purpose && (
                       <div className="booking-detail">
@@ -326,13 +328,12 @@ export const CommonSpaceBooking = () => {
                         <span className="detail-value">{b.purpose}</span>
                       </div>
                     )}
-                    
                   </div>
                   <div className="booking-actions">
                     <button className="action-btn view" onClick={() => showDetails(b)}>
                       <i className="bi bi-eye"></i> View Details
                     </button>
-                    {b?.status !== 'Cancelled' && (
+                    {b?.status !== 'Cancelled' && b?.Type=== "Slot" && (
                       <button className="action-btn cancel" onClick={() => cancelBooking(b)}>
                         <i className="bi bi-x-circle"></i>Cancel
                       </button>
@@ -368,8 +369,10 @@ export const CommonSpaceBooking = () => {
               </button>
             </div>
             <form onSubmit={handleSubmit(onSubmit)}>
-              <div className="A">
-                <div>
+              <div className={`booking-form-grid A  `}>
+
+                <div className="form-column w-50">
+                  <input className='d-none' {...register('Type', { required: true })} readOnly />
                   <div className="form-group">
                     <label htmlFor="facility">Select Facility *</label>
                     <select id="facility" {...register('facility', { required: true })} onChange={handleFacilityChange}>
@@ -381,14 +384,12 @@ export const CommonSpaceBooking = () => {
                       ))}
                     </select>
                   </div>
+
                   {selectedFacility && (
                     <>
-                      <p id="maxHoursDisplay" style={{ marginTop: '5px', fontWeight: 'bold' }}>
-                        Max Booking: {selectedFacility.maxHours} Hour{selectedFacility.maxHours !== 1 ? 's' : ''}
-                      </p>
-                      <div className="form-group">
+                      <div className="form-group mb-2">
                         <label>Booking Rules</label>
-                        <textarea id="bookingRulesField" rows="4" readOnly value={selectedFacility.rules} placeholder="Select a facility to view booking rules..."></textarea>
+                        <textarea id="bookingRulesField" rows="4" readOnly value={selectedFacility.bookingRules} placeholder="Select a facility to view booking rules..."></textarea>
                       </div>
                     </>
                   )}
@@ -400,7 +401,7 @@ export const CommonSpaceBooking = () => {
                     <label>Purpose (Optional)</label>
                     <textarea id="purpose" rows="3" {...register('purpose')} placeholder="Brief description of the purpose..."></textarea>
                   </div>
-                  <div className="form-actions">
+                  <div className="form-actions mt-3">
                     <button type="button" className="btn btn-secondary" onClick={() => setIsBookingFormOpen(false)}>
                       Cancel
                     </button>
@@ -409,80 +410,108 @@ export const CommonSpaceBooking = () => {
                     </button>
                   </div>
                 </div>
-                <div>
-                  <div className="form-group">
-                    <label>Select Time Slots *</label>
-                    <div className="time-slots-container">
-                      <div className="time-slots-header">
-                        <h4 className="time-slots-title">
-                          <i className="bi bi-clock"></i> Available Time Slots
-                        </h4>
-                        <div className="time-period-info">6:00 AM - 10:00 PM</div>
+
+                <div className="slot-subscription-column w-50">
+                  {isSubscriptionBased ? (
+                    <div className="form-group">
+                      <div className='subscription-content mb-3'>
+                        <p>
+                          <b>Note: </b>Time slots are not required for subscription access. Proceed to submit the booking to initiate payment for the subscription fee.
+                        </p>
                       </div>
-                      <div className="time-slots-grid">
-                        {availableSlots.map((hour) => {
-                          const displayTime = formatTime(parseInt(hour.split(':')[0]));
-                          const isChecked = selectedSlots.includes(hour);
-                          return (
-                            <div key={hour} className={`time-slot ${isChecked ? 'selected' : ''}`}>
-                              <input type="checkbox" value={hour} id={`slot-${hour}`} checked={isChecked} onChange={handleTimeSlotChange} disabled={!isSlotEnabled} />
-                              <label htmlFor={`slot-${hour}`}>{displayTime}</label>
-                            </div>
-                          );
-                        })}
+
+                      <div className="subscription-content-alert">
+                        <p>
+                          <b>Subscription Type:</b> This is a <span className="highlight">monthly subscription</span>.
+                          You'll be able to access and use this amenity throughout  month from the selected date without daily booking.
+                        </p>
+                        <p>
+                          <b>Note:</b> Please check the selected date carefully before submitting. Once submitted, the subscription cannot be canceled or modified.
+                        </p>
                       </div>
+
+                    </div>
+                  ) : (
+                    <>
+                      <div className="form-group">
+                        <label>Select Time Slots *</label>
+                        <div className="time-slots-container">
+                          <div className="time-slots-header">
+                            <h4 className="time-slots-title">
+                              <i className="bi bi-clock"></i> Available Time Slots
+                            </h4>
+                            <div className="time-period-info">6:00 AM - 10:00 PM</div>
+                          </div>
+                          <div className="time-slots-grid">
+                            {availableSlots.map((hour) => {
+                              const displayTime = formatTime(parseInt(hour.split(':')[0]));
+                              const isChecked = selectedSlots.includes(hour);
+                              return (
+                                <div key={hour} className={`time-slot ${isChecked ? 'selected' : ''}`}>
+                                  <input type="checkbox" value={hour} id={`slot-${hour}`} checked={isChecked} onChange={handleTimeSlotChange} disabled={!isSlotEnabled} />
+                                  <label htmlFor={`slot-${hour}`}>{displayTime}</label>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="selected-time-preview">
+                        <strong>Selected Time:</strong> {formatSelectedTime()}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </form >
+          </div >
+        </div >
+      )}
+
+      {
+        isDetailsPopupOpen && (
+          <div className="popup">
+            <div className="popup-content">
+              <div className="popup-header">
+                <h2>Booking Details</h2>
+                <button className="close-btn" onClick={() => setIsDetailsPopupOpen(false)}>✖</button>
+              </div>
+              <div className="popup-body">
+                <div className="details-grid shadow-sm">
+                  <div className="detail-item"><span className="detail-label">Booking ID</span><span className="detail-value">#{mockDetailBooking._id.slice(-6)}</span></div>
+                  <div className="detail-item"><span className="detail-label">Status</span><span className={`status-badge status-${mockDetailBooking.status}`}>{mockDetailBooking.status}</span></div>
+                  <div className="detail-item"><i className="bi bi-building text-primary"></i><div><span className="detail-label">Facility</span><span className="detail-value">{mockDetailBooking.name}</span></div></div>
+                  <div className="detail-item"><i className="bi bi-calendar text-primary"></i><div><span className="detail-label">Date</span><span className="detail-value">{mockDetailBooking.date}</span></div></div>
+                  <div className="detail-item"><i className="bi bi-clock text-primary"></i><div><span className="detail-label">Time</span><span className="detail-value">{mockDetailBooking.from} - {mockDetailBooking.to}</span></div></div>
+                  <div className="detail-item"><i className="bi bi-person-circle text-primary"></i><div><span className="detail-label">Created</span><span className="detail-value">{mockDetailBooking.created}</span></div></div>
+                  <div className="detail-item col-span-2"><i className="bi bi-card-text text-primary"></i><div><span className="detail-label">Purpose</span><span className="detail-value">{mockDetailBooking.purpose}</span></div></div>
+                </div>
+                {isCancelled && (<div className="cancellation-box"><h4>Cancellation Details</h4><div className="detail-item"><span className="detail-label">Reason</span><span className="detail-value">Cancelled by user</span></div><div className="detail-item"><span className="detail-label">Cancelled By</span><span className="detail-value">Resident A</span></div><div className="detail-item"><span className="detail-label">Cancelled On</span><span className="detail-value">2025-10-18</span></div></div>)}
+                {!isCancelled && paymentRequired && (
+                  <div className="payment-section">
+                    <h4>Payment Information</h4>
+                    <div className="payment-grid">
+                      <div className="detail-item"><span className="detail-label">Amount</span><span className="detail-value text-success">₹{mockDetailBooking.amount}</span></div>
+                      <div className="detail-item"><span className="detail-label">Payment Status</span><span className={`detail-value ${mockDetailBooking?.payment?.status === 'Completed' ? 'text-success' : 'text-danger'}`}>{mockDetailBooking.payment?.status}</span></div>
                     </div>
                   </div>
-                  <div className="selected-time-preview">
-                    <strong>Selected Time:</strong> {formatSelectedTime()}
-                  </div>
-                </div>
+                )}
               </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {isDetailsPopupOpen && (
-        <div className="popup">
-          <div className="popup-content">
-            <div className="popup-header">
-              <h2>Booking Details</h2>
-              <button className="close-btn" onClick={() => setIsDetailsPopupOpen(false)}>✖</button>
-            </div>
-            <div className="popup-body">
-              <div className="details-grid shadow-sm">
-                <div className="detail-item"><span className="detail-label">Booking ID</span><span className="detail-value">#{mockDetailBooking._id.slice(-6)}</span></div>
-                <div className="detail-item"><span className="detail-label">Status</span><span className={`status-badge status-${mockDetailBooking.status}`}>{mockDetailBooking.status}</span></div>
-                <div className="detail-item"><i className="bi bi-building text-primary"></i><div><span className="detail-label">Facility</span><span className="detail-value">{mockDetailBooking.name}</span></div></div>
-                <div className="detail-item"><i className="bi bi-calendar text-primary"></i><div><span className="detail-label">Date</span><span className="detail-value">{mockDetailBooking.date}</span></div></div>
-                <div className="detail-item"><i className="bi bi-clock text-primary"></i><div><span className="detail-label">Time</span><span className="detail-value">{mockDetailBooking.from} - {mockDetailBooking.to}</span></div></div>
-                <div className="detail-item"><i className="bi bi-person-circle text-primary"></i><div><span className="detail-label">Created</span><span className="detail-value">{mockDetailBooking.created}</span></div></div>
-                <div className="detail-item col-span-2"><i className="bi bi-card-text text-primary"></i><div><span className="detail-label">Purpose</span><span className="detail-value">{mockDetailBooking.purpose}</span></div></div>
+              <div className="popup-footer">
+                {!isCancelled && paymentRequired && mockDetailBooking?.payment?.status !== 'Completed' && (
+                  <button className="btn btn-success" onClick={() => { setIsDetailsPopupOpen(false); setonClose(true); }}>Proceed to Payment</button>
+                )}
               </div>
-              {isCancelled && (<div className="cancellation-box"><h4>Cancellation Details</h4><div className="detail-item"><span className="detail-label">Reason</span><span className="detail-value">Cancelled by user</span></div><div className="detail-item"><span className="detail-label">Cancelled By</span><span className="detail-value">Resident A</span></div><div className="detail-item"><span className="detail-label">Cancelled On</span><span className="detail-value">2025-10-18</span></div></div>)}
-              {!isCancelled && paymentRequired && (
-                <div className="payment-section">
-                  <h4>Payment Information</h4>
-                  <div className="payment-grid">
-                    <div className="detail-item"><span className="detail-label">Amount</span><span className="detail-value text-success">₹{mockDetailBooking.amount}</span></div>
-                    <div className="detail-item"><span className="detail-label">Payment Status</span><span className={`detail-value ${mockDetailBooking?.payment?.status === 'Completed' ? 'text-success' : 'text-danger'}`}>{mockDetailBooking.payment?.status}</span></div>
-                  </div>
-                </div>
-              )}
-            </div>
-            <div className="popup-footer">
-              {!isCancelled && paymentRequired && mockDetailBooking?.payment?.status !== 'Completed' && (
-                <button className="btn btn-success" onClick={() => { setIsDetailsPopupOpen(false); setonClose(true); }}>Proceed to Payment</button>
-              )}
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
-      {onClose && Object.keys(paymentDetails).length > 0 && (
-        <PaymentPopUp paymentDetails={paymentDetails} setonClose={setonClose} />
-      )}
+      {
+        onClose && Object.keys(paymentDetails).length > 0 && (
+          <PaymentPopUp paymentDetails={paymentDetails} setonClose={setonClose} newBooking={newBooking} clearBookingFormState={clearBookingFormState} />
+        )
+      }
     </>
   );
 };

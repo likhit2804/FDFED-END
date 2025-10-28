@@ -30,20 +30,20 @@ export const fetchuserBookings = createAsyncThunk("commonSpace/fetchBookings", a
 })
 
 
-export const sendUserRequest = createAsyncThunk("commonSpace/sendUserRequest", async ({ bookingData, requestId }, { rejectWithValue }) => {
+export const ConfirmBooking = createAsyncThunk("commonSpace/ConfirmBooking", async ({ data, newBooking, requestId }, { rejectWithValue }) => {
   try {
     const response = await fetch("http://localhost:3000/resident/commonSpace", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(bookingData),
+      body: JSON.stringify({data,newBooking}),
     });
-    const data = await response.json();
+    const d = await response.json();
     if (!response.ok) {
-      return rejectWithValue(data);
+      return rejectWithValue({ error: d, requestId });
     }
-    return { ...data, requestId };
+    return { space: d.space, requestId };
   } catch (error) {
     return rejectWithValue(error.message);
   }
@@ -195,7 +195,6 @@ const CommonSpaceSlice = createSlice({
   name: "CommonSpace",
   initialState,
   reducers: {
-    // --- OPTIMISTIC REDUCERS ---
 
     optimisticAddBooking: (state, action) => {
         const { bookingData, requestId } = action.payload;
@@ -238,7 +237,6 @@ const CommonSpaceSlice = createSlice({
       state.loading = false
     },
 
-    // A cleanup reducer for failed optimistic requests
     removeOptimisticBooking: (state, action) => {
         state.Bookings = state.Bookings.filter(b => b._id !== action.payload.requestId);
         state.loading = false;
@@ -268,17 +266,18 @@ const CommonSpaceSlice = createSlice({
       state.error = action.payload;
     });
 
-    // sendUserRequest - Cleans up optimistic state and adds final state
-    builder.addCase(sendUserRequest.fulfilled, (state, action) => {
+    builder.addCase(ConfirmBooking.fulfilled, (state, action) => {
       const { space, requestId } = action.payload;
       state.Bookings = state.Bookings.filter(b => b._id !== requestId);
-      state.Bookings.push(space);
+      state.Bookings.unshift(space);
+      
+      
       state.loading = false;
-    }).addCase(sendUserRequest.rejected, (state, action) => {
-      const requestId = action.meta.arg.requestId;
+    }).addCase(ConfirmBooking.rejected, (state, action) => {
+      const requestId = action.payload?.requestId || action.meta.arg.requestId;
       state.Bookings = state.Bookings.filter(b => b._id !== requestId);
       state.loading = false;
-      state.error = action.payload;
+      state.error = action.payload.error || action.payload;
     })
 
     builder.addCase(fetchDataforManager.pending, (state) => {
@@ -338,7 +337,6 @@ const CommonSpaceSlice = createSlice({
       state.error = action.payload;
     })
     
-    // cancelUserBooking - Finalize or Revert
     .addCase(cancelUserBooking.fulfilled, (state, action) => {
         const idToCancel = action.payload.id;
         const bookingToUpdate = state.Bookings.find(b => b._id === idToCancel);

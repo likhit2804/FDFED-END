@@ -520,7 +520,6 @@
 }
 
 .form-group {
-  margin-bottom: 1.5rem;
   display: flex;
   flex-direction: column;
 }
@@ -759,6 +758,7 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 15px;
+  margin-bottom: 0;
 }
 
 .form-group {
@@ -777,9 +777,10 @@
 .form-group select,
 .form-group textarea {
   padding: 10px;
-  border: 1px solid #ddd;
+  border: 1px solid #7b7b7b;
   border-radius: var(--border-radius);
   font-size: 0.95rem;
+  box-shadow: var(--shadow-light);
 }
 
 .form-actions {

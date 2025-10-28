@@ -170,7 +170,7 @@ managerRouter.post("/commonSpace/reject/:id", async (req, res) => {
 managerRouter.post("/spaces", async (req, res) => {
   try {
     // Validate required fields
-    const { spaceType, spaceName, bookingRent } = req.body;
+    const { spaceType, spaceName, bookingRent,Type } = req.body;
     console.log("req.body : ", req.body);
 
     if (!spaceType || !spaceName) {
@@ -212,6 +212,7 @@ managerRouter.post("/spaces", async (req, res) => {
       community: new mongoose.Types.ObjectId("68f74d38c06f8c9e8ab68c80"),
       createdAt: new Date(),
       updatedAt: new Date(),
+      Type
     })
 
     console.log("new space:",newSpace);

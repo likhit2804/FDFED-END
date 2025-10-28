@@ -25,6 +25,10 @@ const Amenities = new mongoose.Schema(
       trim: true,
       minlength: 2,
     },
+    Type:{
+      type : String,
+      enum : ["Slot","Subscription"]
+    },
     bookable: { type: Boolean, default: true },
     bookingRules: { type: String },
     rent: Number,
