@@ -1455,51 +1455,270 @@ AdminRouter.put("/api/payments/transaction/:communityId/:transactionId", async (
     });
   }
 });
-// Communities Page Route
-// Add this temporary debug route to see what's actually in your database
-AdminRouter.get("/communities", async (req, res) => {
-  try {
-    const communities = await Community.find().populate("communityManager");
-    const managers = await CommunityManager.find();
 
-    // Calculate statistics using subscriptionStatus field (lowercase values)
-    const totalCommunities = communities.length;
-    const activeCommunities = communities.filter(c => 
-      c.subscriptionStatus && c.subscriptionStatus.toLowerCase() === "active"
-    ).length;
-    const pendingCommunities = communities.filter(c => 
-      c.subscriptionStatus && c.subscriptionStatus.toLowerCase() === "pending"
-    ).length;
+// Get all communities with statistics (JSON API endpoint)
+AdminRouter.get("/communities/data", async (req, res) => {
+  try {
+    const communities = await Community.find()
+      .populate("communityManager", "name email")
+      .sort({ createdAt: -1 });
+    
+    res.json({ 
+      success: true,
+      communities 
+    });
+  } catch (error) {
+    console.error("Error fetching communities data:", error);
+    res.status(500).json({ 
+      success: false,
+      error: "Server Error" 
+    });
+  }
+});
+
+// Get single community by ID
+AdminRouter.get("/communities/:id", async (req, res) => {
+  try {
+    const community = await Community.findById(req.params.id)
+      .populate("communityManager", "name email");
+    
+    if (!community) {
+      return res.status(404).json({ 
+        success: false,
+        error: "Community not found" 
+      });
+    }
+    
+    res.json({ 
+      success: true,
+      community 
+    });
+  } catch (error) {
+    console.error("Error fetching community:", error);
+    res.status(500).json({ 
+      success: false,
+      error: "Server Error" 
+    });
+  }
+});
+
+// Create new community
+AdminRouter.post("/communities", async (req, res) => {
+  try {
+    const { name, location, description, communityManager, subscriptionStatus } = req.body;
+    
+    // Validate required fields
+    if (!name || !location) {
+      return res.status(400).json({ 
+        success: false,
+        error: "Name and location are required" 
+      });
+    }
+    
+    // Create new community
+    const newCommunity = new Community({
+      name,
+      location,
+      description,
+      communityManager: communityManager || null,
+      subscriptionStatus: subscriptionStatus || "pending",
+      totalMembers: 0
+    });
+    
+    await newCommunity.save();
+    
+    // Populate manager details before returning
+    await newCommunity.populate("communityManager", "name email");
+    
+    res.status(201).json({ 
+      success: true,
+      message: "Community created successfully",
+      community: newCommunity 
+    });
+  } catch (error) {
+    console.error("Error creating community:", error);
+    res.status(500).json({ 
+      success: false,
+      error: "Server Error" 
+    });
+  }
+});
+
+// Update community
+AdminRouter.put("/communities/:id", async (req, res) => {
+  try {
+    const { name, location, description, communityManager, subscriptionStatus } = req.body;
+    
+    // Find and update community
+    const community = await Community.findById(req.params.id);
+    
+    if (!community) {
+      return res.status(404).json({ 
+        success: false,
+        error: "Community not found" 
+      });
+    }
+    
+    // Update fields
+    if (name) community.name = name;
+    if (location) community.location = location;
+    if (description !== undefined) community.description = description;
+    if (communityManager !== undefined) community.communityManager = communityManager || null;
+    if (subscriptionStatus) community.subscriptionStatus = subscriptionStatus;
+    
+    await community.save();
+    
+    // Populate manager details before returning
+    await community.populate("communityManager", "name email");
+    
+    res.json({ 
+      success: true,
+      message: "Community updated successfully",
+      community 
+    });
+  } catch (error) {
+    console.error("Error updating community:", error);
+    res.status(500).json({ 
+      success: false,
+      error: "Server Error" 
+    });
+  }
+});
+
+// Delete community
+AdminRouter.delete("/communities/:id", async (req, res) => {
+  try {
+    const community = await Community.findById(req.params.id);
+    
+    if (!community) {
+      return res.status(404).json({ 
+        success: false,
+        error: "Community not found" 
+      });
+    }
+    
+    // Check if community has members (optional safety check)
+    if (community.totalMembers > 0) {
+      return res.status(400).json({ 
+        success: false,
+        error: "Cannot delete community with existing members" 
+      });
+    }
+    
+    await Community.findByIdAndDelete(req.params.id);
+    
+    res.json({ 
+      success: true,
+      message: "Community deleted successfully" 
+    });
+  } catch (error) {
+    console.error("Error deleting community:", error);
+    res.status(500).json({ 
+      success: false,
+      error: "Server Error" 
+    });
+  }
+});
+
+// Get community managers list (for dropdown)
+AdminRouter.get("/communities/managers/list", async (req, res) => {
+  try {
+    const managers = await CommunityManager.find()
+      .select("name email")
+      .sort({ name: 1 });
+    
+    res.json({ 
+      success: true,
+      managers 
+    });
+  } catch (error) {
+    console.error("Error fetching managers:", error);
+    res.status(500).json({ 
+      success: false,
+      error: "Server Error" 
+    });
+  }
+});
+
+// Get community statistics
+AdminRouter.get("/communities/stats/overview", async (req, res) => {
+  try {
+    const totalCommunities = await Community.countDocuments();
+    const activeCommunities = await Community.countDocuments({ 
+      subscriptionStatus: { $regex: /^active$/i } 
+    });
+    const pendingCommunities = await Community.countDocuments({ 
+      subscriptionStatus: { $regex: /^pending$/i } 
+    });
     
     const topLocations = await Community.aggregate([
       { $group: { _id: "$location", count: { $sum: 1 } } },
       { $sort: { count: -1 } },
       { $limit: 5 }
     ]);
-
-    res.render("admin/communities", {
-      communities, 
-      managers,
-      totalCommunities,
-      activeCommunities,
-      pendingCommunities,
-      topLocations
+    
+    const recentCommunities = await Community.find()
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .populate("communityManager", "name email");
+    
+    res.json({
+      success: true,
+      stats: {
+        totalCommunities,
+        activeCommunities,
+        pendingCommunities,
+        topLocations,
+        recentCommunities
+      }
     });
   } catch (error) {
-    console.error("Error fetching communities:", error);
-    res.status(500).send("Server Error");
+    console.error("Error fetching statistics:", error);
+    res.status(500).json({ 
+      success: false,
+      error: "Server Error" 
+    });
   }
 });
-// Add this new route to provide JSON data for refresh
-AdminRouter.get("/communities/data", async (req, res) => {
+
+// Bulk update community status
+AdminRouter.patch("/communities/bulk/status", async (req, res) => {
   try {
-    const communities = await Community.find().populate("communityManager");
-    res.json({ communities });
+    const { communityIds, status } = req.body;
+    
+    if (!communityIds || !Array.isArray(communityIds) || communityIds.length === 0) {
+      return res.status(400).json({ 
+        success: false,
+        error: "Community IDs array is required" 
+      });
+    }
+    
+    if (!["active", "pending"].includes(status?.toLowerCase())) {
+      return res.status(400).json({ 
+        success: false,
+        error: "Invalid status value" 
+      });
+    }
+    
+    const result = await Community.updateMany(
+      { _id: { $in: communityIds } },
+      { $set: { subscriptionStatus: status } }
+    );
+    
+    res.json({ 
+      success: true,
+      message: `Updated ${result.modifiedCount} communities`,
+      modifiedCount: result.modifiedCount 
+    });
   } catch (error) {
-    console.error("Error fetching communities data:", error);
-    res.status(500).json({ error: "Server Error" });
+    console.error("Error bulk updating communities:", error);
+    res.status(500).json({ 
+      success: false,
+      error: "Server Error" 
+    });
   }
 });
+
 // Community Managers Page Route
 AdminRouter.get("/community-managers", async (req, res) => {
   try {

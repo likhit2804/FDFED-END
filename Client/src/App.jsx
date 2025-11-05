@@ -27,6 +27,18 @@ import {Tasks} from './components/Worker/Tasks'
 import {History} from './components/Worker/History'
 import {WorkerProfile} from './components/Worker/Profile'
 
+import AdminLogin from './components/AdminLogin';
+
+import AdminLayout from './components/Admin/AdminLayout';
+import AdminDashboard from './components/Admin/AdminDashboard';
+import  AdminCommunities from './components/Admin/AdminCommunities';
+import AdminCommunityManagers from './components/Admin/AdminCommunityManagers';
+import AdminPayments from './components/Admin/AdminPayments';
+import AdminApplications from './components/Admin/AdminApplications';
+import AdminProfile from './components/Admin/AdminProfile';
+
+import { AdminAuthProvider } from './context/AdminAuthContext';
+import ProtectedAdminRoute from './components/Admin/ProtectedAdminRoute';
 
 function App() {
 
@@ -37,6 +49,17 @@ function App() {
         <Route path='/SignIn' element={<SignIn />} />
         <Route path='/SignUp' element={<SignUp />} />
         <Route path='/interestForm' element={<InterestForm />} />
+
+        <Route path='/adminLogin' element={<AdminLogin/>} ></Route>
+
+        <Route path='/admin'  element={<ProtectedAdminRoute><AdminLayout userType="admin"/></ProtectedAdminRoute>}>
+          <Route path='dashboard' element={<AdminDashboard/>} />
+          <Route path='communities' element={<AdminCommunities/>} />
+          <Route path='managers' element={<AdminCommunityManagers/>} />
+          <Route path='payments' element={<AdminPayments/>} />
+          <Route path='applications' element={<AdminApplications/>} />
+          <Route path='profile' element={<AdminProfile/>} />
+        </Route>
 
         <Route path='/manager' element={<Layout userType="manager" />} >
 
@@ -71,7 +94,9 @@ function App() {
   )
 
   return (
-    <RouterProvider router={router} />
+    <AdminAuthProvider>
+      <RouterProvider router={router} />
+    </AdminAuthProvider>
   )
 }
 

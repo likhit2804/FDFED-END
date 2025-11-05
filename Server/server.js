@@ -159,10 +159,7 @@ app.use(cors({
   credentials: true
 }));
 
-app.use((req, res, next) => {
-  res.locals.alert = req.flash("alert-msg");
-  next();
-});
+
 
 app.use("/uploads", express.static("uploads"));
 
@@ -204,24 +201,34 @@ app.use("/interest",interestRouter)
 
 const PORT = 3000 ;
 
-
 app.post("/AdminLogin", async (req, res) => {
   try {
     const { email, password } = req.body;
     console.log("Admin login attempt:", req.body);
 
     const result = await AuthenticateA(email, password, req, res);
-    
+
     if (result) {
-      return res.redirect("/admin");
+      // Success — send response so React can redirect
+      return res.status(200).json({
+        success: true,
+        message: "Login successful",
+        redirect: "/admin/dashboard", // frontend will navigate here
+      });
     } else {
-      req.flash("message", "Invalid email or password");
-      return res.redirect("/AdminLogin");
+      // Invalid credentials
+      return res.status(401).json({
+        success: false,
+        message: "Invalid email or password",
+      });
     }
+
   } catch (error) {
     console.error("Admin login error:", error);
-    req.flash("message", "Server error during login");
-    return res.redirect("/AdminLogin");
+    return res.status(500).json({
+      success: false,
+      message: "Server error during login",
+    });
   }
 });
 
