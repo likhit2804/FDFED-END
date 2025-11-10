@@ -2,8 +2,11 @@ import React from "react";
 import SidebarAdmin from "../partials/SidebarAdmin";
 import { Outlet } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
+import { SidebarProvider, useSidebar } from "../../context/AdminSidebarContext";
 
-export default function AdminLayout() {
+function AdminLayoutContent() {
+  const { collapsed } = useSidebar();
+
   const styles = {
     layout: {
       display: "flex",
@@ -11,21 +14,24 @@ export default function AdminLayout() {
       background: "linear-gradient(to bottom, #e0f2fe, #ffffff)",
       fontFamily: "Poppins, sans-serif",
       overflowX: "hidden",
+      transition: "all 0.3s ease-in-out",
     },
     main: {
       flexGrow: 1,
       display: "flex",
       flexDirection: "column",
-      marginLeft: "280px",
-      transition: "margin-left 0.3s ease-in-out",
-      padding: "32px 40px",
+
+      marginLeft: collapsed ? "100px" : "230px",
+      transition: "margin-left 0.3s ease-in-out, width 0.3s ease-in-out",
+      padding: collapsed ? "32px 30px" : "32px 40px",
+      width: collapsed ? "calc(100% - 100px)" : "calc(100% - 230px)",
     },
     contentWrapper: {
       flexGrow: 1,
       overflowY: "auto",
       paddingBottom: "32px",
       scrollbarWidth: "thin",
-      scrollbarColor: "#cbd5e1 transparent", // Firefox
+      scrollbarColor: "#cbd5e1 transparent",
     },
     transparentCard: {
       background: "rgba(255, 255, 255, 0.75)",
@@ -34,17 +40,30 @@ export default function AdminLayout() {
       boxShadow: "0 4px 20px rgba(0,0,0,0.05)",
       border: "1px solid rgba(255,255,255,0.35)",
       minHeight: "80vh",
-      padding: "36px 40px",
+      padding: collapsed ? "32px 30px" : "36px 40px",
       transition: "all 0.3s ease-in-out",
     },
   };
 
   return (
-    <>
-      {/* 🌿 Refined, minimal scrollbar */}
+    <div style={styles.layout}>
+      <SidebarAdmin />
+      <div style={styles.main}>
+        <main style={styles.contentWrapper}>
+          <div style={styles.transparentCard}>
+            <Outlet />
+          </div>
+        </main>
+      </div>
+    </div>
+  );
+}
+
+export default function AdminLayout() {
+  return (
+    <SidebarProvider>
       <style>
         {`
-          /* Base scrollbar track */
           ::-webkit-scrollbar {
             width: 12px;
             height: 12px;
@@ -55,25 +74,21 @@ export default function AdminLayout() {
             border-radius: 10px;
           }
 
-          /* Thumb — clean, semi-transparent slate tone */
           ::-webkit-scrollbar-thumb {
-            background-color: rgba(100, 116, 139, 0.6); /* slate-500ish */
+            background-color: rgba(100, 116, 139, 0.6);
             border-radius: 10px;
             border: 3px solid rgba(241, 245, 249, 0.6);
             transition: background-color 0.3s ease;
           }
 
-          /* Hover state — darker slate with more opacity */
           ::-webkit-scrollbar-thumb:hover {
             background-color: rgba(71, 85, 105, 0.75);
           }
 
-          /* Corner cleanup */
           ::-webkit-scrollbar-corner {
             background: transparent;
           }
 
-          /* Firefox fallback */
           * {
             scrollbar-width: thin;
             scrollbar-color: rgba(100,116,139,0.6) rgba(241,245,249,0.6);
@@ -81,16 +96,7 @@ export default function AdminLayout() {
         `}
       </style>
 
-      <div style={styles.layout}>
-        <SidebarAdmin />
-        <div style={styles.main}>
-          <main style={styles.contentWrapper}>
-            <div style={styles.transparentCard}>
-              <Outlet />
-            </div>
-          </main>
-        </div>
-      </div>
-    </>
+      <AdminLayoutContent />
+    </SidebarProvider>
   );
 }
