@@ -7,10 +7,13 @@ import {
   CreditCard,
   User,
   LogOut,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { useSidebar } from "../../context/AdminSidebarContext";
 import logoWhite from "../../imgs/logo_N_white.png";
 import logoWhiteCollapsed from "../../imgs/logo_white.png";
+import { useNavigate } from "react-router-dom";
 
 export default function SidebarAdmin() {
   const {
@@ -35,15 +38,17 @@ export default function SidebarAdmin() {
     { icon: LogOut, label: "Sign Out", path: "/adminLogin" },
   ];
 
-  // ✅ Fix active tab detection on reload
+  
   useEffect(() => {
     const currentPath = window.location.pathname;
     setActiveTab(currentPath);
   }, [setActiveTab]);
 
+  const navigate = useNavigate();
+
   const handleClick = (path) => {
     setActiveTab(path);
-    window.location.href = path; // ✅ redirect navigation
+    navigate(path); 
   };
 
   const renderNavItem = (item, index) => {
@@ -67,19 +72,18 @@ export default function SidebarAdmin() {
             background: isActive
               ? "rgba(59, 130, 246, 0.15)"
               : isHovered
-              ? "rgba(255,255,255,0.05)"
-              : "transparent",
+                ? "rgba(255,255,255,0.05)"
+                : "transparent",
             color: isActive ? "#ffffff" : "#cbd5e1",
             fontWeight: isActive ? 600 : 500,
             fontSize: "0.95rem",
             borderRadius: "10px",
             border: "none",
             cursor: "pointer",
-           
-            transition:"all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+            transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
             transform: isHovered && !isActive ? "translateX(4px)" : "none",
             position: "relative",
-            overflow: "hidden", // prevent internal text causing horizontal scroll
+            overflow: "hidden",
           }}
         >
           {/* Active indicator bar */}
@@ -102,7 +106,7 @@ export default function SidebarAdmin() {
           {!collapsed && (
             <span
               style={{
-                            transition:"all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
                 opacity: collapsed ? 0 : 1,
                 transform: collapsed ? "translateX(-10px)" : "translateX(0)",
                 whiteSpace: "nowrap",
@@ -129,7 +133,8 @@ export default function SidebarAdmin() {
                 whiteSpace: "nowrap",
                 boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
                 opacity: isHovered ? 1 : 0,
-               transition: "opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                transition:
+                  "opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1), transform 0.2s",
                 zIndex: 1000,
                 pointerEvents: "none",
               }}
@@ -154,51 +159,72 @@ export default function SidebarAdmin() {
         color: "#ffffff",
         borderRadius: "20px",
         boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
-        transition: "width 0.35s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+        transition:
+          "width 0.35s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
         overflow: "hidden",
-        overflowY: "auto", // keep vertical scroll
-        overflowX: "hidden", // ✅ hide horizontal scroll always
+        overflowY: "auto",
+        overflowX: "hidden",
         zIndex: 1050,
         display: "flex",
         flexDirection: "column",
       }}
     >
-      {/* Header */}
+      {/* Header with Logo + Chevron */}
       <div
         style={{
           display: "flex",
           alignItems: "center",
-          justifyContent: "center",
-          padding: collapsed ? "16px" : "16px 20px",
+          justifyContent: collapsed ? "center" : "space-between",
+          padding: "14px 18px",
           borderBottom: "1px solid rgba(255,255,255,0.1)",
-          transition: "padding 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-          overflow: "hidden",
+          transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
         }}
       >
-        <button
-          onClick={toggleSidebar}
+        {/* Logo wrapper */}
+        <div
           style={{
-            background: "transparent",
-            border: "none",
-            cursor: "pointer",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
+
+            flex: collapsed ? "0" : "1",
           }}
         >
           <img
             src={collapsed ? logoWhiteCollapsed : logoWhite}
             alt="Urban Ease Logo"
             style={{
-              height: "36px",
+              height: "34px", // slightly smaller for better alignment
               width: "auto",
-              transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
               objectFit: "contain",
+              display: "block",
+              transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
               transform: collapsed ? "scale(0.9)" : "scale(1)",
             }}
           />
+        </div>
+
+        {/* Toggle Button */}
+        <button
+          onClick={toggleSidebar}
+          style={{
+            background: "transparent",
+            border: "none",
+            cursor: "pointer",
+            color: "#ffffff",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            marginLeft: collapsed ? "0" : "10px",
+            transform: "translateY(4px)", // 👈 fine-tune alignment visually
+            transition:
+              "transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), margin 0.3s ease",
+          }}
+        >
+          {collapsed ? <ChevronRight size={22} /> : <ChevronLeft size={22} />}
         </button>
       </div>
+
 
       {/* Main Navigation */}
       <div
@@ -207,7 +233,7 @@ export default function SidebarAdmin() {
           padding: collapsed ? "12px 8px" : "16px 12px",
           transition: "padding 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
           overflowY: "auto",
-          overflowX: "hidden", // ✅ hide horizontal scroll inside content too
+          overflowX: "hidden",
         }}
       >
         <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>

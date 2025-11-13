@@ -4,7 +4,6 @@ const auth = (req, res, next) => {
     const token = req.cookies.token; 
 
     if (!token) {
-        req.flash('message', 'Please log in first'); 
         return res.redirect('/login');  
     }
 

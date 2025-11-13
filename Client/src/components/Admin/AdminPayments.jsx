@@ -1,9 +1,9 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import Header from "./Header";
 import Tabs from "./Tabs";
 import SearchBar from "./SearchBar";
 import Dropdown from "./Dropdown";
-import AdminTable from "./AdminTables"; // ✅ corrected import (singular)
+import AdminTable from "./AdminTables";
 import GraphLine from "./GraphLine";
 import GraphPie from "./GraphPie";
 import Card from "./Card";
@@ -11,16 +11,83 @@ import { DollarSign, Grid2x2, Clock, XCircle } from "lucide-react";
 
 export default function Payments() {
   // ===== States =====
+  const [data, setData] = useState([]);
+  const [stats, setStats] = useState({
+    totalRevenue: 0,
+    totalTransactions: 0,
+    pendingPayments: 0,
+    failedPayments: 0,
+  });
+  const [graphData, setGraphData] = useState([]);
+  const [planDistribution, setPlanDistribution] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
   const [statusTab, setStatusTab] = useState("All");
   const [dateRange, setDateRange] = useState("All Time");
   const [search, setSearch] = useState("");
   const [planType, setPlanType] = useState("All Plans");
   const [graphRange, setGraphRange] = useState("Monthly");
 
-  // ===== Tabs & Filter Options =====
+  // ===== Constants =====
   const StatusTabs = ["All", "Completed", "Pending", "Failed"];
   const DateRangeTabs = ["All Time", "Today", "This Week", "This Month", "This Year"];
   const planOptions = ["All Plans", "Basic", "Standard", "Premium"];
+  const API_BASE_URL =
+    process.env.NODE_ENV === "production"
+      ? `${window.location.origin}/admin/api`
+      : "http://localhost:3000/admin/api";
+
+  // ===== Fetch Payments =====
+  useEffect(() => {
+    const fetchPayments = async () => {
+      try {
+        setLoading(true);
+        setError("");
+
+        const res = await fetch(`${API_BASE_URL}/payments`, {
+          method: "GET",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("adminToken") || ""}`,
+          },
+        });
+
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+        const json = await res.json();
+        if (json.success) {
+          const { payments, statistics, monthlyRevenue, planDistribution } = json.data;
+
+          setData(
+            payments.map((p) => ({
+              name: p.communityName,
+              transactionId: p.transactionId,
+              plan: p.plan,
+              amount: `₹${p.amount}`,
+              paymentMethod: p.paymentMethod,
+              date: p.paymentDate,
+              status: p.status,
+            }))
+          );
+
+          setStats(statistics);
+          setGraphData(monthlyRevenue.map((m) => ({ x: m.month, y: m.revenue })));
+          setPlanDistribution(planDistribution);
+        } else {
+          throw new Error("Invalid response from server");
+        }
+      } catch (err) {
+        console.error("Error fetching payments:", err);
+        setError("Failed to load payment data");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPayments();
+  }, []);
 
   // ===== Columns =====
   const columns = [
@@ -33,124 +100,171 @@ export default function Payments() {
     { header: "Status", accessor: "status" },
   ];
 
-  // ===== Data =====
-  const data = [
-    {
-      name: "Aarav Heights",
-      transactionId: "TXN_176083638958",
-      plan: "Standard",
-      amount: "₹1,999",
-      paymentMethod: "debit_card",
-      date: "17 Oct 2025",
-      status: "Completed",
-    },
-    {
-      name: "GreenView",
-      transactionId: "TXN_176083932013",
-      plan: "Basic",
-      amount: "₹999",
-      paymentMethod: "upi",
-      date: "12 Oct 2025",
-      status: "Pending",
-    },
-    {
-      name: "Skyline Towers",
-      transactionId: "TXN_176086239812",
-      plan: "Premium",
-      amount: "₹2,499",
-      paymentMethod: "credit_card",
-      date: "05 Oct 2025",
-      status: "Failed",
-    },
-    {
-      name: "BlueStone Complex",
-      transactionId: "TXN_176086532931",
-      plan: "Standard",
-      amount: "₹1,999",
-      paymentMethod: "upi",
-      date: "03 Oct 2025",
-      status: "Completed",
-    },
-  ];
-
   // ===== Filtering Logic =====
   const filteredData = useMemo(() => {
+    const normalize = (v) => (v || "").toString().trim().toLowerCase();
+
+    // Helper to check date within selected range
+    const isWithinRange = (dateStr) => {
+      if (!dateStr || dateRange === "All Time") return true;
+
+      // Handle dd-mm-yyyy or dd/mm/yyyy
+      const [day, month, year] = dateStr.split(/[-/]/).map(Number);
+      const date = new Date(year, month - 1, day);
+
+      const now = new Date();
+
+      switch (dateRange) {
+        case "Today":
+          return (
+            date.getDate() === now.getDate() &&
+            date.getMonth() === now.getMonth() &&
+            date.getFullYear() === now.getFullYear()
+          );
+
+        case "This Week": {
+          const weekStart = new Date(now);
+          weekStart.setDate(now.getDate() - now.getDay());
+          weekStart.setHours(0, 0, 0, 0);
+
+          const weekEnd = new Date(weekStart);
+          weekEnd.setDate(weekStart.getDate() + 7);
+          return date >= weekStart && date < weekEnd;
+        }
+
+        case "This Month":
+          return (
+            date.getMonth() === now.getMonth() &&
+            date.getFullYear() === now.getFullYear()
+          );
+
+        case "This Year":
+          return date.getFullYear() === now.getFullYear();
+
+        default:
+          return true;
+      }
+    };
+
+    // Main filtering logic
     return data.filter((row) => {
-      const matchesStatus = statusTab === "All" || row.status === statusTab;
-      const matchesPlan = planType === "All Plans" || row.plan === planType;
+      const rowStatus = normalize(row.status);
+      const tabStatus = normalize(statusTab);
+      const rowPlan = normalize(row.plan);
+      const selPlan = normalize(planType);
+
+      const matchesStatus = tabStatus === "all" || rowStatus === tabStatus;
+      const matchesPlan = selPlan === "all plans" || rowPlan === selPlan;
+
+      const q = normalize(search);
       const matchesSearch =
-        row.name.toLowerCase().includes(search.toLowerCase()) ||
-        row.transactionId.toLowerCase().includes(search.toLowerCase());
-      return matchesStatus && matchesPlan && matchesSearch;
+        (row.name || "").toLowerCase().includes(q) ||
+        (row.transactionId || "").toLowerCase().includes(q);
+
+      const matchesDate = isWithinRange(row.date);
+
+      return matchesStatus && matchesPlan && matchesSearch && matchesDate;
     });
-  }, [statusTab, planType, search, data]);
+  }, [statusTab, planType, search, data, dateRange]);
 
-  // ===== Dynamic Stats =====
-  const totalRevenue = useMemo(() => {
-    return filteredData
-      .filter((d) => d.status === "Completed")
-      .reduce((sum, d) => sum + parseInt(d.amount.replace(/[₹,]/g, "")), 0);
-  }, [filteredData]);
+  // ===== Filtered Graph Data Based on Graph Range =====
+  // ===== Filtered Graph Data Based on Graph Range =====
+const filteredGraphData = useMemo(() => {
+  if (!data || data.length === 0) return [];
 
-  const totalTransactions = filteredData.length;
-  const pendingPayments = filteredData.filter((d) => d.status === "Pending").length;
-  const failedPayments = filteredData.filter((d) => d.status === "Failed").length;
+  const now = new Date();
+  const revenueByPeriod = {};
 
-  // ===== Graph Data (changes by graphRange) =====
-  const graphData = useMemo(() => {
-    if (graphRange === "Weekly")
-      return [
-        { x: "Mon", y: 2000 },
-        { x: "Tue", y: 1500 },
-        { x: "Wed", y: 3500 },
-        { x: "Thu", y: 1000 },
-        { x: "Fri", y: 2500 },
-        { x: "Sat", y: 3000 },
-        { x: "Sun", y: 1800 },
-      ];
-    if (graphRange === "Yearly")
-      return [
-        { x: "Jan", y: 12000 },
-        { x: "Feb", y: 15000 },
-        { x: "Mar", y: 18000 },
-        { x: "Apr", y: 22000 },
-        { x: "May", y: 19000 },
-        { x: "Jun", y: 24000 },
-        { x: "Jul", y: 25000 },
-        { x: "Aug", y: 23000 },
-        { x: "Sep", y: 26000 },
-        { x: "Oct", y: 27000 },
-        { x: "Nov", y: 28000 },
-        { x: "Dec", y: 29000 },
-      ];
-    return [
-      { x: "Dec", y: 0 },
-      { x: "Jan", y: 5000 },
-      { x: "Feb", y: 3000 },
-      { x: "Mar", y: 7000 },
-      { x: "Apr", y: 4000 },
-      { x: "May", y: 0 },
-      { x: "Jun", y: 0 },
-      { x: "Jul", y: 0 },
-      { x: "Aug", y: 6000 },
-      { x: "Sep", y: 8000 },
-      { x: "Oct", y: 25000 },
-      { x: "Nov", y: 4000 },
-    ];
-  }, [graphRange]);
+  // Generate expected labels for the selected range
+  let expectedLabels = [];
+  if (graphRange === "Weekly") {
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(now.getDate() - i);
+      expectedLabels.push(`${d.getDate()}/${d.getMonth() + 1}`);
+      revenueByPeriod[`${d.getDate()}/${d.getMonth() + 1}`] = 0;
+    }
+  } else if (graphRange === "Monthly") {
+    for (let i = 1; i <= 4; i++) {
+      expectedLabels.push(`Week ${i}`);
+      revenueByPeriod[`Week ${i}`] = 0;
+    }
+  } else if (graphRange === "Yearly") {
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    expectedLabels = [...monthNames];
+    monthNames.forEach((m) => (revenueByPeriod[m] = 0));
+  }
 
+  // Filter completed payments within selected range
+  const filteredPayments = data.filter((payment) => {
+    if (payment.status.toLowerCase() !== "completed") return false;
+
+    const [day, month, year] = payment.date.split(/[-/]/).map(Number);
+    const paymentDate = new Date(year, month - 1, day);
+
+    switch (graphRange) {
+      case "Weekly": {
+        const weekAgo = new Date(now);
+        weekAgo.setDate(now.getDate() - 7);
+        return paymentDate >= weekAgo;
+      }
+      case "Monthly": {
+        const monthAgo = new Date(now);
+        monthAgo.setMonth(now.getMonth() - 1);
+        return paymentDate >= monthAgo;
+      }
+      case "Yearly": {
+        const yearAgo = new Date(now);
+        yearAgo.setFullYear(now.getFullYear() - 1);
+        return paymentDate >= yearAgo;
+      }
+      default:
+        return true;
+    }
+  });
+
+  // Fill in existing revenue
+  filteredPayments.forEach((payment) => {
+    const [day, month, year] = payment.date.split(/[-/]/).map(Number);
+    const paymentDate = new Date(year, month - 1, day);
+
+    let key;
+    if (graphRange === "Weekly") {
+      key = `${paymentDate.getDate()}/${paymentDate.getMonth() + 1}`;
+    } else if (graphRange === "Monthly") {
+      const weekNum = Math.ceil(paymentDate.getDate() / 7);
+      key = `Week ${weekNum}`;
+    } else {
+      const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      key = monthNames[paymentDate.getMonth()];
+    }
+
+    const amount = parseFloat(payment.amount.replace(/[₹,]/g, "")) || 0;
+    if (revenueByPeriod[key] !== undefined) {
+      revenueByPeriod[key] += amount;
+    }
+  });
+
+  // Always show all labels (with 0 if no data)
+  return expectedLabels.map((label) => ({
+    x: label,
+    y: revenueByPeriod[label] || 0,
+  }));
+}, [data, graphRange]);
+
+
+  // ===== Pie Chart (Payment Distribution) =====
   const paymentStatusData = useMemo(() => {
-    const completed = filteredData.filter((d) => d.status === "Completed").length;
-    const pending = filteredData.filter((d) => d.status === "Pending").length;
-    const failed = filteredData.filter((d) => d.status === "Failed").length;
+    const { totalTransactions, pendingPayments, failedPayments } = stats;
+    const completed = totalTransactions - pendingPayments - failedPayments;
+    const total = totalTransactions || 1;
 
-    const total = completed + pending + failed || 1;
     return [
       { name: "Completed", value: (completed / total) * 100 },
-      { name: "Pending", value: (pending / total) * 100 },
-      { name: "Failed", value: (failed / total) * 100 },
+      { name: "Pending", value: (pendingPayments / total) * 100 },
+      { name: "Failed", value: (failedPayments / total) * 100 },
     ];
-  }, [filteredData]);
+  }, [stats]);
 
   // ===== Styles =====
   const styles = {
@@ -207,7 +321,6 @@ export default function Payments() {
   // ===== Render =====
   return (
     <>
-      {/* ===== Header ===== */}
       <div
         className="sticky-top border-bottom bg-white rounded-3 shadow-sm px-4 py-3 mb-4 d-flex justify-content-between align-items-center"
         style={{ zIndex: 100 }}
@@ -219,25 +332,25 @@ export default function Payments() {
       <div style={styles.cardsRow}>
         <Card
           icon={<DollarSign size={22} />}
-          value={`₹${totalRevenue.toLocaleString()}`}
+          value={`₹${stats.totalRevenue.toLocaleString()}`}
           label="Total Revenue"
           borderColor="#22c55e"
         />
         <Card
           icon={<Grid2x2 size={22} />}
-          value={totalTransactions}
+          value={stats.totalTransactions}
           label="Total Transactions"
           borderColor="#3b82f6"
         />
         <Card
           icon={<Clock size={22} />}
-          value={pendingPayments}
+          value={stats.pendingPayments}
           label="Pending Payments"
           borderColor="#f59e0b"
         />
         <Card
           icon={<XCircle size={22} />}
-          value={failedPayments}
+          value={stats.failedPayments}
           label="Failed Payments"
           borderColor="#ef4444"
         />
@@ -245,7 +358,6 @@ export default function Payments() {
 
       {/* ===== Graph Section ===== */}
       <div style={styles.chartRow}>
-        {/* Left Graph with Tabs */}
         <div style={styles.graphCard}>
           <div style={styles.graphHeader}>
             <h5 style={{ fontWeight: 700, color: "#0f172a", margin: 0 }}>
@@ -257,18 +369,14 @@ export default function Payments() {
               onChange={setGraphRange}
             />
           </div>
-          <GraphLine data={graphData} xKey="x" yKey="y" color="#0f172a" showArea />
+          <GraphLine data={filteredGraphData} xKey="x" yKey="y" color="#0f172a" showArea />
         </div>
 
-        {/* Right Graph (Pie) */}
         <div style={styles.graphCard}>
           <h5 style={{ fontWeight: 700, color: "#0f172a", marginBottom: "16px" }}>
             Payment Status Distribution
           </h5>
-          <GraphPie
-            data={paymentStatusData}
-            colors={["#22c55e", "#facc15", "#ef4444"]}
-          />
+          <GraphPie data={paymentStatusData} colors={["#22c55e", "#facc15", "#ef4444"]} />
         </div>
       </div>
 
@@ -294,7 +402,13 @@ export default function Payments() {
 
       {/* ===== Data Table ===== */}
       <div style={styles.tableSection}>
-        <AdminTable columns={columns} data={filteredData} actions={[]} />
+        {loading ? (
+          <div className="text-center py-4 text-muted">Loading payments...</div>
+        ) : error ? (
+          <div className="text-center text-danger py-4">{error}</div>
+        ) : (
+          <AdminTable columns={columns} data={filteredData} actions={[]} />
+        )}
       </div>
     </>
   );

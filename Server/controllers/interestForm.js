@@ -215,24 +215,52 @@ export const submitInterestForm = async (req, res) => {
 
 
 // Admin: Get all applications
+// ✅ JSON version for React (no res.render, no req.flash)
 export const getAllApplications = async (req, res) => {
   try {
-    const interests = await Interest.find().sort({ 
-      createdAt: -1 // Then by creation date (newest first)
-    });
-    
-    res.render('admin/interests', {
-      title: 'Community Interest Applications',
-      interests,
-      success: req.flash('success'),
-      error: req.flash('error')
+    // 1️⃣ Fetch data
+    const interests = await Interest.find()
+      .sort({ createdAt: -1 })
+     
+
+    console.log("Fetched interests:", interests.length);
+
+    // 2️⃣ Safely format results for React
+    const formatted = interests.map((app) => ({
+      id: app._id,
+      name: app.user?.name || app.name || "Unknown", // fallback for older data
+      email: app.user?.email || app.email || "N/A",
+      phone: app.user?.phone || app.phone || "N/A",
+      community: app.community?.name || "N/A",
+      location: app.community?.location || "Unknown",
+      message: app.message || "",
+      status: (app.status || "PENDING").toUpperCase(),
+      appliedOn: app.createdAt
+        ? new Date(app.createdAt).toLocaleDateString("en-IN")
+        : "Unknown",
+      photos: app.photos || [],
+    }));
+
+    // 3️⃣ Send JSON response
+    res.json({
+      success: true,
+      data: formatted,
+      count: formatted.length,
     });
   } catch (error) {
-    console.error('Get interests error:', error);
-    req.flash('error', 'Error fetching applications');
-    res.redirect('/admin/dashboard');
+    // 4️⃣ Proper logging
+    console.error("❌ Error fetching community interest applications:", error.message);
+    console.error(error.stack);
+
+    // 5️⃣ Safe error response
+    res.status(500).json({
+      success: false,
+      message: "Server error while fetching applications",
+      error: error.message,
+    });
   }
 };
+
 
 // Admin: Get all applications as JSON
 export const getAllApplicationsJSON = async (req, res) => {

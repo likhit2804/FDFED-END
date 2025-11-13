@@ -1,21 +1,25 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import Header from "./Header";
 import Tabs from "./Tabs";
 import SearchBar from "./SearchBar";
 import Dropdown from "./Dropdown";
-import AdminTable from "./AdminTables"; // ✅ corrected (singular, consistent with your new StatusBadge setup)
+import AdminTable from "./AdminTables";
 
 export default function Communities() {
   // ===== States =====
   const [activeTab, setActiveTab] = useState("All");
   const [search, setSearch] = useState("");
   const [location, setLocation] = useState("All Locations");
+  const [locations, setLocations] = useState(["All Locations"]);
 
-  // ===== Filters =====
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  // ===== Tabs =====
   const tabs = ["All", "Active", "Pending"];
-  const locations = ["All Locations", "Bangalore", "Delhi", "Hyderabad"];
 
-  // ===== Table Columns =====
+  // ===== Columns =====
   const columns = [
     { header: "Name", accessor: "name" },
     { header: "Location", accessor: "location" },
@@ -25,31 +29,72 @@ export default function Communities() {
     { header: "Manager", accessor: "manager" },
   ];
 
-  // ===== Table Data =====
-  const data = [
-    { name: "Nani Network", location: "Vijayawada", members: 0, date: "5/9/2025", status: "ACTIVE", manager: "Unassigned" },
-    { name: "Thanvi", location: "Nirmal", members: 0, date: "5/9/2025", status: "ACTIVE", manager: "Srusanth Sadhu" },
-    { name: "C23", location: "Markapur", members: 0, date: "12/9/2025", status: "ACTIVE", manager: "Bhanu Sishya" },
-    { name: "svSS", location: "ZvDD", members: 0, date: "15/9/2025", status: "PENDING", manager: "Unassigned" },
-    { name: "off", location: "On", members: 0, date: "5/10/2025", status: "PENDING", manager: "Unassigned" },
-    { name: "Community 1", location: "Bangalore", members: 87, date: "21/8/2025", status: "ACTIVE", manager: "Srusanth Sadhu" },
-    { name: "Community 2", location: "Delhi", members: 39, date: "27/9/2025", status: "ACTIVE", manager: "Srusanth Sadhu" },
-  ];
+  // ===== API BASE URL =====
+  const API_BASE_URL =
+    process.env.NODE_ENV === "production"
+      ? `${window.location.origin}/admin/api`
+      : "http://localhost:3000/admin/api";
+
+  // ===== Fetch Communities Data =====
+  useEffect(() => {
+    const fetchCommunities = async () => {
+      try {
+        setLoading(true);
+
+        const res = await fetch(`${API_BASE_URL}/communities/overview`, {
+          method: "GET",
+          credentials: "include", // allows cookie-based auth
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("adminToken") || ""}`, // for JWT header
+          },
+        });
+
+        const json = await res.json();
+
+        if (json.success && json.data?.allCommunities) {
+          const formatted = json.data.allCommunities.map((c) => ({
+            name: c.name,
+            location: c.location,
+            members: c.totalMembers || 0,
+            date: new Date(c.createdAt).toLocaleDateString("en-IN"),
+            status: c.subscriptionStatus?.toUpperCase() || "PENDING",
+            manager: c.communityManager ? c.communityManager.name : "Unassigned",
+          }));
+
+          setData(formatted);
+          setLocations([
+            "All Locations",
+            ...new Set(formatted.map((c) => c.location)),
+          ]);
+        } else {
+          throw new Error("Invalid response");
+        }
+      } catch (err) {
+        console.error("Error fetching communities:", err);
+        setError("Failed to load data");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCommunities();
+  }, []);
 
   // ===== Filtering Logic =====
   const filteredData = useMemo(() => {
     return data.filter((row) => {
       const matchesTab =
-        activeTab === "All" || row.status.toUpperCase() === activeTab.toUpperCase();
+        activeTab === "All" || row.status === activeTab.toUpperCase();
       const matchesLocation =
         location === "All Locations" ||
-        row.location.toLowerCase() === location.toLowerCase();
+        row.location?.toLowerCase() === location.toLowerCase();
       const matchesSearch =
-        row.name.toLowerCase().includes(search.toLowerCase()) ||
-        row.manager.toLowerCase().includes(search.toLowerCase());
+        row.name?.toLowerCase().includes(search.toLowerCase()) ||
+        row.manager?.toLowerCase().includes(search.toLowerCase());
       return matchesTab && matchesLocation && matchesSearch;
     });
-  }, [activeTab, location, search]);
+  }, [activeTab, location, search, data]); // ✅ added `data` here
 
   // ===== Table Actions =====
   const actions = [
@@ -132,7 +177,15 @@ export default function Communities() {
       </div>
 
       {/* ===== Data Table ===== */}
-      <AdminTable columns={columns} data={filteredData} actions={actions} />
+      {loading ? (
+        <div className="text-center py-5 text-muted fw-semibold">
+          Loading communities...
+        </div>
+      ) : error ? (
+        <div className="text-center text-danger py-5">{error}</div>
+      ) : (
+        <AdminTable columns={columns} data={filteredData} actions={actions} />
+      )}
     </>
   );
 }

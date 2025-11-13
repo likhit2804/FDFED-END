@@ -30,12 +30,8 @@ import {WorkerProfile} from './components/Worker/Profile'
 import AdminLogin from './components/AdminLogin';
 
 import AdminLayout from './components/Admin/AdminLayout';
-import AdminDashboard from './components/Admin/AdminDashboard';
-import  AdminCommunities from './components/Admin/AdminCommunities';
-import AdminCommunityManagers from './components/Admin/AdminCommunityManagers';
-import AdminPayments from './components/Admin/AdminPayments';
-import AdminApplications from './components/Admin/AdminApplications';
-import AdminProfile from './components/Admin/AdminProfile';
+import { adminRoutes } from "./routes/adminRoutes";
+
 
 import { AdminAuthProvider } from './context/AdminAuthContext';
 import ProtectedAdminRoute from './components/Admin/ProtectedAdminRoute';
@@ -52,13 +48,17 @@ function App() {
 
         <Route path='/adminLogin' element={<AdminLogin/>} ></Route>
 
-        <Route path='/admin'  element={<ProtectedAdminRoute><AdminLayout userType="admin"/></ProtectedAdminRoute>}>
-          <Route path='dashboard' element={<AdminDashboard/>} />
-          <Route path='communities' element={<AdminCommunities/>} />
-          <Route path='managers' element={<AdminCommunityManagers/>} />
-          <Route path='payments' element={<AdminPayments/>} />
-          <Route path='applications' element={<AdminApplications/>} />
-          <Route path='profile' element={<AdminProfile/>} />
+        <Route
+          path="/admin/*"
+          element={
+            <ProtectedAdminRoute>
+              <AdminLayout userType="admin" />
+            </ProtectedAdminRoute>
+          }
+        >
+          {adminRoutes.map(({ path, element }) => (
+            <Route key={path} path={path} element={element} />
+          ))}
         </Route>
 
         <Route path='/manager' element={<Layout userType="manager" />} >

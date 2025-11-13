@@ -8,6 +8,7 @@ export default function DashboardOverview() {
   const [period, setPeriod] = useState("6M");
   const [loading, setLoading] = useState(false);
   const [kpis, setKpis] = useState({
+     fullRevenueData: [], 
     totalCommunities: 0,
     totalResidents: 0,
     pendingApplications: 0,
@@ -18,55 +19,97 @@ export default function DashboardOverview() {
     applicationsStatus: { approved: 0, pending: 0, rejected: 0 },
   });
 
-  const API_BASE_URL = `${window.location.origin}/admin/api`;
+  const API_BASE_URL =
+  process.env.NODE_ENV === "production"
+    ? `${window.location.origin}/admin/api`
+    : "http://localhost:3000/admin/api";
 
-  // 🧠 Fetch dashboard data
-  const fetchDashboardData = async () => {
-    try {
-      setLoading(true);
-      const res = await fetch(`${API_BASE_URL}/dashboard`);
-      const json = await res.json();
-      if (json.success) {
-        const { kpis, chartData } = json.data;
 
-        const revenueData = chartData.growthChart.labels.map((label, i) => ({
-          x: label,
-          y: chartData.growthChart.revenue[i],
-        }));
+// 🧠 Fetch dashboard data (with token + cookie support)
+const fetchDashboardData = async () => {
+  try {
+    setLoading(true);
 
-        setKpis(kpis);
-        setChartData({
-          revenueData,
-          applicationsStatus: chartData.applicationsStatus,
-        });
-      }
-    } catch (err) {
-      console.error("Dashboard fetch error:", err);
-    } finally {
-      setLoading(false);
+    const res = await fetch(`${API_BASE_URL}/dashboard`, {
+      method: "GET",
+      credentials: "include", // allows cookies (if backend sets JWT cookie)
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem("adminToken") || ""}`, // for JWT in localStorage
+      },
+    });
+
+    // 🧩 Handle unauthorized (expired/invalid token)
+    if (res.status === 401) {
+      localStorage.removeItem("adminToken");
+      window.location.href = "/adminLogin";
+      return;
     }
-  };
 
-  // 📈 Fetch chart for selected period
-  const fetchChartPeriod = async (selectedPeriod) => {
-    try {
-      setPeriod(selectedPeriod);
-      const res = await fetch(
-        `${API_BASE_URL}/dashboard/charts?period=${selectedPeriod}`
-      );
-      const json = await res.json();
-      if (json.success) {
-        const { growthChart } = json.data;
-        const revenueData = growthChart.labels.map((label, i) => ({
-          x: label,
-          y: growthChart.revenue[i],
-        }));
-        setChartData((prev) => ({ ...prev, revenueData }));
-      }
-    } catch (err) {
-      console.error("Chart fetch error:", err);
+    // 🧩 Handle other errors
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`HTTP ${res.status}: ${text}`);
     }
-  };
+
+    // 🧩 Ensure JSON response
+    const contentType = res.headers.get("content-type") || "";
+    if (!contentType.includes("application/json")) {
+      const text = await res.text();
+      throw new Error(`Expected JSON, got: ${text.slice(0, 150)}`);
+    }
+
+    const json = await res.json();
+
+    if (json.success) {
+  const { kpis, chartData } = json.data;
+
+  const fullRevenueData = chartData.growthChart.labels.map((label, i) => ({
+    x: label,
+    y: chartData.growthChart.revenue[i],
+  }));
+
+  setKpis(kpis);
+
+  // Store full dataset (for ALL)
+  setChartData({
+    fullRevenueData,
+    revenueData: fullRevenueData,   // default graph
+    applicationsStatus: chartData.applicationsStatus,
+  });
+
+    } else {
+      throw new Error(json.message || "Failed to load dashboard data");
+    }
+  } catch (err) {
+    console.error("Dashboard fetch error:", err);
+  } finally {
+    setLoading(false);
+  }
+};
+
+// 📈 Fetch chart for selected period
+const fetchChartPeriod = (selectedPeriod) => {
+  setPeriod(selectedPeriod);
+
+  setChartData((prev) => {
+    const full = prev.fullRevenueData;
+
+    let sliced;
+
+    if (selectedPeriod === "6M") {
+      sliced = full.slice(-6);
+    } else if (selectedPeriod === "1Y") {
+      sliced = full.slice(-12);
+    } else {
+      sliced = full; // "All"
+    }
+
+    return { ...prev, revenueData: sliced };
+  });
+};
+
+
 
   // ⏱️ Fetch on mount
   useEffect(() => {
@@ -127,6 +170,7 @@ export default function DashboardOverview() {
       height: "280px",
       marginTop: "16px",
     },
+    
   };
 
   return (
@@ -210,7 +254,15 @@ export default function DashboardOverview() {
             </div>
           </div>
           <div style={styles.graphContainer}>
-            <GraphLine data={revenueData} xKey="x" yKey="y" color="#10b981" showArea />
+           <GraphLine
+  key={period}
+  data={revenueData}
+  xKey="x"
+  yKey="y"
+  color="#10b981"
+  showArea
+/>
+
           </div>
         </div>
 

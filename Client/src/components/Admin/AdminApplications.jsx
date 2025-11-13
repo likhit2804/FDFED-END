@@ -1,8 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   X,
-  CheckCircle,
-  XCircle,
   Eye,
   Users,
   ClipboardCheck,
@@ -11,47 +9,71 @@ import {
 import "bootstrap/dist/css/bootstrap.min.css";
 import Card from "./Card";
 import Tabs from "./Tabs";
-import Status from "./Status"; // ✅ centralized badge
+import Status from "./Status";
 
 export default function ManagerApplications() {
+  // ===== State Management =====
+  const [applications, setApplications] = useState([]);
   const [selectedApp, setSelectedApp] = useState(null);
   const [activePhoto, setActivePhoto] = useState(null);
   const [activeTab, setActiveTab] = useState("All");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  // ===== Sample Data =====
-  const applications = [
-    {
-      id: 1,
-      name: "Srushanth Sadhu",
-      email: "srushanthreddy.s23@iiits.in",
-      phone: "1234567890",
-      community: "AAA Residency",
-      location: "Hyderabad",
-      message: "Looking forward to managing the AAA community efficiently.",
-      appliedOn: "October 17, 2025",
-      status: "APPROVED", // ✅ normalized to uppercase for StatusBadge
-      photos: [
-        "https://picsum.photos/id/1011/400/300",
-        "https://picsum.photos/id/1015/400/300",
-        "https://picsum.photos/id/1016/400/300",
-      ],
-    },
-    {
-      id: 2,
-      name: "Likhit Grandhe",
-      email: "likhit.2804@gmail.com",
-      phone: "9606590179",
-      community: "SV Complex",
-      location: "Tirupati",
-      message: "I have 2 years of community management experience.",
-      appliedOn: "October 17, 2025",
-      status: "PENDING", // ✅ normalized
-      photos: [
-        "https://picsum.photos/id/1024/400/300",
-        "https://picsum.photos/id/1025/400/300",
-      ],
-    },
-  ];
+  const API_BASE_URL =
+    process.env.NODE_ENV === "production"
+      ? `${window.location.origin}/admin/api`
+      : "http://localhost:3000/admin/api";
+
+  // ===== Fetch Applications =====
+  useEffect(() => {
+    const fetchApplications = async () => {
+      try {
+        setLoading(true);
+
+        const res = await fetch(`${API_BASE_URL}/interests`, {
+          method: "GET",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("adminToken") || ""}`,
+          },
+        });
+
+        if (res.status === 401) {
+          localStorage.removeItem("adminToken");
+          window.location.href = "/adminLogin";
+          return;
+        }
+
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data)) {
+          const formatted = json.data.map((app) => ({
+            id: app._id,
+            name: app.name,
+            email: app.email,
+            phone: app.phone,
+            community: app.community?.name || "N/A",
+            location: app.community?.location || "Unknown",
+            message: app.message || "",
+            appliedOn: new Date(app.createdAt).toLocaleDateString("en-IN"),
+            status: app.status?.toUpperCase() || "PENDING",
+            photos: app.photos || [],
+          }));
+          setApplications(formatted);
+        } else {
+          throw new Error("Invalid response structure");
+        }
+      } catch (err) {
+        console.error("Error fetching manager applications:", err);
+        setError("Failed to load applications");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchApplications();
+  }, []);
 
   // ===== Derived Stats =====
   const total = applications.length;
@@ -59,10 +81,13 @@ export default function ManagerApplications() {
   const pending = applications.filter((a) => a.status === "PENDING").length;
 
   // ===== Tab Filtering =====
-  const filteredApps =
-    activeTab === "All"
+  const filteredApps = useMemo(() => {
+    return activeTab === "All"
       ? applications
-      : applications.filter((a) => a.status.toUpperCase() === activeTab.toUpperCase());
+      : applications.filter(
+          (a) => a.status.toUpperCase() === activeTab.toUpperCase()
+        );
+  }, [activeTab, applications]);
 
   // ===== Inline Styles =====
   const styles = {
@@ -88,12 +113,6 @@ export default function ManagerApplications() {
       padding: "24px",
       overflowY: "auto",
       transition: "all 0.3s ease",
-    },
-    hiddenPreview: {
-      flex: "1 1 0%",
-      opacity: 0,
-      pointerEvents: "none",
-      transform: "translateX(50px)",
     },
     cardItem: {
       background: "#fff",
@@ -154,48 +173,56 @@ export default function ManagerApplications() {
         />
 
         {/* === Applications List === */}
-        {filteredApps.map((app) => (
-          <div
-            key={app.id}
-            style={{
-              ...styles.cardItem,
-              borderLeftColor:
-                app.status === "APPROVED"
-                  ? "#22c55e"
-                  : app.status === "PENDING"
-                  ? "#fbbf24"
-                  : "#ef4444",
-            }}
-            onClick={() => {
-              setSelectedApp(app);
-              setActivePhoto(app.photos[0]);
-            }}
-          >
-            <div style={styles.headerRow}>
-              <div style={styles.name}>{app.name}</div>
-              <Status status={app.status} /> {/* ✅ uses shared badge */}
-            </div>
-            <div style={{ fontSize: "14px", color: "#64748b" }}>
-              {app.email} · {app.phone}
-            </div>
-            <div style={{ fontSize: "14px", color: "#475569" }}>
-              {app.community} — {app.location}
-            </div>
+        {loading ? (
+          <div className="text-center py-5 text-muted fw-semibold">
+            Loading applications...
+          </div>
+        ) : error ? (
+          <div className="text-center text-danger py-5">{error}</div>
+        ) : (
+          filteredApps.map((app) => (
             <div
+              key={app.id}
               style={{
-                marginTop: "10px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
+                ...styles.cardItem,
+                borderLeftColor:
+                  app.status === "APPROVED"
+                    ? "#22c55e"
+                    : app.status === "PENDING"
+                    ? "#fbbf24"
+                    : "#ef4444",
+              }}
+              onClick={() => {
+                setSelectedApp(app);
+                setActivePhoto(app.photos[0]);
               }}
             >
-              <div style={{ fontSize: "13px", color: "#94a3b8" }}>
-                Applied on {app.appliedOn}
+              <div style={styles.headerRow}>
+                <div style={styles.name}>{app.name}</div>
+                <Status status={app.status} />
               </div>
-              <Eye size={18} color="#3b82f6" />
+              <div style={{ fontSize: "14px", color: "#64748b" }}>
+                {app.email} · {app.phone}
+              </div>
+              <div style={{ fontSize: "14px", color: "#475569" }}>
+                {app.community} — {app.location}
+              </div>
+              <div
+                style={{
+                  marginTop: "10px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
+                <div style={{ fontSize: "13px", color: "#94a3b8" }}>
+                  Applied on {app.appliedOn}
+                </div>
+                <Eye size={18} color="#3b82f6" />
+              </div>
             </div>
-          </div>
-        ))}
+          ))
+        )}
       </div>
 
       {/* ===== Right Pane (Preview) ===== */}
