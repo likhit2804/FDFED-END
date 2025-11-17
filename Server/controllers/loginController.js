@@ -11,7 +11,6 @@ async function authenticateUser(model, email, password, req, res) {
     console.log("User :"+user);
     
     if (!user) {
-        req.flash('message', "Invalid email or password");
         return 0;
     }
 
@@ -22,7 +21,6 @@ async function authenticateUser(model, email, password, req, res) {
     
     
     if (!isMatch) {
-        req.flash('message', "Invalid email or password");
         return 0;
     }
 
@@ -61,13 +59,7 @@ async function authenticateUser(model, email, password, req, res) {
 
     console.log(token);
     
-    res.cookie('token', token, {
-        httpOnly: true,  
-        secure: process.env.NODE_ENV === 'PRODUCTION', 
-        maxAge: 7 * 24 * 60 * 60 * 1000 
-    });
-
-    return 1;
+    return {token,user};
 }
 
 async function AuthenticateR(email, password, req, res) {

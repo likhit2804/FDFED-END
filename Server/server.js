@@ -187,13 +187,13 @@ import interestRouter from "./routes/InterestRouter.js"
 import Ad from "./models/Ad.js";
 
 app.use("/admin", auth, authorizeA, AdminRouter);
-app.use("/resident", residentRouter);
+app.use("/resident",auth,authorizeR, residentRouter);
 
 app.use("/security", auth, authorizeS, securityRouter);
 
 app.use("/worker", auth, authorizeW, workerRouter);
 
-app.use("/manager",managerRouter);
+app.use("/manager",auth,authorizeC,managerRouter);
 
 app.use("/interest",interestRouter)
 
@@ -222,65 +222,49 @@ app.post("/AdminLogin", async (req, res) => {
 });
 
 
-
 app.post("/login", async (req, res) => {
   try {
     const { email, password, userType } = req.body;
-    console.log(req.body);
 
-    let result;
+    if (!email || !password || !userType) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    let token;
     switch (userType) {
       case "Resident":
-        result = await AuthenticateR(email, password, req, res);
-        return result
-          ? res.redirect("/resident/dashboard")
-          : res.redirect("/login");
-
+        token = await AuthenticateR(email, password);
+        break;
       case "Security":
-        result = await AuthenticateS(email, password, req, res);
-        return result
-          ? res.redirect("/security/dashboard")
-          : res.redirect("/login");
-
+        token = await AuthenticateS(email, password);
+        break;
       case "Worker":
-        result = await AuthenticateW(email, password, req, res);
-        return result
-          ? res.redirect("/worker/dashboard")
-          : res.redirect("/login");
-
+        token = await AuthenticateW(email, password);
+        break;
       case "communityManager":
-        result = await AuthenticateC(email, password, req, res);
-
-        // If result is an object with redirect property
-        if (result && typeof result === "object" && result.redirect) {
-          return res.redirect(result.redirect);
-        }
-
-        // Otherwise handle normally
-        return result
-          ? res.redirect("/manager/dashboard")
-          : res.redirect("/login");
+        token = await AuthenticateC(email, password);
+        break;
       default:
-        console.log("Invalid user type");
-        return res.redirect("/register");
+        return res.status(400).json({ message: "Invalid user type" });
     }
+
+    if (!token) {
+      return res.status(401).json({ message: "Invalid email or password" });
+    }
+
+    res.json({
+      token: token.token,
+      user:{
+        ... token.user,
+        userType
+      },
+      message: "Login successful",
+    });
+
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: "Server error" });
+    res.status(500).json({ message: "Server error" });
   }
-});
-
-
-app.get("/logout", (req, res) => {
-  const token = req.cookies.token;
-
-  if (!token) {
-    return res.redirect("/login");
-  }
-
-  res.clearCookie("token");
-
-  res.redirect("/login");
 });
 
 
