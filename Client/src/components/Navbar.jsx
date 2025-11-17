@@ -32,6 +32,7 @@ export const Navbar = ({ userType }) => {
                       <li className="px-2"><NavLink className={({isActive})=>(isActive ? "Nactive" : "")} to="/resident/preApproval">Pre approval</NavLink></li>
                       <li className="px-2"><NavLink className={({isActive})=>(isActive ? "Nactive" : "")} to="/resident/issueRaising">Issue Raising</NavLink></li>
                       <li className="px-2"><NavLink className={({isActive})=>(isActive ? "Nactive" : "")} to="/resident/commonSpace">Common space Bookings</NavLink></li>
+                      <li className="px-2"><NavLink className={({isActive})=>(isActive ? "Nactive" : "")} to="/resident/payments">Payments</NavLink></li>
                       <li className="px-2"><NavLink className={({isActive})=>(isActive ? "Nactive" : "")} to="/resident/profile" >Profile</NavLink></li>
                     </>
                   ) : userType === 'Worker' ? (
@@ -41,7 +42,7 @@ export const Navbar = ({ userType }) => {
                       <li className="px-2"><NavLink className={({isActive})=>(isActive ? "Nactive" : "")} to="/worker/tasks">Tasks</NavLink></li>
                       <li className="px-2"><NavLink className={({isActive})=>(isActive ? "Nactive" : "")} to="/worker/profile" >Profile</NavLink></li>
                     </>
-                  ) : userType === 'Manager' ? (
+                  ) : userType === 'manager' ? (
                     <>
                       <li className="px-2"><NavLink className={({isActive})=>(isActive ? "Nactive" : "")} to="/manager/dashboard">Dashboard</NavLink></li>
                       <li className="px-2"><NavLink className={({isActive})=>(isActive ? "Nactive" : "")} to="/manager/issueResolving">Issue Resolving</NavLink></li>

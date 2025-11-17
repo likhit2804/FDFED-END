@@ -72,22 +72,22 @@ const getPreApprovals = async (req, res) => {
 
 const getCommonSpace = async (req, res) => {
   try {
-    const bookings = await CommonSpaces.find({ bookedBy: req.user.id }).sort({
+    const bookings = await CommonSpaces.find({ bookedBy: '68eb3a9eeea837fdb79aba39' }).sort({
       createdAt: -1,
     });
 
-    const resi = await Resident.findById(req.user.id);
+    const resi = await Resident.findById('68eb3a9eeea837fdb79aba39');
 
     resi.notifications.forEach(async (n) => {
       n.timeAgo = getTimeAgo(resi.notifications[0].createdAt);
     });
     await resi.save();
 
-    const ads = await Ad.find({
-      community: req.user.community,
-      startDate: { $lte: new Date() },
-      endDate: { $gte: new Date() },
-    });
+    // const ads = await Ad.find({
+    //   community: req.user.community,
+    //   startDate: { $lte: new Date() },
+    //   endDate: { $gte: new Date() },
+    // });
 
     const community = await Community.findById(req.user.community);
     const availableSpaces = community ? community.commonSpaces : [];
