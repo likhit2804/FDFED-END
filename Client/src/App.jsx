@@ -26,18 +26,47 @@ import { Tasks } from './components/Worker/Tasks';
 import { History } from './components/Worker/History';
 import { WorkerProfile } from './components/Worker/Profile';
 
+
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { ProtectedRoute } from './components/ProtectedRout.jsx'
+
+
+import AdminLogin from './components/AdminLogin';
+
+import AdminLayout from './components/Admin/AdminLayout';
+import { adminRoutes } from "./routes/adminRoutes";
+
+
+import { AdminAuthProvider } from './context/AdminAuthContext';
+import ProtectedAdminRoute from './components/Admin/ProtectedAdminRoute';
+
 
 function App() {
   const router = createBrowserRouter(
     createRoutesFromElements(
       <>
-        <Route path="/" element={<Landingpage />} />
-        <Route path="/SignIn" element={<SignIn />} />
-        <Route path="/SignUp" element={<SignUp />} />
-        <Route path="/interestForm" element={<InterestForm />} />
+
+        <Route path='/' element={<Landingpage/>} />
+        <Route path='/SignIn' element={<SignIn />} />
+        <Route path='/SignUp' element={<SignUp />} />
+        <Route path='/interestForm' element={<InterestForm />} />
+
+        <Route path='/adminLogin' element={<AdminLogin/>} ></Route>
+
+        <Route
+          path="/admin/*"
+          element={
+            <ProtectedAdminRoute>
+              <AdminLayout userType="admin" />
+            </ProtectedAdminRoute>
+          }
+        >
+          {adminRoutes.map(({ path, element }) => (
+            <Route key={path} path={path} element={element} />
+          ))}
+        </Route>
+
 
         <Route element={<ProtectedRoute allowedUserType="communityManager" />}>
           <Route path="/manager" element={<Layout userType="manager" />}>
@@ -73,12 +102,13 @@ function App() {
     )
   );
 
-  return (
-    <>
-      <ToastContainer />
-      <RouterProvider router={router} />
-    </>
-  );
+ return (
+  <AdminAuthProvider>
+    <ToastContainer />
+    <RouterProvider router={router} />
+  </AdminAuthProvider>
+);
 }
+
 
 export default App;

@@ -4,7 +4,11 @@ const auth = (req, res, next) => {
     const token = req.cookies.token; 
 
     if (!token) {
+<<<<<<< HEAD
         return res.json({ message: 'Unauthorized' });  
+=======
+        return res.redirect('/login');  
+>>>>>>> admin
     }
 
     try {
