@@ -495,7 +495,7 @@ residentRouter.get("/dashboard", async (req, res) => {
   const notifications = [];
 
   const ads = await Ad.find({
-    community: req.user.community,
+    community: req.user?.community,
     startDate: { $lte: new Date() },
     endDate: { $gte: new Date() },
   });
