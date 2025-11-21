@@ -200,84 +200,103 @@ app.use("/interest",interestRouter)
 
 const PORT = 3000 ;
 
-import jwt from "jsonwebtoken";
 
 app.post("/AdminLogin", async (req, res) => {
   try {
     const { email, password } = req.body;
-    const result = await AuthenticateA(email, password, req, res);
 
-    if (result) {
-      const token = jwt.sign(
-        { id: result._id, userType: "admin" },
-        process.env.JWT_SECRET,
-        { expiresIn: "1d" }
-      );
+    const result = await AuthenticateA(email, password);
 
-      res.cookie("token", token, {
-        httpOnly: true,
-        sameSite: "strict",
-        secure: process.env.NODE_ENV === "production",
-      });
-
-      return res.status(200).json({
-        success: true,
-        message: "Login successful",
-        redirect: "/admin/dashboard",
+    if (!result) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid email or password"
       });
     }
 
-    res.status(401).json({ success: false, message: "Invalid credentials" });
+    // Set cookie so Admin pages can use auth middleware
+    res.cookie("token", result.token, {
+      httpOnly: true,
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      sameSite: "lax"
+    });
+
+    // 🔥 VERY IMPORTANT:
+    // AdminLogin.jsx expects JSON, NOT HTML redirect
+    return res.json({
+      success: true,
+      user: result.user,
+      token: result.token,
+      redirect: "/admin/dashboard"  // or "/admin"
+    });
+
   } catch (error) {
     console.error("Admin login error:", error);
-    res.status(500).json({ success: false, message: "Server error" });
+    return res.status(500).json({
+      success: false,
+      message: "Server error"
+    });
   }
 });
+
+
 
 
 app.post("/login", async (req, res) => {
   try {
     const { email, password, userType } = req.body;
+    console.log(email, password, userType);
 
-    if (!email || !password || !userType) {
-      return res.status(400).json({ message: "All fields are required" });
-    }
+    let result;
 
-    let token;
-    switch (userType) {
-      case "Resident":
-        token = await AuthenticateR(email, password);
-        break;
-      case "Security":
-        token = await AuthenticateS(email, password);
-        break;
-      case "Worker":
-        token = await AuthenticateW(email, password);
-        break;
-      case "communityManager":
-        token = await AuthenticateC(email, password);
-        break;
-      default:
-        return res.status(400).json({ message: "Invalid user type" });
-    }
+    if (userType === "Resident") result = await AuthenticateR(email, password);
+    else if (userType === "Security") result = await AuthenticateS(email, password);
+    else if (userType === "Worker") result = await AuthenticateW(email, password);
+    else if (userType === "communityManager") result = await AuthenticateC(email, password);
+    else if (userType === "Admin") result = await AuthenticateA(email, password);
+    else return res.status(400).json({ message: "Invalid user type" });
 
-    if (!token) {
+    if (!result) {
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
-    res.json({
-      token: token.token,
-      user:{
-        ... token.user,
-        userType
-      },
-      message: "Login successful",
+    // ✅ STEP 3: Set cookie HERE
+    res.cookie("token", result.token, {
+      httpOnly: true,
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      sameSite: "lax"
     });
 
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Server error" });
+    return res.json({
+      token: result.token,
+      user: result.user,
+    });
+
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: "Server error" });
   }
+});
+
+
+
+app.get('/api/auth/getUser', auth, async (req, res) => {
+   const cookie = req.cookies.token;
+    if (!cookie) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    console.log("checking for user");
+    
+
+    try{
+       const data = await jwt.verify(cookie, process.env.JWT_SECRET);
+       console.log(data);
+       
+        return res.json({ user: data });
+    }catch(err){
+        return res.status(401).json({ message: 'Unauthorized' });
+    }
 });
 
 

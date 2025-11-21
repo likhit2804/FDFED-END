@@ -1,3 +1,4 @@
+// models/Community.js
 import mongoose from "mongoose";
 import Amenity from "./Amenities.js";
 
@@ -5,9 +6,10 @@ const CommunitySchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true },
   location: { type: String, required: true },
   description: { type: String },
+
   status: { type: String, enum: ["Active", "Inactive"], default: "Active" },
   totalMembers: { type: Number, default: 0 },
-  // Profile/Photos section
+
   profile: {
     photos: [{
       filename: { type: String, required: true },
@@ -26,20 +28,22 @@ const CommunitySchema = new mongoose.Schema({
       uploadedAt: Date
     }
   },
-  // Subscription fields
+
+  // CURRENT subscription status only
   subscriptionPlan: {
     type: String,
-    enum: ['basic', 'standard', 'premium'],
-    default: 'basic',
+    enum: ["basic", "standard", "premium"],
+    default: "basic",
   },
   subscriptionStatus: {
     type: String,
-    enum: ['active', 'pending', 'expired'],
-    default: 'pending',
+    enum: ["active", "pending", "expired"],
+    default: "pending",
   },
   planStartDate: Date,
   planEndDate: Date,
-  // Legacy payment history (keep for backward compatibility)
+
+  // legacy (optional)
   paymentHistory: [{
     date: Date,
     amount: Number,
@@ -47,55 +51,36 @@ const CommunitySchema = new mongoose.Schema({
     transactionId: String,
     invoiceUrl: String
   }],
-  // NEW: Detailed subscription history (matches your route code)
-  subscriptionHistory: [{
-    transactionId: { type: String, required: true },
-    planName: { type: String, required: true },
-    planType: { type: String, required: true },
-    amount: { type: Number, required: true },
-    paymentMethod: { type: String, required: true },
-    paymentDate: { type: Date, required: true },
-    planStartDate: { type: Date, required: true },
-    planEndDate: { type: Date, required: true },
-    duration: { type: String, enum: ['monthly', 'yearly'], default: 'monthly' },
-    status: { type: String, enum: ['completed', 'pending', 'failed'], default: 'pending' },
-    isRenewal: { type: Boolean, default: false },
-    metadata: {
-      userAgent: String,
-      ipAddress: String
-    }
-  }],
+
   commonSpaces: [{ type: mongoose.Schema.Types.ObjectId, ref: "Amenity" }],
-  // Reference to community manager
+
   communityManager: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "CommunityManager"
   }
-}, {
-  timestamps: true
-});
-// Add index for better query performance
+}, { timestamps: true });
+
 CommunitySchema.index({ subscriptionStatus: 1, planEndDate: 1 });
-CommunitySchema.index({ 'subscriptionHistory.paymentDate': -1 });
-// Add virtual property to check if subscription is expired
-CommunitySchema.virtual('isExpired').get(function () {
-  if (!this.planEndDate || !this.subscriptionStatus) return true;
-  return this.subscriptionStatus === 'expired' ||
-    (this.subscriptionStatus === 'active' && new Date() > new Date(this.planEndDate));
+
+// virtuals
+CommunitySchema.virtual("isExpired").get(function () {
+  if (!this.planEndDate) return true;
+  return new Date() > new Date(this.planEndDate);
 });
-// Add virtual property to check if subscription is expiring soon (within 7 days)
-CommunitySchema.virtual('isExpiringSoon').get(function () {
-  if (!this.planEndDate || this.subscriptionStatus !== 'active') return false;
-  const sevenDaysFromNow = new Date();
-  sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
-  return new Date(this.planEndDate) <= sevenDaysFromNow;
+
+CommunitySchema.virtual("isExpiringSoon").get(function () {
+  if (!this.planEndDate || this.subscriptionStatus !== "active") return false;
+  const t = new Date();
+  t.setDate(t.getDate() + 7);
+  return new Date(this.planEndDate) <= t;
 });
-// Add method to update subscription status
+
 CommunitySchema.methods.updateSubscriptionStatus = function () {
   if (this.planEndDate && new Date() > new Date(this.planEndDate)) {
-    this.subscriptionStatus = 'expired';
+    this.subscriptionStatus = "expired";
   }
   return this;
 };
+
 const Community = mongoose.model("Community", CommunitySchema);
 export default Community;

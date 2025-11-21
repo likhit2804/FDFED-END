@@ -40,9 +40,34 @@ import { adminRoutes } from "./routes/adminRoutes";
 
 import { AdminAuthProvider } from './context/AdminAuthContext';
 import ProtectedAdminRoute from './components/Admin/ProtectedAdminRoute';
+import { useEffect } from 'react';
+
+
+
 
 
 function App() {
+
+  useEffect(()=>{
+    const fetchUserOnLoad = async () => {
+        const data = await fetch('http://localhost:3000/api/auth/getUser', {
+            method: 'GET',
+            credentials: 'include',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        const result = await data.json();
+        if (result.user) {
+            console.log("User data on load:", result.user);
+        } else {
+            console.log("No user data on load");
+        } 
+        
+    };
+    fetchUserOnLoad();
+}, []);
+
   const router = createBrowserRouter(
     createRoutesFromElements(
       <>
