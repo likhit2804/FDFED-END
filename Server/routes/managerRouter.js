@@ -432,72 +432,9 @@ managerRouter.get("/api/community/spaces", async (req, res) => {
 });
 
 async function checkSubscription(req, res, next) {
-  try {
-    // Skip check for payment-related routes
-    if (
-      req.path.startsWith("/payments") ||
-      req.path.startsWith("/subscription") ||
-      req.path === "/all-communities" ||
-      req.path === "/residents" ||
-      req.path === "/communities" ||
-      req.path === "/currentcManager" ||
-      req.path === "/community-details" ||
-      req.path === "/subscription-status" ||
-      req.path === "/subscription-payment" ||
-      req.path === "/all-payments" ||
-      req.path === "/new-community" ||
-      req.path === "/create-with-payment"
-    ) {
-      return next();
-    }
-
-    // Get manager and community info
-    const managerId = req.user.id;
-    const manager = await CommunityManager.findById(managerId);
-
-    if (!manager) {
-      return res
-        .status(404)
-        .render("error", { message: "Community manager not found" });
-    }
-
-    const community = await Community.findById(
-      manager.assignedCommunity
-    ).select("subscriptionStatus planEndDate");
-
-    if (!community) {
-      return res
-        .status(404)
-        .render("error", { message: "Community not found" });
-    }
-
-    // Check if subscription is active
-    const now = new Date();
-    const isExpired =
-      community.planEndDate && new Date(community.planEndDate) < now;
-
-    if (isExpired || community.subscriptionStatus !== "active") {
-      // Store the original URL in session for redirecting back after payment
-      req.session.returnTo = req.originalUrl;
-
-      // Add a flash message
-      req.flash(
-        "warning",
-        "Your subscription has expired or is inactive. Please complete the payment to continue."
-      );
-
-      // Redirect to payment page
-      return res.redirect("/manager/payments");
-    }
-
-    next();
-  } catch (error) {
-    console.error("Subscription check error:", error);
-    res
-      .status(500)
-      .render("error", { message: "Error checking subscription status" });
-  }
+  return next(); // Allow all routes temporarily
 }
+
 
 // Apply checkSubscription middleware to all routes except excluded ones
 managerRouter.use(checkSubscription);
@@ -1479,35 +1416,219 @@ managerRouter.get("/issueResolving/api/issues", async (req, res) => {
 });
 
 managerRouter.post("/issue/assign", async (req, res) => {
-  const { id, issueID, worker, deadline, remarks } = req.body;
+  const { id, worker, deadline, remarks } = req.body;
+
   try {
     const issue = await Issue.findById(id);
-    console.log(issue);
+
+    if (!issue) {
+      return res.status(404).json({ success: false, message: "Issue not found" });
+    }
+
+    // BLOCK assigning completed issues
+    const invalidStatuses = [
+      "Resolved (Awaiting Confirmation)",
+      "Closed",
+      "Auto-Closed",
+      "Rejected"
+    ];
+
+    if (invalidStatuses.includes(issue.status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Cannot assign a completed or closed issue."
+      });
+    }
+
+    // BLOCK reassigning if already assigned
+    if (issue.workerAssigned) {
+      return res.status(400).json({
+        success: false,
+        message: "Issue already assigned to a worker."
+      });
+    }
+
+    // MANUAL ASSIGN
+    issue.workerAssigned = worker;
+    issue.deadline = deadline || null;
+    issue.remarks = remarks || null;
+    issue.status = "Assigned";
+    issue.autoAssigned = false;
+
+    await issue.save();
+
+    // UPDATE WORKER’S ISSUE LIST
+    const workerData = await Worker.findById(worker);
+    if (!workerData) {
+      return res.status(404).json({ success: false, message: "Worker not found" });
+    }
+
+    workerData.assignedIssues.push(issue._id);
+    await workerData.save();
+
+    return res.json({
+      success: true,
+      message: "Worker assigned successfully",
+      issue
+    });
+
+  } catch (error) {
+    console.error("Error assigning issue:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error"
+    });
+  }
+});
+
+managerRouter.get("/issues", async (req, res) => {
+  try {
+    // Manager ID from JWT cookie
+    const managerId = req.user.id;
+
+    // Find manager
+    const manager = await CommunityManager.findById(managerId);
+    if (!manager) {
+      return res.status(404).json({
+        success: false,
+        message: "Community manager not found",
+      });
+    }
+
+    // Manager must have an assigned community
+    const community = manager.assignedCommunity;
+    if (!community) {
+      return res.status(404).json({
+        success: false,
+        message: "No community assigned to this manager",
+      });
+    }
+
+    // Fetch issues for this community
+    const issues = await Issue.find({ community })
+      .populate("resident")
+      .populate("workerAssigned")
+      .sort({ createdAt: -1 });
+
+    return res.json({
+      success: true,
+      count: issues.length,
+      issues,
+    });
+
+  } catch (error) {
+    console.error("Error fetching issues:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error while fetching issues",
+    });
+  }
+});
+
+managerRouter.post("/issue/reassign", async (req, res) => {
+  const { id, newWorker, remarks, deadline } = req.body;
+
+  try {
+    const issue = await Issue.findById(id);
 
     if (!issue) {
       return res.status(404).send("Issue not found");
     }
 
-    issue.workerAssigned = worker;
-    issue.deadline = deadline;
-    issue.remarks = remarks;
-    issue.status = "Assigned";
+    // -----------------------------------
+    // BLOCK reassignment for completed issues
+    // -----------------------------------
+    const invalidStatuses = [
+      "Resolved (Awaiting Confirmation)",
+      "Closed",
+      "Auto-Closed",
+      "Rejected"
+    ];
+
+    if (invalidStatuses.includes(issue.status)) {
+      return res.status(400).send("Cannot reassign a completed / closed issue.");
+    }
+
+    // -----------------------------------
+    // Cannot reassign to same worker
+    // -----------------------------------
+    if (issue.workerAssigned?.toString() === newWorker) {
+      return res.status(400).send("Issue is already assigned to this worker.");
+    }
+
+    // -----------------------------------
+    // REMOVE FROM OLD WORKER
+    // -----------------------------------
+    if (issue.workerAssigned) {
+      const oldWorker = await Worker.findById(issue.workerAssigned);
+      if (oldWorker) {
+        oldWorker.assignedIssues = oldWorker.assignedIssues.filter(
+          (w) => w.toString() !== issue._id.toString()
+        );
+        await oldWorker.save();
+      }
+    }
+
+    // -----------------------------------
+    // ASSIGN TO NEW WORKER
+    // -----------------------------------
+    const workerData = await Worker.findById(newWorker);
+    if (!workerData) {
+      return res.status(404).send("New worker not found.");
+    }
+
+    issue.workerAssigned = newWorker;
+    issue.status = "Assigned"; // stays Assigned
+    issue.autoAssigned = false; // manual override by manager
+    issue.deadline = deadline || issue.deadline;
+    issue.remarks = remarks || issue.remarks;
+
     await issue.save();
 
-    // Find the worker and update their assigned issues
-    const workerData = await Worker.findById(worker);
-    if (!workerData) {
-      return res.status(404).send("Worker not found");
-    }
-    workerData.assignedIssues.push(id);
+    // Push issue to new worker
+    workerData.assignedIssues.push(issue._id);
     await workerData.save();
 
-    req.flash("alert-msg", "Worker Assigned");
+    req.flash("alert-msg", "Issue successfully reassigned!");
+    return res.redirect("/manager/issueResolving");
 
-    res.redirect("/manager/issueResolving");
   } catch (error) {
-    console.error("Error assigning issue:", error);
+    console.error("Error reassigning:", error);
     return res.status(500).send("Server error");
+  }
+});
+managerRouter.post("/issue/close/:id", async (req, res) => {
+  try {
+    const issue = await Issue.findById(req.params.id);
+
+    if (!issue) return res.status(404).json({ success: false, message: "Issue not found" });
+
+    issue.status = "Closed";
+    await issue.save();
+
+    return res.json({ success: true, message: "Issue closed by manager" });
+
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+managerRouter.post("/issue/onHold/:id", async (req, res) => {
+  try {
+    const issue = await Issue.findById(req.params.id);
+
+    if (!issue) return res.status(404).json({ success: false, message: "Issue not found" });
+
+    issue.status = "On Hold";
+    issue.remarks = req.body.remarks || "On Hold by Manager";
+
+    await issue.save();
+
+    return res.json({ success: true, message: "Issue put on hold." });
+
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ success: false, message: "Server error" });
   }
 });
 

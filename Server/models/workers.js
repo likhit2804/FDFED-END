@@ -2,32 +2,58 @@ import mongoose from "mongoose";
 
 const workerSchema = new mongoose.Schema({
   name: { type: String, required: true },
+
   email: { type: String, required: true, unique: true },
-  password: {
-    type: String,
-  },
-  jobRole: { type: String, required: true },
+
+  password: { type: String },
+
   contact: { type: String, required: true },
+
   address: { type: String, required: true },
-  communityAssigned: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Community",
-  },
-  image:String,
 
   
+
+  // 🔥 REQUIRED for Auto-Assign
+  jobRole: {
+    type: [String],
+    enum: [
+      "Plumbing",
+      "Electrical",
+      "Security",
+      "Maintenance",
+      "Pest Control",
+      "Waste Management",
+      "Other"
+    ],
+    required: true,
+  },
+
+  // 🔥 REQUIRED for Auto-Assign Cron
+  isActive: {
+    type: Boolean,
+    default: true,
+  },
+
+  image: { type: String },
+
   salary: { type: Number, required: true },
+
   joiningDate: { type: Date, default: Date.now },
+
+  // 🔥 A worker always belongs to one community (for filtering)
   community: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Community",
     required: true,
-  }, // Linked to Community
+  },
 
-  assignedIssues: [{ type: mongoose.Schema.Types.ObjectId, ref: "Issue" }],
-});
+  // 🔥 Auto-Assign depends on this to calculate workload
+  assignedIssues: [
+    { type: mongoose.Schema.Types.ObjectId, ref: "Issue" }
+  ],
+  
+}, { timestamps: true });
 
-// Create Worker Model
 const Worker = mongoose.model("Worker", workerSchema);
 
 export default Worker;

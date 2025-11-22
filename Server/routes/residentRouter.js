@@ -112,19 +112,21 @@ async function setPenalties(overdues) {
   }
 }
 
-function generateCustomID(userEmail, facility, countOrRandom = null) {
-  console.log("userEmail:", userEmail);
+function generateCustomID(uCode, facility, countOrRandom = null) {
+  console.log("uCode:", uCode);
 
-  const emailPrefix = userEmail.toUpperCase().slice(-4);
+  // Clean the uCode (remove spaces)
+  const code = uCode.toUpperCase().trim(); // BLK1-101
 
-  const facilityCode = facility.toUpperCase().slice(0, 2);
+  const facilityCode = facility.toUpperCase().slice(0, 2); // IS
 
   const suffix = countOrRandom
     ? String(countOrRandom).padStart(4, "0")
     : String(Math.floor(1000 + Math.random() * 9000));
 
-  return `UE-${emailPrefix}-${facilityCode}-${suffix}`;
+  return `${code}-${facilityCode}-${suffix}`;
 }
+
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -578,60 +580,168 @@ residentRouter.get("/", (req, res) => {
   res.redirect("dashboard");
 });
 
-residentRouter.get("/issueRaising", getIssueData);
+
+import { autoAssignIssue, checkDuplicateIssue } from "../utils/issueAutomation.js";
 
 residentRouter.post("/issueRaising", async (req, res) => {
   try {
-    const { category, description } = req.body;
+    const {
+      category,
+      categoryType,
+      description,
+      location,
+      priority,
+      otherCategory
+    } = req.body;
+
     console.log("Received Issue Data:", req.body);
-    if (!category || !description) {
-      req.flash("message", "All fields are required.");
-      console.log("Missing fields in request body:", req.body);
-      return res.redirect("issueRaising");
+
+    // --------------------------
+    // BASIC VALIDATION
+    // --------------------------
+    if (!category || !categoryType || !description) {
+      return res.status(400).json({
+        success: false,
+        message: "Category, categoryType, and description are required."
+      });
     }
+
     const resident = await Resident.findById(req.user.id);
     if (!resident) {
-      req.flash("message", "Resident not found.");
-      console.log("Resident not found for ID:", req.user.id);
-      return res.redirect("issueRaising");
+      return res.status(404).json({
+        success: false,
+        message: "Resident not found."
+      });
     }
-    console.log("Resident Found:", resident);
 
-    const creat = new Date().toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
-    // Create the new issue document
+    // --------------------------
+    // LOCATION HANDLING
+    // --------------------------
+    let finalLocation = "";
+
+    if (categoryType === "Resident") {
+      finalLocation = resident.uCode; // auto-fill
+    } else {
+      if (!location || !location.trim()) {
+        return res.status(400).json({
+          success: false,
+          message: "Location is required for community issues."
+        });
+      }
+      finalLocation = location.trim();
+    }
+
+    // --------------------------
+    // DUPLICATE ISSUE CHECK
+    // --------------------------
+    const duplicate = await checkDuplicateIssue(
+      resident._id,
+      category,
+      finalLocation
+    );
+
+    if (duplicate) {
+      return res.status(409).json({
+        success: false,
+        message: "A similar issue was raised in the last 24 hours."
+      });
+    }
+
+    // --------------------------
+    // CREATE THE ISSUE
+    // --------------------------
     const newIssue = await Issue.create({
       resident: resident._id,
+      categoryType,
+      category,
+      otherCategory,
       title: category,
-      description: description,
-      status: "Pending",
-      workerAssigned: null,
+      description,
+      location: finalLocation,
+      priority: priority || "Normal",
       community: resident.community,
+      status: "Pending Assignment",
+      workerAssigned: null,
+      autoAssigned: false
     });
 
-    const issueID = generateCustomID(req.user.id, "IS", null);
-    newIssue.issueID = issueID;
+    // --------------------------
+    // ISSUE ID GENERATION
+    // --------------------------
+    newIssue.issueID = generateCustomID(resident.uCode, "IS", null);
     await newIssue.save();
 
-    console.log("New Issue Created:", newIssue);
+    // Add to resident history
     resident.raisedIssues.push(newIssue._id);
     await resident.save();
-    console.log("Resident's raisedIssues updated:", resident.raisedIssues);
+
+    // --------------------------
+    // AUTO ASSIGN WORKER
+    // --------------------------
+    const autoAssignResult = await autoAssignIssue(newIssue);
 
     return res.json({
       success: true,
-      message: "Issue raised successfully!",
+      message: autoAssignResult.assigned
+        ? "Issue raised and auto-assigned!"
+        : "Issue raised, waiting for manager assignment.",
       issue: newIssue,
+      autoAssignInfo: autoAssignResult
     });
+
   } catch (error) {
     console.error("Error raising issue:", error);
-    req.flash("message", "Something went wrong.");
-    return res.json({ success: false, message: "Something went wrong." });
+    return res.status(500).json({
+      success: false,
+      message: "Server error while raising issue."
+    });
   }
 });
+
+residentRouter.post("/issue/confirm/:id", async (req, res) => {
+  try {
+    const issue = await Issue.findById(req.params.id);
+
+    if (!issue) return res.status(404).json({ success: false, message: "Issue not found" });
+
+    if (issue.status !== "Resolved (Awaiting Confirmation)") {
+      return res.status(400).json({ success: false, message: "Cannot confirm this issue" });
+    }
+
+    issue.status = "Closed";
+    await issue.save();
+
+    return res.json({ success: true, message: "Issue closed successfully." });
+
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+residentRouter.post("/issue/reject/:id", async (req, res) => {
+  try {
+    const issue = await Issue.findById(req.params.id);
+
+    if (!issue) return res.status(404).json({ success: false, message: "Issue not found" });
+
+    if (issue.status !== "Resolved (Awaiting Confirmation)") {
+      return res.status(400).json({ success: false, message: "Issue cannot be rejected" });
+    }
+
+    issue.status = "Reopened";
+    issue.workerAssigned = null;
+    issue.autoAssigned = false;
+
+    await issue.save();
+
+    return res.json({ success: true, message: "Issue reopened. Manager will review." });
+
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
 
 residentRouter.post("/deleteIssue/:issueID", async (req, res) => {
   try {
