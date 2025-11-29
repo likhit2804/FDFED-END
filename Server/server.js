@@ -280,23 +280,9 @@ app.post("/login", async (req, res) => {
 
 
 
-app.get('/api/auth/getUser', auth, async (req, res) => {
-   const cookie = req.cookies.token;
-    if (!cookie) {
-      return res.status(401).json({ message: 'Unauthorized' });
-    }
 
-    console.log("checking for user");
-    
-
-    try{
-       const data = await jwt.verify(cookie, process.env.JWT_SECRET);
-       console.log(data);
-       
-        return res.json({ user: data });
-    }catch(err){
-        return res.status(401).json({ message: 'Unauthorized' });
-    }
+app.get('/api/auth/getUser', auth, (req, res) => {
+  res.json({ user: req.user });
 });
 
 
