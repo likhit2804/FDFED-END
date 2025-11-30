@@ -20,7 +20,7 @@ export const ProtectedRoute = ({ allowedUserType }) => {
   }
 
   if (user.userType !== allowedUserType) {
-    if (user.userType === "communityManager")
+    if (user.userType === "CommunityManager")
       return <Navigate to="/manager/dashboard" replace />;
     if (user.userType === "Resident")
       return <Navigate to="/resident/dashboard" replace />;

@@ -40,33 +40,25 @@ import { adminRoutes } from "./routes/adminRoutes";
 
 import { AdminAuthProvider } from './context/AdminAuthContext';
 import ProtectedAdminRoute from './components/Admin/ProtectedAdminRoute';
-import { useEffect } from 'react';
 
-
-
-
+import React, { useEffect } from "react";
+import { useDispatch } from "react-redux";
+import { setUser } from "./Slices/authSlice";
 
 function App() {
+  const dispatch = useDispatch();
 
-  useEffect(()=>{
-    const fetchUserOnLoad = async () => {
-        const data = await fetch('http://localhost:3000/api/auth/getUser', {
-            method: 'GET',
-            credentials: 'include',
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        });
-        const result = await data.json();
-        if (result.user) {
-            console.log("User data on load:", result.user);
-        } else {
-            console.log("No user data on load");
-        } 
-        
-    };
-    fetchUserOnLoad();
-}, []);
+  useEffect(() => {
+    fetch("http://localhost:3000/api/auth/getUser", {
+      credentials: "include"
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.user) {
+          dispatch(setUser(data.user));
+        }
+      });
+  }, [dispatch]);
 
   const router = createBrowserRouter(
     createRoutesFromElements(
@@ -93,7 +85,7 @@ function App() {
         </Route>
 
 
-        <Route element={<ProtectedRoute allowedUserType="communityManager" />}>
+        <Route element={<ProtectedRoute allowedUserType="CommunityManager" />}>
           <Route path="/manager" element={<Layout userType="manager" />}>
             <Route path="dashboard" element={<ManagerDashboard />} />
             <Route path="issueResolving" element={<IssueResolving />} />
@@ -134,6 +126,5 @@ function App() {
   </AdminAuthProvider>
 );
 }
-
 
 export default App;

@@ -29,6 +29,8 @@ const issueSchema = new Schema({
       "Auto-Closed",
       "Reopened",
       "Rejected",
+      "Payment Pending",
+      "Payment Completed"
     ],
     default: "Pending Assignment",
   },

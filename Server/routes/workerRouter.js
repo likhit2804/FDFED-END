@@ -52,99 +52,27 @@ workerRouter.get("/history", async (req, res) => {
   res.render("worker/History", { path: "H", issues, ads });
 });
 
-workerRouter.get("/tasks", async (req, res) => {
-  const tasks = await Issue.find({ workerAssigned: req.user.id,status:"Assigned" })
-    .populate("workerAssigned")
-    .populate("resident");
 
- const ads = await Ad.find({ community: req.user.community,startDate: { $lte: new Date() }, endDate: { $gte: new Date() } });
-
-  
-
-  res.render("worker/Task", { path: "t", tasks, ads });
-});
-
-workerRouter.post("/issue/start/:id", async (req, res) => {
+// JSON API endpoint for worker's active tasks (Assigned, In Progress, Reopened)
+workerRouter.get("/api/tasks", async (req, res) => {
   try {
-    const issue = await Issue.findById(req.params.id);
-
-    if (!issue) return res.status(404).json({ success: false, message: "Issue not found" });
-
-    if (issue.status !== "Assigned") {
-      return res.status(400).json({ success: false, message: "Issue must be Assigned before starting" });
-    }
-
-    issue.status = "In Progress";
-    await issue.save();
-
-    return res.json({ success: true, message: "Issue marked as In Progress" });
-
+    const tasks = await Issue.find({
+      workerAssigned: req.user.id,
+      status: { $in: ["Assigned", "In Progress", "Reopened"] }
+    })
+      .populate("workerAssigned")
+      .populate("resident");
+    res.json({ success: true, tasks });
   } catch (err) {
-    console.error(err);
-    return res.status(500).json({ success: false, message: "Server error" });
-  }
-});
-workerRouter.post("/issue/resolve/:id", async (req, res) => {
-  try {
-    const issue = await Issue.findById(req.params.id).populate("resident");
-
-    if (!issue) {
-      return res.status(404).json({
-        success: false,
-        message: "Issue not found",
-      });
-    }
-
-    // Issue must be in progress to be resolved
-    if (issue.status !== "In Progress") {
-      return res.status(400).json({
-        success: false,
-        message: "Issue must be In Progress to resolve",
-      });
-    }
-
-    // Update status + resolved timestamp
-    issue.status = "Resolved (Awaiting Confirmation)";
-    issue.resolvedAt = new Date();
-
-    // Push notification to resident
-    issue.resident.notifications.push({
-      n: `Your issue ${issue.issueID} has been resolved. Please confirm.`,
-      createdAt: new Date(),
-      belongs: "Issue",
-    });
-
-    await issue.resident.save();
-    await issue.save();
-
-    return res.json({
-      success: true,
-      message: "Issue resolved. Awaiting resident confirmation.",
-    });
-
-  } catch (error) {
-    console.error("Resolve error:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Server error",
-    });
+    res.status(500).json({ success: false, message: "Failed to fetch tasks" });
   }
 });
 
-import { flagMisassigned } from "../utils/issueAutomation.js";
+import {startIssue,resolveIssue,misassignedIssue}from "../controllers/issueController.js";
 
-workerRouter.post("/issue/misassigned/:id", async (req, res) => {
-  try {
-    await flagMisassigned(req.params.id);
-
-    return res.json({ success: true, message: "Issue flagged as misassigned. Auto reassignment triggered." });
-
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json({ success: false, message: "Server error" });
-  }
-});
-
+workerRouter.post("/issue/start/:id", startIssue);
+workerRouter.post("/issue/resolve/:id", resolveIssue);
+workerRouter.post("/issue/misassigned/:id", misassignedIssue);
 
 workerRouter.get("/profile", async (req, res) => {
  const ads = await Ad.find({ community: req.user.community,startDate: { $lte: new Date() }, endDate: { $gte: new Date() } });
