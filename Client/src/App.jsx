@@ -43,7 +43,6 @@ import ProtectedAdminRoute from './components/Admin/ProtectedAdminRoute';
 
 import React, { useEffect } from "react";
 import { useDispatch } from "react-redux";
-import { setUser } from "./Slices/authSlice";
 
 function App() {
   const dispatch = useDispatch();
@@ -54,9 +53,8 @@ function App() {
     })
       .then(res => res.json())
       .then(data => {
-        if (data.user) {
-          dispatch(setUser(data.user));
-        }
+        console.log("user fetched",data);
+        
       });
   }, [dispatch]);
 
