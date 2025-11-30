@@ -6,6 +6,7 @@ import bodyParser from "express";
 import session from "express-session";
 import mongoose from "mongoose";
 import cors from "cors"
+import jwt from "jsonwebtoken";
 
 import dotenv from "dotenv";
 dotenv.config();
@@ -187,18 +188,18 @@ import interestRouter from "./routes/InterestRouter.js"
 import Ad from "./models/Ad.js";
 
 app.use("/admin", auth, authorizeA, AdminRouter);
-app.use("/resident",auth,authorizeR, residentRouter);
+app.use("/resident", auth, authorizeR, residentRouter);
 
 app.use("/security", auth, authorizeS, securityRouter);
 
 app.use("/worker", auth, authorizeW, workerRouter);
 
-app.use("/manager",auth,authorizeC,managerRouter);
+app.use("/manager", auth, authorizeC, managerRouter);
 
-app.use("/interest",interestRouter)
+app.use("/interest", interestRouter)
 
 
-const PORT = 3000 ;
+const PORT = 3000;
 
 
 app.post("/AdminLogin", async (req, res) => {
@@ -249,11 +250,11 @@ app.post("/login", async (req, res) => {
 
     let result;
 
-    if (userType === "Resident") result = await AuthenticateR(email, password);
-    else if (userType === "Security") result = await AuthenticateS(email, password);
-    else if (userType === "Worker") result = await AuthenticateW(email, password);
-    else if (userType === "communityManager") result = await AuthenticateC(email, password);
-    else if (userType === "Admin") result = await AuthenticateA(email, password);
+    if (userType === "Resident") result = await AuthenticateR(email, password, res);
+    else if (userType === "Security") result = await AuthenticateS(email, password, res);
+    else if (userType === "Worker") result = await AuthenticateW(email, password, res);
+    else if (userType === "communityManager") result = await AuthenticateC(email, password, res);
+    else if (userType === "Admin") result = await AuthenticateA(email, password, res);
     else return res.status(400).json({ message: "Invalid user type" });
 
     if (!result) {
@@ -280,9 +281,24 @@ app.post("/login", async (req, res) => {
 
 
 
+app.get('/api/auth/getUser', auth, async (req, res) => {
+  const cookie = req.cookies.token;
 
-app.get('/api/auth/getUser', auth, (req, res) => {
-  res.json({ user: req.user });
+  console.log("token at getUser : ", cookie)
+
+
+  console.log("checking for user");
+
+
+  try {
+    const data = await jwt.verify(cookie, process.env.JWT_SECRET);
+    console.log(data);
+
+    return res.json({ user: data });
+  } catch (err) {
+    console.log(err);
+    return res.status(401).json({ message: 'Unauthorized' });
+  }
 });
 
 

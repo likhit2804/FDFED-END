@@ -1,12 +1,12 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import  CommunityManager from '../models/cManager.js' ;
+import CommunityManager from '../models/cManager.js';
 import Resident from '../models/resident.js';
 import Security from '../models/security.js';
 import Worker from '../models/workers.js';
 import Admin from '../models/admin.js';
 
-async function authenticateUser(model, email, password) {
+async function authenticateUser(model, email, password, res) {
     const user = await model.findOne({ email });
     if (!user) return null;
 
@@ -31,27 +31,34 @@ async function authenticateUser(model, email, password) {
         { expiresIn: '7d' }
     );
 
+    res.cookie('token', token, {
+        httpOnly: true,
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+        sameSite: 'lax'
+    });
+
+
     return {
         token,
         user: userPayload
     };
 }
-export async function AuthenticateR(email, password) {
-    return authenticateUser(Resident, email, password);
+export async function AuthenticateR(email, password, res) {
+    return authenticateUser(Resident, email, password, res);
 }
 
-export async function AuthenticateS(email, password) {
-    return authenticateUser(Security, email, password);
+export async function AuthenticateS(email, password, res) {
+    return authenticateUser(Security, email, password, res);
 }
 
-export async function AuthenticateW(email, password) {
-    return authenticateUser(Worker, email, password);
+export async function AuthenticateW(email, password, res) {
+    return authenticateUser(Worker, email, password, res);
 }
 
-export async function AuthenticateA(email, password) {
-    return authenticateUser(Admin, email, password);
+export async function AuthenticateA(email, password, res) {
+    return authenticateUser(Admin, email, password, res);
 }
 
-export async function AuthenticateC(email, password) {
-    return authenticateUser(CommunityManager, email, password);
+export async function AuthenticateC(email, password, res) {
+    return authenticateUser(CommunityManager, email, password, res);
 }

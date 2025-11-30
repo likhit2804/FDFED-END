@@ -12,7 +12,11 @@ const initialState = {
 export const fetchuserBookings = createAsyncThunk("commonSpace/fetchBookings", async (_, { rejectWithValue }) => {
   try {
     const response = await fetch("http://localhost:3000/resident/commonSpace", {
-      credentials: "include", // <--- ADD THIS LINE
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include"
     });
     if (!response.ok) {
       const errorData = await response.json();
@@ -39,7 +43,6 @@ export const ConfirmBooking = createAsyncThunk("commonSpace/ConfirmBooking", asy
       headers: {
         "Content-Type": "application/json",
       },
-      credentials: "include", // <--- ADD THIS LINE
       body: JSON.stringify({data,newBooking}),
     });
     const d = await response.json();
@@ -53,11 +56,10 @@ export const ConfirmBooking = createAsyncThunk("commonSpace/ConfirmBooking", asy
 }
 )
 
+
 export const fetchDataforManager = createAsyncThunk("commonSpace/fetchDataforManager",async (_, { rejectWithValue }) => {
     try {
-      const response = await fetch("http://localhost:3000/manager/commonSpace", {
-        credentials: "include", // <--- ADD THIS LINE
-      });
+      const response = await fetch("http://localhost:3000/manager/commonSpace");
       if (!response.ok) {
         const errorData = await response.json();
         return rejectWithValue(errorData);
@@ -73,6 +75,7 @@ export const fetchDataforManager = createAsyncThunk("commonSpace/fetchDataforMan
     }
 });
 
+
 export const EditSpace = createAsyncThunk("commonSpace/EditSpace",
   async ({ id, updatedData }, { rejectWithValue }) => {
     try {
@@ -83,7 +86,6 @@ export const EditSpace = createAsyncThunk("commonSpace/EditSpace",
           headers: {
             "Content-Type": "application/json",
           },
-          credentials: "include", // <--- ADD THIS LINE
           body: JSON.stringify(updatedData),
         }
       );
@@ -109,7 +111,6 @@ export const DeleteSpace = createAsyncThunk(
           headers: {
             "Content-Type": "application/json",
           },
-          credentials: "include", // <--- ADD THIS LINE
         }
       );
       const data = await response.json();
@@ -132,7 +133,6 @@ export const AddSpace = createAsyncThunk(
         headers: {
           "Content-Type": "application/json",
         },
-        credentials: "include", // <--- ADD THIS LINE
         body: JSON.stringify(newSpaceData),
       });
       const data = await response.json();
@@ -156,7 +156,6 @@ export const ProceedPayment = createAsyncThunk("commonSpace/ProceedPayment",
         headers: {
           "Content-Type": "application/json",
         },
-        credentials: "include", // <--- ADD THIS LINE
         body: JSON.stringify(paymentData),
       });
       const data = await response.json();
@@ -182,7 +181,6 @@ export const cancelUserBooking = createAsyncThunk(
           headers: {
             "Content-Type": "application/json",
           },
-          credentials: "include", // <--- ADD THIS LINE
         }
       );
       const data = await response.json();

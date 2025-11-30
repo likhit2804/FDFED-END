@@ -3,16 +3,25 @@ import axios from "axios";
 
 export const loginUser = createAsyncThunk(
   "auth/loginUser",
-  async ({ email, password , userType }, { rejectWithValue }) => {
+  async ({ email, password, userType }, { rejectWithValue }) => {
     try {
-      const response = await axios.post(
-        "http://localhost:3000/login",
-        { email, password , userType },
-        { withCredentials: true } // <-- send cookies!
-      );
-      // localStorage.setItem("token", response.data.token); // REMOVE THIS LINE
-      return response.data;
+      const r = await fetch("http://localhost:3000/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({ email, password, userType })
+      })
+      const response = await r.json();
+      console.log(response);
+      
+
+      localStorage.setItem("token", response.token);
+      localStorage.setItem("user", JSON.stringify(response.user));
+      return response;
     } catch (err) {
+      console.log(err);
       return rejectWithValue(err.response?.data?.message || "Login failed");
     }
   }
@@ -22,12 +31,13 @@ export const registerUser = createAsyncThunk(
   "auth/registerUser",
   async ({ name, email, password, userType }, { rejectWithValue }) => {
     try {
-      const response = await axios.post(
-        "http://localhost:5000/api/auth/register",
-        { name, email, password, userType },
-        { withCredentials: true } // <-- send cookies!
-      );
-      return response.data;
+      const response = await axios.post("http://localhost:5000/api/auth/register", {
+        name,
+        email,
+        password,
+        userType,
+      });
+      return response;
     } catch (err) {
       return rejectWithValue(err.response?.data?.message || "Registration failed");
     }
@@ -37,19 +47,18 @@ export const registerUser = createAsyncThunk(
 const authSlice = createSlice({
   name: "auth",
   initialState: {
-    user: null,
-    token: null,
+    user: localStorage.getItem("user") ? JSON.parse(localStorage.getItem("user")) : null,
+    token: localStorage.getItem("token") ? localStorage.getItem("token") : null,
     loading: false,
     error: null,
   },
   reducers: {
     logout: (state) => {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
       state.user = null;
       state.token = null;
     },
-    setUser: (state, action) => {
-      state.user = action.payload;
-    }
   },
   extraReducers: (builder) => {
     builder
@@ -59,9 +68,11 @@ const authSlice = createSlice({
       })
       .addCase(loginUser.fulfilled, (state, action) => {
         state.loading = false;
+        console.log("payload", action.payload);
+    
         state.user = action.payload.user;
         state.token = action.payload.token;
-        console.log("payload",action.payload);
+        console.log("payload", action.payload);
       })
       .addCase(loginUser.rejected, (state, action) => {
         state.loading = false;
@@ -81,5 +92,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { logout, setUser } = authSlice.actions;
+export const { logout } = authSlice.actions;
 export default authSlice.reducer;
