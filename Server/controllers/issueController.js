@@ -7,10 +7,129 @@ import Payment from "../models/payment.js"; // Make sure this import is present 
 
 import {
   autoAssignIssue,
+  autoAssignResidentIssue,  // Add this line
   checkDuplicateIssue,
   autoAssignCommunityIssue,
   checkDuplicateCommunityIssue,
+  flagMisassigned,  // Add this too if missing
 } from "../utils/issueAutomation.js";
+
+// 🧠 INTELLIGENT PRIORITY DETERMINATION
+function determineIssuePriority(category, categoryType, description = "", title = "") {
+  const now = new Date();
+  const isWeekend = now.getDay() === 0 || now.getDay() === 6;
+  const isAfterHours = now.getHours() < 8 || now.getHours() > 18;
+  const isLateNight = now.getHours() >= 22 || now.getHours() <= 5;
+  
+  // Combine title and description for keyword analysis
+  const content = `${title} ${description}`.toLowerCase();
+  
+  // 🚨 URGENT - Immediate safety/security concerns
+  const urgentKeywords = [
+    'emergency', 'urgent', 'fire', 'smoke', 'gas', 'leak', 'flood', 'water damage',
+    'break-in', 'robbery', 'suspicious', 'threat', 'violence', 'injury', 'accident',
+    'power outage', 'no electricity', 'no power', 'electrical sparks', 'burning smell',
+    'stuck in elevator', 'elevator not working', 'can\'t get out', 'trapped',
+    'no heat', 'no hot water', 'freezing', 'sewage backup', 'toilet overflow'
+  ];
+  
+  // ⚠️ HIGH - Significant impact on daily life
+  const highPriorityKeywords = [
+    'not working', 'broken', 'damaged', 'malfunctioning', 'severe',
+    'multiple rooms', 'whole apartment', 'major issue', 'getting worse',
+    'health concern', 'safety issue', 'pest infestation', 'mold', 'rodents'
+  ];
+  
+  // Check for urgent keywords
+  if (urgentKeywords.some(keyword => content.includes(keyword))) {
+    return 'Urgent';
+  }
+  
+  // 🚨 Category-based urgency rules
+  if (category === 'Security') {
+    if (isAfterHours || isWeekend || isLateNight) {
+      return 'Urgent'; // All security issues after hours are urgent
+    }
+    return 'High'; // Security issues during business hours are high priority
+  }
+  
+  if (category === 'Electrical') {
+    if (content.includes('sparks') || content.includes('smell') || content.includes('outage')) {
+      return 'Urgent'; // Electrical safety issues
+    }
+    if (isAfterHours || isWeekend) {
+      return 'High'; // Electrical issues after hours
+    }
+    return 'High'; // All electrical issues are at least high priority
+  }
+  
+  if (category === 'Plumbing') {
+    if (content.includes('flood') || content.includes('leak') || content.includes('overflow') || content.includes('backup')) {
+      return 'Urgent'; // Water damage issues
+    }
+    if (content.includes('no hot water') && (isWeekend || isAfterHours)) {
+      return 'High'; // No hot water on weekends/after hours
+    }
+    if (content.includes('no water') || content.includes('not working')) {
+      return 'High'; // Major plumbing failures
+    }
+    return 'Normal'; // Minor plumbing issues
+  }
+  
+  // 🏢 Community issues - location-based priorities
+  if (categoryType === 'Community') {
+    if (category === 'Elevator') {
+      if (content.includes('stuck') || content.includes('not working')) {
+        return 'Urgent'; // People safety
+      }
+      return 'High'; // Mobility access
+    }
+    
+    if (category === 'Streetlight') {
+      if (isAfterHours || isWeekend) {
+        return 'High'; // Safety concern at night
+      }
+      return 'Normal';
+    }
+    
+    if (category === 'Common Area' || category === 'Garden') {
+      if (content.includes('safety') || content.includes('broken glass') || content.includes('dangerous')) {
+        return 'High'; // Safety hazards
+      }
+      return 'Normal';
+    }
+  }
+  
+  // Check for high priority keywords
+  if (highPriorityKeywords.some(keyword => content.includes(keyword))) {
+    return 'High';
+  }
+  
+  // 🐛 Pest Control - time-sensitive
+  if (category === 'Pest Control') {
+    if (content.includes('infestation') || content.includes('many') || content.includes('everywhere')) {
+      return 'High'; // Severe infestations
+    }
+    return 'Normal';
+  }
+  
+  // 🗑️ Waste Management
+  if (category === 'Waste Management') {
+    if (content.includes('overflow') || content.includes('smell') || content.includes('everywhere')) {
+      return 'High'; // Health concerns
+    }
+    return 'Normal';
+  }
+  
+  // 🔧 Maintenance - default normal unless urgent keywords found
+  if (category === 'Maintenance') {
+    return 'Normal';
+  }
+  
+  // Default fallback
+  return 'Normal';
+}
+
 function generateCustomID(uCode, facility, countOrRandom = null) {
   console.log("uCode:", uCode);
 
@@ -51,19 +170,38 @@ export const assignIssue = async (req, res) => {
       });
     }
 
- 
-    if (issue.status === "Reopened") {
+    // Validate worker exists and is active
+    const workerData = await Worker.findById(worker);
+    if (!workerData)
+      return res.status(404).json({ success: false, message: "Worker not found" });
+    
+    if (!workerData.isActive) {
+      return res.status(400).json({ success: false, message: "Cannot assign to inactive worker" });
+    }
+    
+    // Check if worker is in same community
+    if (workerData.community.toString() !== issue.community.toString()) {
+      return res.status(400).json({ success: false, message: "Worker must be in same community as issue" });
+    }
+    
+    // Check workload - warn if overloaded
+    if (workerData.assignedIssues.length >= 10) {
+      console.warn(`Warning: Assigning to worker ${workerData.name} who already has ${workerData.assignedIssues.length} issues`);
+    }
+
+    // ✔ NEW: Manager can only assign if NO auto-assignment happened OR if auto-assignment failed
+    if (issue.autoAssigned && issue.workerAssigned) {
       return res.status(400).json({
         success: false,
-        message: "Issue is reopened. please use reassign instead.",
+        message: "This issue was auto-assigned successfully. Use reassign instead.",
       });
     }
 
-   
-    if (issue.workerAssigned) {
+    // ✔ Prevent assigning if already has a different worker (from previous manual assign)
+    if (issue.workerAssigned && issue.workerAssigned.toString() !== worker) {
       return res.status(400).json({
         success: false,
-        message: "Issue already assigned to a worker.",
+        message: "Issue already assigned to a different worker. Use reassign instead.",
       });
     }
 
@@ -75,22 +213,37 @@ export const assignIssue = async (req, res) => {
     issue.autoAssigned = false;
     await issue.save();
 
-    const workerData = await Worker.findById(worker);
-    if (!workerData)
-      return res.status(404).json({ success: false, message: "Worker not found" });
+    // Remove from old worker if reassigning
+    if (issue.workerAssigned && issue.workerAssigned.toString() !== worker) {
+      const oldWorker = await Worker.findById(issue.workerAssigned);
+      if (oldWorker) {
+        oldWorker.assignedIssues = oldWorker.assignedIssues.filter(
+          (id) => id.toString() !== issue._id.toString()
+        );
+        await oldWorker.save();
+      }
+    }
 
-    workerData.assignedIssues.push(issue._id);
-    await workerData.save();
+    // Add to new worker's assigned issues
+    if (!workerData.assignedIssues.includes(issue._id)) {
+      workerData.assignedIssues.push(issue._id);
+      await workerData.save();
+    }
 
-    res.json({ success: true, message: "Worker assigned successfully", issue });
+    const populated = await Issue.findById(issue._id)
+      .populate("resident")
+      .populate("workerAssigned");
 
+    res.json({
+      success: true,
+      message: "Worker assigned successfully",
+      issue: populated,
+    });
   } catch (error) {
     console.error("Assign Error:", error);
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
-
-
 
 // --------------------------------------------------
 // MANAGER: Get all issues in manager community
@@ -117,11 +270,12 @@ export const getManagerIssues = async (req, res) => {
       .populate("resident")
       .populate("workerAssigned")
       .sort({ createdAt: -1 });
+     
 
     // Separate by type
     const residentIssues = issues.filter(i => i.categoryType === "Resident");
     const communityIssues = issues.filter(i => i.categoryType === "Community");
-
+    
     // Group community issues by location for prioritization
     const groupedCommunityIssues = {};
     communityIssues.forEach(issue => {
@@ -168,8 +322,6 @@ export const reassignIssue = async (req, res) => {
   try {
     const { newWorker, remarks, deadline } = req.body;
 
-    
-
     const issue = await Issue.findById(req.params.id);
     if (!issue) return res.status(404).json({ success: false, message: "Issue not found" });
 
@@ -181,10 +333,10 @@ export const reassignIssue = async (req, res) => {
     ];
 
     if (invalidStatuses.includes(issue.status)) {
-      return res.status(400).json({ success: false, message: "Cannot reassign a completed / closed issue." });
+      return res.status(400).json({ success: false, message: "Cannot reassign a completed/closed issue." });
     }
 
-    // If there was never an assigned worker, instruct to use assign instead
+    // ✔ Can reassign if: auto-assigned & reopened, OR was manually assigned & needs change
     if (!issue.workerAssigned) {
       return res.status(400).json({
         success: false,
@@ -194,16 +346,13 @@ export const reassignIssue = async (req, res) => {
 
     // Prevent reassign to the same worker
     if (issue.workerAssigned.toString() === newWorker.toString()) {
-      return res.status(400).json({ success: false, message: "Issue is already assigned to this worker." });
+      return res.status(400).json({ success: false, message: "Already assigned to this worker." });
     }
 
-    // Find new worker
     const workerData = await Worker.findById(newWorker);
     if (!workerData) return res.status(404).json({ success: false, message: "New worker not found." });
 
-    
-    // --- Non-transactional (standard) flow ---
-    // Remove from old worker (if exists)
+    // Remove from old worker
     if (issue.workerAssigned) {
       const oldWorker = await Worker.findById(issue.workerAssigned);
       if (oldWorker) {
@@ -217,18 +366,17 @@ export const reassignIssue = async (req, res) => {
     // Update issue
     issue.workerAssigned = newWorker;
     issue.status = "Assigned";
-    issue.autoAssigned = false;
+    issue.autoAssigned = false; // Manager reassignment resets auto flag
     issue.deadline = deadline || issue.deadline;
     issue.remarks = remarks || issue.remarks;
     await issue.save();
 
-    // Push issue to new worker, avoid duplicates
+    // Push to new worker
     if (!workerData.assignedIssues.map(String).includes(issue._id.toString())) {
       workerData.assignedIssues.push(issue._id);
       await workerData.save();
     }
 
-    // Optionally populate to return useful info
     const populated = await Issue.findById(issue._id)
       .populate("resident")
       .populate("workerAssigned")
@@ -239,7 +387,6 @@ export const reassignIssue = async (req, res) => {
       message: "Issue successfully reassigned!",
       issue: populated
     });
-
   } catch (error) {
     console.error("Reassign Error:", error);
     return res.status(500).json({ success: false, message: "Server error" });
@@ -312,7 +459,8 @@ export const getIssueById = async (req, res) => {
 // --------------------------------------------------
 export const raiseIssue = async (req, res) => {
   try {
-    const { title, category, categoryType, description, location, priority, otherCategory } = req.body;
+    const { title, category, categoryType, description, location, otherCategory } = req.body;
+    // Remove priority from destructuring - system will determine it automatically
 
     if (!category || !categoryType || !description) {
       return res.status(400).json({ success: false, message: "Missing required fields" });
@@ -321,14 +469,30 @@ export const raiseIssue = async (req, res) => {
     const resident = await Resident.findById(req.user.id);
     if (!resident) return res.status(404).json({ success: false, message: "Resident not found" });
 
+    // 🧠 INTELLIGENT PRIORITY ASSIGNMENT - No user input needed
+    const finalPriority = determineIssuePriority(category, categoryType, description, title);
+
     let finalLocation = "";
     if (categoryType === "Resident") {
-      finalLocation = resident.unitCode;
+      finalLocation = (location && location.trim()) ? location.trim() : resident.uCode;
     } else {
-      finalLocation = location || "Common Area";
+      if (!location || !location.trim()) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Location is required for Community issues" 
+        });
+      }
+      finalLocation = location.trim();
     }
 
-    // Duplicate check
+    if (!finalLocation) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Unable to determine location for this issue" 
+      });
+    }
+
+    // Enhanced duplicate check
     let duplicate;
     if (categoryType === "Resident") {
       duplicate = await checkDuplicateIssue(resident._id, category, finalLocation);
@@ -336,17 +500,26 @@ export const raiseIssue = async (req, res) => {
       duplicate = await checkDuplicateCommunityIssue(category, finalLocation);
     }
     if (duplicate) {
-      return res.status(409).json({ success: false, message: "Duplicate issue exists" });
+      return res.status(409).json({ 
+        success: false, 
+        message: `Similar issue already exists: ${duplicate.title || duplicate.category}`,
+        existingIssue: {
+          id: duplicate._id,
+          title: duplicate.title,
+          status: duplicate.status,
+          createdAt: duplicate.createdAt
+        }
+      });
     }
 
-    // Create issue
+    // Create issue with smart priority
     const issue = new Issue({
       title,
       category,
       categoryType,
       description,
       location: finalLocation,
-      priority,
+      priority: finalPriority,
       resident: resident._id,
       community: resident.community,
       otherCategory,
@@ -354,18 +527,33 @@ export const raiseIssue = async (req, res) => {
     });
     await issue.save();
 
-    // Auto assign if Community issue
-    if (categoryType === "Community") {
-      await autoAssignCommunityIssue(issue);
+    console.log(`Issue created: ${issue._id}, Category: ${issue.category}, Type: ${issue.categoryType}, Priority: ${issue.priority}`);
+
+    // Auto assign workers for both types
+    try {
+      if (categoryType === "Community") {
+        console.log("Attempting to auto-assign community issue...");
+        const result = await autoAssignCommunityIssue(issue);
+        console.log("Community auto-assign result:", result);
+      } else if (categoryType === "Resident") {
+        console.log("Attempting to auto-assign resident issue...");
+        const result = await autoAssignResidentIssue(issue);
+        console.log("Resident auto-assign result:", result);
+      }
+    } catch (autoAssignError) {
+      console.error("Auto-assignment failed:", autoAssignError);
+      // Don't fail the entire request if auto-assignment fails
     }
 
-    res.status(201).json({ success: true, issue });
+    // Fetch the updated issue to return with worker assignment
+    const updatedIssue = await Issue.findById(issue._id).populate('workerAssigned');
+    
+    res.status(201).json({ success: true, issue: updatedIssue });
   } catch (error) {
     console.error("Raise Issue Error:", error);
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
-
 
 // --------------------------------------------------
 // RESIDENT: Confirm Issue

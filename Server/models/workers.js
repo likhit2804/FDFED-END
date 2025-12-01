@@ -17,8 +17,10 @@ const workerSchema = new mongoose.Schema({
   jobRole: {
     type: [String],
     enum: [
-      "Plumbing",
-      "Electrical",
+      "Plumber",        // Match existing database data
+      "Electrician",    // Match existing database data
+      "Plumbing",       // Keep for backwards compatibility
+      "Electrical",     // Keep for backwards compatibility
       "Security",
       "Maintenance",
       "Pest Control",

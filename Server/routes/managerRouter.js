@@ -1422,6 +1422,39 @@ managerRouter.post("/issue/close/:id", closeIssueByManager);
 managerRouter.post("/issue/hold/:id", holdIssue);
 managerRouter.get("/issue/:id", getIssueById);
 
+// NEW: Route for handling rejected auto-assigned issues (resident rejects → goes to manager)
+managerRouter.get("/issue/rejected/pending", async (req, res) => {
+  try {
+    const managerId = req.user.id;
+    const manager = await CommunityManager.findById(managerId);
+
+    if (!manager) {
+      return res.status(404).json({ success: false, message: "Manager not found" });
+    }
+
+    const community = manager.assignedCommunity;
+
+    // Issues that were auto-assigned but rejected by resident
+    const rejectedIssues = await Issue.find({
+      community,
+      status: "Reopened",
+      autoAssigned: true,
+    })
+      .populate("resident")
+      .populate("workerAssigned")
+      .sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      count: rejectedIssues.length,
+      issues: rejectedIssues,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
 
 managerRouter.get("/payments", async (req, res) => {
   try {

@@ -22,7 +22,7 @@ export const IssueRaising = () => {
       categoryType: 'Resident', // Added
       title: '',
       category: '',
-      priority: 'Medium',
+      // Priority automatically determined by system based on category and content
       description: '',
       location: '',
       otherCategory: '', // Optional, for custom category
@@ -119,7 +119,7 @@ export const IssueRaising = () => {
       "Common Area"
   ]
 
-  const priorityLevels = ["Normal", "High", "Urgent"];
+  // Priority is now automatically determined by the system
   // Confirm issue resolution
   const handleConfirm = async (id) => {
     try {
@@ -632,7 +632,8 @@ export const IssueRaising = () => {
                     <div className="booking-detail">
                       <span className="detail-label">Priority:</span>
                       <span className={`detail-value priority-${issue?.priority?.toLowerCase()}`}>
-                        {issue?.priority || '-'}
+                        {issue?.priority || 'Auto-determined'} 
+                        {issue?.priority && <span style={{fontSize: '11px', color: '#666', marginLeft: '4px'}}>(Auto)</span>}
                       </span>
                     </div>
                     <div className="booking-detail">
@@ -747,20 +748,17 @@ export const IssueRaising = () => {
                   </div>
                 )}
 
-                {/* Priority */}
-                <div className="form-group">
-                  <label htmlFor="priority">Priority Level *</label>
-                  <select
-                    id="priority"
-                    {...register('priority', { required: true })}
-                    disabled={formSubmitting}
-                  >
-                    {priorityLevels.map((level) => (
-                      <option key={level} value={level}>
-                        {level}
-                      </option>
-                    ))}
-                  </select>
+                {/* Priority is automatically determined by system based on category and description */}
+                <div className="info-note" style={{
+                  background: '#e3f2fd',
+                  padding: '12px',
+                  borderRadius: '6px',
+                  margin: '16px 0',
+                  fontSize: '14px',
+                  color: '#1565c0'
+                }}>
+                  <i className="bi bi-info-circle" style={{marginRight: '8px'}}></i>
+                  Priority is automatically determined based on issue type, timing, and urgency keywords
                 </div>
 
                 {/* Location (required if Community) */}
@@ -945,7 +943,7 @@ export const IssueRaising = () => {
                   <div>
                     <span className="detail-label">Priority</span>
                     <span className={`detail-value priority-${selectedIssue.priority?.toLowerCase()}`}>
-                      {selectedIssue.priority}
+                      {selectedIssue.priority} <span style={{fontSize: '11px', color: '#666'}}>(Auto-determined)</span>
                     </span>
                   </div>
                 </div>
