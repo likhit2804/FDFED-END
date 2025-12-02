@@ -20,46 +20,55 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
-workerRouter.get("/dashboard", async (req, res) => {
-  const t = await Issue.find({ workerAssigned: req.user.id });
-  console.log(t);
+workerRouter.get("/getDashboardData", async (req, res) => {
 
- const ads = await Ad.find({ community: req.user.community,startDate: { $lte: new Date() }, endDate: { $gte: new Date() } });
+  try {
+    const t = await Worker.findById(req.user.id);
+    console.log(req.user.id);
 
-  
+    const Issues = await Issue.find({ workerAssigned: req.user.id })
 
-  console.log(ads);
+    const ads = await Ad.find({ community: req.user.community, startDate: { $lte: new Date() }, endDate: { $gte: new Date() } });
 
-  res.render("worker/dashboard", { path: "d", t, ads });
+    console.log(Issues);
+
+    return res.json({ success: true, worker: t, issues: Issues, ads })
+  } catch (err) {
+    console.log(err);
+    return res.json({ success: false, message: "Server error" })
+  }
+
 });
 
-workerRouter.get("/", (req, res) => {
-  res.redirect("dashboard");
-});
 
 workerRouter.get("/history", async (req, res) => {
-  const issues = await Issue.find({ workerAssigned: req.user.id,status:{ $nin: ["Assigned", "Pending"] } })
-    .populate("workerAssigned")
-    .populate("resident");
+  try {
+    const issues = await Issue.find({
+      workerAssigned: req.user.id,
+      status: { $nin: ["Assigned", "Pending"] },
+    })
+      .populate("workerAssigned")
+      .populate("resident");
 
- const ads = await Ad.find({ community: req.user.community,startDate: { $lte: new Date() }, endDate: { $gte: new Date() } });
+    console.log("Worker history issues:", issues.length);
 
-  
-  
-  console.log(issues);
-  
-
-  res.render("worker/History", { path: "H", issues, ads });
+    return res.json({ success: true, issues });
+  } catch (err) {
+    console.error(err);
+    return res
+      .status(500)
+      .json({ success: false, message: "Server error while fetching history" });
+  }
 });
 
 workerRouter.get("/tasks", async (req, res) => {
-  const tasks = await Issue.find({ workerAssigned: req.user.id,status:"Assigned" })
+  const tasks = await Issue.find({ workerAssigned: req.user.id, status: "Assigned" })
     .populate("workerAssigned")
     .populate("resident");
 
- const ads = await Ad.find({ community: req.user.community,startDate: { $lte: new Date() }, endDate: { $gte: new Date() } });
+  const ads = await Ad.find({ community: req.user.community, startDate: { $lte: new Date() }, endDate: { $gte: new Date() } });
 
-  
+
 
   res.render("worker/Task", { path: "t", tasks, ads });
 });
@@ -74,9 +83,9 @@ workerRouter.post("/issueResolving/resolve/:id", async (req, res) => {
     issue.status = "Review Pending";
     issue.resolvedAt = new Date();
     issue.resident.notifications.push({
-      n:`Issue ${issue.issueID} is resolved `,
-      createdAt:new Date(),
-      belongs:"Issue"
+      n: `Issue ${issue.issueID} is resolved `,
+      createdAt: new Date(),
+      belongs: "Issue"
     })
 
     await issue.resident.save();
@@ -84,23 +93,28 @@ workerRouter.post("/issueResolving/resolve/:id", async (req, res) => {
     res.status(200).json({ success: true, message: "Issue resolved successfully" });
   } catch (error) {
     console.error(error);
-    res.status(500).json({success: false, message: "Server error" });
+    res.status(500).json({ success: false, message: "Server error" });
   }
 });
 
-workerRouter.get("/profile", async (req, res) => {
- const ads = await Ad.find({ community: req.user.community,startDate: { $lte: new Date() }, endDate: { $gte: new Date() } });
+workerRouter.get("/getUserData", async (req, res) => {
+  try {
+    const ads = await Ad.find({ community: req.user.community, startDate: { $lte: new Date() }, endDate: { $gte: new Date() } });
 
-  
+    const r = await Worker.findById(req.user.id);
 
-  const r = await Worker.findById(req.user.id);
-  console.log(r);
-
-  res.render("worker/Profile", { path: "pr", ads, r });
+    return res.json({ success: true, worker: r, ads: ads })
+  } catch (err) {
+    console.log(err);
+    return res.json({ success: false, message: "Server error" });
+  }
 });
 
 workerRouter.post("/profile", upload.single("image"), async (req, res) => {
   const { name, email, contact, address } = req.body;
+
+  console.log("Got data in backend for profile");
+
 
   const r = await Worker.findById(req.user.id);
 
@@ -123,7 +137,7 @@ workerRouter.post("/profile", upload.single("image"), async (req, res) => {
 
   await r.save();
 
-  return res.json({success:true,message:"Profile updated successfully",r});
+  return res.json({ success: true, message: "Profile updated successfully", r });
 });
 
 workerRouter.post("/change-password", async (req, res) => {

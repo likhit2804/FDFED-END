@@ -6,16 +6,16 @@ const workerSchema = new mongoose.Schema({
   password: {
     type: String,
   },
-  jobRole: { type: String, required: true },
+  jobRole: { type: [String], required: true },
   contact: { type: String, required: true },
   address: { type: String, required: true },
   communityAssigned: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Community",
   },
-  image:String,
+  image: String,
 
-  
+
   salary: { type: Number, required: true },
   joiningDate: { type: Date, default: Date.now },
   community: {
