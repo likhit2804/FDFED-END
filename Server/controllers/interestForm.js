@@ -6,51 +6,125 @@ import nodemailer from 'nodemailer';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import validator from 'validator';
+import mongoose from 'mongoose';
+import cloudinary from '../configs/cloudinary.js';
+import fs from 'fs';
 import dotenv from 'dotenv';
 dotenv.config();
-// multerConfig.js - Create this file for reusable multer configuration
+
+// Lightweight router for direct submit with Cloudinary uploads
+import express from 'express';
 import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
-import mongoose from 'mongoose';
-// Ensure uploads directory exists
-const uploadsDir = 'uploads';
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
+const upload = multer({ storage: multer.memoryStorage() });
 
-// Configure storage
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, 'uploads/');
-  },
-  filename: function (req, file, cb) {
-    // Generate unique filename
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
-  }
-});
 
-// File filter for images only
-const fileFilter = (req, file, cb) => {
-  if (file.mimetype.startsWith('image/')) {
-    cb(null, true);
-  } else {
-    cb(new Error('Only image files are allowed!'), false);
-  }
+// Helper: Upload buffer to Cloudinary (uses existing cloudinary config)
+const uploadToCloudinary = (buffer) => {
+  return new Promise((resolve, reject) => {
+    cloudinary.uploader
+      .upload_stream({ folder: 'communities' }, (error, result) => {
+        if (error) reject(error);
+        else resolve(result);
+      })
+      .end(buffer);
+  });
 };
 
-// Create multer instance
-const upload = multer({
-  storage: storage,
-  limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB per file
-    files: 5 // Maximum 5 files
-  },
-  fileFilter: fileFilter
-});
+// Named export router to avoid breaking existing controller exports
+export const interestUploadRouter = (() => {
+  const router = express.Router();
 
-export default upload;
+  // POST /submit: Accept photos and upload to Cloudinary, return URLs
+  router.post('/submit', upload.array('photos', 5), async (req, res) => {
+    try {
+      const photoUrls = [];
+
+      if (req.files && Array.isArray(req.files)) {
+        for (const file of req.files) {
+          const result = await uploadToCloudinary(file.buffer);
+          photoUrls.push(result.secure_url);
+        }
+      }
+
+      const interestData = {
+        ...req.body,
+        photos: photoUrls,
+      };
+
+      // If you want to persist immediately, uncomment:
+      // await Interest.create(interestData);
+
+      res.json({
+        success: true,
+        message: 'Submitted successfully',
+        photoCount: photoUrls.length,
+        data: interestData,
+      });
+    } catch (error) {
+      console.error('Direct submit error:', error);
+      res.status(500).json({ success: false, message: error.message });
+    }
+  });
+
+  return router;
+})();
+
+// Upload photo to Cloudinary
+export const uploadPhoto = async (req, res) => {
+  try {
+    console.log('Upload photo endpoint hit');
+    console.log('File received:', !!req.file);
+    
+    if (!req.file) {
+      console.log('No file provided');
+      return res.status(400).json({ success: false, message: 'No file provided' });
+    }
+
+    console.log('File details:', {
+      originalname: req.file.originalname,
+      mimetype: req.file.mimetype,
+      size: req.file.size
+    });
+
+    // Upload to Cloudinary using buffer
+    const result = await new Promise((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          folder: 'interest-applications',
+          transformation: [
+            { width: 1024, crop: 'limit' },
+            { quality: 'auto:good' }
+          ],
+          resource_type: 'image'
+        },
+        (error, result) => {
+          if (error) {
+            console.error('Cloudinary upload error:', error);
+            reject(error);
+          } else {
+            console.log('Cloudinary upload success:', result.secure_url);
+            resolve(result);
+          }
+        }
+      );
+      
+      uploadStream.end(req.file.buffer);
+    });
+
+    res.json({
+      success: true,
+      url: result.secure_url
+    });
+
+  } catch (error) {
+    console.error('Upload photo error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to upload image',
+      error: error.message
+    });
+  }
+};
 // Email transporter setup - Simplified version
 const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
@@ -73,18 +147,12 @@ export const showInterestForm = (req, res) => {
 
 
 
-import sharp from 'sharp';
-
-
 export const submitInterestForm = async (req, res) => {
   try {
     const { firstName, lastName, email, phone, communityName, location, description } = req.body;
 
     // Required fields validation
     if (!firstName || !lastName || !email || !phone || !communityName || !location || !description) {
-      if (req.files && req.files.length > 0) {
-        req.files.forEach(file => fs.existsSync(file.path) && fs.unlinkSync(file.path));
-      }
       return res.status(400).json({
         success: false,
         message: 'All required fields must be filled.',
@@ -102,26 +170,17 @@ export const submitInterestForm = async (req, res) => {
 
     // Email validation
     if (!validator.isEmail(email)) {
-      if (req.files && req.files.length > 0) {
-        req.files.forEach(file => fs.existsSync(file.path) && fs.unlinkSync(file.path));
-      }
       return res.status(400).json({ success: false, message: 'Please enter a valid email address.' });
     }
 
     // Phone validation
     if (!validator.isMobilePhone(phone, 'any', { strictMode: false })) {
-      if (req.files && req.files.length > 0) {
-        req.files.forEach(file => fs.existsSync(file.path) && fs.unlinkSync(file.path));
-      }
       return res.status(400).json({ success: false, message: 'Please enter a valid phone number.' });
     }
 
     // Check for existing application by email
     const emailExists = await Interest.findOne({ email: email.toLowerCase().trim() });
     if (emailExists) {
-      if (req.files && req.files.length > 0) {
-        req.files.forEach(file => fs.existsSync(file.path) && fs.unlinkSync(file.path));
-      }
       return res.status(409).json({
         success: false,
         message: 'An application with this email already exists. Please check your email for further communication.'
@@ -135,26 +194,45 @@ export const submitInterestForm = async (req, res) => {
     });
 
     if (communityLocationExists) {
-      if (req.files && req.files.length > 0) {
-        req.files.forEach(file => fs.existsSync(file.path) && fs.unlinkSync(file.path));
-      }
       return res.status(409).json({
         success: false,
         message: `An application for the community "${communityName}" in "${location}" already exists.`
       });
     }
 
-    // Process and compress uploaded photos
-    let photoPaths = [];
+    // Process and upload photos to Cloudinary
+    let photoUrls = [];
     if (req.files && req.files.length > 0) {
       for (const file of req.files) {
-        const compressedPath = path.join(path.dirname(file.path), 'compressed_' + file.filename);
-        await sharp(file.path)
-          .resize({ width: 1024 })
-          .jpeg({ quality: 80 })
-          .toFile(compressedPath);
-        fs.unlinkSync(file.path);
-        photoPaths.push(compressedPath);
+        try {
+          // Upload to Cloudinary using buffer from memory storage
+          const result = await new Promise((resolve, reject) => {
+            const uploadStream = cloudinary.uploader.upload_stream(
+              {
+                folder: 'interest-applications',
+                transformation: [
+                  { width: 1024, crop: 'limit' },
+                  { quality: 'auto:good' }
+                ],
+                resource_type: 'image'
+              },
+              (error, result) => {
+                if (error) reject(error);
+                else resolve(result);
+              }
+            );
+            
+            // Write file buffer to upload stream
+            uploadStream.end(file.buffer);
+          });
+          
+          // Store Cloudinary URL
+          photoUrls.push(result.secure_url);
+          
+        } catch (uploadError) {
+          console.error('Cloudinary upload error:', uploadError);
+          throw new Error('Failed to upload photo to cloud storage');
+        }
       }
     }
 
@@ -167,7 +245,7 @@ export const submitInterestForm = async (req, res) => {
       communityName: validator.escape(communityName.trim()),
       location: validator.escape(location.trim()),
       description: validator.escape(description.trim()),
-      photos: photoPaths,
+      photos: photoUrls,
       status: 'pending',
       submittedAt: new Date()
     });
@@ -181,26 +259,16 @@ export const submitInterestForm = async (req, res) => {
         applicationId: savedApplication._id,
         submittedAt: savedApplication.submittedAt,
         status: savedApplication.status,
-        photosCount: photoPaths.length
+        photosCount: photoUrls.length
       }
     });
 
   } catch (error) {
     console.error('Error in submitInterestForm:', error);
-    if (req.files && req.files.length > 0) {
-      req.files.forEach(file => fs.existsSync(file.path) && fs.unlinkSync(file.path));
-    }
 
     if (error.name === 'ValidationError') {
       const validationErrors = Object.values(error.errors).map(err => err.message);
       return res.status(400).json({ success: false, message: 'Validation failed', errors: validationErrors });
-    }
-
-    if (error instanceof multer.MulterError) {
-      if (error.code === 'LIMIT_FILE_SIZE')
-        return res.status(400).json({ success: false, message: 'File size too large. Each image must be smaller than 5MB.' });
-      if (error.code === 'LIMIT_FILE_COUNT')
-        return res.status(400).json({ success: false, message: 'Too many files. Maximum 5 photos allowed.' });
     }
 
     res.status(500).json({
@@ -221,24 +289,29 @@ export const getAllApplications = async (req, res) => {
     // 1️⃣ Fetch data
     const interests = await Interest.find()
       .sort({ createdAt: -1 })
-     
+      .populate('approvedBy rejectedBy', 'name email');
 
     console.log("Fetched interests:", interests.length);
 
     // 2️⃣ Safely format results for React
     const formatted = interests.map((app) => ({
-      id: app._id,
-      name: app.user?.name || app.name || "Unknown", // fallback for older data
-      email: app.user?.email || app.email || "N/A",
-      phone: app.user?.phone || app.phone || "N/A",
-      community: app.community?.name || "N/A",
-      location: app.community?.location || "Unknown",
-      message: app.message || "",
-      status: (app.status || "PENDING").toUpperCase(),
-      appliedOn: app.createdAt
-        ? new Date(app.createdAt).toLocaleDateString("en-IN")
-        : "Unknown",
+      _id: app._id,
+      firstName: app.firstName,
+      lastName: app.lastName,
+      email: app.email,
+      phone: app.phone,
+      communityName: app.communityName,
+      location: app.location,
+      description: app.description,
       photos: app.photos || [],
+      status: app.status || "pending",
+      createdAt: app.createdAt,
+      updatedAt: app.updatedAt,
+      approvedBy: app.approvedBy,
+      rejectedBy: app.rejectedBy,
+      approvedAt: app.approvedAt,
+      rejectedAt: app.rejectedAt,
+      rejectionReason: app.rejectionReason
     }));
 
     // 3️⃣ Send JSON response
@@ -325,9 +398,8 @@ export const approveApplication = async (req, res) => {
       [{
         name: interest.communityName?.trim() || '',
         location: interest.location?.trim() || '',
-        email: interest.communityEmail?.trim() || '',
         description: interest.description?.trim() || '',
-        totalMembers: parseInt(interest.totalMembers) || 0,
+        totalMembers: 0,
         communityManager: newManager[0]._id
       }],
       { session }
@@ -354,19 +426,29 @@ export const approveApplication = async (req, res) => {
     await session.commitTransaction();
     session.endSession();
 
-    // 8. Send email
-    console.log("[Step 7] Sending approval email to:", interest.email);
+    // 8. Get admin name for email
+    const adminUser = await admin.findById(req.user.id);
+    const adminName = adminUser?.name || 'Admin';
+
+    // 9. Send email
+    console.log("[Step 8] Sending approval email to:", interest.email);
     await sendStatusEmail(
       interest.email,
       'approved',
-      req.user.name,
+      adminName,
       '',
       randomPassword
     );
-    console.log("[Step 7] Email sent successfully");
+    console.log("[Step 8] Email sent successfully");
 
-    req.flash('success', 'Manager account and community created successfully');
-    res.redirect('/admin/interests');
+    res.json({
+      success: true,
+      message: 'Manager account and community created successfully',
+      data: {
+        managerId: newManager[0]._id,
+        communityId: newCommunity[0]._id
+      }
+    });
 
   } catch (error) {
     console.error("[ERROR] Approval process failed:", error);
@@ -377,8 +459,11 @@ export const approveApplication = async (req, res) => {
 
     let errorMessage = 'Error creating manager account';
     if (error.message) errorMessage = error.message;
-    req.flash('error', errorMessage);
-    res.redirect('/admin/interests');
+    
+    res.status(500).json({
+      success: false,
+      message: errorMessage
+    });
   }
 };
 
@@ -386,9 +471,11 @@ export const approveApplication = async (req, res) => {
 
 export const rejectApplication = async (req, res) => {
   try {
-    if (!req.body.reason || req.body.reason.trim().length <=0) {
-      req.flash('error', 'Rejection reason must be at least 10 characters');
-      return res.redirect(`/admin/interests/${req.params.id}`); // Updated route
+    if (!req.body.reason || req.body.reason.trim().length <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Rejection reason must be provided'
+      });
     }
 
     const interest = await Interest.findByIdAndUpdate(
@@ -403,26 +490,40 @@ export const rejectApplication = async (req, res) => {
     );
 
     if (!interest) {
-      req.flash('error', 'Application not found');
-      return res.redirect('/admin/interests'); // Updated route
+      return res.status(404).json({
+        success: false,
+        message: 'Application not found'
+      });
     }
+
+    // Get admin name for email
+    const adminUser = await admin.findById(req.user.id);
+    const adminName = adminUser?.name || 'Admin';
 
     await sendStatusEmail(
       interest.email, 
       'rejected', 
-      req.user.name, 
+      adminName, 
       validator.escape(req.body.reason.trim())
     );
 
-    req.flash('success', 'Application rejected successfully');
-    res.redirect('/admin/interests'); // Updated route
+    res.json({
+      success: true,
+      message: 'Application rejected successfully',
+      data: {
+        applicationId: interest._id,
+        rejectionReason: interest.rejectionReason
+      }
+    });
 
   } catch (error) {
     console.error('Rejection error:', error);
-    req.flash('error', error.name === 'ValidationError' 
-      ? 'Invalid rejection data' 
-      : 'Error rejecting application');
-    res.redirect(`/admin/interests/${req.params.id}`); // Updated route
+    res.status(500).json({
+      success: false,
+      message: error.name === 'ValidationError' 
+        ? 'Invalid rejection data' 
+        : 'Error rejecting application'
+    });
   }
 };
 // Admin: Suspend application

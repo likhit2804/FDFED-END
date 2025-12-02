@@ -36,6 +36,7 @@ import workerRouter from "./routes/workerRouter.js";
 import managerRouter from "./routes/managerRouter.js";
 import interestRouter from "./routes/InterestRouter.js";
 import Ad from "./models/Ad.js";
+import { interestUploadRouter } from './controllers/interestForm.js';
 
 dotenv.config();
 
@@ -49,7 +50,6 @@ const PORT = 3000;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
 // --- Middleware ---
 app.use(session({
   secret: "your-secret-key",
@@ -88,6 +88,7 @@ app.use("/security", auth, authorizeS, securityRouter);
 app.use("/worker", auth, authorizeW, workerRouter);
 app.use("/manager", auth, authorizeC, managerRouter);
 app.use("/interest", interestRouter);
+app.use('/interest', interestUploadRouter);
 
 app.post("/AdminLogin", async (req, res) => {
   console.log("AdminLogin route hit with body:", req.body);
