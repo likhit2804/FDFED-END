@@ -1,6 +1,5 @@
 // controllers/residentController.js
 import Resident from "../models/resident.js";
-// import VisitorPreApproval from "../models/preapproval.js";
 import Visitor from "../models/visitors.js";
 import Ad from "../models/Ad.js";
 import CommonSpaces from "../models/commonSpaces.js";
@@ -460,8 +459,35 @@ const getQRcode = async (req, res) => {
   }
 };
 
+export const getResidentProfile = async (req, res) => {
+  try {
+    const resident = await Resident.findById(req.user.id)
+      .populate("community", "communityName");
 
-const getResidentDashboard = async(req,res) => {
+    if (!resident) {
+      return res.json({
+        success: false,
+        message: "Resident not found"
+      });
+    }
 
+    return res.json({
+      success: true,
+      resident: {
+        firstname: resident.residentFirstname,
+        lastname: resident.residentLastname,
+        email: resident.email,
+        contact: resident.contact,
+        uCode: resident.uCode,
+        communityName: resident.community?.communityName || "",
+        image: resident.image || null
+      }
+    });
+
+  } catch (err) {
+    console.error("Error fetching profile:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
 };
-export { getPreApprovals, getCommonSpace, getIssueData, getPaymentData, getQRcode };
+
+export { getPreApprovals, getCommonSpace, getIssueData, getPaymentData, getQRcode, getResidentProfile };

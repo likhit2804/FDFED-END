@@ -24,6 +24,7 @@ import {
   getIssueData,
   getPaymentData,
   getQRcode,
+  getResidentProfile,
 } from "../controllers/Resident.js";
 import { getTimeAgo, getPaymentRemainders, setPenalties } from "../utils/residentHelpers.js";
 
@@ -77,15 +78,37 @@ residentRouter.get("/payment/community", async (req, res) => {
   }
 });
 
-residentRouter.get("/ad", async (req, res) => {
-  const ads = await Ad.find({
-    community: req.user?.community,
-    startDate: { $lte: new Date() },
-    endDate: { $gte: new Date() },
-  });
+// residentRouter.get("/ad", async (req, res) => {
+//   const ads = await Ad.find({
+//     community: req.user?.community,
+//     startDate: { $lte: new Date() },
+//     endDate: { $gte: new Date() },
+//   });
 
-  res.render("resident/Advertisement", { path: "ad", ads });
+//   res.render("resident/Advertisement", { path: "ad", ads });
+// });
+residentRouter.get("/ad", async (req, res) => {
+  try {
+    const ads = await Ad.find({
+      community: req.user?.community,
+      startDate: { $lte: new Date() },
+      endDate: { $gte: new Date() }
+    });
+
+    return res.json({
+      success: true,
+      ads
+    });
+  } catch (err) {
+    console.error("Ads fetch error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch ads"
+    });
+  }
 });
+
+
 
 residentRouter.get("/commonSpace", async (req, res) => {
   try {
@@ -676,49 +699,47 @@ residentRouter.post("/submitFeedback", async (req, res) => {
 // Payment routes - corrected version
 residentRouter.get("/payments", getPaymentData);
 
-// residentRouter.get("/payments", async (req, res) => {
-//   try {
-//     const userId = req.user.id;
 
-//    const ads = await Ad.find({ community: req.user.community,startDate: { $lte: new Date() }, endDate: { $gte: new Date() } });
+// residentRouter.get("/payment/receipt/:id", async (req, res) => {
+//   const Id = req.params.id;
+//   console.log("Payment ID:", Id);
 
-//     console.log(ads);
+//   const payment = await Payment.findById(Id)
+//     .populate("receiver")
+//     .populate("sender");
 
-//     const payments = await Payment.find({ sender: userId })
-//       .populate("receiver", "name");
+//   console.log("Payment Details:", payment);
 
-//     // sort the payments  so that object with status overdue at first next with status pending and next with status completed , and in there are multiple objects with same status they should be in ascending order of paymentdeadline
-//     payments.sort((a, b) => {
-//       const statusOrder = { "Overdue": 1, "Pending": 2, "Completed": 3 };
-//       if (statusOrder[a.status] !== statusOrder[b.status]) {
-//         return statusOrder[a.status] - statusOrder[b.status];
-//       }
-
-//       return new Date(a.paymentDeadline) - new Date(b.paymentDeadline);
-//     });
-
-//     console.log(payments);
-
-//     res.render("resident/payments", { path: "p", payments, ads });
-//   } catch (error) {
-//     console.error("Error fetching payments:", error);
-//     req.flash("message", "Failed to load payment data");
-//     res.redirect("/dashboard");
-//   }
+//   return res.json({
+//   success: true,
+//   payment
 // });
 
+// });
 residentRouter.get("/payment/receipt/:id", async (req, res) => {
   const Id = req.params.id;
-  console.log("Payment ID:", Id);
 
-  const payment = await Payment.findById(Id)
-    .populate("receiver")
-    .populate("sender");
+  try {
+    const payment = await Payment.findById(Id)
+      .populate("receiver")
+      .populate("sender");
 
-  console.log("Payment Details:", payment);
+    if (!payment) {
+      return res.status(404).json({ success: false, message: "Payment not found" });
+    }
 
-  res.render("resident/receipt", { path: "p", payment });
+    return res.json({ success: true, payment });
+
+  } catch (err) {
+    console.error("Payment receipt fetch error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch payment receipt"
+    });
+  }
 });
+
+
 
 residentRouter.get("/payment/:paymentId", async (req, res) => {
   try {
@@ -745,105 +766,8 @@ residentRouter.get("/payment/:paymentId", async (req, res) => {
   }
 });
 
-residentRouter.get("/preApprovals", auth, authorizeR, getPreApprovals);
-
 //pre approval routes
-// residentRouter.post("/preapproval", auth, authorizeR, async (req, res) => {
-//   try {
-//     // Add validation for req.body
-//     if (!req.body) {
-//       return res.status(400).json({ message: "Request body is missing" });
-//     }
-
-//     const { visitorName, contactNumber, dateOfVisit, timeOfVisit, purpose } =
-//       req.body;
-
-//     // Validate required fields
-//     if (
-//       !visitorName ||
-//       !contactNumber ||
-//       !dateOfVisit ||
-//       !timeOfVisit ||
-//       !purpose
-//     ) {
-//       return res.status(400).json({
-//         message: "Missing required fields",
-//         required: [
-//           "visitorName",
-//           "contactNumber",
-//           "dateOfVisit",
-//           "timeOfVisit",
-//           "purpose",
-//         ],
-//       });
-//     }
-
-//     const resident = await Resident.findById(req.user.id).populate("community");
-//     if (!resident) {
-//       return res.status(404).json({ message: "Resident not found" });
-//     }
-
-//     const date = formatDate(dateOfVisit);
-//     console.log("Formatted Date:", date);
-
-//     const scheduledAt = new Date(`${dateOfVisit}T${timeOfVisit}`);
-//     const tempId = new mongoose.Types.ObjectId();
-//     const uniqueId = generateCustomID(tempId.toString(), "PA", null);
-
-//     const newVisitor = await Visitor.create({
-//       _id : tempId,
-//       ID: uniqueId,
-//       name: visitorName,
-//       contactNumber,
-//       purpose,
-//       scheduledAt,
-//       approvedBy: resident._id,
-//       community: resident.community._id,
-//     });
-
-//     // QR Code Generation
-//     const payload = {
-//       visitorId: newVisitor._id.toString(),
-//       name: visitorName,
-//       contactNumber,
-//       purpose,
-//       scheduledAt,
-//     };
-
-//     const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "24h" });
-//     newVisitor.qrToken = token;
-
-//     // Generate QR image as Base64
-//     const qrImage = await QRCode.toDataURL(token);
-//     newVisitor.qrCode = qrImage;
-
-//     await newVisitor.save();
-
-//     resident.preApprovedVisitors.push(newVisitor._id);
-//     await resident.save();
-
-//     // Return JSON response
-//     return res.status(201).json({
-//       success: true,
-//       preapproval: {
-//         _id: newVisitor._id,
-//         ID: uniqueId,
-//         visitorName,
-//         contactNumber,
-//         dateOfVisit: date,
-//         timeOfVisit,
-//         purpose,
-//         status: "approved",
-//       },
-//     });
-//   } catch (err) {
-//     console.error("Error in pre-approving visitor:", err);
-//     return res.status(500).json({
-//       message: "Internal server error",
-//       error: err.message,
-//     });
-//   }
-// });
+residentRouter.get("/preApprovals", auth, authorizeR, getPreApprovals);
 
 residentRouter.post("/preapproval", auth, authorizeR, async (req, res) => {
   const session = await mongoose.startSession();
@@ -954,17 +878,20 @@ residentRouter.delete("/preapproval/cancel/:id", async (req, res) => {
 
 residentRouter.get("/preapproval/qr/:id", auth, authorizeR, getQRcode);
 
-residentRouter.get("/profile", async (req, res) => {
-  const ads = await Ad.find({
-    community: req.user.community,
-    startDate: { $lte: new Date() },
-    endDate: { $gte: new Date() },
-  });
+// residentRouter.get("/profile", async (req, res) => {
+//   const ads = await Ad.find({
+//     community: req.user.community,
+//     startDate: { $lte: new Date() },
+//     endDate: { $gte: new Date() },
+//   });
 
-  const r = await Resident.findById(req.user.id);
+//   const r = await Resident.findById(req.user.id);
 
-  res.render("resident/Profile", { path: "pr", ads, r });
-});
+//   res.render("resident/Profile", { path: "pr", ads, r });
+// });
+residentRouter.get("/profile", auth, authorizeR, getResidentProfile);
+
+
 
 residentRouter.post("/profile", upload.single("image"), async (req, res) => {
   const { firstName, lastName, contact, email, address } = req.body;
@@ -1020,6 +947,54 @@ residentRouter.post("/change-password", async (req, res) => {
 
   res.json({ ok: true, message: "Password changed successfully." });
 });
+
+residentRouter.put("/update-profile", async (req, res) => {
+  try {
+    const { firstname, lastname, contact, uCode } = req.body;
+
+    if (!firstname || !lastname || !contact || !uCode) {
+      return res.status(400).json({
+        success: false,
+        message: "All fields are required",
+      });
+    }
+
+    const resident = await Resident.findById(req.user.id);
+    if (!resident) {
+      return res.status(404).json({
+        success: false,
+        message: "Resident not found",
+      });
+    }
+
+    // Update fields
+    resident.residentFirstname = firstname;
+    resident.residentLastname = lastname;
+    resident.contact = contact;
+    resident.uCode = uCode.toUpperCase();
+
+    await resident.save();
+
+    return res.json({
+      success: true,
+      message: "Profile updated successfully",
+      resident: {
+        firstname: resident.residentFirstname,
+        lastname: resident.residentLastname,
+        contact: resident.contact,
+        uCode: resident.uCode,
+      },
+    });
+
+  } catch (error) {
+    console.error("Profile update error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+});
+
 
 residentRouter.get("/clearNotification", async (req, res) => {
   const resi = await Resident.updateOne(
