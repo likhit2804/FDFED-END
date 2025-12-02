@@ -1,20 +1,18 @@
 import express from "express";
 import path from "path";
-
 import { fileURLToPath } from "url";
-import bodyParser from "express";
 import session from "express-session";
 import mongoose from "mongoose";
+
 import cors from "cors"
 import jwt from "jsonwebtoken";
 
-import dotenv from "dotenv";
-dotenv.config();
 
+import dotenv from "dotenv";
+import cookieParser from "cookie-parser";
 import multer from "multer";
 
 import auth from "./controllers/auth.js";
-
 import {
   authorizeR,
   authorizeS,
@@ -31,145 +29,51 @@ import {
   AuthenticateA,
 } from "./controllers/loginController.js";
 
+import AdminRouter from "./routes/adminRouter.js";
+import residentRouter from "./routes/residentRouter.js";
+import securityRouter from "./routes/securityRouter.js";
+import workerRouter from "./routes/workerRouter.js";
+import managerRouter from "./routes/managerRouter.js";
+import interestRouter from "./routes/InterestRouter.js";
+import Ad from "./models/Ad.js";
+
 dotenv.config();
 
-import cookieParser from "cookie-parser";
-
-const communities = [
-  {
-    name: "Skyline Elite",
-    location: "Gurgaon, Haryana",
-    image:
-      "https://th.bing.com/th/id/OIP.XCknuV3fq5T8j3M7rPyUGQHaDy?w=339&h=178&c=7&r=0&o=5&dpr=1.5&pid=1.7",
-    amenities: [
-      "Smart Home Automation",
-      "Private Rooftop Lounge",
-      "Tennis Court",
-    ],
-    description:
-      "A luxurious high-rise with stunning city views, featuring cutting-edge smart home technology.",
-  },
-  {
-    name: "Green Habitat",
-    location: "Chennai, Tamil Nadu",
-    image:
-      "https://th.bing.com/th/id/OIP.TGVXc84nlyJ1SDpxdor0QwHaE-?w=226&h=180&c=7&r=0&o=5&dpr=1.5&pid=1.7",
-    amenities: [
-      "Organic Farming Space",
-      "Electric Vehicle Charging Stations",
-      "Amphitheater",
-    ],
-    description:
-      "An environmentally friendly community offering sustainability and modern living.",
-  },
-  {
-    name: "Horizon Towers",
-    location: "Hyderabad, Telangana",
-    image:
-      "https://th.bing.com/th/id/OIP.E474VpdAAkzzPi5k6D8segHaES?w=314&h=182&c=7&r=0&o=5&dpr=1.5&pid=1.7",
-    amenities: ["Co-working Spaces", "Pet-Friendly Zone", "Mini Theater"],
-    description:
-      "A smart community designed for professionals and families, blending work and leisure effortlessly.",
-  },
-  {
-    name: "Serene Meadows",
-    location: "Bengaluru, Karnataka",
-    image:
-      "https://th.bing.com/th/id/OIP.phuGZCk8fOSGEuhAjJyiPAHaFF?w=213&h=180&c=7&r=0&o=5&dpr=1.5&pid=1.7",
-    amenities: ["Tennis Court", "Smart Home Automation", "Pet-Friendly Zone"],
-    description:
-      "A peaceful gated community with modern villas, smart home automation, and green landscapes.",
-  },
-  {
-    name: "Royal Greens",
-    location: "Jaipur, Rajasthan",
-    image:
-      "https://th.bing.com/th/id/OIP.EBz1Pcpw1AD0pNFACwtTXgHaEc?w=274&h=180&c=7&r=0&o=5&dpr=1.5&pid=1.7",
-    amenities: ["Amphitheater", "Co-working Spaces", "Private Rooftop Lounge"],
-    description:
-      "A luxurious residential enclave inspired by Rajasthan’s royal heritage and modern architecture.",
-  },
-  {
-    name: "Eco Nirvana",
-    location: "Pune, Maharashtra",
-    image:
-      "https://th.bing.com/th/id/OIP.ZPQGmpkZE-H4B99k5DMKxQHaDr?w=286&h=173&c=7&r=0&o=5&dpr=1.5&pid=1.7",
-    amenities: [
-      "Organic Farming Space",
-      "Electric Vehicle Charging Stations",
-      "Pet-Friendly Zone",
-    ],
-    description:
-      "An eco-friendly township focused on sustainable living with ample greenery and renewable energy solutions.",
-  },
-  {
-    name: "Skylife Heights",
-    location: "Mumbai, Maharashtra",
-    image:
-      "https://th.bing.com/th/id/OIP.R8PHppVJK2cK0n7a7Fge7AHaEK?w=322&h=181&c=7&r=0&o=5&dpr=1.5&pid=1.7",
-    amenities: [
-      "Private Rooftop Lounge",
-      "Mini Theater",
-      "Smart Home Automation",
-    ],
-    description:
-      "A high-rise luxury community with breathtaking cityscape views and world-class amenities.",
-  },
-  {
-    name: "Tranquil Woods",
-    location: "Dehradun, Uttarakhand",
-    image:
-      "https://th.bing.com/th/id/OIP.TyDKsBV8a1oev3lR4lRDtwHaE8?w=224&h=180&c=7&r=0&o=5&dpr=1.5&pid=1.7",
-    amenities: ["Yoga Pavilion", "Nature Trails", "Amphitheater"],
-    description:
-      "A serene residential retreat nestled in the Himalayas, offering a perfect blend of nature and comfort.",
-  },
-  {
-    name: "Heritage Villas",
-    location: "Kolkata, West Bengal",
-    image:
-      "https://th.bing.com/th/id/OIP.zf4o8W7RXs37TaJZ4HvYQAHaEB?w=285&h=180&c=7&r=0&o=5&dpr=1.5&pid=1.7",
-    amenities: ["Tennis Court", "Mini Theater", "Pet-Friendly Zone"],
-    description:
-      "A charming community blending classic Bengali architecture with modern conveniences.",
-  },
-];
-
-mongoose.connect(process.env.MONGO_URI1).then(() => {
-  console.log("database connected");
-});
+// --- DB Connection ---
+mongoose.connect(process.env.MONGO_URI1)
+  .then(() => console.log(" Database connected"))
+  .catch(err => console.error(" Database connection failed:", err));
 
 const app = express();
-const port = 3000;
+const PORT = 3000;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-app.use(
-  session({
-    secret: "your-secret-key",
-    resave: false,
-    saveUninitialized: true,
-    cookie: { secure: false },
-  })
-);
-
+// --- Middleware ---
+app.use(session({
+  secret: "your-secret-key",
+  resave: false,
+  saveUninitialized: true,
+  cookie: { secure: false },
+}));
 
 app.use(cors({
   origin: "http://localhost:5173",
-  credentials: true
+  credentials: true,
 }));
+
 
 
 app.use("/uploads", express.static("uploads"));
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-
-
-
-app.use(express.static(path.join(__dirname, "Public")));
+app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+app.use("/uploads", express.static("uploads"));
+app.use(express.static(path.join(__dirname, "Public")));
+
 app.use((req, res, next) => {
   res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, private");
   res.setHeader("Pragma", "no-cache");
@@ -177,29 +81,19 @@ app.use((req, res, next) => {
   next();
 });
 
-
-app.use("/uploads", express.static("uploads"));
-import AdminRouter from "./routes/adminRouter.js";
-import residentRouter from "./routes/residentRouter.js";
-import securityRouter from "./routes/securityRouter.js";
-import workerRouter from "./routes/workerRouter.js";
-import managerRouter from "./routes/managerRouter.js";
-import interestRouter from "./routes/InterestRouter.js"
-import Ad from "./models/Ad.js";
-
+// --- Routes ---
 app.use("/admin", auth, authorizeA, AdminRouter);
 app.use("/resident", auth, authorizeR, residentRouter);
-
 app.use("/security", auth, authorizeS, securityRouter);
-
 app.use("/worker", auth, authorizeW, workerRouter);
-
 app.use("/manager", auth, authorizeC, managerRouter);
+app.use("/interest", interestRouter);
 
-app.use("/interest", interestRouter)
+app.use("/interest", interestRouter);
 
 
-const PORT = 3000;
+
+
 
 
 app.post("/AdminLogin", async (req, res) => {
@@ -213,6 +107,7 @@ app.post("/AdminLogin", async (req, res) => {
         success: false,
         message: "Invalid email or password"
       });
+
     }
 
     // Set cookie so Admin pages can use auth middleware
@@ -299,9 +194,11 @@ app.get('/api/auth/getUser', auth, async (req, res) => {
     console.log(err);
     return res.status(401).json({ message: 'Unauthorized' });
   }
+
 });
 
-
+// --- Server Start ---
 app.listen(PORT, async () => {
   console.log(`Server running at http://localhost:${PORT}`);
+
 });

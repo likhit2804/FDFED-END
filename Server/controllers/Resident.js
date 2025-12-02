@@ -9,27 +9,7 @@ import Payment from "../models/payment.js";
 import Issue from "../models/issues.js";
 import QRCode from "qrcode";
 import jwt from "jsonwebtoken";
-
-// Utils function
-function getTimeAgo(date) {
-  const now = new Date(Date.now());
-  const diffMs = now - new Date(date);
-  const diffSeconds = Math.floor(diffMs / 1000);
-
-  if (diffSeconds < 60)
-    return `${diffSeconds} second${diffSeconds !== 1 ? "s" : ""} ago`;
-
-  const diffMinutes = Math.floor(diffSeconds / 60);
-  if (diffMinutes < 60)
-    return `${diffMinutes} minute${diffMinutes !== 1 ? "s" : ""} ago`;
-
-  const diffHours = Math.floor(diffMinutes / 60);
-  if (diffHours < 24)
-    return `${diffHours} hour${diffHours !== 1 ? "s" : ""} ago`;
-
-  const diffDays = Math.floor(diffHours / 24);
-  return `${diffDays} day${diffDays !== 1 ? "s" : ""} ago`;
-}
+import { getTimeAgo } from "../utils/residentHelpers.js";
 
 const getPreApprovals = async (req, res) => {
   try {
@@ -262,5 +242,7 @@ const getQRcode = async (req, res) =>{
   }
 }
 
+const getResidentDashboard = async(req,res) => {
 
+};
 export { getPreApprovals, getCommonSpace, getIssueData, getPaymentData, getQRcode };

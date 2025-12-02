@@ -16,7 +16,7 @@ import { Payments } from './components/Manager/Payments';
 
 import { CommonSpaceBooking } from './components/Resident/CommonSpace';
 import { IssueRaising } from './components/Resident/IssueRaising';
-import { ResidentDashboard } from './components/Resident/dashboard';
+import { ResidentDashboard } from './components/Resident/Dashboard';
 import { PreApproval } from './components/Resident/PreApproval';
 import { ResidentProfile } from './components/Resident/Profile';
 import { ResidentPayments } from './components/Resident/ResidentPayments.jsx';

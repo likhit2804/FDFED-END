@@ -25,6 +25,7 @@ import {
   getPaymentData,
   getQRcode,
 } from "../controllers/Resident.js";
+import { getTimeAgo, getPaymentRemainders, setPenalties } from "../utils/residentHelpers.js";
 
 import multer from "multer";
 import cron from "node-cron";
@@ -32,85 +33,6 @@ import checkSubscriptionStatus from "../middleware/subcriptionStatus.js";
 import { populate } from "dotenv";
 import Amenity from "../models/Amenities.js";
 residentRouter.use(checkSubscriptionStatus);
-
-function getPaymentRemainders(pending, notifications) {
-  const now = new Date();
-  const reminders = [];
-
-  for (const payment of pending) {
-    const deadline = new Date(payment.paymentDeadline);
-    const diffMs = deadline.getTime() - now.getTime();
-
-    const I = payment.ID || payment.title;
-    const amount = payment.amount;
-
-    const isFuture = diffMs >= 0;
-    const diffDays = isFuture
-      ? Math.ceil(diffMs / (1000 * 60 * 60 * 24))
-      : Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-    const hoursLeft = diffMs / (1000 * 60 * 60);
-
-    if (diffDays === 1 || (diffDays === 0 && hoursLeft > 0)) {
-      reminders.push({
-        n: `Your payment for ${I} of amount ₹${amount} is due tomorrow.`,
-        createdAt: new Date(),
-        belongs: "Payment",
-      });
-    } else if (diffDays < 0) {
-      reminders.push({
-        n: `Your payment for ${I} of amount ₹${amount} was due ${Math.abs(
-          diffDays
-        )} day(s) ago.`,
-        createdAt: new Date(),
-        belongs: "Payment",
-      });
-    }
-  }
-
-  const newReminders = reminders.filter((newR) => {
-    const newWords = newR.n.split(" ").slice(0, 5).join(" ");
-    return !notifications.some((existingR) => {
-      const existingWords = existingR.n.split(" ").slice(0, 5).join(" ");
-      return existingWords === newWords;
-    });
-  });
-
-  console.log(reminders);
-
-  // Push new reminders into notifications
-  notifications.push(...newReminders);
-
-  return reminders;
-}
-
-async function setPenalties(overdues) {
-  console.log("setting penalties");
-
-  for (const o of overdues) {
-    const deadline = new Date(o.paymentDeadline);
-    const diffMs = deadline.getTime() - new Date().getTime();
-
-    const I = o.ID || o.title;
-    const amount = o.amount;
-    const penalty = amount * 0.1;
-
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-    const hoursLeft = diffMs / (1000 * 60 * 60);
-
-    const is = new Date(o.penalty.changedOn) - new Date();
-    const is24 = Math.floor(is / (1000 * 60 * 60 * 24));
-
-    if (!o.penalty || is24) {
-      o.penalty.p = penalty;
-      o.penalty.changedOn = new Date();
-      o.amount = Math.floor(amount + penalty);
-    }
-
-    return;
-  }
-}
 
 function generateCustomID(userEmail, facility, countOrRandom = null) {
   console.log("userEmail:", userEmail);
@@ -137,26 +59,6 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 
-function getTimeAgo(date) {
-  const now = new Date(Date.now());
-  const diffMs = now - new Date(date);
-  const diffSeconds = Math.floor(diffMs / 1000);
-
-  if (diffSeconds < 60)
-    return `${diffSeconds} second${diffSeconds !== 1 ? "s" : ""} ago`;
-
-  const diffMinutes = Math.floor(diffSeconds / 60);
-  if (diffMinutes < 60)
-    return `${diffMinutes} minute${diffMinutes !== 1 ? "s" : ""} ago`;
-
-  const diffHours = Math.floor(diffMinutes / 60);
-  if (diffHours < 24)
-    return `${diffHours} hour${diffHours !== 1 ? "s" : ""} ago`;
-
-  const diffDays = Math.floor(diffHours / 24);
-  return `${diffDays} day${diffDays !== 1 ? "s" : ""} ago`;
-}
-
 residentRouter.get("/payment/community", async (req, res) => {
   try {
     const user = await Community.findById(req.user.community);
@@ -176,7 +78,7 @@ residentRouter.get("/payment/community", async (req, res) => {
 
 residentRouter.get("/ad", async (req, res) => {
   const ads = await Ad.find({
-    community: req.user.community,
+    community: req.user?.community,
     startDate: { $lte: new Date() },
     endDate: { $gte: new Date() },
   });
@@ -490,88 +392,109 @@ const formatDate = (rawDate) => {
   });
 };
 
-residentRouter.get("/dashboard", async (req, res) => {
-  const recents = [];
-  const notifications = [];
 
-  const ads = await Ad.find({
-    community: req.user?.community,
-    startDate: { $lte: new Date() },
-    endDate: { $gte: new Date() },
-  });
+residentRouter.get("/api/dashboard", async (req, res) => {
+  try {
+    const recents = [];
 
-  const issues = await Issue.find({ resident: req.user.id });
-  const commonSpaces = await CommonSpaces.find({ bookedBy: req.user.id });
-  const payments = await Payment.find({ sender: req.user.id });
-  const preApp = await Visitor.find({ approvedBy: req.user.id });
-  const resi = await Resident.findById(req.user.id);
+    // Fetch base data
+    const ads = await Ad.find({
+      community: req.user.community,
+      startDate: { $lte: new Date() },
+      endDate: { $gte: new Date() }
+    });
 
-  // Add to recents (creation-based timeline)
-  recents.push(
-    ...issues.map((issue) => ({
-      type: "Issue",
-      title: issue.issueID,
-      date: new Date(issue.createdAt),
-    })),
-    ...preApp.map((i) => ({
-      type: "PreApproval",
-      title: i._id,
-      date: new Date(i.createdAt),
-    })),
-    ...commonSpaces.map((space) => ({
-      type: "CommonSpace",
-      title: space.name,
-      date: new Date(space.createdAt),
-    })),
-    ...payments.map((payment) => ({
-      type: "Payment",
-      title: payment.title,
-      date: new Date(payment.paymentDate),
-    }))
-  );
+    const issues = await Issue.find({ resident: req.user.id });
+    const commonSpaces = await CommonSpaces.find({ bookedBy: req.user.id });
+    const payments = await Payment.find({ sender: req.user.id });
+    const preApp = await Visitor.find({ approvedBy: req.user.id });
 
-  const pendingPayments = await Payment.find({
-    sender: req.user.id,
-    status: { $in: ["Pending", "Overdue"] },
-  });
+    const resident = await Resident.findById(req.user.id);
 
-  pendingPayments.forEach(async (p) => {
-    if (new Date(p.paymentDeadline) < new Date()) {
-      p.status = "Overdue";
+    // Build recents list
+    recents.push(
+      ...issues.map(issue => ({
+        type: "Issue",
+        title: issue.issueID,
+        date: issue.createdAt
+      })),
+      ...preApp.map(i => ({
+        type: "PreApproval",
+        title: i._id,
+        date: i.createdAt
+      })),
+      ...commonSpaces.map(space => ({
+        type: "CommonSpace",
+        title: space.name,
+        date: space.createdAt
+      })),
+      ...payments.map(payment => ({
+        type: "Payment",
+        title: payment.title,
+        date: payment.paymentDate
+      }))
+    );
+
+    // Sort by newest
+    recents.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    // Handle pending/overdue payments
+    const pendingPayments = await Payment.find({
+      sender: req.user.id,
+      status: { $in: ["Pending", "Overdue"] }
+    });
+
+    for (const p of pendingPayments) {
+      if (new Date(p.paymentDeadline) < new Date()) {
+        p.status = "Overdue";
+        await p.save();
+      }
     }
-    await p.save();
-  });
 
-  const overdues = pendingPayments.filter((p) => p.status === "Overdue");
-  setPenalties(overdues);
+    // Penalties
+    const overdues = pendingPayments.filter(p => p.status === "Overdue");
+    setPenalties(overdues);
 
-  recents.sort((a, b) => b.updatedAt - a.updatedAt);
+    // Apply payment reminders
+    getPaymentRemainders(pendingPayments, resident.notifications);
 
-  const not = getPaymentRemainders(pendingPayments, resi.notifications);
+    // Add timeAgo to notifications
+    resident.notifications.forEach(n => {
+      n.timeAgo = getTimeAgo(n.createdAt);
+    });
 
-  resi.notifications.forEach((n) => {
-    n.timeAgo = getTimeAgo(n.createdAt);
-  });
+    // Sort newest first
+    resident.notifications.sort(
+      (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+    );
 
-  resi.notifications.sort((a, b) => b.createdAt - a.createdAt);
+    // Keep only last 24 hours notifications
+    const now = new Date();
+    const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
-  const now = new Date();
-  const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const trimmedNotifications = resident.notifications.filter(n => {
+      return new Date(n.createdAt) >= oneDayAgo;
+    });
 
-  resi.notifications = resi.notifications.filter((n) => {
-    const notificationDate = new Date(n.createdAt);
-    return notificationDate >= twentyFourHoursAgo;
-  });
+    // Save final trimmed notifications
+    resident.notifications = trimmedNotifications;
+    await resident.save();
 
-  await resi.save();
+    return res.json({
+      success: true,
+      ads,
+      recents,
+      notifications: trimmedNotifications,
+      pendingPayments
+    });
 
-  res.render("resident/dashboard", {
-    path: "d",
-    recents,
-    ads,
-    resi,
-    pendingPayments,
-  });
+  } catch (err) {
+    console.error("Dashboard JSON API Error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Server error"
+    });
+  }
 });
 
 residentRouter.get("/", (req, res) => {
