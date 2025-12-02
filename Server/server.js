@@ -3,7 +3,11 @@ import path from "path";
 import { fileURLToPath } from "url";
 import session from "express-session";
 import mongoose from "mongoose";
-import cors from "cors";
+
+import cors from "cors"
+import jwt from "jsonwebtoken";
+
+
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import multer from "multer";
@@ -59,6 +63,11 @@ app.use(cors({
   credentials: true,
 }));
 
+
+
+app.use("/uploads", express.static("uploads"));
+
+app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
@@ -80,84 +89,116 @@ app.use("/worker", auth, authorizeW, workerRouter);
 app.use("/manager", auth, authorizeC, managerRouter);
 app.use("/interest", interestRouter);
 
-// --- Login routes ---
+app.use("/interest", interestRouter);
+
+
+
+
+
+
 app.post("/AdminLogin", async (req, res) => {
   try {
     const { email, password } = req.body;
-    console.log("Admin login attempt:", req.body);
 
-    const result = await AuthenticateA(email, password, req, res);
+    const result = await AuthenticateA(email, password);
 
-    if (result) {
-      return res.status(200).json({ redirect: "/admin" });
-    } else {
-      return res.status(401).json({ error: "Invalid email or password" });
+    if (!result) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid email or password"
+      });
+
     }
+
+    // Set cookie so Admin pages can use auth middleware
+    res.cookie("token", result.token, {
+      httpOnly: true,
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      sameSite: "lax"
+    });
+
+    // 🔥 VERY IMPORTANT:
+    // AdminLogin.jsx expects JSON, NOT HTML redirect
+    return res.json({
+      success: true,
+      user: result.user,
+      token: result.token,
+      redirect: "/admin/dashboard"  // or "/admin"
+    });
+
   } catch (error) {
     console.error("Admin login error:", error);
-    return res.status(500).json({ error: "Server error during login" });
+    return res.status(500).json({
+      success: false,
+      message: "Server error"
+    });
   }
 });
+
+
+
 
 app.post("/login", async (req, res) => {
   try {
     const { email, password, userType } = req.body;
-    console.log("Login attempt:", req.body);
+    console.log(email, password, userType);
 
     let result;
-    let redirect;
 
-    switch (userType) {
-      case "Resident":
-        result = await AuthenticateR(email, password, req, res);
-        redirect = "/resident/dashboard";
-        break;
+    if (userType === "Resident") result = await AuthenticateR(email, password, res);
+    else if (userType === "Security") result = await AuthenticateS(email, password, res);
+    else if (userType === "Worker") result = await AuthenticateW(email, password, res);
+    else if (userType === "communityManager") result = await AuthenticateC(email, password, res);
+    else if (userType === "Admin") result = await AuthenticateA(email, password, res);
+    else return res.status(400).json({ message: "Invalid user type" });
 
-      case "Security":
-        result = await AuthenticateS(email, password, req, res);
-        redirect = "/security/dashboard";
-        break;
-
-      case "Worker":
-        result = await AuthenticateW(email, password, req, res);
-        redirect = "/worker/dashboard";
-        break;
-
-      case "communityManager":
-        result = await AuthenticateC(email, password, req, res);
-        redirect = "/manager/dashboard";
-        break;
-
-      default:
-        return res.status(400).json({ error: "Invalid user type" });
+    if (!result) {
+      return res.status(401).json({ message: "Invalid email or password" });
     }
 
-    if (result) {
-      return res.status(200).json({ redirect });
-    } else {
-      return res.status(401).json({ error: "Invalid credentials" });
-    }
-  } catch (error) {
-    console.error("Login error:", error);
-    return res.status(500).json({ error: "Server error" });
+    // ✅ STEP 3: Set cookie HERE
+    res.cookie("token", result.token, {
+      httpOnly: true,
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      sameSite: "lax"
+    });
+
+    return res.json({
+      token: result.token,
+      user: result.user,
+    });
+
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: "Server error" });
   }
 });
 
-app.get("/logout", (req, res) => {
-  const token = req.cookies.token;
-  if (token) res.clearCookie("token");
-  return res.status(200).json({ message: "Logged out successfully" });
+
+
+app.get('/api/auth/getUser', auth, async (req, res) => {
+  const cookie = req.cookies.token;
+
+  console.log("token at getUser : ", cookie)
+
+
+  console.log("checking for user");
+
+
+  try {
+    const data = await jwt.verify(cookie, process.env.JWT_SECRET);
+    console.log(data);
+
+    return res.json({ user: data });
+  } catch (err) {
+    console.log(err);
+    return res.status(401).json({ message: 'Unauthorized' });
+  }
+
 });
 
 // --- Server Start ---
 app.listen(PORT, async () => {
-  const ads = await Ad.find({});
-  for (const ad of ads) {
-    const now = new Date();
-    const endDate = new Date(ad.endDate);
-    if (now < endDate) ad.status = "active";
-    else ad.status = "expired";
-    await ad.save();
-  }
-  console.log(` Server running at http://localhost:${PORT}`);
+  console.log(`Server running at http://localhost:${PORT}`);
+
 });

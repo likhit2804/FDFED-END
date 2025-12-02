@@ -1,10 +1,19 @@
 import React from "react";
 import logo from '../imgs/logo.png';
 import "../assets/css/Navbar.css"
-import {NavLink} from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { useDispatch } from "react-redux";
+import { logout } from "../Slices/authSlice";
 
 export const Navbar = ({ userType }) => {
- 
+    const dispatch = useDispatch();
+    const navigate = useNavigate();
+
+    const handleLogout = () => {
+        dispatch(logout());
+        navigate("/login");
+    };
+
     return (
         <>
             <nav
@@ -32,6 +41,7 @@ export const Navbar = ({ userType }) => {
                       <li className="px-2"><NavLink className={({isActive})=>(isActive ? "Nactive" : "")} to="/resident/preApproval">Pre approval</NavLink></li>
                       <li className="px-2"><NavLink className={({isActive})=>(isActive ? "Nactive" : "")} to="/resident/issueRaising">Issue Raising</NavLink></li>
                       <li className="px-2"><NavLink className={({isActive})=>(isActive ? "Nactive" : "")} to="/resident/commonSpace">Common space Bookings</NavLink></li>
+                      <li className="px-2"><NavLink className={({isActive})=>(isActive ? "Nactive" : "")} to="/resident/payments">Payments</NavLink></li>
                       <li className="px-2"><NavLink className={({isActive})=>(isActive ? "Nactive" : "")} to="/resident/profile" >Profile</NavLink></li>
                     </>
                   ) : userType === 'Worker' ? (
@@ -41,7 +51,7 @@ export const Navbar = ({ userType }) => {
                       <li className="px-2"><NavLink className={({isActive})=>(isActive ? "Nactive" : "")} to="/worker/tasks">Tasks</NavLink></li>
                       <li className="px-2"><NavLink className={({isActive})=>(isActive ? "Nactive" : "")} to="/worker/profile" >Profile</NavLink></li>
                     </>
-                  ) : userType === 'Manager' ? (
+                  ) : userType === 'manager' ? (
                     <>
                       <li className="px-2"><NavLink className={({isActive})=>(isActive ? "Nactive" : "")} to="/manager/dashboard">Dashboard</NavLink></li>
                       <li className="px-2"><NavLink className={({isActive})=>(isActive ? "Nactive" : "")} to="/manager/issueResolving">Issue Resolving</NavLink></li>
@@ -53,11 +63,10 @@ export const Navbar = ({ userType }) => {
                   ) : (
                     <p>No Links Available</p>
                   )
-
                 }
               </ul>
               <div className="log-out-con  d-flex justify-content-around align-items-center" style={{position: 'relative'}}>
-                <button className="log-out btn btn-warning p-2">
+                <button className="log-out btn btn-warning p-2" onClick={handleLogout}>
                   <i className="bi bi-box-arrow-right me-1"></i>Logout
                 </button>
               </div>
