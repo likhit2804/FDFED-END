@@ -90,33 +90,29 @@ app.use("/manager", auth, authorizeC, managerRouter);
 app.use("/interest", interestRouter);
 
 app.post("/AdminLogin", async (req, res) => {
+  console.log("AdminLogin route hit with body:", req.body);
   try {
     const { email, password } = req.body;
+    console.log("Extracted email:", email, "password:", password ? "[PROVIDED]" : "[MISSING]");
 
-    const result = await AuthenticateA(email, password);
+    const result = await AuthenticateA(email, password, res);
+    console.log("AuthenticateA result:", result ? "SUCCESS" : "FAILED");
 
     if (!result) {
+      console.log("Authentication failed - returning 401");
       return res.status(401).json({
         success: false,
         message: "Invalid email or password"
       });
-
     }
 
-    // Set cookie so Admin pages can use auth middleware
-    res.cookie("token", result.token, {
-      httpOnly: true,
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-      sameSite: "lax"
-    });
-
-    // 🔥 VERY IMPORTANT:
-    // AdminLogin.jsx expects JSON, NOT HTML redirect
+    console.log("Authentication successful - returning success");
+    // Cookie is already set by AuthenticateA function
     return res.json({
       success: true,
       user: result.user,
       token: result.token,
-      redirect: "/admin/dashboard"  // or "/admin"
+      redirect: "/admin/dashboard"
     });
 
   } catch (error) {
@@ -127,8 +123,6 @@ app.post("/AdminLogin", async (req, res) => {
     });
   }
 });
-
-
 
 app.post("/login", async (req, res) => {
   try {
