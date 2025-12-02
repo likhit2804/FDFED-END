@@ -31,6 +31,8 @@ export const ResidentDashboard = () => {
       }
     } catch (err) {
       console.error("Fetch Error:", err);
+    } finally {
+      setLoading(false);   
     }
   }
 
