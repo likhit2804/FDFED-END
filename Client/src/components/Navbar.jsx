@@ -60,7 +60,14 @@ export const Navbar = ({ userType }) => {
                       <li className="px-2"><NavLink className={({isActive})=>(isActive ? "Nactive" : "")} to="/manager/advertisement">Advertisement</NavLink></li>
                       <li className="px-2"><NavLink className={({isActive})=>(isActive ? "Nactive" : "")} to="/manager/profile" >Profile</NavLink></li>
                     </>
-                  ) : (
+                  ) :userType === 'security' ? (
+                    <>
+                      <li className="px-2"><NavLink className={({isActive})=>(isActive ? "Nactive" : "")} to="/security/dashboard">Dashboard</NavLink></li>
+                      <li className="px-2"><NavLink className={({isActive})=>(isActive ? "Nactive" : "")} to="/security/visitorManagement">Visitor Management</NavLink></li>
+                      <li className="px-2"><NavLink className={({isActive})=>(isActive ? "Nactive" : "")} to="/security/preapproval">Preapproval</NavLink></li>
+                      <li className="px-2"><NavLink className={({isActive})=>(isActive ? "Nactive" : "")} to="/security/profile" >Profile</NavLink></li>
+                    </>
+                  ): (
                     <p>No Links Available</p>
                   )
                 }
