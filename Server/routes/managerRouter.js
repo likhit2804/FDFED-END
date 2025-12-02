@@ -1077,7 +1077,10 @@ managerRouter.get("/userManagement", async (req, res) => {
   const W = await Worker.find({ community: req.user.community });
   const S = await Security.find({ community: req.user.community });
 
-  res.render("communityManager/userManagement", { path: "um", ads, R, W, S });
+  console.log(ads, R, W, S);
+  
+
+  res.json({ ads, R, W, S });
 });
 
 managerRouter.post("/userManagement/resident", async (req, res) => {
@@ -1330,6 +1333,9 @@ managerRouter.get("/userManagement/worker/:id", async (req, res) => {
 
   const r = await Worker.findById(id);
 
+  console.log(r.jobRole);
+  
+
   res.status(200).json({ success: true, r });
 });
 
@@ -1341,11 +1347,8 @@ managerRouter.delete("/userManagement/worker/:id", async (req, res) => {
   res.status(200).json({ ok: true });
 });
 
-
 managerRouter.get("/api/dashboard", async (req, res) => {
   try {
-    
-
     const communityId = req.user.community;
 
     // Fetch all required data in parallel for better performance
@@ -1525,7 +1528,6 @@ managerRouter.get("/api/dashboard", async (req, res) => {
     });
   }
 });
-
 
 managerRouter.get("/issueResolving", async (req, res) => {
   try {
@@ -1716,6 +1718,94 @@ managerRouter.get("/payments", async (req, res) => {
   } catch (error) {
     console.error("Error loading payments page:", error);
     res.status(500).render("error", { message: "Error loading payments page" });
+  }
+});
+
+managerRouter.get("/api/payments", async (req, res) => {
+  try {
+    const managerId = req.user && req.user.id;
+    const manager = await CommunityManager.findById(managerId);
+
+    console.log("got the request for payments");
+
+    if (!manager) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Community manager not found" });
+    }
+
+    const community = await Community.findById(manager.assignedCommunity)
+      .select(
+        "name subscriptionPlan subscriptionStatus planStartDate planEndDate subscriptionHistory"
+      )
+      .lean();
+
+    if (!community) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Community not found" });
+    }
+
+    // Use the array if present; otherwise default to empty array
+    const payments = Array.isArray(community.subscriptionHistory)
+      ? community.subscriptionHistory
+      : [];
+
+    // Normalize/ensure keys and compute stats
+    const totalTransactions = payments.length;
+
+    const toLower = (v) => (v || "").toString().toLowerCase();
+
+    const paidPayments = payments.filter(
+      (p) =>
+        toLower(p.status) === "completed" || toLower(p.status) === "complete"
+    ).length;
+    const pendingPayments = payments.filter(
+      (p) => toLower(p.status) === "pending"
+    ).length;
+    const overduePayments = payments.filter(
+      (p) => toLower(p.status) === "overdue"
+    ).length;
+
+    const paidAmount = payments
+      .filter(
+        (p) =>
+          toLower(p.status) === "completed" || toLower(p.status) === "complete"
+      )
+      .reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+
+    const pendingAmount = payments
+      .filter((p) => toLower(p.status) === "pending")
+      .reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+
+    const overdueAmount = payments
+      .filter((p) => toLower(p.status) === "overdue")
+      .reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+
+    return res.json({
+      success: true,
+      payments,
+      community: {
+        name: community.name,
+        subscriptionPlan: community.subscriptionPlan,
+        subscriptionStatus: community.subscriptionStatus,
+        planEndDate: community.planEndDate,
+      },
+      stats: {
+        totalTransactions,
+        paidCount: paidPayments,
+        pendingCount: pendingPayments,
+        overdueCount: overduePayments,
+        paidAmount,
+        pendingAmount,
+        overdueAmount,
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching payments api:", error);
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to fetch payments" });
   }
 });
 
@@ -2234,9 +2324,11 @@ managerRouter.put("/api/ad/:id", upload.single("image"), async (req, res) => {
 });
 
 // Delete advertisement
-managerRouter.delete("/api/ad/:id", async (req, res) => {
+managerRouter.delete("/ad/:id", async (req, res) => {
   try {
     const adId = req.params.id;
+    console.log(adId);
+    
 
     // Validate ad ID format
     if (!adId || !adId.match(/^[0-9a-fA-F]{24}$/)) {
@@ -2255,13 +2347,6 @@ managerRouter.delete("/api/ad/:id", async (req, res) => {
       });
     }
 
-    // Verify ownership - ensure the ad belongs to the user's community
-    if (ad.community.toString() !== req.user.community.toString()) {
-      return res.status(403).json({
-        success: false,
-        message: "Unauthorized: You can only delete your own advertisements",
-      });
-    }
 
     // Delete the advertisement
     const deletedAd = await Ad.findByIdAndDelete(adId);
@@ -2273,23 +2358,6 @@ managerRouter.delete("/api/ad/:id", async (req, res) => {
       });
     }
 
-    // Optional: Delete the image file from storage
-    if (deletedAd.imagePath) {
-      const fs = require("fs");
-      const path = require("path");
-      try {
-        const filePath = path.join(__dirname, "..", deletedAd.imagePath);
-        if (fs.existsSync(filePath)) {
-          fs.unlinkSync(filePath);
-        }
-      } catch (fileError) {
-        console.warn(
-          "Warning: Could not delete image file:",
-          fileError.message
-        );
-        // Don't fail the entire operation if file deletion fails
-      }
-    }
 
     return res.status(200).json({
       success: true,
@@ -2306,62 +2374,132 @@ managerRouter.delete("/api/ad/:id", async (req, res) => {
   }
 });
 
-managerRouter.get("/profile", async (req, res) => {
-  const ads = await Ad.find({
-    community: req.user.community,
-    status: "Active",
-  });
+managerRouter.get("/profile/api", async (req, res) => {
+  try {
+    const managerId = req.user.id;
+    const manager = await CommunityManager.findById(managerId);
 
-  const r = await CommunityManager.findById(req.user.id);
+    if (!manager) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Manager not found" });
+    }
 
-  console.log(r);
+    const community = await Community.findById(
+      manager.assignedCommunity
+    ).select("name");
 
-  res.render("communityManager/Profile", { path: "pr", ads, r });
+    res.json({
+      success: true,
+      manager: {
+        name: manager.name || "",
+        email: manager.email || "",
+        contact: manager.contact || "",
+        location: manager.location || "",
+        address: manager.address || "",
+      },
+      community: {
+        name: community?.name || "",
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching manager profile:", error);
+    res
+      .status(500)
+      .json({ success: false, message: "Failed to fetch profile" });
+  }
 });
 
 managerRouter.post("/profile", upload.single("image"), async (req, res) => {
-  const { name, email, contact } = req.body;
+  try {
+    const { name, email, contact, location, address } = req.body;
+    const managerId = req.user.id;
 
-  let image = "";
+    const manager = await CommunityManager.findById(managerId);
+    if (!manager) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Manager not found" });
+    }
 
-  const r = await CommunityManager.findById(req.user.id);
-  if (req.file) {
-    image = req.file.path;
+    manager.name = name || manager.name;
+    manager.email = email || manager.email;
+    manager.contact = contact || manager.contact;
+    manager.location = location || manager.location;
+    manager.address = address || manager.address;
+
+    if (req.file) {
+      manager.image = req.file.path;
+    }
+
+    await manager.save();
+
+    res.json({
+      success: true,
+      message: "Profile updated successfully",
+      manager: {
+        name: manager.name,
+        email: manager.email,
+        contact: manager.contact,
+        location: manager.location,
+        address: manager.address,
+      },
+    });
+  } catch (error) {
+    console.error("Error updating profile:", error);
+    res
+      .status(500)
+      .json({ success: false, message: "Failed to update profile" });
   }
-
-  r.name = name;
-  r.email = email;
-  r.contact = contact;
-  r.image = image;
-
-  await r.save();
-
-  res.json({ success: true, r, message: "Profile updated" });
 });
 
 managerRouter.post("/profile/changePassword", async (req, res) => {
-  const { cp, np, cnp } = req.body;
+  try {
+    const { cp, np, cnp } = req.body;
+    const managerId = req.user.id;
 
-  console.log(np, cp);
+    if (!cp || !np || !cnp) {
+      return res
+        .status(400)
+        .json({ success: false, message: "All fields are required" });
+    }
 
-  const r = await CommunityManager.findById(req.user.id);
+    if (np !== cnp) {
+      return res
+        .status(400)
+        .json({ success: false, message: "New passwords do not match" });
+    }
 
-  const isMatch = await bcrypt.compare(cp, r.password);
+    const manager = await CommunityManager.findById(managerId);
+    if (!manager) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Manager not found" });
+    }
 
-  if (!isMatch) {
+    const isMatch = await bcrypt.compare(cp, manager.password);
+    if (!isMatch) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Current password is incorrect" });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(np, salt);
+    manager.password = hashedPassword;
+
+    await manager.save();
+
     return res.json({
-      success: false,
-      message: "current password does not match",
+      success: true,
+      message: "Password changed successfully",
     });
+  } catch (error) {
+    console.error("Error changing password:", error);
+    res
+      .status(500)
+      .json({ success: false, message: "Failed to change password" });
   }
-
-  const salt = await bcrypt.genSalt(10);
-  const hashedPassword = await bcrypt.hash(np, salt);
-  r.password = hashedPassword;
-
-  await r.save();
-
-  return res.json({ success: true, message: "password changed" });
 });
 
 export default managerRouter;

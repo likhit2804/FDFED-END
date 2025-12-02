@@ -32,7 +32,7 @@ const residentSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Community",
       required: true,
-    }, // Linked to Community
+    },
     notifications: [
       {
         n: { type: String },

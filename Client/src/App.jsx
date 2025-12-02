@@ -13,6 +13,7 @@ import { ManagerProfile } from './components/Manager/Profile';
 import { IssueResolving } from './components/Manager/IssueResolving';
 import { Advertisement } from './components/Manager/Advertisement';
 import { Payments } from './components/Manager/Payments';
+import UserManagement from './components/Manager/UserManagement.jsx';
 
 import { CommonSpaceBooking } from './components/Resident/CommonSpace';
 import { IssueRaising } from './components/Resident/IssueRaising';
@@ -91,6 +92,7 @@ function App() {
             <Route path="advertisement" element={<Advertisement />} />
             <Route path="payments" element={<Payments />} />
             <Route path="profile" element={<ManagerProfile />} />
+            <Route path="userManagement" element={<UserManagement />} />
           </Route>
         </Route>
 

@@ -21,8 +21,12 @@ async function authenticateUser(model, email, password, res) {
         userType
     };
 
-    if (user.community) {
+    if(userType.community){
         userPayload.community = user.community;
+    }else if(userType === 'CommunityManager'){
+        userPayload.community = user.assignedCommunity;
+    }else{
+        userPayload.community = null;
     }
 
     const token = jwt.sign(

@@ -19,6 +19,7 @@ export const CommonSpace = () => {
   const [BookingDetailsopen, setBookingDetailsOpen] = useState(false);
   const [currentBooking, setCurrentBooking] = useState({});
   const [toggleRent, setToggleRent] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const { register, handleSubmit, reset, setValue, watch } = useForm({
     defaultValues: { spaceType: '', spaceName: '', bookable: 'true', bookingRent: '', bookingRules: '', Type: '' },
@@ -75,6 +76,22 @@ export const CommonSpace = () => {
     setRejectionReason('');
     setBookingToReject(null);
   };
+
+  // Filter bookings based on search query
+  const filteredBookings = Bookings.filter((booking) => {
+    const searchLower = searchQuery.toLowerCase();
+    const spaceName = booking.name?.toLowerCase() || '';
+    const bookingDate = new Date(booking.Date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }).toLowerCase();
+    const bookingStatus = booking.status?.toLowerCase() || '';
+    const bookingId = booking.ID?.toLowerCase() || '';
+
+    return (
+      spaceName.includes(searchLower) ||
+      bookingDate.includes(searchLower) ||
+      bookingStatus.includes(searchLower) ||
+      bookingId.includes(searchLower)
+    );
+  });
 
   const onSubmit = (data) => {
     const payload = { ...data, bookable: data.bookable === 'true' };
@@ -233,13 +250,18 @@ export const CommonSpace = () => {
       </motion.div>
 
       <div className="search-bar">
-        <input type="text" placeholder="Search by space, date or status..." />
-        <button className="approve-all">Search</button>
+        <input
+          type="text"
+          placeholder="Search by space, date or status..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+        <button className="approve-all" onClick={() => setSearchQuery('')}>Clear</button>
       </div>
 
       <motion.div className="bookings-container" id="bookingsContainer" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-        {Bookings.length > 0 ? (
-          Bookings.map((c) => (
+        {filteredBookings.length > 0 ? (
+          filteredBookings.map((c) => (
             <motion.div key={c._id} className="booking-card d-flex flex-column" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
               <div className="booking-card-header">
                 <span className="booking-id">ID: {c.ID}</span>

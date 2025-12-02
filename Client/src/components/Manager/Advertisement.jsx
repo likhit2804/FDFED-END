@@ -710,10 +710,11 @@ export const Advertisement = () => {
                 method: "DELETE",
                 credentials: "include"
             });
-            if (!response.ok)
+            if (!response.ok) {
+                const text = await response.text();
+                console.log("Failed to delete ad:", response.status, text);
                 throw new Error("Failed to delete ad.");
-
-
+            }
 
         } catch (err) {
             console.error("Error deleting ad:", err);
