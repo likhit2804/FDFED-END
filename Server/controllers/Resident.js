@@ -459,7 +459,7 @@ const getQRcode = async (req, res) => {
   }
 };
 
-export const getResidentProfile = async (req, res) => {
+const getResidentProfile = async (req, res) => {
   try {
     const resident = await Resident.findById(req.user.id)
       .populate("community", "communityName");
