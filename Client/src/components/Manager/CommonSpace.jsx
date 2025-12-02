@@ -189,10 +189,10 @@ export const CommonSpace = () => {
                         <button className="edit-space-btn" onClick={() => handleEditSpace(space)}><i className="bi bi-pencil"></i></button>
                         <button className="delete-space-btn" onClick={() => handleDeleteSpace(space)}><i className="bi bi-trash"></i></button>
                       </div>
-                      <h4>{space.name}</h4>
-                      <p><strong>Type:</strong> {space.type}</p>
-                      <p><strong>Bookable:</strong> {space.bookable ? 'Yes' : 'No'}</p>
-                      <p><strong>Rent:</strong> {space.rent}</p>
+                      <h4>{space?.name}</h4>
+                      <p><strong>Type:</strong> {space?.type}</p>
+                      <p><strong>Bookable:</strong> {space?.bookable ? 'Yes' : 'No'}</p>
+                      <p><strong>Rent:</strong> {space?.rent}</p>
                       {space.bookingRules && <p><strong>Rules:</strong> {space.bookingRules.substring(0, 50)}...</p>}
                     </motion.div>
                   ))

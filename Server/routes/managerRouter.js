@@ -47,19 +47,25 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 managerRouter.get("/commonSpace", async (req, res) => {
-  try{
-    const c = '68f74d38c06f8c9e8ab68c80';
-    const bookings = await CommonSpaces.find({ community: c , status : {$ne : "Rejected"} }).populate('payment').populate("bookedBy", "residentFirstname residentLastname email").sort({
-      createdAt: -1,
-    });
+  try {
+    const c = "68f74d38c06f8c9e8ab68c80";
+    const bookings = await CommonSpaces.find({
+      community: c,
+      status: { $ne: "Rejected" },
+    })
+      .populate("payment")
+      .populate("bookedBy", "residentFirstname residentLastname email")
+      .sort({
+        createdAt: -1,
+      });
 
-    const commonSpaces = await Amenity.find({community:c});
+    const commonSpaces = await Amenity.find({ community: c });
 
     res.status(200).json({
       bookings,
       commonSpaces,
     });
-  }catch(err){
+  } catch (err) {
     console.error("Error fetching common spaces and bookings:", err);
     res.status(500).json({
       success: false,
@@ -132,7 +138,6 @@ managerRouter.get("/commonSpace/details/:id", async (req, res) => {
   }
 });
 
-
 managerRouter.post("/commonSpace/reject/:id", async (req, res) => {
   const id = req.params.id;
   const { reason } = req.body;
@@ -170,18 +175,17 @@ managerRouter.post("/commonSpace/reject/:id", async (req, res) => {
 managerRouter.post("/spaces", async (req, res) => {
   try {
     // Validate required fields
-    const { spaceType, spaceName, bookingRent,Type } = req.body;
+    const { spaceType, spaceName, bookingRent, Type } = req.body;
     console.log("req.body : ", req.body);
 
     if (!spaceType || !spaceName) {
       console.log("no space name or type");
-      
+
       return res.status(400).json({
         success: false,
         message: "Space type and name are required",
       });
     }
-
 
     // if (!req.user || !req.user.community) {
     //   return res.status(401).json({
@@ -190,12 +194,14 @@ managerRouter.post("/spaces", async (req, res) => {
     //   });
     // }
 
-
     // Check for duplicate space names
-    const existingSpace = await Amenity.find({spaceName,community:'68f74d38c06f8c9e8ab68c80'})
+    const existingSpace = await Amenity.find({
+      spaceName,
+      community: "68f74d38c06f8c9e8ab68c80",
+    });
     if (existingSpace.length > 0) {
-      console.log("there is already existing",existingSpace);
-      
+      console.log("there is already existing", existingSpace);
+
       return res.status(400).json({
         success: false,
         message: "A space with this name already exists",
@@ -212,11 +218,10 @@ managerRouter.post("/spaces", async (req, res) => {
       community: new mongoose.Types.ObjectId("68f74d38c06f8c9e8ab68c80"),
       createdAt: new Date(),
       updatedAt: new Date(),
-      Type
-    })
+      Type,
+    });
 
-    console.log("new space:",newSpace);
-    
+    console.log("new space:", newSpace);
 
     res.status(201).json({
       success: true,
@@ -235,7 +240,7 @@ managerRouter.post("/spaces", async (req, res) => {
 
 managerRouter.put("/spaces/:id", async (req, res) => {
   console.log(req.body);
-  
+
   try {
     const spaceId = req.params.id;
     if (!spaceId) {
@@ -245,7 +250,7 @@ managerRouter.put("/spaces/:id", async (req, res) => {
       });
     }
 
-    const space = await Amenity.findById(spaceId)
+    const space = await Amenity.findById(spaceId);
 
     // if (!req.user || !req.user.community) {
     //   return res.status(401).json({
@@ -254,8 +259,8 @@ managerRouter.put("/spaces/:id", async (req, res) => {
     //   });
     // }
 
-
-    const { spaceType, spaceName , bookingRules, bookable, bookingRent } = req.body;
+    const { spaceType, spaceName, bookingRules, bookable, bookingRent } =
+      req.body;
     if (
       (spaceType !== undefined && !spaceType.trim()) ||
       (spaceName !== undefined && !spaceName.trim())
@@ -266,9 +271,11 @@ managerRouter.put("/spaces/:id", async (req, res) => {
       });
     }
 
-
     if (spaceName && spaceName.trim()) {
-      const duplicateSpace = await Amenity.find({spaceName , community:'68f74d38c06f8c9e8ab68c80'})
+      const duplicateSpace = await Amenity.find({
+        spaceName,
+        community: "68f74d38c06f8c9e8ab68c80",
+      });
       if (duplicateSpace[0]) {
         return res.status(400).json({
           success: false,
@@ -276,7 +283,6 @@ managerRouter.put("/spaces/:id", async (req, res) => {
         });
       }
     }
-
 
     space.name = spaceName;
     space.type = spaceType;
@@ -286,12 +292,11 @@ managerRouter.put("/spaces/:id", async (req, res) => {
     space.updatedAt = new Date();
 
     await space.save();
-    
 
     res.json({
       success: true,
       message: "Space updated successfully",
-      space
+      space,
     });
   } catch (error) {
     console.error("Error updating space:", error);
@@ -323,8 +328,6 @@ managerRouter.delete("/spaces/:id", async (req, res) => {
     //   });
     // }
 
-
-
     const space = await Amenity.findByIdAndDelete(spaceId);
     if (!space) {
       return res.status(404).json({
@@ -337,7 +340,7 @@ managerRouter.delete("/spaces/:id", async (req, res) => {
       success: true,
       message: "Common space deleted successfully",
       deletedSpace: {
-        id: spaceId
+        id: spaceId,
       },
     });
   } catch (error) {
@@ -433,10 +436,11 @@ managerRouter.get("/api/community/spaces", async (req, res) => {
 
 async function checkSubscription(req, res, next) {
   try {
-    // Skip check for payment-related routes
+    // Skip check for payment-related routes and API endpoints
     if (
       req.path.startsWith("/payments") ||
       req.path.startsWith("/subscription") ||
+      req.path.startsWith("/api/") ||
       req.path === "/all-communities" ||
       req.path === "/residents" ||
       req.path === "/communities" ||
@@ -1087,12 +1091,10 @@ managerRouter.post("/userManagement/resident", async (req, res) => {
     if (Rid) {
       const r = await Resident.findById(Rid);
       if (!r) {
-        return res
-          .status(404)
-          .json({
-            success: false,
-            message: `Resident with ID ${Rid} not found`,
-          });
+        return res.status(404).json({
+          success: false,
+          message: `Resident with ID ${Rid} not found`,
+        });
       }
 
       r.residentFirstname = residentFirstname;
@@ -1118,7 +1120,6 @@ managerRouter.post("/userManagement/resident", async (req, res) => {
       const hashedPassword = await bcrypt.hash(password, 10);
       r.password = hashedPassword;
       await r.save();
-
 
       res.json({ success: true, resident: r });
     }
@@ -1176,12 +1177,10 @@ managerRouter.post("/userManagement/security", async (req, res) => {
     if (Sid) {
       const s = await Security.findById(Sid);
       if (!s) {
-        return res
-          .status(404)
-          .json({
-            success: false,
-            message: `Security staff with ID ${Sid} not found`,
-          });
+        return res.status(404).json({
+          success: false,
+          message: `Security staff with ID ${Sid} not found`,
+        });
       }
 
       s.name = securityName;
@@ -1342,66 +1341,191 @@ managerRouter.delete("/userManagement/worker/:id", async (req, res) => {
   res.status(200).json({ ok: true });
 });
 
-managerRouter.get("/dashboard", async (req, res) => {
-  const ads = await Ad.find({
-    community: req.user.community,
-    status: "Active",
-  });
 
-  const issues = await Issue.find({
-    community: req.user.community,
-    status: "Pending",
-  }).populate("resident", "residentFirstname residentLastname");
-  const residents = await Resident.find({ community: req.user.community });
-  const commonSpacesBookings = await CommonSpaces.find({
-    community: req.user.community,
-    status: "Pending",
-  }).populate("bookedBy", "residentFirstname residentLastname");
-  const payments = await Payment.find({ community: req.user.community });
-  const visitors = await visitor.find({ community: req.user.community });
+managerRouter.get("/api/dashboard", async (req, res) => {
+  try {
+    
 
-  const totalResidents = residents.length;
-  const totalCommonSpacesBookings = commonSpacesBookings.length;
-  const totalPayments = payments.length;
+    const communityId = req.user.community;
 
-  let Iactions = [...issues];
-  let Cactions = [...commonSpacesBookings];
+    // Fetch all required data in parallel for better performance
+    const [
+      residents,
+      workers,
+      issues,
+      commonSpacesBookings,
+      payments,
+      visitors,
+      advertisements,
+    ] = await Promise.all([
+      Resident.find({ community: communityId }).lean(),
+      Worker.find({ community: communityId }).lean(),
+      Issue.find({ community: communityId })
+        .populate("resident", "residentFirstname residentLastname email")
+        .lean(),
+      CommonSpaces.find({ community: communityId })
+        .populate("bookedBy", "residentFirstname residentLastname email")
+        .lean(),
+      Payment.find({ community: communityId }).lean(),
+      visitor.find({ community: communityId }).lean(),
+      Ad.find({ community: communityId })
+        .select("title status startDate endDate")
+        .lean(),
+    ]);
 
-  Iactions.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-  Cactions.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    // Calculate statistics
+    const totalResidents = residents.length;
+    const totalWorkers = workers.length;
+    const totalAdvisitorsCount = visitors.length;
+    const totalActiveBookings = commonSpacesBookings.length;
+    const totalPayments = payments.length;
 
-  const pendingIssues = issues.filter(
-    (issue) => issue.status === "Pending" || issue.status === "Assigned"
-  ).length;
-  const pendingCommonSpacesBookings = commonSpacesBookings.filter(
-    (booking) => booking.status === "Pending"
-  ).length;
-  const pendingPayments = payments.filter(
-    (payment) => payment.status === "Pending"
-  ).length;
-  const completedPayments = payments.filter(
-    (payment) => payment.status === "Completed"
-  ).length;
+    // Calculate payment statistics
+    const paidPayments = payments.filter(
+      (p) => p.status === "Completed"
+    ).length;
+    const pendingPayments = payments.filter(
+      (p) => p.status === "Pending"
+    ).length;
+    const overduePayments = payments.filter(
+      (p) => p.status === "Overdue"
+    ).length;
 
-  res.render("communityManager/dashboard", {
-    path: "d",
-    ads,
-    totalResidents,
-    totalCommonSpacesBookings,
-    totalPayments,
-    pendingIssues,
-    pendingCommonSpacesBookings,
-    pendingPayments,
-    completedPayments,
-    visitors,
-    Iactions,
-    Cactions,
-  });
+    // Calculate payment amounts
+    const paidAmount = payments
+      .filter((p) => p.status === "Completed")
+      .reduce((sum, p) => sum + (p.amount || 0), 0);
+    const pendingAmount = payments
+      .filter((p) => p.status === "Pending")
+      .reduce((sum, p) => sum + (p.amount || 0), 0);
+    const overdueAmount = payments
+      .filter((p) => p.status === "Overdue")
+      .reduce((sum, p) => sum + (p.amount || 0), 0);
+
+    // Calculate issue statistics
+    const pendingIssues = issues.filter(
+      (issue) => issue.status === "Pending" || issue.status === "Assigned"
+    ).length;
+    const resolvedIssues = issues.filter(
+      (issue) => issue.status === "Resolved"
+    ).length;
+    const urgentIssues = issues.filter(
+      (issue) => issue.priority === "High" && issue.status !== "Resolved"
+    ).length;
+
+    // Get recent issues (last 5)
+    const recentIssues = [...issues]
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .slice(0, 5)
+      .map((issue) => ({
+        _id: issue._id,
+        title: issue.title || "No Title",
+        status: issue.status,
+        priority: issue.priority,
+        resident: issue.resident
+          ? `${issue.resident.residentFirstname} ${issue.resident.residentLastname}`
+          : "Unknown",
+        createdAt: issue.createdAt,
+      }));
+
+    // Get recent bookings (last 5)
+    const recentBookings = [...commonSpacesBookings]
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .slice(0, 5)
+      .map((booking) => ({
+        _id: booking._id,
+        name: booking.name || "No Name",
+        status: booking.status,
+        date: booking.Date,
+        bookedBy: booking.bookedBy
+          ? `${booking.bookedBy.residentFirstname} ${booking.bookedBy.residentLastname}`
+          : "Unknown",
+        createdAt: booking.createdAt,
+      }));
+
+    // Get revenue data for charts
+    const revenueData = [
+      { name: "Paid", value: paidAmount, count: paidPayments },
+      { name: "Pending", value: pendingAmount, count: pendingPayments },
+      { name: "Overdue", value: overdueAmount, count: overduePayments },
+    ];
+
+    // Calculate ad statistics
+    const now = new Date();
+    const activeAds = advertisements.filter((ad) => {
+      const startDate = new Date(ad.startDate);
+      const endDate = new Date(ad.endDate);
+      return startDate <= now && now <= endDate;
+    }).length;
+
+    const pendingAds = advertisements.filter((ad) => {
+      const startDate = new Date(ad.startDate);
+      return startDate > now;
+    }).length;
+
+    const expiredAds = advertisements.filter((ad) => {
+      const endDate = new Date(ad.endDate);
+      return endDate < now;
+    }).length;
+
+    // Prepare response
+    res.status(200).json({
+      success: true,
+      data: {
+        summary: {
+          totalResidents,
+          totalWorkers,
+          totalVisitors: totalAdvisitorsCount,
+          totalActiveBookings,
+        },
+        issues: {
+          pending: pendingIssues,
+          resolved: resolvedIssues,
+          urgent: urgentIssues,
+          recent: recentIssues,
+        },
+        bookings: {
+          total: totalActiveBookings,
+          pending: commonSpacesBookings.filter((b) => b.status === "Pending")
+            .length,
+          approved: commonSpacesBookings.filter((b) => b.status === "Approved")
+            .length,
+          recent: recentBookings,
+        },
+        payments: {
+          total: totalPayments,
+          paid: paidPayments,
+          pending: pendingPayments,
+          overdue: overduePayments,
+          revenueData,
+          amounts: {
+            paid: paidAmount,
+            pending: pendingAmount,
+            overdue: overdueAmount,
+          },
+        },
+        advertisements: {
+          active: activeAds,
+          pending: pendingAds,
+          expired: expiredAds,
+          total: advertisements.length,
+        },
+        visitors: {
+          today: totalAdvisitorsCount,
+        },
+      },
+      message: "Dashboard data fetched successfully",
+    });
+  } catch (error) {
+    console.error("Error fetching dashboard data:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch dashboard data",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
+  }
 });
 
-managerRouter.get("/", (req, res) => {
-  res.redirect("dashboard");
-});
 
 managerRouter.get("/issueResolving", async (req, res) => {
   try {
@@ -1861,31 +1985,325 @@ managerRouter.post("/change-plan", async (req, res) => {
   }
 });
 
-managerRouter.get("/ad", async (req, res) => {
-  const ads = await Ad.find({
-    community: req.user.community,
-    status: "Active",
-  });
+managerRouter.get("/api/ad", async (req, res) => {
+  try {
+    // Fetch all ads for the community, sorted by creation date (newest first)
+    const ads = await Ad.find({
+      community: req.user.community,
+    })
+      .select(
+        "_id title startDate endDate imagePath link status createdAt updatedAt"
+      )
+      .sort({ createdAt: -1 })
+      .lean();
 
-  res.render("communityManager/Advertisement", { path: "ad", ads });
+    // Update status dynamically based on current date
+    const now = new Date();
+    const adsWithUpdatedStatus = ads.map((ad) => {
+      const startDate = new Date(ad.startDate);
+      const endDate = new Date(ad.endDate);
+
+      let status = ad.status;
+      if (startDate <= now && now <= endDate) {
+        status = "Active";
+      } else if (now < startDate) {
+        status = "Pending";
+      } else if (now > endDate) {
+        status = "Expired";
+      }
+
+      return {
+        ...ad,
+        status,
+        startDate: startDate.toISOString().split("T")[0],
+        endDate: endDate.toISOString().split("T")[0],
+      };
+    });
+
+    // Calculate statistics
+    const totalAds = adsWithUpdatedStatus.length;
+    const activeAds = adsWithUpdatedStatus.filter(
+      (ad) => ad.status === "Active"
+    ).length;
+    const expiredAds = adsWithUpdatedStatus.filter(
+      (ad) => ad.status === "Expired"
+    ).length;
+    const pendingAds = adsWithUpdatedStatus.filter(
+      (ad) => ad.status === "Pending"
+    ).length;
+
+    res.status(200).json({
+      success: true,
+      ads: adsWithUpdatedStatus,
+      statistics: {
+        total: totalAds,
+        active: activeAds,
+        expired: expiredAds,
+        pending: pendingAds,
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching ads:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch advertisements",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
+  }
 });
 
-managerRouter.post("/ad", upload.single("image"), async (req, res) => {
-  const { title, sdate, edate, link } = req.body;
-  const file = req.file.path;
+managerRouter.post("/api/ad", upload.single("image"), async (req, res) => {
+  try {
+    const { title, startDate, endDate, sdate, edate, link, amount } = req.body;
 
-  const ad = await Ad.create({
-    title,
-    startDate: new Date(sdate), // directly save as Date object
-    endDate: new Date(edate),
+    if (!title) {
+      return res.status(400).json({
+        success: false,
+        message: "Title is required",
+      });
+    }
 
-    link,
-    imagePath: file,
-    community: req.user.community,
-  });
+    const rawStart = startDate || sdate;
+    const rawEnd = endDate || edate;
 
-  console.log("new ad : ", ad);
-  res.redirect("ad");
+    if (!rawStart || !rawEnd) {
+      return res.status(400).json({
+        success: false,
+        message: "Start date and end date are required",
+      });
+    }
+
+    const parsedStartDate = new Date(rawStart);
+    const parsedEndDate = new Date(rawEnd);
+
+    if (
+      Number.isNaN(parsedStartDate.getTime()) ||
+      Number.isNaN(parsedEndDate.getTime())
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid start or end date format",
+      });
+    }
+
+    if (!req.file || !req.file.path) {
+      return res.status(400).json({
+        success: false,
+        message: "Advertisement image is required",
+      });
+    }
+
+    const imagePath = req.file.path;
+
+    const ad = await Ad.create({
+      title: title.trim(),
+      startDate: parsedStartDate,
+      endDate: parsedEndDate,
+      link,
+      imagePath,
+      community: req.user.community,
+    });
+
+    ad.updateStatus();
+    await ad.save();
+
+    const formattedAd = {
+      _id: ad._id,
+      title: ad.title,
+      startDate: ad.startDate.toISOString().split("T")[0],
+      endDate: ad.endDate.toISOString().split("T")[0],
+      link: ad.link,
+      imagePath: ad.imagePath,
+      status: ad.status,
+      createdAt: ad.createdAt,
+      updatedAt: ad.updatedAt,
+    };
+
+    return res.status(201).json({
+      success: true,
+      message: "Advertisement created successfully",
+      ad: formattedAd,
+    });
+  } catch (error) {
+    console.error("Error creating advertisement:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to create advertisement",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
+  }
+});
+
+// Update advertisement
+managerRouter.put("/api/ad/:id", upload.single("image"), async (req, res) => {
+  try {
+    const adId = req.params.id;
+    const { title, startDate, endDate, link } = req.body;
+
+    if (!adId || !adId.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid advertisement ID",
+      });
+    }
+
+    // Find the advertisement
+    const ad = await Ad.findById(adId);
+    if (!ad) {
+      return res.status(404).json({
+        success: false,
+        message: "Advertisement not found",
+      });
+    }
+
+    if (title) {
+      if (title.trim().length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Title cannot be empty",
+        });
+      }
+      ad.title = title.trim();
+    }
+
+    // Update dates if provided
+    if (startDate && endDate) {
+      const parsedStartDate = new Date(startDate);
+      const parsedEndDate = new Date(endDate);
+
+      if (
+        Number.isNaN(parsedStartDate.getTime()) ||
+        Number.isNaN(parsedEndDate.getTime())
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid start or end date format",
+        });
+      }
+
+      if (parsedStartDate >= parsedEndDate) {
+        return res.status(400).json({
+          success: false,
+          message: "Start date must be before end date",
+        });
+      }
+
+      ad.startDate = parsedStartDate;
+      ad.endDate = parsedEndDate;
+    }
+
+    // Update link if provided
+    if (link !== undefined) {
+      ad.link = link || null;
+    }
+
+    // Update image if provided
+    if (req.file && req.file.path) {
+      ad.imagePath = req.file.path;
+    }
+
+    ad.updatedAt = new Date();
+    ad.updateStatus();
+    await ad.save();
+
+    const formattedAd = {
+      _id: ad._id,
+      title: ad.title,
+      startDate: ad.startDate.toISOString().split("T")[0],
+      endDate: ad.endDate.toISOString().split("T")[0],
+      link: ad.link,
+      imagePath: ad.imagePath,
+      status: ad.status,
+      createdAt: ad.createdAt,
+      updatedAt: ad.updatedAt,
+    };
+
+    return res.status(200).json({
+      success: true,
+      message: "Advertisement updated successfully",
+      ad: formattedAd,
+    });
+  } catch (error) {
+    console.error("Error updating advertisement:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to update advertisement",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
+  }
+});
+
+// Delete advertisement
+managerRouter.delete("/api/ad/:id", async (req, res) => {
+  try {
+    const adId = req.params.id;
+
+    // Validate ad ID format
+    if (!adId || !adId.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid advertisement ID format",
+      });
+    }
+
+    // Find the advertisement
+    const ad = await Ad.findById(adId);
+    if (!ad) {
+      return res.status(404).json({
+        success: false,
+        message: "Advertisement not found",
+      });
+    }
+
+    // Verify ownership - ensure the ad belongs to the user's community
+    if (ad.community.toString() !== req.user.community.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: "Unauthorized: You can only delete your own advertisements",
+      });
+    }
+
+    // Delete the advertisement
+    const deletedAd = await Ad.findByIdAndDelete(adId);
+
+    if (!deletedAd) {
+      return res.status(500).json({
+        success: false,
+        message: "Failed to delete advertisement",
+      });
+    }
+
+    // Optional: Delete the image file from storage
+    if (deletedAd.imagePath) {
+      const fs = require("fs");
+      const path = require("path");
+      try {
+        const filePath = path.join(__dirname, "..", deletedAd.imagePath);
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+      } catch (fileError) {
+        console.warn(
+          "Warning: Could not delete image file:",
+          fileError.message
+        );
+        // Don't fail the entire operation if file deletion fails
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Advertisement deleted successfully",
+      deletedAdId: adId,
+    });
+  } catch (error) {
+    console.error("Error deleting advertisement:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to delete advertisement",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
+  }
 });
 
 managerRouter.get("/profile", async (req, res) => {
@@ -1931,9 +2349,11 @@ managerRouter.post("/profile/changePassword", async (req, res) => {
   const isMatch = await bcrypt.compare(cp, r.password);
 
   if (!isMatch) {
-    return res.json({ success: false, message: "current password does not match" });
+    return res.json({
+      success: false,
+      message: "current password does not match",
+    });
   }
-
 
   const salt = await bcrypt.genSalt(10);
   const hashedPassword = await bcrypt.hash(np, salt);
