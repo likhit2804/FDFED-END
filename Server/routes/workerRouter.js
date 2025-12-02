@@ -52,41 +52,27 @@ workerRouter.get("/history", async (req, res) => {
   res.render("worker/History", { path: "H", issues, ads });
 });
 
-workerRouter.get("/tasks", async (req, res) => {
-  const tasks = await Issue.find({ workerAssigned: req.user.id,status:"Assigned" })
-    .populate("workerAssigned")
-    .populate("resident");
 
- const ads = await Ad.find({ community: req.user.community,startDate: { $lte: new Date() }, endDate: { $gte: new Date() } });
-
-  
-
-  res.render("worker/Task", { path: "t", tasks, ads });
-});
-
-workerRouter.post("/issueResolving/resolve/:id", async (req, res) => {
-  const issueId = req.params.id;
+// JSON API endpoint for worker's active tasks (Assigned, In Progress, Reopened)
+workerRouter.get("/api/tasks", async (req, res) => {
   try {
-    const issue = await Issue.findById(issueId).populate('resident');
-    if (!issue) {
-      return res.status(404).json({ message: "Issue not found" });
-    }
-    issue.status = "Review Pending";
-    issue.resolvedAt = new Date();
-    issue.resident.notifications.push({
-      n:`Issue ${issue.issueID} is resolved `,
-      createdAt:new Date(),
-      belongs:"Issue"
+    const tasks = await Issue.find({
+      workerAssigned: req.user.id,
+      status: { $in: ["Assigned", "In Progress", "Reopened"] }
     })
-
-    await issue.resident.save();
-    await issue.save();
-    res.status(200).json({ success: true, message: "Issue resolved successfully" });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({success: false, message: "Server error" });
+      .populate("workerAssigned")
+      .populate("resident");
+    res.json({ success: true, tasks });
+  } catch (err) {
+    res.status(500).json({ success: false, message: "Failed to fetch tasks" });
   }
 });
+
+import {startIssue,resolveIssue,misassignedIssue}from "../controllers/issueController.js";
+
+workerRouter.post("/issue/start/:id", startIssue);
+workerRouter.post("/issue/resolve/:id", resolveIssue);
+workerRouter.post("/issue/misassigned/:id", misassignedIssue);
 
 workerRouter.get("/profile", async (req, res) => {
  const ads = await Ad.find({ community: req.user.community,startDate: { $lte: new Date() }, endDate: { $gte: new Date() } });

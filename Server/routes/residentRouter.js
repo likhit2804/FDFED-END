@@ -15,7 +15,6 @@ import Community from "../models/communities.js";
 import auth from "../controllers/auth.js";
 import { authorizeR } from "../controllers/authorization.js";
 import Ad from "../models/Ad.js";
-import communities from "../models/communities.js";
 import PaymentController from "../controllers/payments.js";
 import { OTP } from "../controllers/OTP.js";
 import {
@@ -30,22 +29,23 @@ import { getTimeAgo, getPaymentRemainders, setPenalties } from "../utils/residen
 import multer from "multer";
 import cron from "node-cron";
 import checkSubscriptionStatus from "../middleware/subcriptionStatus.js";
-import { populate } from "dotenv";
 import Amenity from "../models/Amenities.js";
+
 residentRouter.use(checkSubscriptionStatus);
 
 function generateCustomID(userEmail, facility, countOrRandom = null) {
   console.log("userEmail:", userEmail);
-
-  const emailPrefix = userEmail.toUpperCase().slice(-4);
-
+  
+  // Clean the userEmail (remove spaces)
+  const code = userEmail.toUpperCase().trim();
+  
   const facilityCode = facility.toUpperCase().slice(0, 2);
-
+  
   const suffix = countOrRandom
     ? String(countOrRandom).padStart(4, "0")
     : String(Math.floor(1000 + Math.random() * 9000));
 
-  return `UE-${emailPrefix}-${facilityCode}-${suffix}`;
+  return `${code}-${facilityCode}-${suffix}`;
 }
 
 const storage = multer.diskStorage({
@@ -89,12 +89,12 @@ residentRouter.get("/ad", async (req, res) => {
 residentRouter.get("/commonSpace", async (req, res) => {
   try {
     const bookings = await CommonSpaces.find({
-      bookedBy: "68eb3a9eeea837fdb79aba39",
+      bookedBy: req.user.id, // Fixed: use req.user.id instead of hardcoded
     })
       .populate("payment")
       .sort({ createdAt: -1 });
     const spaces = await Amenity.find({
-      community: "68f74d38c06f8c9e8ab68c80",
+      community: req.user.community, // Fixed: use req.user.community instead of hardcoded
     });
 
     return res.json({
@@ -135,7 +135,7 @@ residentRouter.post("/commonSpace/:id", async (req, res) => {
 
 residentRouter.post("/commonSpace", async (req, res) => {
   try {
-    const uid = "68eb3a9eeea837fdb79aba39";
+    const uid = req.user.id; // Fixed: use req.user.id instead of hardcoded
     console.log(req.body);
 
     const {
@@ -200,7 +200,7 @@ residentRouter.post("/commonSpace", async (req, res) => {
       status: Type === "Slot" ? "Booked" : "Active",
       availability: null,
       bookedBy: uid,
-      community: new mongoose.Types.ObjectId("68f74d38c06f8c9e8ab68c80"),
+      community: new mongoose.Types.ObjectId(req.user.community), // Fixed: use req.user.community
     });
 
     let uniqueId = generateCustomID(b._id.toString(), "CS", null);
@@ -243,7 +243,7 @@ residentRouter.post("/commonSpace", async (req, res) => {
     const payment = await Payment.create({
       title: b._id,
       sender: b.bookedBy._id,
-      receiver: new mongoose.Types.ObjectId("68eb31f33b437b684cabfa92"),
+      receiver: new mongoose.Types.ObjectId(req.user.community), // Fixed: use req.user.community
       amount: amount,
       paymentDate: new Date(),
       paymentMethod: paymentMethod,
@@ -251,7 +251,7 @@ residentRouter.post("/commonSpace", async (req, res) => {
       remarks: null,
       ID: uniqueId,
       belongTo: "CommonSpaces",
-      community: new mongoose.Types.ObjectId("68f74d38c06f8c9e8ab68c80"),
+      community: new mongoose.Types.ObjectId(req.user.community), // Fixed: use req.user.community
       belongToId: b._id,
     });
 
@@ -284,7 +284,7 @@ residentRouter.post("/commonSpace", async (req, res) => {
 residentRouter.put("/booking/cancel/:id", async (req, res) => {
   try {
     const bookingId = req.params.id;
-    const residentId = "68eb3a9eeea837fdb79aba39";
+    const residentId = req.user.id; // Fixed: use req.user.id instead of hardcoded
 
     const booking = await CommonSpaces.findOne({
       _id: bookingId,
@@ -351,12 +351,9 @@ residentRouter.put("/booking/cancel/:id", async (req, res) => {
   }
 });
 
-
 residentRouter.get("/api/facilities", async (req, res) => {
   try {
-    const community = await Community.findById(
-      "68eb31f33b437b684cabfa94"
-    ).select("commonSpaces");
+    const community = await Community.findById(req.user.community).select("commonSpaces"); // Fixed: use req.user.community
     const facilities = community.commonSpaces || [];
 
     console.log("Raw facilities from database:", facilities);
@@ -391,7 +388,6 @@ const formatDate = (rawDate) => {
     timeZone: "Asia/Kolkata",
   });
 };
-
 
 residentRouter.get("/api/dashboard", async (req, res) => {
   try {
@@ -501,210 +497,18 @@ residentRouter.get("/", (req, res) => {
   res.redirect("dashboard");
 });
 
-residentRouter.get("/issueRaising", getIssueData);
+import { confirmIssue, rejectIssueResolution, raiseIssue, deleteIssue, getResidentIssues, getIssueDataById, submitFeedback} from "../controllers/issueController.js";
 
-residentRouter.post("/issueRaising", async (req, res) => {
-  try {
-    const { category, description } = req.body;
-    console.log("Received Issue Data:", req.body);
-    if (!category || !description) {
-      req.flash("message", "All fields are required.");
-      console.log("Missing fields in request body:", req.body);
-      return res.redirect("issueRaising");
-    }
-    const resident = await Resident.findById(req.user.id);
-    if (!resident) {
-      req.flash("message", "Resident not found.");
-      console.log("Resident not found for ID:", req.user.id);
-      return res.redirect("issueRaising");
-    }
-    console.log("Resident Found:", resident);
-
-    const creat = new Date().toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
-    // Create the new issue document
-    const newIssue = await Issue.create({
-      resident: resident._id,
-      title: category,
-      description: description,
-      status: "Pending",
-      workerAssigned: null,
-      community: resident.community,
-    });
-
-    const issueID = generateCustomID(req.user.id, "IS", null);
-    newIssue.issueID = issueID;
-    await newIssue.save();
-
-    console.log("New Issue Created:", newIssue);
-    resident.raisedIssues.push(newIssue._id);
-    await resident.save();
-    console.log("Resident's raisedIssues updated:", resident.raisedIssues);
-
-    return res.json({
-      success: true,
-      message: "Issue raised successfully!",
-      issue: newIssue,
-    });
-  } catch (error) {
-    console.error("Error raising issue:", error);
-    req.flash("message", "Something went wrong.");
-    return res.json({ success: false, message: "Something went wrong." });
-  }
-});
-
-residentRouter.post("/deleteIssue/:issueID", async (req, res) => {
-  try {
-    const { issueID } = req.params;
-
-    const issue = await Issue.findOneAndDelete({ _id: issueID });
-
-    if (!issue) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Issue not found." });
-    }
-
-    const resident = await Resident.findById(req.user.id);
-    if (!resident) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Resident not found." });
-    }
-
-    resident.raisedIssues = resident.raisedIssues.filter(
-      (id) => id.toString() !== issueID
-    );
-
-    await resident.save();
-
-    res.json({ success: true, message: "Issue deleted successfully." });
-  } catch (error) {
-    console.error("Error deleting issue:", error);
-    res.status(500).json({ error: "Internal server error." });
-  }
-});
-
-residentRouter.get("/api/issues", async (req, res) => {
-  try {
-    const issues = await Issue.find({ resident: req.user.id })
-      .populate("workerAssigned")
-      .populate("payment");
-
-    res.status(200).json({ issues });
-  } catch (error) {
-    console.error("Error fetching issues:", error);
-    res.status(500).json({ error: "Internal server error." });
-  }
-});
-
-residentRouter.get("/getIssueData/:issueID", async (req, res) => {
-  try {
-    const { issueID } = req.params;
-    console.log("Fetching issue data for ID:", issueID);
-    const issue = await Issue.findById(issueID)
-      .populate("resident")
-      .populate("workerAssigned")
-      .populate("payment");
-    if (!issue) {
-      return res.status(404).json({ error: "Issue not found." });
-    }
-    console.log("Issue data found:", issue);
-
-    res.status(200).json(issue);
-  } catch (error) {
-    console.error("Error fetching issue data:", error);
-    res.status(500).json({ error: "Internal server error." });
-  }
-});
-
-residentRouter.post("/submitFeedback", async (req, res) => {
-  const { id, feedback, rating } = req.body;
-  console.log("Feedback Data Received:", req.body);
-
-  try {
-    const issue = await Issue.findById(id).populate(
-      "community",
-      "communityManager"
-    );
-
-    if (!issue) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Issue not found." });
-    }
-
-    const payment = await Payment.create({
-      title: `Payment for Issue ${issue.issueID}`,
-      sender: issue.resident,
-      receiver: issue.community.communityManager,
-      amount: 2000,
-      status: "Pending",
-      community: issue.community,
-      belongTo: "Issue",
-      belongToId: issue._id,
-      paymentDeadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-    });
-
-    const uniqueId = generateCustomID(issue._id.toString(), "PY", null);
-    payment.ID = uniqueId;
-    await payment.save();
-
-    issue.payment = payment._id;
-    issue.feedback = feedback;
-    issue.rating = Number(rating);
-    issue.status = "Payment Pending";
-    await issue.save();
-
-    return res.status(201).json({
-      success: true,
-      message: "Feedback submitted successfully.",
-      issueId: issue._id,
-    });
-  } catch (error) {
-    console.error("Error submitting feedback:", error);
-    return res
-      .status(500)
-      .json({ success: false, message: "Internal server error." });
-  }
-});
+residentRouter.post("/issue/confirmIssue/:id", confirmIssue);
+residentRouter.post("/issue/rejectIssueResolution/:id", rejectIssueResolution);
+residentRouter.post("/issue/raise", raiseIssue);
+residentRouter.delete("/issue/delete/:issueID", deleteIssue);
+residentRouter.get("/issue/data", getResidentIssues);
+residentRouter.get("/issue/data/:id", getIssueDataById);
+residentRouter.post("/issue/submitFeedback", submitFeedback);
 
 // Payment routes - corrected version
 residentRouter.get("/payments", getPaymentData);
-
-// residentRouter.get("/payments", async (req, res) => {
-//   try {
-//     const userId = req.user.id;
-
-//    const ads = await Ad.find({ community: req.user.community,startDate: { $lte: new Date() }, endDate: { $gte: new Date() } });
-
-//     console.log(ads);
-
-//     const payments = await Payment.find({ sender: userId })
-//       .populate("receiver", "name");
-
-//     // sort the payments  so that object with status overdue at first next with status pending and next with status completed , and in there are multiple objects with same status they should be in ascending order of paymentdeadline
-//     payments.sort((a, b) => {
-//       const statusOrder = { "Overdue": 1, "Pending": 2, "Completed": 3 };
-//       if (statusOrder[a.status] !== statusOrder[b.status]) {
-//         return statusOrder[a.status] - statusOrder[b.status];
-//       }
-
-//       return new Date(a.paymentDeadline) - new Date(b.paymentDeadline);
-//     });
-
-//     console.log(payments);
-
-//     res.render("resident/payments", { path: "p", payments, ads });
-//   } catch (error) {
-//     console.error("Error fetching payments:", error);
-//     req.flash("message", "Failed to load payment data");
-//     res.redirect("/dashboard");
-//   }
-// });
 
 residentRouter.get("/payment/receipt/:id", async (req, res) => {
   const Id = req.params.id;
@@ -745,104 +549,6 @@ residentRouter.get("/payment/:paymentId", async (req, res) => {
 });
 
 residentRouter.get("/preApprovals", auth, authorizeR, getPreApprovals);
-
-//pre approval routes
-// residentRouter.post("/preapproval", auth, authorizeR, async (req, res) => {
-//   try {
-//     // Add validation for req.body
-//     if (!req.body) {
-//       return res.status(400).json({ message: "Request body is missing" });
-//     }
-
-//     const { visitorName, contactNumber, dateOfVisit, timeOfVisit, purpose } =
-//       req.body;
-
-//     // Validate required fields
-//     if (
-//       !visitorName ||
-//       !contactNumber ||
-//       !dateOfVisit ||
-//       !timeOfVisit ||
-//       !purpose
-//     ) {
-//       return res.status(400).json({
-//         message: "Missing required fields",
-//         required: [
-//           "visitorName",
-//           "contactNumber",
-//           "dateOfVisit",
-//           "timeOfVisit",
-//           "purpose",
-//         ],
-//       });
-//     }
-
-//     const resident = await Resident.findById(req.user.id).populate("community");
-//     if (!resident) {
-//       return res.status(404).json({ message: "Resident not found" });
-//     }
-
-//     const date = formatDate(dateOfVisit);
-//     console.log("Formatted Date:", date);
-
-//     const scheduledAt = new Date(`${dateOfVisit}T${timeOfVisit}`);
-//     const tempId = new mongoose.Types.ObjectId();
-//     const uniqueId = generateCustomID(tempId.toString(), "PA", null);
-
-//     const newVisitor = await Visitor.create({
-//       _id : tempId,
-//       ID: uniqueId,
-//       name: visitorName,
-//       contactNumber,
-//       purpose,
-//       scheduledAt,
-//       approvedBy: resident._id,
-//       community: resident.community._id,
-//     });
-
-//     // QR Code Generation
-//     const payload = {
-//       visitorId: newVisitor._id.toString(),
-//       name: visitorName,
-//       contactNumber,
-//       purpose,
-//       scheduledAt,
-//     };
-
-//     const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "24h" });
-//     newVisitor.qrToken = token;
-
-//     // Generate QR image as Base64
-//     const qrImage = await QRCode.toDataURL(token);
-//     newVisitor.qrCode = qrImage;
-
-//     await newVisitor.save();
-
-//     resident.preApprovedVisitors.push(newVisitor._id);
-//     await resident.save();
-
-//     // Return JSON response
-//     return res.status(201).json({
-//       success: true,
-//       preapproval: {
-//         _id: newVisitor._id,
-//         ID: uniqueId,
-//         visitorName,
-//         contactNumber,
-//         dateOfVisit: date,
-//         timeOfVisit,
-//         purpose,
-//         status: "approved",
-//       },
-//     });
-//   } catch (err) {
-//     console.error("Error in pre-approving visitor:", err);
-//     return res.status(500).json({
-//       message: "Internal server error",
-//       error: err.message,
-//     });
-//   }
-// });
 
 residentRouter.post("/preapproval", auth, authorizeR, async (req, res) => {
   const session = await mongoose.startSession();

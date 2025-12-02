@@ -432,72 +432,9 @@ managerRouter.get("/api/community/spaces", async (req, res) => {
 });
 
 async function checkSubscription(req, res, next) {
-  try {
-    // Skip check for payment-related routes
-    if (
-      req.path.startsWith("/payments") ||
-      req.path.startsWith("/subscription") ||
-      req.path === "/all-communities" ||
-      req.path === "/residents" ||
-      req.path === "/communities" ||
-      req.path === "/currentcManager" ||
-      req.path === "/community-details" ||
-      req.path === "/subscription-status" ||
-      req.path === "/subscription-payment" ||
-      req.path === "/all-payments" ||
-      req.path === "/new-community" ||
-      req.path === "/create-with-payment"
-    ) {
-      return next();
-    }
-
-    // Get manager and community info
-    const managerId = req.user.id;
-    const manager = await CommunityManager.findById(managerId);
-
-    if (!manager) {
-      return res
-        .status(404)
-        .render("error", { message: "Community manager not found" });
-    }
-
-    const community = await Community.findById(
-      manager.assignedCommunity
-    ).select("subscriptionStatus planEndDate");
-
-    if (!community) {
-      return res
-        .status(404)
-        .render("error", { message: "Community not found" });
-    }
-
-    // Check if subscription is active
-    const now = new Date();
-    const isExpired =
-      community.planEndDate && new Date(community.planEndDate) < now;
-
-    if (isExpired || community.subscriptionStatus !== "active") {
-      // Store the original URL in session for redirecting back after payment
-      req.session.returnTo = req.originalUrl;
-
-      // Add a flash message
-      req.flash(
-        "warning",
-        "Your subscription has expired or is inactive. Please complete the payment to continue."
-      );
-
-      // Redirect to payment page
-      return res.redirect("/manager/payments");
-    }
-
-    next();
-  } catch (error) {
-    console.error("Subscription check error:", error);
-    res
-      .status(500)
-      .render("error", { message: "Error checking subscription status" });
-  }
+  return next(); // Allow all routes temporarily
 }
+
 
 // Apply checkSubscription middleware to all routes except excluded ones
 managerRouter.use(checkSubscription);
@@ -1477,56 +1414,47 @@ managerRouter.get("/issueResolving/api/issues", async (req, res) => {
     });
   }
 });
+import {assignIssue,getManagerIssues,reassignIssue,closeIssueByManager,holdIssue,getIssueById} from "../controllers/issueController.js";
+managerRouter.get("/issue/myIssues", getManagerIssues);
+managerRouter.post("/issue/assign/:id", assignIssue);
+managerRouter.post("/issue/reassign/:id", reassignIssue);
+managerRouter.post("/issue/close/:id", closeIssueByManager);
+managerRouter.post("/issue/hold/:id", holdIssue);
+managerRouter.get("/issue/:id", getIssueById);
 
-managerRouter.post("/issue/assign", async (req, res) => {
-  const { id, issueID, worker, deadline, remarks } = req.body;
+// NEW: Route for handling rejected auto-assigned issues (resident rejects → goes to manager)
+managerRouter.get("/issue/rejected/pending", async (req, res) => {
   try {
-    const issue = await Issue.findById(id);
-    console.log(issue);
+    const managerId = req.user.id;
+    const manager = await CommunityManager.findById(managerId);
 
-    if (!issue) {
-      return res.status(404).send("Issue not found");
+    if (!manager) {
+      return res.status(404).json({ success: false, message: "Manager not found" });
     }
 
-    issue.workerAssigned = worker;
-    issue.deadline = deadline;
-    issue.remarks = remarks;
-    issue.status = "Assigned";
-    await issue.save();
+    const community = manager.assignedCommunity;
 
-    // Find the worker and update their assigned issues
-    const workerData = await Worker.findById(worker);
-    if (!workerData) {
-      return res.status(404).send("Worker not found");
-    }
-    workerData.assignedIssues.push(id);
-    await workerData.save();
+    // Issues that were auto-assigned but rejected by resident
+    const rejectedIssues = await Issue.find({
+      community,
+      status: "Reopened",
+      autoAssigned: true,
+    })
+      .populate("resident")
+      .populate("workerAssigned")
+      .sort({ createdAt: -1 });
 
-    req.flash("alert-msg", "Worker Assigned");
-
-    res.redirect("/manager/issueResolving");
+    res.json({
+      success: true,
+      count: rejectedIssues.length,
+      issues: rejectedIssues,
+    });
   } catch (error) {
-    console.error("Error assigning issue:", error);
-    return res.status(500).send("Server error");
+    console.error(error);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 });
 
-managerRouter.get("/issueResolving/:id", async (req, res) => {
-  const id = req.params.id;
-
-  const issue = await Issue.findById(id)
-    .populate("resident")
-    .populate("workerAssigned")
-    .populate("payment");
-
-  console.log(issue);
-
-  if (!issue) {
-    return res.status(404).json({ message: "Issue not found" });
-  }
-
-  res.status(200).json({ issue, success: true });
-});
 
 managerRouter.get("/payments", async (req, res) => {
   try {

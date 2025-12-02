@@ -89,13 +89,6 @@ app.use("/worker", auth, authorizeW, workerRouter);
 app.use("/manager", auth, authorizeC, managerRouter);
 app.use("/interest", interestRouter);
 
-app.use("/interest", interestRouter);
-
-
-
-
-
-
 app.post("/AdminLogin", async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -137,7 +130,6 @@ app.post("/AdminLogin", async (req, res) => {
 
 
 
-
 app.post("/login", async (req, res) => {
   try {
     const { email, password, userType } = req.body;
@@ -174,27 +166,8 @@ app.post("/login", async (req, res) => {
   }
 });
 
-
-
-app.get('/api/auth/getUser', auth, async (req, res) => {
-  const cookie = req.cookies.token;
-
-  console.log("token at getUser : ", cookie)
-
-
-  console.log("checking for user");
-
-
-  try {
-    const data = await jwt.verify(cookie, process.env.JWT_SECRET);
-    console.log(data);
-
-    return res.json({ user: data });
-  } catch (err) {
-    console.log(err);
-    return res.status(401).json({ message: 'Unauthorized' });
-  }
-
+app.get('/api/auth/getUser', auth, (req, res) => {
+  res.json({ user: req.user });
 });
 
 // --- Server Start ---

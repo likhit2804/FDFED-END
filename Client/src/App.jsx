@@ -26,11 +26,9 @@ import { Tasks } from './components/Worker/Tasks';
 import { History } from './components/Worker/History';
 import { WorkerProfile } from './components/Worker/Profile';
 
-
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { ProtectedRoute } from './components/ProtectedRout.jsx'
-
 
 import AdminLogin from './components/AdminLogin';
 
@@ -43,6 +41,7 @@ import ProtectedAdminRoute from './components/Admin/ProtectedAdminRoute';
 
 import React, { useEffect } from "react";
 import { useDispatch } from "react-redux";
+import { setUser } from "./Slices/authSlice";
 
 function App() {
   const dispatch = useDispatch();
@@ -53,8 +52,10 @@ function App() {
     })
       .then(res => res.json())
       .then(data => {
-        console.log("user fetched",data);
-        
+        console.log("user fetched", data);
+        if (data.user) {
+          dispatch(setUser(data.user));
+        }
       });
   }, [dispatch]);
 
