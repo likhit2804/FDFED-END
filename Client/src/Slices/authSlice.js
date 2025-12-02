@@ -5,21 +5,12 @@ export const loginUser = createAsyncThunk(
   "auth/loginUser",
   async ({ email, password, userType }, { rejectWithValue }) => {
     try {
-      const r = await fetch("http://localhost:3000/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify({ email, password, userType })
-      })
-      const response = await r.json();
-      console.log(response);
-      
-
-      localStorage.setItem("token", response.token);
-      localStorage.setItem("user", JSON.stringify(response.user));
-      return response;
+      const response = await axios.post(
+        "http://localhost:3000/login",
+        { email, password, userType },
+        { withCredentials: true }
+      );
+      return response.data;
     } catch (err) {
       console.log(err);
       return rejectWithValue(err.response?.data?.message || "Login failed");
@@ -31,13 +22,12 @@ export const registerUser = createAsyncThunk(
   "auth/registerUser",
   async ({ name, email, password, userType }, { rejectWithValue }) => {
     try {
-      const response = await axios.post("http://localhost:5000/api/auth/register", {
-        name,
-        email,
-        password,
-        userType,
-      });
-      return response;
+      const response = await axios.post(
+        "http://localhost:5000/api/auth/register",
+        { name, email, password, userType },
+        { withCredentials: true }
+      );
+      return response.data;
     } catch (err) {
       return rejectWithValue(err.response?.data?.message || "Registration failed");
     }
@@ -54,11 +44,12 @@ const authSlice = createSlice({
   },
   reducers: {
     logout: (state) => {
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
       state.user = null;
       state.token = null;
     },
+    setUser: (state, action) => {
+      state.user = action.payload;
+    }
   },
   extraReducers: (builder) => {
     builder
@@ -69,7 +60,6 @@ const authSlice = createSlice({
       .addCase(loginUser.fulfilled, (state, action) => {
         state.loading = false;
         console.log("payload", action.payload);
-    
         state.user = action.payload.user;
         state.token = action.payload.token;
         console.log("payload", action.payload);
@@ -92,5 +82,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { logout } = authSlice.actions;
+export const { logout, setUser } = authSlice.actions;
 export default authSlice.reducer;
