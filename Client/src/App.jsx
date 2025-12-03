@@ -33,7 +33,7 @@ import { WorkerProfile } from "./components/Worker/Profile";
 
 import { SecurityDashboard } from "./components/security/Dashboard.jsx"
 import { VisitorManagement } from "./components/security/visitorManagement.jsx";
-import { SecurityPreapproval } from "./components/security/preapproval.jsx";
+import { SecurityPreApproval } from "./components/security/preapproval.jsx";
 import { SecurityProfile } from "./components/security/profile.jsx";
 
 import { ToastContainer } from "react-toastify";
@@ -122,7 +122,7 @@ function App() {
           <Route path="/security" element={<Layout userType="security" />}>
             <Route path="dashboard" element={<SecurityDashboard />} />
             <Route path="visitorManagement" element={<VisitorManagement />} />
-            <Route path="preapproval" element={<SecurityPreapproval />} />
+            <Route path="preapproval" element={<SecurityPreApproval />} />
             <Route path="profile" element={<SecurityProfile />} />
           </Route>
         </Route>
