@@ -89,7 +89,6 @@ app.use("/worker", auth, authorizeW, workerRouter);
 app.use("/manager", auth, authorizeC, managerRouter);
 app.use("/interest", interestRouter);
 
-app.use("/interest", interestRouter);
 
 
 
