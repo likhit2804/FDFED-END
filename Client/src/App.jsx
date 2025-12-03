@@ -13,6 +13,9 @@ import { ManagerProfile } from './components/Manager/Profile';
 import { IssueResolving } from './components/Manager/IssueResolving';
 import { Advertisement } from './components/Manager/Advertisement';
 import { Payments } from './components/Manager/Payments';
+import { SubscriptionPlans } from './components/Manager/SubscriptionPlans';
+import { PendingRegistrations } from './components/Manager/PendingRegistrations';
+import { PreapprovedBulkUpload } from './components/Manager/PreapprovedBulkUpload';
 
 import { CommonSpaceBooking } from './components/Resident/CommonSpace';
 import { IssueRaising } from './components/Resident/IssueRaising';
@@ -89,8 +92,11 @@ function App() {
             <Route path="dashboard" element={<ManagerDashboard />} />
             <Route path="issueResolving" element={<IssueResolving />} />
             <Route path="commonSpace" element={<CommonSpace />} />
+            <Route path="pendingRegistrations" element={<PendingRegistrations />} />
+            <Route path="preapproved/upload" element={<PreapprovedBulkUpload />} />
             <Route path="advertisement" element={<Advertisement />} />
             <Route path="payments" element={<Payments />} />
+            <Route path="subscription" element={<SubscriptionPlans />} />
             <Route path="profile" element={<ManagerProfile />} />
           </Route>
         </Route>

@@ -20,6 +20,8 @@ import CommunityManager from "../models/cManager.js";
 import Ad from "../models/Ad.js";
 import Payment from "../models/payment.js";
 import visitor from "../models/visitors.js";
+import PreapprovedResident from "../models/preApprovedResident.js";
+import PendingResidentRegistration from "../models/pendingResidentRegistration.js";
 
 import { sendPassword } from "../controllers/OTP.js";
 
@@ -432,7 +434,56 @@ managerRouter.get("/api/community/spaces", async (req, res) => {
 });
 
 async function checkSubscription(req, res, next) {
-  return next(); // Allow all routes temporarily
+  try {
+    // Allow auth-less or excluded routes
+    const allowList = [
+      "/subscription-plans",
+      "/subscription-payment",
+      "/subscription-status",
+      "/subscription-history",
+      "/community-details",
+    ];
+
+    // If the current path is in allowList, skip check
+    if (allowList.some((p) => req.path.startsWith(p))) {
+      return next();
+    }
+
+    // Require user context
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    const manager = await CommunityManager.findById(req.user.id);
+    if (!manager || !manager.assignedCommunity) {
+      return res.status(403).json({ success: false, message: "No assigned community" });
+    }
+
+    const community = await Community.findById(manager.assignedCommunity).select(
+      "subscriptionStatus planEndDate"
+    );
+    if (!community) {
+      return res.status(404).json({ success: false, message: "Community not found" });
+    }
+
+    const now = new Date();
+    const isExpired = community.planEndDate && new Date(community.planEndDate) < now;
+    const isActive = community.subscriptionStatus === "active" && !isExpired;
+
+    if (!isActive) {
+      // Block access to other pages until subscription is active
+      return res.status(402).json({
+        success: false,
+        message: "Subscription required. Please subscribe to access this page.",
+        redirect: "/manager/subscription",
+      });
+    }
+
+    return next();
+  } catch (err) {
+    console.error("Subscription check error:", err);
+    return res.status(500).json({ success: false, message: "Subscription check failed" });
+  }
 }
 
 
@@ -516,6 +567,7 @@ managerRouter.post("/subscription-payment", async (req, res) => {
       transactionId,
       paymentDate,
       isRenewal,
+      cardMeta,
     } = req.body;
 
     // Validate required fields
@@ -568,6 +620,12 @@ managerRouter.post("/subscription-payment", async (req, res) => {
       metadata: {
         userAgent: req.get("User-Agent"),
         ipAddress: req.ip || req.connection.remoteAddress,
+        card: paymentMethod === "card" && cardMeta ? {
+          brand: cardMeta.brand,
+          last4: cardMeta.last4,
+          expiry: cardMeta.expiry,
+          name: cardMeta.name,
+        } : undefined,
       },
     };
 
@@ -1814,6 +1872,325 @@ managerRouter.post("/ad", upload.single("image"), async (req, res) => {
 
   console.log("new ad : ", ad);
   res.redirect("ad");
+});
+
+// ================= Pre-Approved Residents =================
+// Upload bulk pre-approved residents (CSV or JSON array)
+// Accepts either multipart file (CSV) or JSON body: [{ phone, unit, name }]
+managerRouter.post("/preapproved/residents/bulk", upload.single("file"), async (req, res) => {
+  try {
+    const managerId = req.user.id;
+    const manager = await CommunityManager.findById(managerId);
+    if (!manager || !manager.assignedCommunity) {
+      return res.status(401).json({ success: false, message: "Unauthorized or no assigned community" });
+    }
+
+    const communityId = manager.assignedCommunity;
+    let entries = [];
+
+    if (req.file) {
+      // Parse CSV: headers phone,unit,name (optional)
+      const content = fs.readFileSync(req.file.path, "utf8");
+      const lines = content.split(/\r?\n/).filter(Boolean);
+      const header = lines.shift().split(",").map(h => h.trim().toLowerCase());
+      const idxPhone = header.indexOf("phone");
+      const idxUnit = header.indexOf("unit");
+      const idxName = header.indexOf("name");
+      if (idxPhone === -1 || idxUnit === -1) {
+        return res.status(400).json({ success: false, message: "CSV must include 'phone' and 'unit' headers" });
+      }
+      for (const line of lines) {
+        const cols = line.split(",").map(c => c.trim());
+        if (!cols[idxPhone] || !cols[idxUnit]) continue;
+        entries.push({ phone: cols[idxPhone], unit: cols[idxUnit], name: idxName !== -1 ? cols[idxName] : undefined });
+      }
+    } else if (Array.isArray(req.body)) {
+      entries = req.body;
+    } else if (Array.isArray(req.body?.entries)) {
+      entries = req.body.entries;
+    } else {
+      return res.status(400).json({ success: false, message: "Provide a CSV file or JSON array under 'entries'" });
+    }
+
+    // Normalize and validate
+    const clean = entries
+      .map(e => ({
+        phone: String(e.phone || "").replace(/\s+/g, ""),
+        unit: String(e.unit || "").trim(),
+        name: e.name ? String(e.name).trim() : undefined
+      }))
+      .filter(e => e.phone && e.unit);
+
+    if (!clean.length) {
+      return res.status(400).json({ success: false, message: "No valid entries found" });
+    }
+
+    // Upsert entries, skip duplicates
+    const results = { inserted: 0, duplicates: 0, errors: 0 };
+    for (const e of clean) {
+      try {
+        await PreapprovedResident.updateOne(
+          { community: communityId, phone: e.phone, unit: e.unit },
+          { $setOnInsert: { community: communityId, phone: e.phone, unit: e.unit, name: e.name } },
+          { upsert: true }
+        );
+        results.inserted += 1;
+      } catch (err) {
+        if (err.code === 11000) results.duplicates += 1; else results.errors += 1;
+      }
+    }
+
+    res.json({ success: true, message: "Pre-approved residents processed", results });
+  } catch (error) {
+    console.error("Bulk preapproved upload error:", error);
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
+});
+
+// List pre-approved residents for current manager's community
+managerRouter.get("/preapproved/residents", async (req, res) => {
+  try {
+    const managerId = req.user.id;
+    const manager = await CommunityManager.findById(managerId);
+    if (!manager || !manager.assignedCommunity) {
+      return res.status(401).json({ success: false, message: "Unauthorized or no assigned community" });
+    }
+    const communityId = manager.assignedCommunity;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 50;
+    const skip = (page - 1) * limit;
+
+    const [items, total] = await Promise.all([
+      PreapprovedResident.find({ community: communityId }).sort({ createdAt: -1 }).skip(skip).limit(limit),
+      PreapprovedResident.countDocuments({ community: communityId })
+    ]);
+
+    res.json({ success: true, data: items, pagination: { page, limit, total, pages: Math.ceil(total / limit) } });
+  } catch (error) {
+    console.error("List preapproved error:", error);
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
+});
+
+// Delete a pre-approved entry
+managerRouter.delete("/preapproved/residents/:id", async (req, res) => {
+
+  // ================= Pending Resident Registrations (Manager Review) =================
+  // List pending registrations for this manager's community
+  managerRouter.get("/registrations/pending", async (req, res) => {
+    try {
+      const manager = await CommunityManager.findById(req.user.id);
+      if (!manager?.assignedCommunity) {
+        return res.status(401).json({ success: false, message: "Unauthorized or no assigned community" });
+      }
+      const communityId = manager.assignedCommunity;
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 50;
+      const skip = (page - 1) * limit;
+      const [items, total] = await Promise.all([
+        PendingResidentRegistration.find({ community: communityId, status: "pending" }).sort({ createdAt: -1 }).skip(skip).limit(limit),
+        PendingResidentRegistration.countDocuments({ community: communityId, status: "pending" })
+      ]);
+      res.json({ success: true, data: items, pagination: { page, limit, total, pages: Math.ceil(total / limit) } });
+    } catch (error) {
+      console.error("List pending registrations error:", error);
+      res.status(500).json({ success: false, message: "Server error", error: error.message });
+    }
+  });
+
+  // Approve a pending registration → create Resident and mark approved
+  managerRouter.post("/registrations/:id/approve", async (req, res) => {
+    try {
+      const manager = await CommunityManager.findById(req.user.id);
+      if (!manager?.assignedCommunity) {
+        return res.status(401).json({ success: false, message: "Unauthorized or no assigned community" });
+      }
+      const pr = await PendingResidentRegistration.findById(req.params.id);
+      if (!pr || String(pr.community) !== String(manager.assignedCommunity) || pr.status !== "pending") {
+        return res.status(404).json({ success: false, message: "Pending registration not found" });
+      }
+      // Create resident
+      const resident = await Resident.create({
+        residentFirstname: pr.residentFirstname,
+        residentLastname: pr.residentLastname,
+        email: pr.email,
+        contact: pr.phone,
+        uCode: pr.unit,
+        community: pr.community,
+      });
+      // Update pending record
+      pr.status = "approved";
+      pr.managerReviewedBy = req.user.id;
+      pr.managerReviewedAt = new Date();
+      await pr.save();
+      res.json({ success: true, message: "Registration approved", residentId: resident._id });
+    } catch (error) {
+      console.error("Approve registration error:", error);
+      res.status(500).json({ success: false, message: "Server error", error: error.message });
+    }
+  });
+
+  // Reject a pending registration
+  managerRouter.post("/registrations/:id/reject", async (req, res) => {
+    try {
+      const manager = await CommunityManager.findById(req.user.id);
+      if (!manager?.assignedCommunity) {
+        return res.status(401).json({ success: false, message: "Unauthorized or no assigned community" });
+      }
+      const { reason } = req.body;
+      const pr = await PendingResidentRegistration.findById(req.params.id);
+      if (!pr || String(pr.community) !== String(manager.assignedCommunity) || pr.status !== "pending") {
+        return res.status(404).json({ success: false, message: "Pending registration not found" });
+      }
+      pr.status = "rejected";
+      pr.reason = reason || "";
+      pr.managerReviewedBy = req.user.id;
+      pr.managerReviewedAt = new Date();
+      await pr.save();
+      res.json({ success: true, message: "Registration rejected" });
+    } catch (error) {
+      console.error("Reject registration error:", error);
+      res.status(500).json({ success: false, message: "Server error", error: error.message });
+    }
+  });
+
+  // Update unit for a pending registration
+  managerRouter.patch("/registrations/:id/unit", async (req, res) => {
+    try {
+      const manager = await CommunityManager.findById(req.user.id);
+      if (!manager?.assignedCommunity) {
+        return res.status(401).json({ success: false, message: "Unauthorized or no assigned community" });
+      }
+      const { unit } = req.body;
+      if (!unit || typeof unit !== "string") {
+        return res.status(400).json({ success: false, message: "Valid unit is required" });
+      }
+      const pr = await PendingResidentRegistration.findById(req.params.id);
+      if (!pr || String(pr.community) !== String(manager.assignedCommunity) || pr.status !== "pending") {
+        return res.status(404).json({ success: false, message: "Pending registration not found" });
+      }
+      pr.unit = unit.trim();
+      pr.updatedAt = new Date();
+      await pr.save();
+      res.json({ success: true, message: "Unit updated", data: { id: pr._id, unit: pr.unit } });
+    } catch (error) {
+      console.error("Update unit error:", error);
+      res.status(500).json({ success: false, message: "Server error", error: error.message });
+    }
+  });
+
+  // Add or update manager note for a pending registration
+  managerRouter.patch("/registrations/:id/note", async (req, res) => {
+    try {
+      const manager = await CommunityManager.findById(req.user.id);
+      if (!manager?.assignedCommunity) {
+        return res.status(401).json({ success: false, message: "Unauthorized or no assigned community" });
+      }
+      const { note } = req.body;
+      const pr = await PendingResidentRegistration.findById(req.params.id);
+      if (!pr || String(pr.community) !== String(manager.assignedCommunity) || pr.status !== "pending") {
+        return res.status(404).json({ success: false, message: "Pending registration not found" });
+      }
+      pr.managerNote = typeof note === "string" ? note : "";
+      pr.updatedAt = new Date();
+      await pr.save();
+      res.json({ success: true, message: "Note saved", data: { id: pr._id, note: pr.managerNote } });
+    } catch (error) {
+      console.error("Save note error:", error);
+      res.status(500).json({ success: false, message: "Server error", error: error.message });
+    }
+  });
+
+  // Resend OTP to applicant (stubbed using existing OTP controller)
+  managerRouter.post("/registrations/:id/resend-otp", async (req, res) => {
+    try {
+      const manager = await CommunityManager.findById(req.user.id);
+      if (!manager?.assignedCommunity) {
+        return res.status(401).json({ success: false, message: "Unauthorized or no assigned community" });
+      }
+      const pr = await PendingResidentRegistration.findById(req.params.id);
+      if (!pr || String(pr.community) !== String(manager.assignedCommunity) || pr.status !== "pending") {
+        return res.status(404).json({ success: false, message: "Pending registration not found" });
+      }
+      // Using email-based OTP as stub. Replace with SMS integration if available.
+      const otp = await sendPassword({ email: pr.email, userType: "Resident" });
+      res.json({ success: true, message: "OTP resent to applicant", meta: { email: pr.email } });
+    } catch (error) {
+      console.error("Resend OTP error:", error);
+      res.status(500).json({ success: false, message: "Server error", error: error.message });
+    }
+  });
+
+  // Bulk approve pending registrations
+  managerRouter.post("/registrations/bulk-approve", async (req, res) => {
+    try {
+      const manager = await CommunityManager.findById(req.user.id);
+      if (!manager?.assignedCommunity) {
+        return res.status(401).json({ success: false, message: "Unauthorized or no assigned community" });
+      }
+      const ids = Array.isArray(req.body?.ids) ? req.body.ids : [];
+      if (!ids.length) return res.status(400).json({ success: false, message: "No IDs provided" });
+      const communityId = manager.assignedCommunity;
+      const pendings = await PendingResidentRegistration.find({ _id: { $in: ids }, community: communityId, status: "pending" });
+      const created = [];
+      for (const pr of pendings) {
+        const resident = await Resident.create({
+          residentFirstname: pr.residentFirstname,
+          residentLastname: pr.residentLastname,
+          email: pr.email,
+          contact: pr.phone,
+          uCode: pr.unit,
+          community: pr.community,
+        });
+        pr.status = "approved";
+        pr.managerReviewedBy = req.user.id;
+        pr.managerReviewedAt = new Date();
+        await pr.save();
+        created.push(resident._id);
+      }
+      res.json({ success: true, message: "Bulk approved", count: created.length, residents: created });
+    } catch (error) {
+      console.error("Bulk approve error:", error);
+      res.status(500).json({ success: false, message: "Server error", error: error.message });
+    }
+  });
+
+  // Bulk reject pending registrations
+  managerRouter.post("/registrations/bulk-reject", async (req, res) => {
+    try {
+      const manager = await CommunityManager.findById(req.user.id);
+      if (!manager?.assignedCommunity) {
+        return res.status(401).json({ success: false, message: "Unauthorized or no assigned community" });
+      }
+      const ids = Array.isArray(req.body?.ids) ? req.body.ids : [];
+      const reason = req.body?.reason || "";
+      if (!ids.length) return res.status(400).json({ success: false, message: "No IDs provided" });
+      const communityId = manager.assignedCommunity;
+      const result = await PendingResidentRegistration.updateMany(
+        { _id: { $in: ids }, community: communityId, status: "pending" },
+        { $set: { status: "rejected", reason, managerReviewedBy: req.user.id, managerReviewedAt: new Date() } }
+      );
+      res.json({ success: true, message: "Bulk rejected", modified: result.modifiedCount });
+    } catch (error) {
+      console.error("Bulk reject error:", error);
+      res.status(500).json({ success: false, message: "Server error", error: error.message });
+    }
+  });
+  try {
+    const managerId = req.user.id;
+    const manager = await CommunityManager.findById(managerId);
+    if (!manager || !manager.assignedCommunity) {
+      return res.status(401).json({ success: false, message: "Unauthorized or no assigned community" });
+    }
+    const communityId = manager.assignedCommunity;
+    const entry = await PreapprovedResident.findOne({ _id: req.params.id, community: communityId });
+    if (!entry) return res.status(404).json({ success: false, message: "Entry not found" });
+    await PreapprovedResident.deleteOne({ _id: req.params.id });
+    res.json({ success: true, message: "Entry deleted" });
+  } catch (error) {
+    console.error("Delete preapproved error:", error);
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
 });
 
 managerRouter.get("/profile", async (req, res) => {

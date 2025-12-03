@@ -393,7 +393,7 @@ export const approveApplication = async (req, res) => {
     );
     console.log("[Step 4] New manager created:", newManager[0]._id);
 
-    // 5. Create community
+    // 5. Create community (communityCode auto-generates in schema)
     const newCommunity = await Community.create(
       [{
         name: interest.communityName?.trim() || '',
@@ -432,11 +432,13 @@ export const approveApplication = async (req, res) => {
 
     // 9. Send email
     console.log("[Step 8] Sending approval email to:", interest.email);
+    // Include the generated community code in the approval email
+    const communityCode = newCommunity[0].communityCode;
     await sendStatusEmail(
       interest.email,
       'approved',
       adminName,
-      '',
+      `Your community code is <strong>${communityCode}</strong>. Share this code with residents for routing their sign-ups to your community.`,
       randomPassword
     );
     console.log("[Step 8] Email sent successfully");
@@ -446,7 +448,8 @@ export const approveApplication = async (req, res) => {
       message: 'Manager account and community created successfully',
       data: {
         managerId: newManager[0]._id,
-        communityId: newCommunity[0]._id
+        communityId: newCommunity[0]._id,
+        communityCode
       }
     });
 
@@ -660,7 +663,9 @@ const sendStatusEmail = async (email, status, adminName, reason = '', password =
         <p><strong>Email:</strong> ${email}</p>
         <p><strong>Temporary Password:</strong> <code>${password}</code></p>
       </div>
-      <a class="btn" href="${process.env.BASE_URL || 'http://localhost:3000'}/login">Login to Your Account</a>
+      <a class="btn" href="${process.env.CLIENT_BASE_URL || 'http://localhost:5173'}/SignIn">Login to Your Account</a>
+      <p style="margin-top:16px;color:#555;">After login, complete your subscription to access manager features.</p>
+      <a class="btn" style="background:#1976d2;box-shadow:0 3px 6px rgba(25,118,210,0.3)" href="${process.env.CLIENT_BASE_URL || 'http://localhost:5173'}/manager/payments">Make Subscription Payment</a>
       ` : ''}
 
       ${status === 'rejected' ? `

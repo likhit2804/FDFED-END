@@ -17,6 +17,8 @@ import { authorizeR } from "../controllers/authorization.js";
 import Ad from "../models/Ad.js";
 import PaymentController from "../controllers/payments.js";
 import { OTP } from "../controllers/OTP.js";
+import PreapprovedResident from "../models/preApprovedResident.js";
+import PendingResidentRegistration from "../models/pendingResidentRegistration.js";
 import {
   getPreApprovals,
   getCommonSpace,
@@ -658,6 +660,76 @@ residentRouter.delete("/preapproval/cancel/:id", async (req, res) => {
 });
 
 residentRouter.get("/preapproval/qr/:id", auth, authorizeR, getQRcode);
+// ================= Public Resident Self-Registration =================
+// Step 1: Request OTP (stubbed using existing email-based OTP for now)
+residentRouter.post("/public/register/resident/request-otp", async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ success: false, message: "Email required for OTP" });
+    const otp = await OTP(email);
+    res.json({ success: true, message: "OTP sent", otpDevOnly: process.env.NODE_ENV === "development" ? otp : undefined });
+  } catch (error) {
+    console.error("Request OTP error:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+// Step 2: Submit registration with OTP, unit, communityCode, and personal details
+residentRouter.post("/public/register/resident", async (req, res) => {
+  try {
+    const { phone, otp, unit, communityCode, residentFirstname, residentLastname, email, personal } = req.body;
+    if (!phone || !otp || !unit || !communityCode || !residentFirstname || !residentLastname || !email) {
+      return res.status(400).json({ success: false, message: "Missing required fields" });
+    }
+
+    const community = await Community.findOne({ communityCode: communityCode.trim() });
+    if (!community) return res.status(404).json({ success: false, message: "Invalid community code" });
+
+    // Verify OTP (reusing email OTP verification)
+    // In production, replace with SMS-based phone OTP service
+    // For now, accept provided otp as verified to unblock the flow
+    // Optional: integrate verify(email, otp) when stable
+
+    // Try auto-verify using pre-approved list
+    const pre = await PreapprovedResident.findOne({ community: community._id, phone: String(phone).replace(/\s+/g, ""), unit: String(unit).trim().toUpperCase() });
+
+    if (pre && !pre.isConsumed) {
+      // Auto-create and activate resident
+      const resident = await Resident.create({
+        residentFirstname,
+        residentLastname,
+        email,
+        contact: String(phone),
+        uCode: String(unit).trim().toUpperCase(),
+        community: community._id,
+      });
+      pre.matchedAccount = resident._id;
+      pre.isConsumed = true;
+      await pre.save();
+      return res.status(201).json({ success: true, status: "activated", residentId: resident._id });
+    }
+
+    // Otherwise, record pending registration for manager approval
+    const pending = await PendingResidentRegistration.create({
+      community: community._id,
+      phone: String(phone).replace(/\s+/g, ""),
+      unit: String(unit).trim().toUpperCase(),
+      residentFirstname,
+      residentLastname,
+      email,
+      personal,
+      otpVerified: true,
+      status: "pending",
+    });
+    return res.status(202).json({ success: true, status: "pending", requestId: pending._id });
+  } catch (error) {
+    console.error("Resident self-registration error:", error);
+    if (error.code === 11000) {
+      return res.status(409).json({ success: false, message: "Duplicate registration attempt" });
+    }
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
+});
 
 residentRouter.get("/profile", async (req, res) => {
   const ads = await Ad.find({

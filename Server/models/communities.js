@@ -7,6 +7,9 @@ const CommunitySchema = new mongoose.Schema({
   location: { type: String, required: true },
   description: { type: String },
 
+  // Unique short code used to route sign-ups to this community
+  communityCode: { type: String, required: true, unique: true, index: true },
+
   status: { type: String, enum: ["Active", "Inactive"], default: "Active" },
   totalMembers: { type: Number, default: 0 },
 
@@ -61,6 +64,42 @@ const CommunitySchema = new mongoose.Schema({
 }, { timestamps: true });
 
 CommunitySchema.index({ subscriptionStatus: 1, planEndDate: 1 });
+
+// Helper to generate a readable unique community code
+function normalize(str) {
+  return String(str || "")
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "")
+    .slice(0, 6);
+}
+
+async function generateUniqueCode(name, location) {
+  const base = `${normalize(name)}-${normalize(location)}`.replace(/-$/, "");
+  let attempt = 0;
+  while (attempt < 10) {
+    const suffix = Math.random().toString(36).toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 4);
+    const code = `${base}-${suffix}`;
+    // Ensure uniqueness
+    // eslint-disable-next-line no-await-in-loop
+    const exists = await mongoose.model("Community").exists({ communityCode: code });
+    if (!exists) return code;
+    attempt += 1;
+  }
+  // Fallback ultra-random
+  return `${normalize(name)}-${Date.now().toString(36).toUpperCase().slice(-6)}`;
+}
+
+// Pre-validate hook to auto-generate code if missing
+CommunitySchema.pre("validate", async function (next) {
+  if (!this.communityCode) {
+    try {
+      this.communityCode = await generateUniqueCode(this.name, this.location);
+    } catch (e) {
+      return next(e);
+    }
+  }
+  return next();
+});
 
 // virtuals
 CommunitySchema.virtual("isExpired").get(function () {

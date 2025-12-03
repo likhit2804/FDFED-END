@@ -176,7 +176,9 @@ export const SignIn = () => {
           </form>
           <div style={{ textAlign: 'right', marginTop: '5px' }}>
             <NavLink to="/interestForm" className="login-link">
-              New? Register here
+              <div className="mt-3 text-center">
+                <a href="/SignUp" className="text-primary">New? Register here</a>
+              </div>
             </NavLink>
           </div>
         </div>

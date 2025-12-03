@@ -29,6 +29,7 @@ import {
     Cell,
 } from "recharts";
 import "bootstrap/dist/css/bootstrap.min.css";
+import { NavLink } from "react-router-dom";
 import "../../assets/css/Manager/Dashboard.css"; // Your custom CSS file
 
 function SummaryCards() {
@@ -198,6 +199,17 @@ export function ManagerDashboard() {
                     <PaymentsRevenue />
                     <ReportsAnalytics />
                 </div>
+                                <div className="container-fluid mt-3">
+                                    <div className="card shadow-sm">
+                                        <div className="card-body d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <h6 className="mb-1">Manage Subscription</h6>
+                                                <small className="text-muted">View plans and make subscription payments.</small>
+                                            </div>
+                                            <NavLink className="btn btn-primary" to="/manager/subscription">Go to Subscription Plans</NavLink>
+                                        </div>
+                                    </div>
+                                </div>
             </main>
         </>
     );
