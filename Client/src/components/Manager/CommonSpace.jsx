@@ -19,6 +19,22 @@ export const CommonSpace = () => {
   const [BookingDetailsopen, setBookingDetailsOpen] = useState(false);
   const [currentBooking, setCurrentBooking] = useState({});
   const [toggleRent, setToggleRent] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Occupancy rate stored in component state and recalculated when bookings change
+  const [occupancyRate, setOccupancyRate] = useState(0);
+
+  useEffect(() => {
+    if (Bookings && Bookings.length > 0) {
+      const approvedCount = Bookings.filter((b) => b.status === 'Approved').length;
+      const rate = Math.round((approvedCount / Bookings.length) * 100);
+      console.log('Approved bookings:', approvedCount);
+      console.log('Calculated occupancy rate:', rate);
+      setOccupancyRate(rate);
+    } else {
+      setOccupancyRate(0);
+    }
+  }, [Bookings]);
 
   const { register, handleSubmit, reset, setValue, watch } = useForm({
     defaultValues: { spaceType: '', spaceName: '', bookable: 'true', bookingRent: '', bookingRules: '', Type: '' },
@@ -75,6 +91,22 @@ export const CommonSpace = () => {
     setRejectionReason('');
     setBookingToReject(null);
   };
+
+  // Filter bookings based on search query
+  const filteredBookings = Bookings.filter((booking) => {
+    const searchLower = searchQuery.toLowerCase();
+    const spaceName = booking.name?.toLowerCase() || '';
+    const bookingDate = new Date(booking.Date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }).toLowerCase();
+    const bookingStatus = booking.status?.toLowerCase() || '';
+    const bookingId = booking.ID?.toLowerCase() || '';
+
+    return (
+      spaceName.includes(searchLower) ||
+      bookingDate.includes(searchLower) ||
+      bookingStatus.includes(searchLower) ||
+      bookingId.includes(searchLower)
+    );
+  });
 
   const onSubmit = (data) => {
     const payload = { ...data, bookable: data.bookable === 'true' };
@@ -189,10 +221,10 @@ export const CommonSpace = () => {
                         <button className="edit-space-btn" onClick={() => handleEditSpace(space)}><i className="bi bi-pencil"></i></button>
                         <button className="delete-space-btn" onClick={() => handleDeleteSpace(space)}><i className="bi bi-trash"></i></button>
                       </div>
-                      <h4>{space.name}</h4>
-                      <p><strong>Type:</strong> {space.type}</p>
-                      <p><strong>Bookable:</strong> {space.bookable ? 'Yes' : 'No'}</p>
-                      <p><strong>Rent:</strong> {space.rent}</p>
+                      <h4>{space?.name}</h4>
+                      <p><strong>Type:</strong> {space?.type}</p>
+                      <p><strong>Bookable:</strong> {space?.bookable ? 'Yes' : 'No'}</p>
+                      <p><strong>Rent:</strong> {space?.rent}</p>
                       {space.bookingRules && <p><strong>Rules:</strong> {space.bookingRules.substring(0, 50)}...</p>}
                     </motion.div>
                   ))
@@ -218,7 +250,7 @@ export const CommonSpace = () => {
         <div className="stat-card border-0">
           <BarChart3 size={24} className="text-warning" />
           <h3>Occupancy Rate</h3>
-          <span className="stat-number text-warning">62%</span>
+          <span className="stat-number text-warning">{occupancyRate}%</span>
         </div>
         <div className="stat-card border-0">
           <CheckCircle size={24} className="text-success" />
@@ -233,13 +265,18 @@ export const CommonSpace = () => {
       </motion.div>
 
       <div className="search-bar">
-        <input type="text" placeholder="Search by space, date or status..." />
-        <button className="approve-all">Search</button>
+        <input
+          type="text"
+          placeholder="Search by space, date or status..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+        <button className="approve-all" onClick={() => setSearchQuery('')}>Clear</button>
       </div>
 
       <motion.div className="bookings-container" id="bookingsContainer" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-        {Bookings.length > 0 ? (
-          Bookings.map((c) => (
+        {filteredBookings.length > 0 ? (
+          filteredBookings.map((c) => (
             <motion.div key={c._id} className="booking-card d-flex flex-column" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
               <div className="booking-card-header">
                 <span className="booking-id">ID: {c.ID}</span>

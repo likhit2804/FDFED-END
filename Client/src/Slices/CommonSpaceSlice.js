@@ -23,11 +23,11 @@ export const fetchuserBookings = createAsyncThunk("commonSpace/fetchBookings", a
       return rejectWithValue(errorData);
     }
     const data = await response.json();
-    console.log("data : ",data);
-    
-    if(data.success){
+    console.log("data : ", data);
+
+    if (data.success) {
       return data;
-    }else{
+    } else {
       return rejectWithValue(data);
     }
   } catch (error) {
@@ -43,8 +43,10 @@ export const ConfirmBooking = createAsyncThunk("commonSpace/ConfirmBooking", asy
       headers: {
         "Content-Type": "application/json",
       },
-      credentials: "include", // <--- ADD THIS LINE
-      body: JSON.stringify({data,newBooking}),
+
+      credentials: "include",
+      body: JSON.stringify({ data, newBooking }),
+
     });
     const d = await response.json();
     if (!response.ok) {
@@ -57,24 +59,32 @@ export const ConfirmBooking = createAsyncThunk("commonSpace/ConfirmBooking", asy
 }
 )
 
-export const fetchDataforManager = createAsyncThunk("commonSpace/fetchDataforManager",async (_, { rejectWithValue }) => {
-    try {
-      const response = await fetch("http://localhost:3000/manager/commonSpace", {
-        credentials: "include", // <--- ADD THIS LINE
-      });
-      if (!response.ok) {
-        const errorData = await response.json();
-        return rejectWithValue(errorData);
+
+
+export const fetchDataforManager = createAsyncThunk("commonSpace/fetchDataforManager", async (_, { rejectWithValue }) => {
+  try {
+    const response = await fetch("http://localhost:3000/manager/commonSpace",
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
       }
-      const data = await response.json();
-      if (data.bookings) {
-        return data;
-      } else {
-        return rejectWithValue(data);
-      }
-    } catch (error) {
-      return rejectWithValue(error.message);
+    );
+    if (!response.ok) {
+      const errorData = await response.json();
+      return rejectWithValue(errorData);
     }
+    const data = await response.json();
+    if (data.bookings) {
+      return data;
+    } else {
+      return rejectWithValue(data);
+    }
+  } catch (error) {
+    return rejectWithValue(error.message);
+  }
 });
 
 export const EditSpace = createAsyncThunk("commonSpace/EditSpace",
@@ -87,7 +97,8 @@ export const EditSpace = createAsyncThunk("commonSpace/EditSpace",
           headers: {
             "Content-Type": "application/json",
           },
-          credentials: "include", // <--- ADD THIS LINE
+          credentials: "include",
+
           body: JSON.stringify(updatedData),
         }
       );
@@ -113,14 +124,15 @@ export const DeleteSpace = createAsyncThunk(
           headers: {
             "Content-Type": "application/json",
           },
-          credentials: "include", // <--- ADD THIS LINE
+
+          credentials: "include"
         }
       );
       const data = await response.json();
       if (!response.ok) {
         return rejectWithValue(data);
       }
-      return id; 
+      return id;
     } catch (error) {
       return rejectWithValue(error.message);
     }
@@ -136,7 +148,7 @@ export const AddSpace = createAsyncThunk(
         headers: {
           "Content-Type": "application/json",
         },
-        credentials: "include", // <--- ADD THIS LINE
+        credentials: "include",
         body: JSON.stringify(newSpaceData),
       });
       const data = await response.json();
@@ -152,15 +164,16 @@ export const AddSpace = createAsyncThunk(
 
 export const ProceedPayment = createAsyncThunk("commonSpace/ProceedPayment",
   async ({ paymentData, bookingId }, { rejectWithValue }) => {
-    console.log("Data in slice :",paymentData);
-    
+    console.log("Data in slice :", paymentData);
+
     try {
       const response = await fetch("http://localhost:3000/resident/payment/post", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        credentials: "include", // <--- ADD THIS LINE
+
+        credentials: "include",
         body: JSON.stringify(paymentData),
       });
       const data = await response.json();
@@ -186,7 +199,7 @@ export const cancelUserBooking = createAsyncThunk(
           headers: {
             "Content-Type": "application/json",
           },
-          credentials: "include", // <--- ADD THIS LINE
+          credentials: "include"
         }
       );
       const data = await response.json();
@@ -209,68 +222,68 @@ const CommonSpaceSlice = createSlice({
   reducers: {
 
     optimisticAddBooking: (state, action) => {
-        const { bookingData, requestId } = action.payload;
-        state.loading = true;
-        
-        const facility = state.avalaibleSpaces.find(s => s.name === bookingData.facility);
-        const optimisticBooking = {
-          ...bookingData, 
-          _id: requestId, 
-          status: 'Submitting...',
-          name: facility?.name || 'Unknown Facility',
-          Date: bookingData.date,
-          isOptimistic: true,
-        };
-        state.Bookings.push(optimisticBooking);
+      const { bookingData, requestId } = action.payload;
+      state.loading = true;
+
+      const facility = state.avalaibleSpaces.find(s => s.name === bookingData.facility);
+      const optimisticBooking = {
+        ...bookingData,
+        _id: requestId,
+        status: 'Submitting...',
+        name: facility?.name || 'Unknown Facility',
+        Date: bookingData.date,
+        isOptimistic: true,
+      };
+      state.Bookings.push(optimisticBooking);
     },
 
     optimisticCancelBooking: (state, action) => {
-        const { bookingId, originalStatus } = action.payload;
-        const bookingToUpdate = state.Bookings.find(b => b._id === bookingId);
-        if (bookingToUpdate) {
-            bookingToUpdate.status = "Cancelled";
-        }
+      const { bookingId, originalStatus } = action.payload;
+      const bookingToUpdate = state.Bookings.find(b => b._id === bookingId);
+      if (bookingToUpdate) {
+        bookingToUpdate.status = "Cancelled";
+      }
     },
 
     optimisticProceedPayment: (state, action) => {
-        const { bookingId } = action.payload;
-        const bookingToUpdate = state.Bookings.find(b => b._id === bookingId);
-        if (bookingToUpdate) {
-            if (!bookingToUpdate.payment) {
-                bookingToUpdate.payment = {};
-            }
-            bookingToUpdate.payment.paymentStatus = 'Processing...';
-            state.loading = true;
+      const { bookingId } = action.payload;
+      const bookingToUpdate = state.Bookings.find(b => b._id === bookingId);
+      if (bookingToUpdate) {
+        if (!bookingToUpdate.payment) {
+          bookingToUpdate.payment = {};
         }
+        bookingToUpdate.payment.paymentStatus = 'Processing...';
+        state.loading = true;
+      }
     },
 
-    optimisticDeleteSpace : (state,action) => {
-      state.avalaibleSpaces = state.avalaibleSpaces.filter(b => b._id !== action.payload.id )
+    optimisticDeleteSpace: (state, action) => {
+      state.avalaibleSpaces = state.avalaibleSpaces.filter(b => b._id !== action.payload.id)
       state.loading = false
     },
 
     removeOptimisticBooking: (state, action) => {
-        state.Bookings = state.Bookings.filter(b => b._id !== action.payload.requestId);
-        state.loading = false;
+      state.Bookings = state.Bookings.filter(b => b._id !== action.payload.requestId);
+      state.loading = false;
     },
 
     revertBookingStatus: (state, action) => {
-        const { bookingId } = action.payload;
-        const bookingToRevert = state.Bookings.find(b => b._id === bookingId);
-        if (bookingToRevert && bookingToRevert.originalStatus) {
-            bookingToRevert.status = bookingToRevert.originalStatus;
-            delete bookingToRevert.originalStatus;
-        }
-        state.loading = false;
+      const { bookingId } = action.payload;
+      const bookingToRevert = state.Bookings.find(b => b._id === bookingId);
+      if (bookingToRevert && bookingToRevert.originalStatus) {
+        bookingToRevert.status = bookingToRevert.originalStatus;
+        delete bookingToRevert.originalStatus;
+      }
+      state.loading = false;
     }
   },
   extraReducers: (builder) => {
     builder.addCase(fetchuserBookings.pending, (state) => {
-        state.loading = true;
-      }
+      state.loading = true;
+    }
     ).addCase(fetchuserBookings.fulfilled, (state, action) => {
       state.loading = false;
-      console.log("after fetching : ",action);
+      console.log("after fetching : ", action);
       state.Bookings = action.payload.bookings;
       state.avalaibleSpaces = action.payload.spaces;
     }).addCase(fetchuserBookings.rejected, (state, action) => {
@@ -282,8 +295,8 @@ const CommonSpaceSlice = createSlice({
       const { space, requestId } = action.payload;
       state.Bookings = state.Bookings.filter(b => b._id !== requestId);
       state.Bookings.unshift(space);
-      
-      
+
+
       state.loading = false;
     }).addCase(ConfirmBooking.rejected, (state, action) => {
       const requestId = action.payload?.requestId || action.meta.arg.requestId;
@@ -295,104 +308,104 @@ const CommonSpaceSlice = createSlice({
     builder.addCase(fetchDataforManager.pending, (state) => {
       state.loading = true;
     })
-    .addCase(fetchDataforManager.fulfilled, (state, action) => {
-      state.loading = false;
-      state.Bookings = action.payload.bookings;
-      state.avalaibleSpaces = action.payload.commonSpaces;
-    })
-    .addCase(fetchDataforManager.rejected, (state, action) => {
-      state.loading = false;
-      state.error = action.payload;
-    });
+      .addCase(fetchDataforManager.fulfilled, (state, action) => {
+        state.loading = false;
+        state.Bookings = action.payload.bookings;
+        state.avalaibleSpaces = action.payload.commonSpaces;
+      })
+      .addCase(fetchDataforManager.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      });
 
 
     builder.addCase(EditSpace.pending, (state) => {
       state.loading = true;
     })
-    .addCase(EditSpace.fulfilled, (state, action) => {
-      state.loading = false;
-      const index = state.avalaibleSpaces.findIndex(
-        (space) => space._id === action.payload.space._id
-      );
-      if (index !== -1) {
-        state.avalaibleSpaces[index] = action.payload.space;
-      }
-    })
-    .addCase(EditSpace.rejected, (state, action) => {
-      state.loading = false;
-      state.error = action.payload;
-    })
+      .addCase(EditSpace.fulfilled, (state, action) => {
+        state.loading = false;
+        const index = state.avalaibleSpaces.findIndex(
+          (space) => space._id === action.payload.space._id
+        );
+        if (index !== -1) {
+          state.avalaibleSpaces[index] = action.payload.space;
+        }
+      })
+      .addCase(EditSpace.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
 
-    .addCase(DeleteSpace.pending, (state) => {
-      state.loading = true;
-    })
-    .addCase(DeleteSpace.fulfilled, (state, action) => {
-      state.loading = false;
-      state.avalaibleSpaces = state.avalaibleSpaces.filter(
-        (space) => space._id !== action.payload
-      );
-    })
-    .addCase(DeleteSpace.rejected, (state, action) => {
-      state.loading = false;
-      state.error = action.payload;
-    })
+      .addCase(DeleteSpace.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(DeleteSpace.fulfilled, (state, action) => {
+        state.loading = false;
+        state.avalaibleSpaces = state.avalaibleSpaces.filter(
+          (space) => space._id !== action.payload
+        );
+      })
+      .addCase(DeleteSpace.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
 
-    .addCase(AddSpace.pending, (state) => {
-      state.loading = true;
-    })
-    .addCase(AddSpace.fulfilled, (state, action) => {
-      state.loading = false;
-      state.avalaibleSpaces.push(action.payload.space);
-    })
-    .addCase(AddSpace.rejected, (state, action) => {
-      state.loading = false;
-      state.error = action.payload;
-    })
-    
-    .addCase(cancelUserBooking.fulfilled, (state, action) => {
+      .addCase(AddSpace.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(AddSpace.fulfilled, (state, action) => {
+        state.loading = false;
+        state.avalaibleSpaces.push(action.payload.space);
+      })
+      .addCase(AddSpace.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+
+      .addCase(cancelUserBooking.fulfilled, (state, action) => {
         const idToCancel = action.payload.id;
         const bookingToUpdate = state.Bookings.find(b => b._id === idToCancel);
         if (bookingToUpdate) {
-            bookingToUpdate.status = "Cancelled";
-            bookingToUpdate.isCancelled = true;
-            delete bookingToUpdate.originalStatus;
+          bookingToUpdate.status = "Cancelled";
+          bookingToUpdate.isCancelled = true;
+          delete bookingToUpdate.originalStatus;
         }
         state.loading = false;
-    })
-    .addCase(cancelUserBooking.rejected, (state, action) => {
+      })
+      .addCase(cancelUserBooking.rejected, (state, action) => {
         const bookingId = action.meta.arg.bookingId;
         const bookingToRevert = state.Bookings.find(b => b._id === bookingId);
         if (bookingToRevert && bookingToRevert.originalStatus) {
-            bookingToRevert.status = bookingToRevert.originalStatus;
-            delete bookingToRevert.originalStatus;
+          bookingToRevert.status = bookingToRevert.originalStatus;
+          delete bookingToRevert.originalStatus;
         }
         state.loading = false;
         state.error = action.payload.error || action.payload;
-    })
-    .addCase(ProceedPayment.fulfilled, (state, action) => {
-        
+      })
+      .addCase(ProceedPayment.fulfilled, (state, action) => {
+
         const bookingId = action.payload;
         const bookingToUpdate = state.Bookings.find(b => b._id === bookingId);
 
         if (bookingToUpdate) {
-            bookingToUpdate.status = 'Booked'; 
-            bookingToUpdate.payment.paymentStatus = 'Completed';
+          bookingToUpdate.status = 'Booked';
+          bookingToUpdate.payment.paymentStatus = 'Completed';
         }
         state.loading = false;
-    })
-    .addCase(ProceedPayment.rejected, (state, action) => {
+      })
+      .addCase(ProceedPayment.rejected, (state, action) => {
         const bookingId = action.meta.arg.bookingId;
         const bookingToRevert = state.Bookings.find(b => b._id === bookingId);
 
         if (bookingToRevert && bookingToRevert.payment) {
-            bookingToRevert.payment.paymentStatus = 'Failed';
+          bookingToRevert.payment.paymentStatus = 'Failed';
         }
         state.loading = false;
         state.error = action.payload;
-    });
-   
+      });
+
   },
-  
+
 });
 
 
