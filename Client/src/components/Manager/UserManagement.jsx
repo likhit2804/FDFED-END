@@ -76,11 +76,11 @@ const DynamicForm = ({ fields, initial = {}, onSubmit, submitLabel = "Save" }) =
 
     const handle = (k, v) => setForm((p) => ({ ...p, [k]: v }));
 
-    console.log("formData:", form   );
-    console.log("fields: ",fields);
-    console.log("initial: ",initial);
-    
-    
+    console.log("formData:", form);
+    console.log("fields: ", fields);
+    console.log("initial: ", initial);
+
+
 
     return (
         <form
@@ -193,7 +193,6 @@ export default function UserManagement() {
                     { key: "securityContact", label: "Contact" },
                     { key: "securityAddress", label: "Address" },
                     { key: "securityShift", label: "Shift" },
-                    { key: "gate", label: "Gate / Workplace" },
                 ],
             };
         }
@@ -229,8 +228,8 @@ export default function UserManagement() {
             const res = await fetch(`${BASE}/userManagement/${cfg.endpoint}/${id}`, { credentials: "include" });
             if (!res.ok) throw new Error("Failed to load");
             const json = await res.json();
-            console.log("json :",json.r.jobRole);
-            
+            console.log("json :", json.r);
+
             const payload = json.r || json[entity] || json[cfg.listName?.slice(0, -1)] || json;
             // map server fields to form initial keys
             const initial = mapServerToForm(entity, payload);
@@ -356,7 +355,7 @@ export default function UserManagement() {
                 securityEmail: item.email || "",
                 securityContact: item.contact || "",
                 securityAddress: item.address || "",
-                securityShift: item.shift || "",
+                securityShift: item.Shift || "",
                 gate: item.workplace || "",
             };
         }
@@ -396,7 +395,7 @@ export default function UserManagement() {
                 title={s.name}
                 subtitle={s.workplace || s.gate || ""}
                 meta={[
-                    { label: "Shift", value: s.shift || s.securityShift },
+                    { label: "Shift", value: s.Shift || s.securityShift },
                     { label: "Contact", value: s.contact },
                 ]}
                 onEdit={() => openEdit("security", s._id)}

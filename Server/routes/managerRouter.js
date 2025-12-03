@@ -48,7 +48,7 @@ const upload = multer({ storage: storage });
 
 managerRouter.get("/commonSpace", async (req, res) => {
   try {
-    const c = "68f74d38c06f8c9e8ab68c80";
+    const c = req.user.community;
     const bookings = await CommonSpaces.find({
       community: c,
       status: { $ne: "Rejected" },
@@ -59,7 +59,12 @@ managerRouter.get("/commonSpace", async (req, res) => {
         createdAt: -1,
       });
 
+    console.log("Fetched common spaces bookings sent now:", bookings);
+    console.log("Community ID:", c);
+
     const commonSpaces = await Amenity.find({ community: c });
+
+    console.log("Fetched common spaces sent now:", commonSpaces);
 
     res.status(200).json({
       bookings,
@@ -215,7 +220,7 @@ managerRouter.post("/spaces", async (req, res) => {
         req.body.bookable !== undefined ? Boolean(req.body.bookable) : true,
       bookingRules: req.body.bookingRules ? req.body.bookingRules.trim() : "",
       rent: bookingRent,
-      community: new mongoose.Types.ObjectId("68f74d38c06f8c9e8ab68c80"),
+      community: new mongoose.Types.ObjectId(req.user.community),
       createdAt: new Date(),
       updatedAt: new Date(),
       Type,
@@ -1073,12 +1078,13 @@ managerRouter.get("/userManagement", async (req, res) => {
     status: "Active",
   });
 
+  console.log(req.user.community);
+
   const R = await Resident.find({ community: req.user.community });
   const W = await Worker.find({ community: req.user.community });
   const S = await Security.find({ community: req.user.community });
 
   console.log(ads, R, W, S);
-  
 
   res.json({ ads, R, W, S });
 });
@@ -1334,7 +1340,6 @@ managerRouter.get("/userManagement/worker/:id", async (req, res) => {
   const r = await Worker.findById(id);
 
   console.log(r.jobRole);
-  
 
   res.status(200).json({ success: true, r });
 });
@@ -1654,73 +1659,6 @@ managerRouter.get("/issueResolving/:id", async (req, res) => {
   res.status(200).json({ issue, success: true });
 });
 
-managerRouter.get("/payments", async (req, res) => {
-  try {
-    const ads = await Ad.find({
-      community: req.user.community,
-      status: "Active",
-    });
-
-    const managerId = req.user.id;
-    const manager = await CommunityManager.findById(managerId);
-
-    if (!manager) {
-      return res
-        .status(404)
-        .render("error", { message: "Community manager not found" });
-    }
-
-    const community = await Community.findById(
-      manager.assignedCommunity
-    ).select(
-      "name subscriptionPlan subscriptionStatus planStartDate planEndDate subscriptionHistory"
-    );
-
-    if (!community) {
-      return res
-        .status(404)
-        .render("error", { message: "Community not found" });
-    }
-
-    const payments = community.subscriptionHistory || [];
-    const hasPayments = payments.length > 0;
-
-    const now = new Date();
-    const isExpired =
-      community?.planEndDate && new Date(community.planEndDate) < now;
-
-    const x = !hasPayments; // No payment yet
-    const y = hasPayments && isExpired; // Paid but expired
-
-    const planPrices = {
-      basic: 999,
-      standard: 1999,
-      premium: 3999,
-    };
-
-    const currentPlan = community.subscriptionPlan || "basic";
-    const currentPlanPrice = planPrices[currentPlan];
-
-    res.render("communityManager/Payments", {
-      path: "p",
-      ads,
-      x,
-      y,
-      plan: currentPlan,
-      planPrice: currentPlanPrice,
-      planPrices,
-      community: {
-        name: community.name,
-        subscriptionStatus: community.subscriptionStatus,
-        planEndDate: community.planEndDate,
-      },
-    });
-  } catch (error) {
-    console.error("Error loading payments page:", error);
-    res.status(500).render("error", { message: "Error loading payments page" });
-  }
-});
-
 managerRouter.get("/api/payments", async (req, res) => {
   try {
     const managerId = req.user && req.user.id;
@@ -1747,9 +1685,12 @@ managerRouter.get("/api/payments", async (req, res) => {
     }
 
     // Use the array if present; otherwise default to empty array
-    const payments = Array.isArray(community.subscriptionHistory)
-      ? community.subscriptionHistory
-      : [];
+    const payments = await Payment.find({ community: community._id })
+      .populate("community")
+      .populate("sender")
+      .populate("receiver")
+      .lean();
+    console.log("payments :", payments);
 
     // Normalize/ensure keys and compute stats
     const totalTransactions = payments.length;
@@ -2087,6 +2028,8 @@ managerRouter.get("/api/ad", async (req, res) => {
       .sort({ createdAt: -1 })
       .lean();
 
+    console.log(req.user.community);
+
     // Update status dynamically based on current date
     const now = new Date();
     const adsWithUpdatedStatus = ads.map((ad) => {
@@ -2328,7 +2271,6 @@ managerRouter.delete("/ad/:id", async (req, res) => {
   try {
     const adId = req.params.id;
     console.log(adId);
-    
 
     // Validate ad ID format
     if (!adId || !adId.match(/^[0-9a-fA-F]{24}$/)) {
@@ -2347,7 +2289,6 @@ managerRouter.delete("/ad/:id", async (req, res) => {
       });
     }
 
-
     // Delete the advertisement
     const deletedAd = await Ad.findByIdAndDelete(adId);
 
@@ -2357,7 +2298,6 @@ managerRouter.delete("/ad/:id", async (req, res) => {
         message: "Failed to delete advertisement",
       });
     }
-
 
     return res.status(200).json({
       success: true,

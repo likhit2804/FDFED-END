@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useOutletContext } from "react-router-dom";
 import {
     Megaphone,
     Eye,
@@ -71,7 +72,8 @@ const AdvertisementPopup = ({
     ad,
     setAds,
     ads = [],
-    setEditingAd
+    setEditingAd,
+    onAdCreated
 }) => {
     const {
         register,
@@ -212,6 +214,11 @@ const AdvertisementPopup = ({
             setFileToUpload(null);
             setShowPopup(false);
             setEditingAd(null);
+
+            // Trigger Layout refresh
+            if (onAdCreated && typeof onAdCreated === 'function') {
+                onAdCreated();
+            }
         } catch (err) {
             console.error("Error submitting advertisement:", err);
             setSubmitError(err.message || `An error occurred while ${isEditing ? "updating" : "creating"
@@ -657,7 +664,7 @@ const SearchBar = ({ setShowPopup, setEditingAd, searchTerm, setSearchTerm, stat
                 <option value="Pending">Pending</option>
                 <option value="Expired">Expired</option>
             </select>
-            
+
             <button
                 className="btn"
                 style={{
@@ -680,6 +687,7 @@ const SearchBar = ({ setShowPopup, setEditingAd, searchTerm, setSearchTerm, stat
    Main Advertisement Component
    ============================== */
 export const Advertisement = () => {
+    const { onAdCreated } = useOutletContext() || {};
     const [ads, setAds] = useState([]);
     const [statistics, setStatistics] = useState(null);
     const [showPopup, setShowPopup] = useState(false);
@@ -755,6 +763,8 @@ export const Advertisement = () => {
                 }
 
                 const data = await response.json();
+                console.log(data);
+
 
                 if (data.success) {
                     setAds(Array.isArray(data.ads) ? data.ads : []);
@@ -836,7 +846,8 @@ export const Advertisement = () => {
                         ad={editingAd}
                         setAds={setAds}
                         ads={ads}
-                        setEditingAd={setEditingAd} />
+                        setEditingAd={setEditingAd}
+                        onAdCreated={onAdCreated} />
                 )
             } </div>
     );

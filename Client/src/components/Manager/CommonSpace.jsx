@@ -21,6 +21,21 @@ export const CommonSpace = () => {
   const [toggleRent, setToggleRent] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Occupancy rate stored in component state and recalculated when bookings change
+  const [occupancyRate, setOccupancyRate] = useState(0);
+
+  useEffect(() => {
+    if (Bookings && Bookings.length > 0) {
+      const approvedCount = Bookings.filter((b) => b.status === 'Approved').length;
+      const rate = Math.round((approvedCount / Bookings.length) * 100);
+      console.log('Approved bookings:', approvedCount);
+      console.log('Calculated occupancy rate:', rate);
+      setOccupancyRate(rate);
+    } else {
+      setOccupancyRate(0);
+    }
+  }, [Bookings]);
+
   const { register, handleSubmit, reset, setValue, watch } = useForm({
     defaultValues: { spaceType: '', spaceName: '', bookable: 'true', bookingRent: '', bookingRules: '', Type: '' },
   });
@@ -235,7 +250,7 @@ export const CommonSpace = () => {
         <div className="stat-card border-0">
           <BarChart3 size={24} className="text-warning" />
           <h3>Occupancy Rate</h3>
-          <span className="stat-number text-warning">62%</span>
+          <span className="stat-number text-warning">{occupancyRate}%</span>
         </div>
         <div className="stat-card border-0">
           <CheckCircle size={24} className="text-success" />

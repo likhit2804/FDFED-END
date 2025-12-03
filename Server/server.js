@@ -5,7 +5,7 @@ import { fileURLToPath } from "url";
 import bodyParser from "express";
 import session from "express-session";
 import mongoose from "mongoose";
-import cors from "cors"
+import cors from "cors";
 import jwt from "jsonwebtoken";
 
 import dotenv from "dotenv";
@@ -154,29 +154,29 @@ app.use(
   })
 );
 
-
-app.use(cors({
-  origin: "http://localhost:5173",
-  credentials: true
-}));
-
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+    credentials: true,
+  })
+);
 
 app.use("/uploads", express.static("uploads"));
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-
-
 app.use(express.static(path.join(__dirname, "Public")));
 app.use(cookieParser());
 app.use((req, res, next) => {
-  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, private");
+  res.setHeader(
+    "Cache-Control",
+    "no-store, no-cache, must-revalidate, private"
+  );
   res.setHeader("Pragma", "no-cache");
   res.setHeader("Expires", "0");
   next();
 });
-
 
 app.use("/uploads", express.static("uploads"));
 import AdminRouter from "./routes/adminRouter.js";
@@ -184,7 +184,7 @@ import residentRouter from "./routes/residentRouter.js";
 import securityRouter from "./routes/securityRouter.js";
 import workerRouter from "./routes/workerRouter.js";
 import managerRouter from "./routes/managerRouter.js";
-import interestRouter from "./routes/InterestRouter.js"
+import interestRouter from "./routes/InterestRouter.js";
 import Ad from "./models/Ad.js";
 
 app.use("/admin", auth, authorizeA, AdminRouter);
@@ -196,11 +196,9 @@ app.use("/worker", auth, authorizeW, workerRouter);
 
 app.use("/manager", auth, authorizeC, managerRouter);
 
-app.use("/interest", interestRouter)
-
+app.use("/interest", interestRouter);
 
 const PORT = 3000;
-
 
 app.post("/AdminLogin", async (req, res) => {
   try {
@@ -211,7 +209,7 @@ app.post("/AdminLogin", async (req, res) => {
     if (!result) {
       return res.status(401).json({
         success: false,
-        message: "Invalid email or password"
+        message: "Invalid email or password",
       });
     }
 
@@ -219,7 +217,7 @@ app.post("/AdminLogin", async (req, res) => {
     res.cookie("token", result.token, {
       httpOnly: true,
       maxAge: 7 * 24 * 60 * 60 * 1000,
-      sameSite: "lax"
+      sameSite: "lax",
     });
 
     // 🔥 VERY IMPORTANT:
@@ -228,20 +226,41 @@ app.post("/AdminLogin", async (req, res) => {
       success: true,
       user: result.user,
       token: result.token,
-      redirect: "/admin/dashboard"  // or "/admin"
+      redirect: "/admin/dashboard", // or "/admin"
     });
-
   } catch (error) {
     console.error("Admin login error:", error);
     return res.status(500).json({
       success: false,
-      message: "Server error"
+      message: "Server error",
     });
   }
 });
 
+app.get("/ads", auth, async (req, res) => {
+  try {
+    const communityId = req.user && req.user.community;
+    if (!communityId) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Community not found on user" });
+    }
 
 
+
+    const ads = await Ad.find({ community: communityId,status: "Active" })
+      .select("_id title imagePath link status startDate endDate")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    return res.json({ success: true, ads });
+  } catch (err) {
+    console.error("Error fetching ads for /ads:", err);
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to fetch ads" });
+  }
+});
 
 app.post("/login", async (req, res) => {
   try {
@@ -250,11 +269,16 @@ app.post("/login", async (req, res) => {
 
     let result;
 
-    if (userType === "Resident") result = await AuthenticateR(email, password, res);
-    else if (userType === "Security") result = await AuthenticateS(email, password, res);
-    else if (userType === "Worker") result = await AuthenticateW(email, password, res);
-    else if (userType === "communityManager") result = await AuthenticateC(email, password, res);
-    else if (userType === "Admin") result = await AuthenticateA(email, password, res);
+    if (userType === "Resident")
+      result = await AuthenticateR(email, password, res);
+    else if (userType === "Security")
+      result = await AuthenticateS(email, password, res);
+    else if (userType === "Worker")
+      result = await AuthenticateW(email, password, res);
+    else if (userType === "communityManager")
+      result = await AuthenticateC(email, password, res);
+    else if (userType === "Admin")
+      result = await AuthenticateA(email, password, res);
     else return res.status(400).json({ message: "Invalid user type" });
 
     if (!result) {
@@ -265,30 +289,25 @@ app.post("/login", async (req, res) => {
     res.cookie("token", result.token, {
       httpOnly: true,
       maxAge: 7 * 24 * 60 * 60 * 1000,
-      sameSite: "lax"
+      sameSite: "lax",
     });
 
     return res.json({
       token: result.token,
       user: result.user,
     });
-
   } catch (err) {
     console.error(err);
     return res.status(500).json({ message: "Server error" });
   }
 });
 
-
-
-app.get('/api/auth/getUser', auth, async (req, res) => {
+app.get("/api/auth/getUser", auth, async (req, res) => {
   const cookie = req.cookies.token;
 
-  console.log("token at getUser : ", cookie)
-
+  console.log("token at getUser : ", cookie);
 
   console.log("checking for user");
-
 
   try {
     const data = await jwt.verify(cookie, process.env.JWT_SECRET);
@@ -297,10 +316,35 @@ app.get('/api/auth/getUser', auth, async (req, res) => {
     return res.json({ user: data });
   } catch (err) {
     console.log(err);
-    return res.status(401).json({ message: 'Unauthorized' });
+    return res.status(401).json({ message: "Unauthorized" });
   }
 });
 
+
+async function changeAdStatuses() {
+  try {
+    const ads = await Ad.find({});
+    const now = new Date();
+    for (let ad of ads) {
+      let newStatus = ad.status;
+      if (ad.startDate <= now && now <= ad.endDate) {
+        newStatus = "Active";
+      } else if (now < ad.startDate) {
+        newStatus = "Pending";
+      } else if (now > ad.endDate) {
+        newStatus = "Expired";
+      }
+      if (ad.status !== newStatus) {
+        ad.status = newStatus;
+        await ad.save();
+      }
+    }
+  } catch (err) {
+    console.error("Error changing ad statuses:", err);
+  }
+}
+
+setInterval(changeAdStatuses, 60*60 * 1000); // Run every hour
 
 app.listen(PORT, async () => {
   console.log(`Server running at http://localhost:${PORT}`);

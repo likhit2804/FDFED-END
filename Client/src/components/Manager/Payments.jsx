@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import "../../assets/css/Manager/Payments.css";
+import { Loader } from '../Loader.jsx'
 
 /* -------------------------------
    Payments Overview Cards
@@ -51,7 +52,7 @@ const PaymentsOverview = ({ stats }) => {
             transition={{ delay: i * 0.1 }}
           >
             <div className="payment-card p-3 bg-white rounded-4 shadow-sm">
-              <div className="icon-box" style={{ width:'fit-content' }}>{card.icon}</div>
+              <div className="icon-box" style={{ width: 'fit-content' }}>{card.icon}</div>
               <h6 className="mt-2 text-secondary">{card.title}</h6>
               <h4 className={`fw-semibold ${card.color}`}>{card.value}</h4>
             </div>
@@ -65,8 +66,24 @@ const PaymentsOverview = ({ stats }) => {
 /* -------------------------------
    Receipt Popup
 -------------------------------- */
+const formatDate = (iso) => {
+  if (!iso) return "-";
+  try {
+    const d = new Date(iso);
+    return d.toLocaleString();
+  } catch (e) {
+    return iso;
+  }
+};
+
 const PaymentsDetailsPopUp = ({ show, close, details }) => {
   if (!details) return null;
+
+  const receiver = details.receiver || details.reciever || details.to || "-";
+  const sender = details.sender || details.from || "-";
+  const txnId = details.ID || details.transactionId || details._id || "-";
+  const amount = details.amount ?? details.amt ?? "-";
+  const penalty = details.penalty || {};
 
   return (
     <AnimatePresence>
@@ -94,14 +111,18 @@ const PaymentsDetailsPopUp = ({ show, close, details }) => {
 
             <hr />
 
-            <p><strong>Name:</strong> {details.name}</p>
-            <p><strong>Flat:</strong> {details.flat}</p>
-            <p><strong>Type:</strong> {details.type}</p>
-            <p><strong>Amount:</strong> ₹{details.amount}</p>
-            <p><strong>Date:</strong> {details.date}</p>
-            <p><strong>Mode:</strong> {details.mode}</p>
-            <p><strong>TXN ID:</strong> {details.txn}</p>
-            <p><strong>Status:</strong> {details.status}</p>
+            <p><strong>Title:</strong> {details.title || "-"}</p>
+            <p><strong>Payment ID:</strong> {txnId}</p>
+            <p><strong>Belongs To:</strong> {details.belongTo || "-"}</p>
+            <p><strong>Amount:</strong> {amount !== "-" ? `₹${amount}` : "-"}</p>
+            <p><strong>Payment Date:</strong> {formatDate(details.paymentDate)}</p>
+            <p><strong>Deadline:</strong> {formatDate(details.paymentDeadline)}</p>
+            <p><strong>Method:</strong> {details.paymentMethod || "-"}</p>
+            <p><strong>Penalty:</strong> {penalty.p ?? 0} {penalty.changedOn ? `(changed: ${formatDate(penalty.changedOn)})` : ""}</p>
+            <p><strong>Receiver:</strong> {details.receiver?.email || details.reciever?.email || "-"}</p>
+            <p><strong>Sender:</strong> {details.sender?.email || details.from?.email || "-"}</p>
+            <p><strong>Remarks:</strong> {details.remarks || "-"}</p>
+            <p><strong>Status:</strong> {details.status || "-"}</p>
 
             <div className="text-end">
               <button className="btn btn-dark mt-2" onClick={close}>Close</button>
@@ -136,6 +157,7 @@ const PaymentsHistory = ({ onStats, filters = {} }) => {
         return res.json();
       })
       .then((data) => {
+        console.log("Payments data received:", data);
         setPayments(data.payments || []);
         if (onStats) onStats(data.stats || {});
       })
@@ -163,6 +185,12 @@ const PaymentsHistory = ({ onStats, filters = {} }) => {
         p.planName,
         p.type,
         p.paymentType,
+        p.ID,
+        p._id,
+        p.receiver,
+        p.reciever,
+        p.sender,
+        p.title,
       ]
         .filter(Boolean)
         .some((val) => String(val).toLowerCase().includes(s));
@@ -188,7 +216,7 @@ const PaymentsHistory = ({ onStats, filters = {} }) => {
     <div className="p-0">
 
       {loading ? (
-        <div className="text-center p-4">Loading payments...</div>
+        <div className="text-center p-4"><Loader /></div>
       ) : error ? (
         <div className="text-center text-danger p-4">{error}</div>
       ) : payments.length === 0 ? (
@@ -198,7 +226,7 @@ const PaymentsHistory = ({ onStats, filters = {} }) => {
           {filteredPayments.map((p, i) => (
             <motion.div
               className="col-md-6 col-lg-4"
-              key={p.transactionId || i}
+              key={p.ID || p.transactionId || p._id || i}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.05 }}
@@ -206,8 +234,8 @@ const PaymentsHistory = ({ onStats, filters = {} }) => {
               <div className="card p-3 rounded-4 shadow-sm">
                 <div className="d-flex justify-content-between align-items-start">
                   <div>
-                    <h6 className="fw-semibold">{p.name}</h6>
-                    <small className="text-muted">{p.email}</small>
+                    <h6 className="fw-semibold">{p.title}</h6>
+                    <small className="text-muted">{p.sender.email || p.sender.email || "-"}</small>
                   </div>
                   <span className={`badge ${p.status && p.status.toLowerCase() === 'completed' ? 'bg-success' : p.status && p.status.toLowerCase() === 'pending' ? 'bg-warning' : 'bg-secondary'}`}>{p.status}</span>
                 </div>
@@ -215,8 +243,9 @@ const PaymentsHistory = ({ onStats, filters = {} }) => {
                 <hr />
 
                 <p><strong>Amount:</strong> ₹{p.amount}</p>
-                <p><strong>Date:</strong> {p.date}</p>
-                <p><strong>Method:</strong> {p.mode}</p>
+                <p><strong>Date:</strong> {formatDate(p.paymentDate)}</p>
+                <p><strong>Method:</strong> {p.paymentMethod}</p>
+                <p><strong>Payment ID:</strong> {p.ID || p.transactionId || p._id}</p>
 
                 <button
                   className="reciept-btn w-100 mt-2"

@@ -21,7 +21,7 @@ async function authenticateUser(model, email, password, res) {
         userType
     };
 
-    if(userType.community){
+    if(userType === 'Resident' || userType === 'Security' || userType === 'Worker'){
         userPayload.community = user.community;
     }else if(userType === 'CommunityManager'){
         userPayload.community = user.assignedCommunity;
