@@ -76,11 +76,15 @@ securityRouter.post("/addVisitor", async (req, res) => {
 
 });
 
-securityRouter.get("/dashboard", getDashboardInfo);
-
-securityRouter.get("/", (req, res) => {
-  res.redirect("dashboard");
+securityRouter.get("/dashboard", (req, res) => {
+  return res.json({
+    success: true,
+    message: "Security dashboard base route OK",
+  });
 });
+
+// API route your React fetches
+securityRouter.get("/dashboard/api", getDashboardInfo);
 
 // securityRouter.get("/preApproval", async (req, res) => {
 //   const pa = await Visitor.find({
@@ -337,15 +341,6 @@ securityRouter.get("/visitorManagement/:action/:id", async (req, res) => {
   }
 });
 
-// securityRouter.get("/profile", async (req, res) => {
-//   const ads = await Ad.find({ community: req.user.community, startDate: { $lte: new Date() }, endDate: { $gte: new Date() } });
-
-
-
-//   const r = await Security.findById(req.user.id);
-
-//   res.render("security/Profile", { path: "pr", ads, r });
-// });
 securityRouter.get("/profile", async (req, res) => {
   try {
     const security = await Security.findById(req.user.id)
@@ -380,31 +375,6 @@ securityRouter.get("/profile", async (req, res) => {
 });
 
 
-// securityRouter.post("/profile", upload.single("image"), async (req, res) => {
-//   const { name, email, contact, address } = req.body;
-
-//   const r = await Security.findById(req.user.id);
-
-//   let image = null;
-
-//   if (req.file) {
-//     image = req.file.path;
-//   }
-
-//   r.name = name;
-//   r.email = email;
-//   r.contact = contact;
-//   r.address = address;
-
-//   if (image) {
-//     r.image = image;
-//   }
-
-//   await r.save();
-
-//   return res.json({ success: true, message: "Profile updated successfully", r });
-
-// });
 securityRouter.post("/profile", upload.single("image"), async (req, res) => {
   try {
     const { name, email, contact, address } = req.body;
