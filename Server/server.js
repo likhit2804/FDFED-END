@@ -27,7 +27,12 @@ import {
   AuthenticateS,
   AuthenticateW,
   AuthenticateA,
+  VerifyC,
+  VerifyR,
+  VerifyS,
+  VerifyW,
 } from "./controllers/loginController.js";
+import { sendLoginOtp, verifyOtp, resendOtp } from "./utils/otp.js";
 
 import AdminRouter from "./routes/adminRouter.js";
 import residentRouter from "./routes/residentRouter.js";
@@ -95,13 +100,7 @@ app.use((req, res, next) => {
 
 
 app.use("/uploads", express.static("uploads"));
-import AdminRouter from "./routes/adminRouter.js";
-import residentRouter from "./routes/residentRouter.js";
-import securityRouter from "./routes/securityRouter.js";
-import workerRouter from "./routes/workerRouter.js";
-import managerRouter from "./routes/managerRouter.js";
-import interestRouter from "./routes/InterestRouter.js";
-import Ad from "./models/Ad.js";
+
 
 app.use("/admin", auth, authorizeA, AdminRouter);
 app.use("/resident", auth, authorizeR, residentRouter);
@@ -185,42 +184,127 @@ app.get("/ads", auth, async (req, res) => {
 });
 
 
+// Start 2FA login: verify credentials, send OTP, return temp token
 app.post("/login", async (req, res) => {
   try {
     const { email, password, userType } = req.body;
-    console.log(email, password, userType);
+    if (!email || !password || !userType) {
+      return res.status(400).json({ message: "Missing credentials" });
+    }
 
-    let result;
+    let verified;
+    if (userType === "Resident") verified = await VerifyR(email, password);
+    else if (userType === "Security") verified = await VerifyS(email, password);
+    else if (userType === "Worker") verified = await VerifyW(email, password);
+    else if (userType === "communityManager") verified = await VerifyC(email, password);
+    else if (userType === "Admin") {
+      // Admin can keep direct login using existing route /AdminLogin
+      return res.status(400).json({ message: "Use /AdminLogin for admin" });
+    } else return res.status(400).json({ message: "Invalid user type" });
 
-    if (userType === "Resident")
-      result = await AuthenticateR(email, password, res);
-    else if (userType === "Security")
-      result = await AuthenticateS(email, password, res);
-    else if (userType === "Worker")
-      result = await AuthenticateW(email, password, res);
-    else if (userType === "communityManager")
-      result = await AuthenticateC(email, password, res);
-    else if (userType === "Admin")
-      result = await AuthenticateA(email, password, res);
-    else return res.status(400).json({ message: "Invalid user type" });
-
-    if (!result) {
+    if (!verified) {
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
-    // ✅ STEP 3: Set cookie HERE
-    res.cookie("token", result.token, {
+    await sendLoginOtp(email);
+
+    const tempToken = jwt.sign(
+      { ...verified.userPayload, purpose: "2fa" },
+      process.env.JWT_SECRET,
+      { expiresIn: "10m" }
+    );
+
+    return res.json({ requiresOtp: true, tempToken });
+  } catch (err) {
+    console.error("/login error", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Complete 2FA: verify OTP, then issue JWT cookie and return user
+app.post("/verify-otp", async (req, res) => {
+  try {
+    const { otp, tempToken } = req.body;
+    if (!otp || !tempToken) {
+      return res.status(400).json({ message: "Missing OTP or token" });
+    }
+
+    let payload;
+    try {
+      payload = jwt.verify(tempToken, process.env.JWT_SECRET);
+    } catch (e) {
+      return res.status(401).json({ message: "Invalid or expired session" });
+    }
+
+    if (payload.purpose !== "2fa") {
+      return res.status(400).json({ message: "Invalid token purpose" });
+    }
+
+    const result = verifyOtp(payload.email, otp);
+    if (!result.ok) {
+      const reasonMap = {
+        expired: "OTP expired",
+        mismatch: "Invalid OTP",
+        not_found: "No OTP found",
+        too_many_attempts: "Too many attempts",
+      };
+      return res.status(401).json({ message: reasonMap[result.reason] || "OTP error" });
+    }
+
+    // Issue final JWT and cookie
+    const finalToken = jwt.sign(
+      {
+        id: payload.id,
+        email: payload.email,
+        userType: payload.userType,
+        community: payload.community ?? null,
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    res.cookie("token", finalToken, {
       httpOnly: true,
       maxAge: 7 * 24 * 60 * 60 * 1000,
       sameSite: "lax",
     });
 
     return res.json({
-      token: result.token,
-      user: result.user,
+      token: finalToken,
+      user: {
+        id: payload.id,
+        email: payload.email,
+        userType: payload.userType,
+        community: payload.community ?? null,
+      },
     });
   } catch (err) {
-    console.error(err);
+    console.error("/verify-otp error", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Resend OTP during 2FA window
+app.post("/resend-otp", async (req, res) => {
+  try {
+    const { tempToken } = req.body;
+    if (!tempToken) return res.status(400).json({ message: "Missing token" });
+
+    let payload;
+    try {
+      payload = jwt.verify(tempToken, process.env.JWT_SECRET);
+    } catch (e) {
+      return res.status(401).json({ message: "Invalid or expired session" });
+    }
+
+    if (payload.purpose !== "2fa") {
+      return res.status(400).json({ message: "Invalid token purpose" });
+    }
+
+    await resendOtp(payload.email);
+    return res.json({ success: true });
+  } catch (err) {
+    console.error("/resend-otp error", err);
     return res.status(500).json({ message: "Server error" });
   }
 });

@@ -10,10 +10,26 @@ export const loginUser = createAsyncThunk(
         { email, password, userType },
         { withCredentials: true }
       );
-      return response.data;
+      return { ...response.data, email, userType };
     } catch (err) {
       console.log(err);
       return rejectWithValue(err.response?.data?.message || "Login failed");
+    }
+  }
+);
+
+export const verifyOtp = createAsyncThunk(
+  "auth/verifyOtp",
+  async ({ otp, tempToken }, { rejectWithValue }) => {
+    try {
+      const response = await axios.post(
+        "http://localhost:3000/verify-otp",
+        { otp, tempToken },
+        { withCredentials: true }
+      );
+      return response.data;
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.message || "OTP verification failed");
     }
   }
 );
@@ -41,6 +57,7 @@ const authSlice = createSlice({
     token: null,
     loading: false,
     error: null,
+    pending2fa: null,
   },
   reducers: {
     logout: (state) => {
@@ -59,11 +76,35 @@ const authSlice = createSlice({
       })
       .addCase(loginUser.fulfilled, (state, action) => {
         state.loading = false;
-        console.log("payload", action.payload);
-        state.user = action.payload.user;
-        state.token = action.payload.token;
-        console.log("payload", action.payload);
+        // If server indicates 2FA is required, store temp and wait
+        if (action.payload?.requiresOtp) {
+          state.pending2fa = {
+            tempToken: action.payload.tempToken,
+            email: action.payload.email,
+            userType: action.payload.userType,
+          };
+          state.user = null;
+          state.token = null;
+        } else {
+          state.user = action.payload.user;
+          state.token = action.payload.token;
+          state.pending2fa = null;
+        }
       })
+            .addCase(verifyOtp.pending, (state) => {
+              state.loading = true;
+              state.error = null;
+            })
+            .addCase(verifyOtp.fulfilled, (state, action) => {
+              state.loading = false;
+              state.user = action.payload.user;
+              state.token = action.payload.token;
+              state.pending2fa = null;
+            })
+            .addCase(verifyOtp.rejected, (state, action) => {
+              state.loading = false;
+              state.error = action.payload;
+            })
       .addCase(loginUser.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
