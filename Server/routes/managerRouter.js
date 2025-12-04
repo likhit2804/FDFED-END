@@ -440,6 +440,16 @@ managerRouter.get("/api/community/spaces", async (req, res) => {
 });
 
 async function checkSubscription(req, res, next) {
+  // Heuristic to detect API/XHR requests that expect JSON
+  const wantsJSON = () => {
+    const accept = req.get("Accept") || "";
+    return (
+      req.xhr ||
+      accept.includes("application/json") ||
+      req.path.startsWith("/api/") ||
+      req.path.startsWith("/issue") // our issue endpoints are consumed by front-end via fetch
+    );
+  };
 
   try {
     // Skip check for payment-related routes and API endpoints
@@ -447,6 +457,7 @@ async function checkSubscription(req, res, next) {
       req.path.startsWith("/payments") ||
       req.path.startsWith("/subscription") ||
       req.path.startsWith("/api/") ||
+      req.path.startsWith("/issue") ||
       req.path === "/all-communities" ||
       req.path === "/residents" ||
       req.path === "/communities" ||
@@ -462,10 +473,15 @@ async function checkSubscription(req, res, next) {
     }
 
     // Get manager and community info
-    const managerId = req.user.id;
+    const managerId = req.user?.id;
     const manager = await CommunityManager.findById(managerId);
 
     if (!manager) {
+      if (wantsJSON()) {
+        return res
+          .status(404)
+          .json({ success: false, message: "Community manager not found" });
+      }
       return res
         .status(404)
         .render("error", { message: "Community manager not found" });
@@ -476,6 +492,11 @@ async function checkSubscription(req, res, next) {
     ).select("subscriptionStatus planEndDate");
 
     if (!community) {
+      if (wantsJSON()) {
+        return res
+          .status(404)
+          .json({ success: false, message: "Community not found" });
+      }
       return res
         .status(404)
         .render("error", { message: "Community not found" });
@@ -496,13 +517,27 @@ async function checkSubscription(req, res, next) {
         "Your subscription has expired or is inactive. Please complete the payment to continue."
       );
 
-      // Redirect to payment page
+      if (wantsJSON()) {
+        return res.status(402).json({
+          success: false,
+          code: "SUBSCRIPTION_REQUIRED",
+          message:
+            "Subscription inactive or expired. Please complete payment to continue.",
+          redirect: "/manager/payments",
+        });
+      }
+      // Redirect to payment page for normal web requests
       return res.redirect("/manager/payments");
     }
 
     next();
   } catch (error) {
     console.error("Subscription check error:", error);
+    if (wantsJSON()) {
+      return res
+        .status(500)
+        .json({ success: false, message: "Error checking subscription status" });
+    }
     res
       .status(500)
       .render("error", { message: "Error checking subscription status" });
@@ -590,6 +625,7 @@ managerRouter.post("/subscription-payment", async (req, res) => {
       transactionId,
       paymentDate,
       isRenewal,
+      cardMeta,
     } = req.body;
 
     // Validate required fields
@@ -642,6 +678,12 @@ managerRouter.post("/subscription-payment", async (req, res) => {
       metadata: {
         userAgent: req.get("User-Agent"),
         ipAddress: req.ip || req.connection.remoteAddress,
+        card: paymentMethod === "card" && cardMeta ? {
+          brand: cardMeta.brand,
+          last4: cardMeta.last4,
+          expiry: cardMeta.expiry,
+          name: cardMeta.name,
+        } : undefined,
       },
     };
 

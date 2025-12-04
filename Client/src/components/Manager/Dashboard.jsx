@@ -347,6 +347,7 @@ export function ManagerDashboard() {
                     <PaymentsRevenue data={dashboardData} loading={loading} />
                     <ReportsAnalytics data={dashboardData} loading={loading} />
                 </div>
+                                
             </main>
         </>
     );
