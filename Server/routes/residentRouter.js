@@ -17,6 +17,7 @@ import { authorizeR } from "../controllers/authorization.js";
 import Ad from "../models/Ad.js";
 import PaymentController from "../controllers/payments.js";
 import { OTP } from "../controllers/OTP.js";
+import { verify } from "../controllers/OTP.js";
 import {
   getPreApprovals,
   getCommonSpace,
@@ -32,6 +33,70 @@ import checkSubscriptionStatus from "../middleware/subcriptionStatus.js";
 import Amenity from "../models/Amenities.js";
 
 residentRouter.use(checkSubscriptionStatus);
+// Resident Self-Registration (OTP + Community Code)
+residentRouter.post("/register/request-otp", async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ success: false, message: "Email is required" });
+
+    const existing = await Resident.findOne({ email });
+    if (existing && existing.password) {
+      return res.status(409).json({ success: false, message: "Account already exists" });
+    }
+
+    await OTP(email);
+    return res.json({ success: true, message: "OTP sent to email" });
+  } catch (err) {
+    console.error("OTP request error:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+residentRouter.post("/register/verify-otp", async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+    if (!email || !otp) return res.status(400).json({ success: false, message: "Email and OTP required" });
+
+    const isValid = verify(email, otp);
+    if (!isValid) return res.status(401).json({ success: false, message: "Invalid OTP" });
+
+    return res.json({ success: true, message: "OTP verified" });
+  } catch (err) {
+    console.error("Verify OTP error:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+residentRouter.post("/register/complete", async (req, res) => {
+  try {
+    const { residentFirstname, residentLastname, uCode, contact, email, communityCode } = req.body;
+    if (!residentFirstname || !residentLastname || !uCode || !email || !communityCode) {
+      return res.status(400).json({ success: false, message: "Missing required fields" });
+    }
+
+    const community = await Community.findOne({ communityCode });
+    if (!community) {
+      return res.status(404).json({ success: false, message: "Invalid community code" });
+    }
+
+    let resident = await Resident.findOne({ email });
+    if (!resident) {
+      resident = new Resident({ residentFirstname, residentLastname, uCode, contact, email, community: community._id });
+    } else {
+      resident.residentFirstname = residentFirstname;
+      resident.residentLastname = residentLastname;
+      resident.uCode = uCode;
+      resident.contact = contact;
+      resident.community = community._id;
+    }
+
+    await resident.save();
+    return res.json({ success: true, message: "Resident registered", residentId: resident._id });
+  } catch (err) {
+    console.error("Complete registration error:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+});
 
 function generateCustomID(userEmail, facility, countOrRandom = null) {
   console.log("userEmail:", userEmail);

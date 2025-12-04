@@ -10,11 +10,14 @@ function generateOTP() {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-let otp1;
+// In-memory OTP store per email with expiry
+const otpStore = new Map(); // email -> { otp, expiresAt }
+
+const OTP_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 async function OTP(email) {
-  const otp = await generateOTP();
-  otp1 = otp;
+  const otp = generateOTP();
+  otpStore.set(email, { otp, expiresAt: Date.now() + OTP_TTL_MS });
 
 const transporter = nodemailer.createTransport({
     host: "smtp.gmail.com",
@@ -56,11 +59,15 @@ const transporter = nodemailer.createTransport({
 }
 
 function verify(email, otp) {
-  if (otp1 === otp) {
-    return true;
-  } else {
+  const entry = otpStore.get(email);
+  if (!entry) return false;
+  if (Date.now() > entry.expiresAt) {
+    otpStore.delete(email);
     return false;
   }
+  const ok = entry.otp === String(otp);
+  if (ok) otpStore.delete(email);
+  return ok;
 }
 
 function generateSecurePassword(email) {

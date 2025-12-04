@@ -21,6 +21,7 @@ import { ResidentDashboard } from './components/Resident/Dashboard';
 import { PreApproval } from './components/Resident/PreApproval';
 import { ResidentProfile } from './components/Resident/Profile';
 import { ResidentPayments } from './components/Resident/ResidentPayments.jsx';
+import { ResidentRegister } from './components/Resident/ResidentRegister.jsx';
 
 import { WorkerDashboard } from './components/Worker/Dashboard';
 import { Tasks } from './components/Worker/Tasks';
@@ -67,6 +68,7 @@ function App() {
         <Route path='/' element={<Landingpage/>} />
         <Route path='/SignIn' element={<SignIn />} />
         <Route path='/SignUp' element={<SignUp />} />
+        <Route path='/residentRegister' element={<ResidentRegister />} />
         <Route path='/interestForm' element={<InterestForm />} />
 
         <Route path='/adminLogin' element={<AdminLogin/>} ></Route>

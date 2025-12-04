@@ -32,7 +32,8 @@ import {
   VerifyS,
   VerifyW,
 } from "./controllers/loginController.js";
-import { sendLoginOtp, verifyOtp, resendOtp } from "./utils/otp.js";
+import { sendLoginOtp, verifyOtp, resendOtp, sendTemporaryPassword } from "./utils/otp.js";
+import bcrypt from "bcryptjs";
 
 import AdminRouter from "./routes/adminRouter.js";
 import residentRouter from "./routes/residentRouter.js";
@@ -42,6 +43,10 @@ import managerRouter from "./routes/managerRouter.js";
 import interestRouter from "./routes/InterestRouter.js";
 import Ad from "./models/Ad.js";
 import { interestUploadRouter } from './controllers/interestForm.js';
+// Use utils OTP implementation
+// import { OTP, verify } from "./controllers/OTP.js";
+import Resident from "./models/resident.js";
+import Community from "./models/communities.js";
 
 dotenv.config();
 
@@ -106,6 +111,110 @@ app.use("/manager", auth, authorizeC, managerRouter);
 
 app.use("/interest", interestRouter);
 app.use('/interest', interestUploadRouter);
+// Public resident self-registration endpoints (no auth)
+
+app.post("/resident-register/request-otp", async (req, res) => {
+  try {
+    // Debug: request metadata
+    console.log("[REQ-OTP] Incoming request", {
+      method: req.method,
+      path: req.originalUrl || req.url,
+      headers: {
+        "content-type": req.headers["content-type"],
+        "user-agent": req.headers["user-agent"],
+      },
+    });
+
+    const { email } = req.body || {};
+    console.log("[REQ-OTP] Parsed body:", req.body);
+    if (!email) {
+      console.warn("[REQ-OTP] Missing email in body");
+      return res.status(400).json({ success: false, message: "Email is required" });
+    }
+
+    const existing = await Resident.findOne({ email });
+    console.log("[REQ-OTP] Existing resident: ", existing ? {
+      id: existing._id,
+      hasPassword: Boolean(existing.password),
+    } : null);
+    if (existing && existing.password) {
+      return res.status(409).json({ success: false, message: "Account already exists" });
+    }
+
+    // Debug: environment sanity checks (mail provider, cloudinary, etc. if used)
+    try {
+      console.log("[REQ-OTP] Triggering OTP via utils for:", email);
+      await sendLoginOtp(email);
+      console.log("[REQ-OTP] OTP dispatch completed (utils)");
+    } catch (otpErr) {
+      console.error("[REQ-OTP] OTP function threw:", otpErr);
+      return res.status(500).json({ success: false, message: "Failed to send OTP", error: String(otpErr && otpErr.message || otpErr) });
+    }
+    return res.json({ success: true, message: "OTP sent to email" });
+  } catch (err) {
+    console.error("[REQ-OTP] Unhandled error:", err);
+    return res.status(500).json({ success: false, message: "Server error", error: String(err && err.message || err) });
+  }
+});
+
+app.post("/resident-register/verify-otp", async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+    if (!email || !otp) return res.status(400).json({ success: false, message: "Email and OTP required" });
+
+    console.log("[VERIFY-OTP] Incoming", { email });
+    const isValid = await verifyOtp(email, otp);
+    if (!isValid) return res.status(401).json({ success: false, message: "Invalid or expired OTP" });
+
+    return res.json({ success: true, message: "OTP verified" });
+  } catch (err) {
+    console.error("[VERIFY-OTP] Error:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+app.post("/resident-register/complete", async (req, res) => {
+  try {
+    const { residentFirstname, residentLastname, uCode, contact, email, communityCode } = req.body;
+    if (!residentFirstname || !residentLastname || !uCode || !email || !communityCode) {
+      return res.status(400).json({ success: false, message: "Missing required fields" });
+    }
+
+    const community = await Community.findOne({ communityCode });
+    if (!community) {
+      return res.status(404).json({ success: false, message: "Invalid community code" });
+    }
+
+    let resident = await Resident.findOne({ email });
+    if (!resident) {
+      resident = new Resident({ residentFirstname, residentLastname, uCode, contact, email, community: community._id });
+    } else {
+      resident.residentFirstname = residentFirstname;
+      resident.residentLastname = residentLastname;
+      resident.uCode = uCode;
+      resident.contact = contact;
+      resident.community = community._id;
+    }
+
+    // Generate a temporary password, hash it, persist, and email
+    const tempPassword = Math.random().toString(36).slice(-10);
+    const hashed = await bcrypt.hash(tempPassword, 12);
+    resident.password = hashed;
+    await resident.save();
+
+    try {
+      await sendTemporaryPassword(email, tempPassword);
+      console.log("[REGISTER-COMPLETE] Temporary password sent to", email);
+    } catch (mailErr) {
+      console.error("[REGISTER-COMPLETE] Failed to send temporary password:", mailErr);
+    }
+
+    return res.json({ success: true, message: "Resident registered. Temporary password emailed.", residentId: resident._id });
+  } catch (err) {
+    console.error("Complete registration error:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+});
 
 
 

@@ -63,6 +63,11 @@ export const Landingpage = () => {
                   Register
                 </NavLink>
               </li>
+              <li className="nav-item px-3 py-2">
+                <NavLink className="btn btn-outline-primary" to="/residentRegister">
+                  Resident Registration
+                </NavLink>
+              </li>
             </ul>
           </div>
         </div>
