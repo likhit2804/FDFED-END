@@ -83,8 +83,8 @@ export const ResidentDashboard = () => {
   }, [recents, notifications]);
 
   return (
-    <div className="container-fluid py-4 dashboard-wrapper">
-      <h2 className="fw-bold mb-4">Community Dashboard</h2>
+    <div className="container-fluid  dashboard-wrapper">
+      <h2 className=" mb-4">Community Dashboard</h2>
 
       <div className="row g-4">
 

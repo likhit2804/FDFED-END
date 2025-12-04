@@ -24,6 +24,7 @@ import {
   getIssueData,
   getPaymentData,
   getQRcode,
+  getResidentProfile,
 } from "../controllers/Resident.js";
 import { getTimeAgo, getPaymentRemainders, setPenalties } from "../utils/residentHelpers.js";
 
@@ -124,6 +125,7 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 
+
 residentRouter.get("/payment/community", async (req, res) => {
   try {
     const user = await Community.findById(req.user.community);
@@ -141,15 +143,37 @@ residentRouter.get("/payment/community", async (req, res) => {
   }
 });
 
-residentRouter.get("/ad", async (req, res) => {
-  const ads = await Ad.find({
-    community: req.user?.community,
-    startDate: { $lte: new Date() },
-    endDate: { $gte: new Date() },
-  });
+// residentRouter.get("/ad", async (req, res) => {
+//   const ads = await Ad.find({
+//     community: req.user?.community,
+//     startDate: { $lte: new Date() },
+//     endDate: { $gte: new Date() },
+//   });
 
-  res.render("resident/Advertisement", { path: "ad", ads });
+//   res.render("resident/Advertisement", { path: "ad", ads });
+// });
+residentRouter.get("/ad", async (req, res) => {
+  try {
+    const ads = await Ad.find({
+      community: req.user?.community,
+      startDate: { $lte: new Date() },
+      endDate: { $gte: new Date() }
+    });
+
+    return res.json({
+      success: true,
+      ads
+    });
+  } catch (err) {
+    console.error("Ads fetch error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch ads"
+    });
+  }
 });
+
+
 
 residentRouter.get("/commonSpace", async (req, res) => {
   try {
@@ -577,16 +601,28 @@ residentRouter.get("/payments", getPaymentData);
 
 residentRouter.get("/payment/receipt/:id", async (req, res) => {
   const Id = req.params.id;
-  console.log("Payment ID:", Id);
 
-  const payment = await Payment.findById(Id)
-    .populate("receiver")
-    .populate("sender");
+  try {
+    const payment = await Payment.findById(Id)
+      .populate("receiver")
+      .populate("sender");
 
-  console.log("Payment Details:", payment);
+    if (!payment) {
+      return res.status(404).json({ success: false, message: "Payment not found" });
+    }
 
-  res.render("resident/receipt", { path: "p", payment });
+    return res.json({ success: true, payment });
+
+  } catch (err) {
+    console.error("Payment receipt fetch error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch payment receipt"
+    });
+  }
 });
+
+
 
 residentRouter.get("/payment/:paymentId", async (req, res) => {
   try {
@@ -724,17 +760,20 @@ residentRouter.delete("/preapproval/cancel/:id", async (req, res) => {
 
 residentRouter.get("/preapproval/qr/:id", auth, authorizeR, getQRcode);
 
-residentRouter.get("/profile", async (req, res) => {
-  const ads = await Ad.find({
-    community: req.user.community,
-    startDate: { $lte: new Date() },
-    endDate: { $gte: new Date() },
-  });
+// residentRouter.get("/profile", async (req, res) => {
+//   const ads = await Ad.find({
+//     community: req.user.community,
+//     startDate: { $lte: new Date() },
+//     endDate: { $gte: new Date() },
+//   });
 
-  const r = await Resident.findById(req.user.id);
+//   const r = await Resident.findById(req.user.id);
 
-  res.render("resident/Profile", { path: "pr", ads, r });
-});
+//   res.render("resident/Profile", { path: "pr", ads, r });
+// });
+residentRouter.get("/profile", auth, authorizeR, getResidentProfile);
+
+
 
 residentRouter.post("/profile", upload.single("image"), async (req, res) => {
   const { firstName, lastName, contact, email, address } = req.body;
@@ -790,6 +829,54 @@ residentRouter.post("/change-password", async (req, res) => {
 
   res.json({ ok: true, message: "Password changed successfully." });
 });
+
+residentRouter.put("/update-profile", async (req, res) => {
+  try {
+    const { firstname, lastname, contact, uCode } = req.body;
+
+    if (!firstname || !lastname || !contact || !uCode) {
+      return res.status(400).json({
+        success: false,
+        message: "All fields are required",
+      });
+    }
+
+    const resident = await Resident.findById(req.user.id);
+    if (!resident) {
+      return res.status(404).json({
+        success: false,
+        message: "Resident not found",
+      });
+    }
+
+    // Update fields
+    resident.residentFirstname = firstname;
+    resident.residentLastname = lastname;
+    resident.contact = contact;
+    resident.uCode = uCode.toUpperCase();
+
+    await resident.save();
+
+    return res.json({
+      success: true,
+      message: "Profile updated successfully",
+      resident: {
+        firstname: resident.residentFirstname,
+        lastname: resident.residentLastname,
+        contact: resident.contact,
+        uCode: resident.uCode,
+      },
+    });
+
+  } catch (error) {
+    console.error("Profile update error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+});
+
 
 residentRouter.get("/clearNotification", async (req, res) => {
   const resi = await Resident.updateOne(
