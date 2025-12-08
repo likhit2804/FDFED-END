@@ -10,6 +10,8 @@ export const loginUser = createAsyncThunk(
         { email, password, userType },
         { withCredentials: true }
       );
+      localStorage.setItem("token", response.data.tempToken);
+      localStorage.setItem("user", JSON.stringify({ email,userType }));
       return { ...response.data, email, userType };
     } catch (err) {
       console.log(err);
@@ -53,8 +55,10 @@ export const registerUser = createAsyncThunk(
 const authSlice = createSlice({
   name: "auth",
   initialState: {
-    user: null,
-    token: null,
+    user: localStorage.getItem("user")
+      ? JSON.parse(localStorage.getItem("user"))
+      : null,
+    token: localStorage.getItem("token") ||  null,
     loading: false,
     error: null,
     pending2fa: null,

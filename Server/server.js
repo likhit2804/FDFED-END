@@ -3,14 +3,16 @@ import path from "path";
 import { fileURLToPath } from "url";
 import session from "express-session";
 import mongoose from "mongoose";
-import cors from "cors"
-
+import cors from "cors";
 import jwt from "jsonwebtoken";
-
-
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import multer from "multer";
+
+// SOCKET.IO NEW IMPORTS
+import http from "http";
+import { Server } from "socket.io";
+import { setIO } from "./utils/socket.js";
 
 import auth from "./controllers/auth.js";
 import {
@@ -32,7 +34,14 @@ import {
   VerifyS,
   VerifyW,
 } from "./controllers/loginController.js";
-import { sendLoginOtp, verifyOtp, resendOtp, sendTemporaryPassword } from "./utils/otp.js";
+
+import {
+  sendLoginOtp,
+  verifyOtp,
+  resendOtp,
+  sendTemporaryPassword,
+} from "./utils/otp.js";
+
 import bcrypt from "bcryptjs";
 
 import AdminRouter from "./routes/adminRouter.js";
@@ -42,21 +51,102 @@ import workerRouter from "./routes/workerRouter.js";
 import managerRouter from "./routes/managerRouter.js";
 import interestRouter from "./routes/InterestRouter.js";
 import Ad from "./models/Ad.js";
-import { interestUploadRouter } from './controllers/interestForm.js';
-// Use utils OTP implementation
-// import { OTP, verify } from "./controllers/OTP.js";
+import { interestUploadRouter } from "./controllers/interestForm.js";
+
 import Resident from "./models/resident.js";
 import Community from "./models/communities.js";
 
 dotenv.config();
 
 // --- DB Connection ---
-mongoose.connect(process.env.MONGO_URI1)
+mongoose
+  .connect(process.env.MONGO_URI1)
   .then(() => console.log(" Database connected"))
-  .catch(err => console.error(" Database connection failed:", err));
+  .catch((err) => console.error(" Database connection failed:", err));
 
 const app = express();
 const PORT = 3000;
+
+// SOCKET SERVER CREATION
+const server = http.createServer(app);
+
+export const io = new Server(server, {
+  cors: {
+    origin: "http://localhost:5173",
+    credentials: true,
+  },
+});
+
+// expose io to other modules (via utils/socket.js)
+setIO(io);
+
+// helper: extract JWT token from socket handshake (auth, cookies, or query)
+function getTokenFromSocketHandshake(socket) {
+  // Priority 1: auth object (sent via socket.io-client config)
+  if (socket.handshake.auth?.token) {
+    return socket.handshake.auth.token;
+  }
+
+  // Priority 2: cookies (httpOnly cookie)
+  const cookieHeader = socket.handshake.headers?.cookie;
+  if (cookieHeader) {
+    const tokenCookie = cookieHeader
+      .split(";")
+      .map((c) => c.trim())
+      .find((c) => c.startsWith("token="));
+
+    if (tokenCookie) {
+      const token = tokenCookie.split("=")[1];
+      if (token && token !== "undefined") return token;
+    }
+  }
+
+  return null;
+}
+
+io.on("connection", (socket) => {
+  console.log("🔥 Socket connected:", socket.id);
+
+  try {
+    const token = getTokenFromSocketHandshake(socket);
+    console.log("🔍 Token extracted:", token ? "✅ Found" : "❌ Not found");
+
+    if (token) {
+      const payload = jwt.verify(token, process.env.JWT_SECRET);
+      console.log("✅ Token verified. Payload:", {
+        id: payload.id,
+        email: payload.email,
+        userType: payload.userType,
+        community: payload.community,
+      });
+
+      // Only community managers join community rooms
+      if (payload.userType === "CommunityManager" && payload.community) {
+        const room = `community_${payload.community}`;
+        socket.join(room);
+        socket.data.communityId = payload.community;
+        socket.data.userId = payload.id;
+        socket.data.userType = payload.userType;
+
+        console.log(`✅ Manager (${payload.id}) joined room: ${room}`);
+      } else if (payload.userType !== "CommunityManager") {
+        console.log(
+          `ℹ️ User type '${payload.userType}' is not CommunityManager, skipping room join`
+        );
+      } else if (!payload.community) {
+        console.log(`⚠️ No community ID found in token, skipping room join`);
+      }
+    } else {
+      console.warn("⚠️ No token provided in socket handshake");
+    }
+  } catch (err) {
+    console.warn("❌ Socket auth failed:", err.message);
+  }
+
+  socket.on("disconnect", () => {
+    console.log("❌ Socket disconnected:", socket.id);
+  });
+});
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -77,15 +167,8 @@ app.use(
   })
 );
 
-
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-
-
-
-
-app.use(express.static(path.join(__dirname, "Public")));
-
 app.use(cookieParser());
 app.use("/uploads", express.static("uploads"));
 app.use(express.static(path.join(__dirname, "Public")));
@@ -100,71 +183,56 @@ app.use((req, res, next) => {
   next();
 });
 
-
-
+// ROUTES
 app.use("/admin", auth, authorizeA, AdminRouter);
 app.use("/resident", auth, authorizeR, residentRouter);
 app.use("/security", auth, authorizeS, securityRouter);
 app.use("/worker", auth, authorizeW, workerRouter);
 app.use("/manager", auth, authorizeC, managerRouter);
 
-
 app.use("/interest", interestRouter);
-app.use('/interest', interestUploadRouter);
-// Public resident self-registration endpoints (no auth)
+app.use("/interest", interestUploadRouter);
+
+// ---------------- PUBLIC RESIDENT REGISTRATION APIS ----------------
 
 app.post("/resident-register/request-otp", async (req, res) => {
   try {
-    // Debug: request metadata
-    console.log("[REQ-OTP] Incoming request", {
-      method: req.method,
-      path: req.originalUrl || req.url,
-      headers: {
-        "content-type": req.headers["content-type"],
-        "user-agent": req.headers["user-agent"],
-      },
-    });
-
     const { email } = req.body || {};
-    console.log("[REQ-OTP] Parsed body:", req.body);
-    if (!email) {
-      console.warn("[REQ-OTP] Missing email in body");
-      return res.status(400).json({ success: false, message: "Email is required" });
-    }
+    if (!email)
+      return res
+        .status(400)
+        .json({ success: false, message: "Email is required" });
 
     const existing = await Resident.findOne({ email });
-    console.log("[REQ-OTP] Existing resident: ", existing ? {
-      id: existing._id,
-      hasPassword: Boolean(existing.password),
-    } : null);
     if (existing && existing.password) {
-      return res.status(409).json({ success: false, message: "Account already exists" });
+      return res
+        .status(409)
+        .json({ success: false, message: "Account already exists" });
     }
 
-    // Debug: environment sanity checks (mail provider, cloudinary, etc. if used)
-    try {
-      console.log("[REQ-OTP] Triggering OTP via utils for:", email);
-      await sendLoginOtp(email);
-      console.log("[REQ-OTP] OTP dispatch completed (utils)");
-    } catch (otpErr) {
-      console.error("[REQ-OTP] OTP function threw:", otpErr);
-      return res.status(500).json({ success: false, message: "Failed to send OTP", error: String(otpErr && otpErr.message || otpErr) });
-    }
+    await sendLoginOtp(email);
     return res.json({ success: true, message: "OTP sent to email" });
   } catch (err) {
-    console.error("[REQ-OTP] Unhandled error:", err);
-    return res.status(500).json({ success: false, message: "Server error", error: String(err && err.message || err) });
+    console.error("[REQ-OTP] Error:", err);
+    return res
+      .status(500)
+      .json({ success: false, message: "Server error", error: err.message });
   }
 });
 
 app.post("/resident-register/verify-otp", async (req, res) => {
   try {
     const { email, otp } = req.body;
-    if (!email || !otp) return res.status(400).json({ success: false, message: "Email and OTP required" });
+    if (!email || !otp)
+      return res
+        .status(400)
+        .json({ success: false, message: "Email and OTP required" });
 
-    console.log("[VERIFY-OTP] Incoming", { email });
     const isValid = await verifyOtp(email, otp);
-    if (!isValid) return res.status(401).json({ success: false, message: "Invalid or expired OTP" });
+    if (!isValid)
+      return res
+        .status(401)
+        .json({ success: false, message: "Invalid or expired OTP" });
 
     return res.json({ success: true, message: "OTP verified" });
   } catch (err) {
@@ -175,19 +243,43 @@ app.post("/resident-register/verify-otp", async (req, res) => {
 
 app.post("/resident-register/complete", async (req, res) => {
   try {
-    const { residentFirstname, residentLastname, uCode, contact, email, communityCode } = req.body;
-    if (!residentFirstname || !residentLastname || !uCode || !email || !communityCode) {
-      return res.status(400).json({ success: false, message: "Missing required fields" });
+    const {
+      residentFirstname,
+      residentLastname,
+      uCode,
+      contact,
+      email,
+      communityCode,
+    } = req.body;
+
+    if (
+      !residentFirstname ||
+      !residentLastname ||
+      !uCode ||
+      !email ||
+      !communityCode
+    ) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Missing required fields" });
     }
 
     const community = await Community.findOne({ communityCode });
-    if (!community) {
-      return res.status(404).json({ success: false, message: "Invalid community code" });
-    }
+    if (!community)
+      return res
+        .status(404)
+        .json({ success: false, message: "Invalid community code" });
 
     let resident = await Resident.findOne({ email });
     if (!resident) {
-      resident = new Resident({ residentFirstname, residentLastname, uCode, contact, email, community: community._id });
+      resident = new Resident({
+        residentFirstname,
+        residentLastname,
+        uCode,
+        contact,
+        email,
+        community: community._id,
+      });
     } else {
       resident.residentFirstname = residentFirstname;
       resident.residentLastname = residentLastname;
@@ -196,62 +288,49 @@ app.post("/resident-register/complete", async (req, res) => {
       resident.community = community._id;
     }
 
-    // Generate a temporary password, hash it, persist, and email
     const tempPassword = Math.random().toString(36).slice(-10);
     const hashed = await bcrypt.hash(tempPassword, 12);
     resident.password = hashed;
+
     await resident.save();
+    await sendTemporaryPassword(email, tempPassword);
 
-    try {
-      await sendTemporaryPassword(email, tempPassword);
-      console.log("[REGISTER-COMPLETE] Temporary password sent to", email);
-    } catch (mailErr) {
-      console.error("[REGISTER-COMPLETE] Failed to send temporary password:", mailErr);
-    }
-
-    return res.json({ success: true, message: "Resident registered. Temporary password emailed.", residentId: resident._id });
+    return res.json({
+      success: true,
+      message: "Resident registered. Temporary password emailed.",
+      residentId: resident._id,
+    });
   } catch (err) {
     console.error("Complete registration error:", err);
     return res.status(500).json({ success: false, message: "Server error" });
   }
 });
 
-
+// ---------------- ADMIN LOGIN ----------------
 
 app.post("/AdminLogin", async (req, res) => {
-  console.log("AdminLogin route hit with body:", req.body);
   try {
     const { email, password } = req.body;
-    console.log("Extracted email:", email, "password:", password ? "[PROVIDED]" : "[MISSING]");
 
     const result = await AuthenticateA(email, password, res);
-    console.log("AuthenticateA result:", result ? "SUCCESS" : "FAILED");
-
     if (!result) {
-      console.log("Authentication failed - returning 401");
       return res.status(401).json({
         success: false,
         message: "Invalid email or password",
       });
     }
 
-
-    // Set cookie so Admin pages can use auth middleware
     res.cookie("token", result.token, {
       httpOnly: true,
       maxAge: 7 * 24 * 60 * 60 * 1000,
       sameSite: "lax",
     });
 
-    // 🔥 VERY IMPORTANT:
-    // AdminLogin.jsx expects JSON, NOT HTML redirect
-
     return res.json({
       success: true,
       user: result.user,
       token: result.token,
-      redirect: "/admin/dashboard"
-
+      redirect: "/admin/dashboard",
     });
   } catch (error) {
     console.error("Admin login error:", error);
@@ -262,77 +341,72 @@ app.post("/AdminLogin", async (req, res) => {
   }
 });
 
+// ---------------- ADS FETCH ----------------
 
 app.get("/ads", auth, async (req, res) => {
   try {
-    const communityId = req.user && req.user.community;
-    if (!communityId) {
+    const communityId = req.user?.community;
+    if (!communityId)
       return res
         .status(400)
-        .json({ success: false, message: "Community not found on user" });
-    }
+        .json({ success: false, message: "Community not found" });
 
-
-
-    const ads = await Ad.find({ community: communityId,status: "Active" })
+    const ads = await Ad.find({
+      community: communityId,
+      status: "Active",
+    })
       .select("_id title imagePath link status startDate endDate")
       .sort({ createdAt: -1 })
       .lean();
 
     return res.json({ success: true, ads });
   } catch (err) {
-    console.error("Error fetching ads for /ads:", err);
+    console.error("Error fetching ads:", err);
     return res
       .status(500)
       .json({ success: false, message: "Failed to fetch ads" });
   }
 });
 
+// ---------------- USER LOGIN (2FA) ----------------
 
-// Start 2FA login: verify credentials, send OTP, return temp token
 app.post("/login", async (req, res) => {
   try {
     const { email, password, userType } = req.body;
-    if (!email || !password || !userType) {
-      return res.status(400).json({ message: "Missing credentials" });
-    }
 
     let verified;
     if (userType === "Resident") verified = await VerifyR(email, password);
     else if (userType === "Security") verified = await VerifyS(email, password);
     else if (userType === "Worker") verified = await VerifyW(email, password);
-    else if (userType === "communityManager") verified = await VerifyC(email, password);
-    else if (userType === "Admin") {
-      // Admin can keep direct login using existing route /AdminLogin
-      return res.status(400).json({ message: "Use /AdminLogin for admin" });
-    } else return res.status(400).json({ message: "Invalid user type" });
+    else if (userType === "communityManager")
+      verified = await VerifyC(email, password);
+    else if (userType === "Admin")
+      return res.status(400).json({ message: "Use /AdminLogin" });
+    else return res.status(400).json({ message: "Invalid user type" });
 
-    if (!verified) {
+    if (!verified)
       return res.status(401).json({ message: "Invalid email or password" });
-    }
 
     await sendLoginOtp(email);
 
     const tempToken = jwt.sign(
       { ...verified.userPayload, purpose: "2fa" },
       process.env.JWT_SECRET,
-      { expiresIn: "10m" }
+      { expiresIn: "1d" }
     );
 
-    return res.json({ requiresOtp: true, tempToken });
+    return res.json({ requiresOtp: true, user: verified.userPayload, tempToken });
   } catch (err) {
     console.error("/login error", err);
     return res.status(500).json({ message: "Server error" });
   }
 });
 
-// Complete 2FA: verify OTP, then issue JWT cookie and return user
+// ---------------- OTP VERIFY ----------------
+
 app.post("/verify-otp", async (req, res) => {
   try {
     const { otp, tempToken } = req.body;
-    if (!otp || !tempToken) {
-      return res.status(400).json({ message: "Missing OTP or token" });
-    }
 
     let payload;
     try {
@@ -341,22 +415,14 @@ app.post("/verify-otp", async (req, res) => {
       return res.status(401).json({ message: "Invalid or expired session" });
     }
 
-    if (payload.purpose !== "2fa") {
+    if (payload.purpose !== "2fa")
       return res.status(400).json({ message: "Invalid token purpose" });
-    }
 
     const result = verifyOtp(payload.email, otp);
     if (!result.ok) {
-      const reasonMap = {
-        expired: "OTP expired",
-        mismatch: "Invalid OTP",
-        not_found: "No OTP found",
-        too_many_attempts: "Too many attempts",
-      };
-      return res.status(401).json({ message: reasonMap[result.reason] || "OTP error" });
+      return res.status(401).json({ message: "Invalid OTP" });
     }
 
-    // Issue final JWT and cookie
     const finalToken = jwt.sign(
       {
         id: payload.id,
@@ -389,11 +455,11 @@ app.post("/verify-otp", async (req, res) => {
   }
 });
 
-// Resend OTP during 2FA window
+// ---------------- RESEND OTP ----------------
+
 app.post("/resend-otp", async (req, res) => {
   try {
     const { tempToken } = req.body;
-    if (!tempToken) return res.status(400).json({ message: "Missing token" });
 
     let payload;
     try {
@@ -402,9 +468,8 @@ app.post("/resend-otp", async (req, res) => {
       return res.status(401).json({ message: "Invalid or expired session" });
     }
 
-    if (payload.purpose !== "2fa") {
+    if (payload.purpose !== "2fa")
       return res.status(400).json({ message: "Invalid token purpose" });
-    }
 
     await resendOtp(payload.email);
     return res.json({ success: true });
@@ -414,32 +479,29 @@ app.post("/resend-otp", async (req, res) => {
   }
 });
 
+// ---------------- AUTH CHECK ----------------
 
 app.get("/api/auth/getUser", auth, async (req, res) => {
   const cookie = req.cookies.token;
 
-  console.log("token at getUser : ", cookie);
-
-  console.log("checking for user");
-
   try {
-    const data = await jwt.verify(cookie, process.env.JWT_SECRET);
-    console.log(data);
-
+    const data = jwt.verify(cookie, process.env.JWT_SECRET);
     return res.json({ user: data });
   } catch (err) {
-    console.log(err);
     return res.status(401).json({ message: "Unauthorized" });
   }
 });
 
+// ---------------- AD STATUS AUTO UPDATE ----------------
 
 async function changeAdStatuses() {
   try {
     const ads = await Ad.find({});
     const now = new Date();
+
     for (let ad of ads) {
       let newStatus = ad.status;
+
       if (ad.startDate <= now && now <= ad.endDate) {
         newStatus = "Active";
       } else if (now < ad.startDate) {
@@ -447,9 +509,16 @@ async function changeAdStatuses() {
       } else if (now > ad.endDate) {
         newStatus = "Expired";
       }
+
       if (ad.status !== newStatus) {
         ad.status = newStatus;
         await ad.save();
+
+        // 🔥 REAL-TIME UPDATE
+        io.emit("ads:update", {
+          id: ad._id,
+          status: newStatus,
+        });
       }
     }
   } catch (err) {
@@ -457,9 +526,10 @@ async function changeAdStatuses() {
   }
 }
 
-setInterval(changeAdStatuses, 60*60 * 1000); // Run every hour
+setInterval(changeAdStatuses, 60 * 60 * 1000); // Every hour
 
-app.listen(PORT, async () => {
-  console.log(`Server running at http://localhost:${PORT}`);
+// ---------------- START SERVER WITH SOCKET.IO ----------------
 
+server.listen(PORT, () => {
+  console.log(`🚀 Server running at http://localhost:${PORT}`);
 });

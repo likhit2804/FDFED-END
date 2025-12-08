@@ -54,6 +54,10 @@ const workerSchema = new mongoose.Schema({
   assignedIssues: [
     { type: mongoose.Schema.Types.ObjectId, ref: "Issue" }
   ],
+  notifications: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Notifications",
+  }]
   
 }, { timestamps: true });
 

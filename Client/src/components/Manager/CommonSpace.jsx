@@ -7,6 +7,8 @@ import { optimisticDeleteSpace, AddSpace, DeleteSpace, EditSpace, fetchDataforMa
 import { ToastContainer, toast } from 'react-toastify';
 import { BarChart3, Building2, Calendar, CheckCircle } from 'lucide-react';
 
+import { io } from 'socket.io-client';
+
 export const CommonSpace = () => {
   const dispatch = useDispatch();
   const { avalaibleSpaces, Bookings } = useSelector((state) => state.CommonSpace);
@@ -35,6 +37,7 @@ export const CommonSpace = () => {
       setOccupancyRate(0);
     }
   }, [Bookings]);
+
 
   const { register, handleSubmit, reset, setValue, watch } = useForm({
     defaultValues: { spaceType: '', spaceName: '', bookable: 'true', bookingRent: '', bookingRules: '', Type: '' },

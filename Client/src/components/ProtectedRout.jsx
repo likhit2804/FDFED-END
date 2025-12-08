@@ -15,7 +15,7 @@ export const ProtectedRoute = ({ allowedUserType }) => {
     }
   }, [token, user, allowedUserType, location]);
 
-  if (!token || !user) {
+  if (!token) {
     return <Navigate to="/SignIn" replace />;
   }
 

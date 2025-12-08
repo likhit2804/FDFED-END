@@ -15,10 +15,16 @@ const communityManagerSchema = new mongoose.Schema(
     image: String,
     password: { type: String, required: true },
     contact: { type: String, required: true },
-    assignedCommunity: { 
-      type: mongoose.Schema.Types.ObjectId, 
-      ref: "Community" 
-    }
+    assignedCommunity: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Community",
+    },
+    notifications: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Notifications",
+      }
+    ],
   },
   { timestamps: true }
 );
@@ -31,7 +37,7 @@ communityManagerSchema.pre("findOneAndDelete", async function (next) {
 
     // Find all communities created by this manager
     const communities = await Community.find({ managerId: manager._id });
-    const communityIds = communities.map(c => c._id);
+    const communityIds = communities.map((c) => c._id);
 
     if (communityIds.length > 0) {
       await CommonSpaces.deleteMany({ community: { $in: communityIds } });
@@ -52,6 +58,9 @@ communityManagerSchema.pre("findOneAndDelete", async function (next) {
   }
 });
 
-const CommunityManager = mongoose.model("CommunityManager", communityManagerSchema);
+const CommunityManager = mongoose.model(
+  "CommunityManager",
+  communityManagerSchema
+);
 
 export default CommunityManager;

@@ -220,21 +220,10 @@ const CommonSpaceSlice = createSlice({
   name: "CommonSpace",
   initialState,
   reducers: {
-
     optimisticAddBooking: (state, action) => {
-      const { bookingData, requestId } = action.payload;
+      const b = action.payload;
       state.loading = true;
-
-      const facility = state.avalaibleSpaces.find(s => s.name === bookingData.facility);
-      const optimisticBooking = {
-        ...bookingData,
-        _id: requestId,
-        status: 'Submitting...',
-        name: facility?.name || 'Unknown Facility',
-        Date: bookingData.date,
-        isOptimistic: true,
-      };
-      state.Bookings.push(optimisticBooking);
+      state.Bookings.push(b);
     },
 
     optimisticCancelBooking: (state, action) => {

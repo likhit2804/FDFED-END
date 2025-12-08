@@ -41,6 +41,12 @@ const SecuritySchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
+    notifications: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Notifications",
+      }
+    ],
     // Linked to Community
   },
   { timestamps: true }

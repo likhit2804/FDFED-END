@@ -1410,7 +1410,7 @@ managerRouter.get("/api/dashboard", async (req, res) => {
       visitors,
       advertisements,
     ] = await Promise.all([
-      Resident.find({ community: communityId }).lean(),
+      Resident.find({ community: communityId }).populate("notifications").lean(),
       Worker.find({ community: communityId }).lean(),
       Issue.find({ community: communityId })
         .populate("resident", "residentFirstname residentLastname email")
@@ -1425,6 +1425,9 @@ managerRouter.get("/api/dashboard", async (req, res) => {
         .lean(),
     ]);
 
+    const notifications = await CommunityManager.findById(req.user.id).populate("notifications").lean();
+    console.log(notifications);
+    
     // Calculate statistics
     const totalResidents = residents.length;
     const totalWorkers = workers.length;
@@ -1524,6 +1527,7 @@ managerRouter.get("/api/dashboard", async (req, res) => {
     res.status(200).json({
       success: true,
       data: {
+        notifications: notifications?.notifications || [],
         summary: {
           totalResidents,
           totalWorkers,

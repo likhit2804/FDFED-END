@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, memo } from "react";
+import { toast } from "react-toastify";
 import {
     Building2,
     LogOut,
@@ -31,10 +32,10 @@ import {
 } from "recharts";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "../../assets/css/Manager/Dashboard.css";
+import { useSocket } from "../../hooks/useSocket";
 
-const API_BASE_URL = process.env.NODE_ENV === "production" ? `${window.location.origin}/manager/api` : "http://localhost:3000/manager/api";
 
-function SummaryCards({ data, loading }) {
+const SummaryCards = memo(function SummaryCards({ data, loading }) {
     const summaryData = [
         {
             title: "Total Residents",
@@ -109,9 +110,9 @@ function SummaryCards({ data, loading }) {
             </div>
         </div>
     );
-}
+});
 
-function PaymentsRevenue({ data, loading }) {
+const PaymentsRevenue = memo(function PaymentsRevenue({ data, loading }) {
     // Build payment data from backend with proper structure
     const stats = data?.payments || {};
     const paymentData = [
@@ -170,16 +171,15 @@ function PaymentsRevenue({ data, loading }) {
             </div>
         </div>
     );
-}
+});
+const defaultIssueData = [
+    { week: "Week 1", resolved: 12, pending: 5, new: 8 },
+    { week: "Week 2", resolved: 15, pending: 8, new: 10 },
+    { week: "Week 3", resolved: 18, pending: 6, new: 7 },
+    { week: "Week 4", resolved: 20, pending: 4, new: 5 },
+];
 
-function ReportsAnalytics({ data, loading }) {
-    const defaultIssueData = [
-        { week: "Week 1", resolved: 12, pending: 5, new: 8 },
-        { week: "Week 2", resolved: 15, pending: 8, new: 10 },
-        { week: "Week 3", resolved: 18, pending: 6, new: 7 },
-        { week: "Week 4", resolved: 20, pending: 4, new: 5 },
-    ];
-
+const ReportsAnalytics = memo(function ReportsAnalytics({ data, loading }) {
     return (
         <div className="container-fluid mt-2 p-0">
             <div className="card shadow-sm">
@@ -211,22 +211,35 @@ function ReportsAnalytics({ data, loading }) {
             </div>
         </div>
     );
-}
+});
 
-function NotificationsPanel({ data, loading }) {
-    const defaultNotifications = [
-        { icon: UserCheck, title: "No Notifications", message: "All systems running smoothly", time: "Now", color: "text-success" },
-    ];
+function NotificationsPanel({ data, loading, bookings=[] }) {
 
-    const notifications = loading
-        ? defaultNotifications
-        : (data?.issues?.recent?.slice(0, 4).map((issue) => ({
-            icon: AlertCircle,
-            title: issue.status === "Pending" ? "New Issue" : "Issue Assigned",
-            message: issue.title,
-            time: new Date(issue.createdAt).toLocaleTimeString(),
-            color: "text-warning",
-        })) || defaultNotifications);
+    const notifications = data?.notifications || [];
+
+    console.log("notifications : ",notifications);
+
+    const getIcon = (referenceType) => {
+        switch (referenceType) {
+            case "CommonSpaces":
+                return Calendar;
+            case "Issues":
+                return ExclamationTriangle ;
+            default:
+                return Bell;
+        }
+    };
+
+    const getColor = (referenceType) => {
+        switch (referenceType) {
+            case "CommonSpaces":
+                return "text-primary";
+            case "Issues":
+                return "text-warning";
+            default:
+                return "text-info";
+        }
+    };
 
     return (
         <aside className="container-fluid p-0 ">
@@ -236,16 +249,17 @@ function NotificationsPanel({ data, loading }) {
                 </div>
                 <div className="card-body notification-scroll">
                     {notifications.map((n, i) => {
-                        const Icon = n.icon;
+                        const Icon = getIcon(n.referenceType);
+                        const color = getColor(n.referenceType);
                         return (
                             <div key={i} className="d-flex align-items-start mb-3">
                                 <div className="me-3">
-                                    <Icon className={`${n.color}`} size={20} />
+                                    <Icon className={color} size={20} />
                                 </div>
                                 <div>
                                     <p className="mb-0 fw-semibold">{n.title}</p>
                                     <small className="text-muted d-block">{n.message}</small>
-                                    <small className="text-secondary">{n.time}</small>
+                                    <small className="text-secondary">{n.createdAt}</small>
                                 </div>
                             </div>
                         );
@@ -256,18 +270,39 @@ function NotificationsPanel({ data, loading }) {
     );
 }
 
+const MemoizedNotificationsPanel = memo(NotificationsPanel);
+
 export function ManagerDashboard() {
     const [dashboardData, setDashboardData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [bookingNotifications, setBookingNotifications] = useState([]);
 
+    // Initialize socket connection
+    const socket = useSocket("http://localhost:3000");
+
+    useEffect(() => {
+        if (socket) {
+            console.log("got socket in dashboard");
+
+            socket.on("booking:new", (data) => {
+                console.log("📦 New booking received:", data);
+                setBookingNotifications((prev) => [data, ...prev.slice(0, 9)]);
+                toast.success(`✅ ${data.message}`);
+            });
+
+            return () => {
+                socket.off("booking:new");
+            };
+        }
+    }, [socket]);
     useEffect(() => {
         const fetchDashboardData = async () => {
             try {
                 setLoading(true);
                 setError(null);
 
-                const response = await fetch(`${API_BASE_URL}/dashboard`, {
+                const response = await fetch("http://localhost:3000/manager/api/dashboard", {
                     method: "GET",
                     credentials: "include",
                     headers: {
@@ -292,10 +327,11 @@ export function ManagerDashboard() {
                 }
 
                 const result = await response.json();
-                console.log(result);
+                console.log("dashboard data : ",result);
 
                 if (result.success) {
                     setDashboardData(result.data);
+                    setBookingNotifications(result.data.notifications);
                 } else {
                     throw new Error(result.message || "Failed to fetch dashboard data");
                 }
@@ -309,12 +345,6 @@ export function ManagerDashboard() {
 
         // Fetch data immediately
         fetchDashboardData();
-
-        // Set up auto-refresh every 30 seconds
-        const interval = setInterval(fetchDashboardData, 30000);
-
-        // Cleanup interval on unmount
-        return () => clearInterval(interval);
     }, []);
 
     if (error) {
@@ -332,22 +362,32 @@ export function ManagerDashboard() {
         );
     }
 
+    console.log(bookingNotifications);
+
+
     return (
         <>
             <main className="pb-5">
                 <div className="container-fluid mb-3">
                     <div className="row">
-                        <div className="col-12">
+                        <div className="col-8">
                             <SummaryCards data={dashboardData} loading={loading} />
+                        </div>
+                        <div className="col-4" >
+                            <MemoizedNotificationsPanel data={dashboardData} loading={loading} bookings={bookingNotifications} />
                         </div>
 
                     </div>
+
                 </div>
                 <div className="d-flex gap-2 container-fluid">
-                    <PaymentsRevenue data={dashboardData} loading={loading} />
-                    <ReportsAnalytics data={dashboardData} loading={loading} />
+                    <div style={{ flex: 2 }}>
+                        <PaymentsRevenue data={dashboardData} loading={loading} />
+                        <ReportsAnalytics data={dashboardData} loading={loading} />
+                    </div>
+
                 </div>
-                                
+
             </main>
         </>
     );

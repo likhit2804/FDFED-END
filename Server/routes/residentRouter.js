@@ -14,6 +14,7 @@ import Visitor from "../models/visitors.js";
 import Community from "../models/communities.js";
 import auth from "../controllers/auth.js";
 import { authorizeR } from "../controllers/authorization.js";
+import { getIO } from "../utils/socket.js";
 import Ad from "../models/Ad.js";
 import PaymentController from "../controllers/payments.js";
 import { OTP } from "../controllers/OTP.js";
@@ -26,7 +27,11 @@ import {
   getQRcode,
   getResidentProfile,
 } from "../controllers/Resident.js";
-import { getTimeAgo, getPaymentRemainders, setPenalties } from "../utils/residentHelpers.js";
+import {
+  getTimeAgo,
+  getPaymentRemainders,
+  setPenalties,
+} from "../utils/residentHelpers.js";
 
 import multer from "multer";
 import cron from "node-cron";
@@ -38,11 +43,16 @@ residentRouter.use(checkSubscriptionStatus);
 residentRouter.post("/register/request-otp", async (req, res) => {
   try {
     const { email } = req.body;
-    if (!email) return res.status(400).json({ success: false, message: "Email is required" });
+    if (!email)
+      return res
+        .status(400)
+        .json({ success: false, message: "Email is required" });
 
     const existing = await Resident.findOne({ email });
     if (existing && existing.password) {
-      return res.status(409).json({ success: false, message: "Account already exists" });
+      return res
+        .status(409)
+        .json({ success: false, message: "Account already exists" });
     }
 
     await OTP(email);
@@ -56,10 +66,14 @@ residentRouter.post("/register/request-otp", async (req, res) => {
 residentRouter.post("/register/verify-otp", async (req, res) => {
   try {
     const { email, otp } = req.body;
-    if (!email || !otp) return res.status(400).json({ success: false, message: "Email and OTP required" });
+    if (!email || !otp)
+      return res
+        .status(400)
+        .json({ success: false, message: "Email and OTP required" });
 
     const isValid = verify(email, otp);
-    if (!isValid) return res.status(401).json({ success: false, message: "Invalid OTP" });
+    if (!isValid)
+      return res.status(401).json({ success: false, message: "Invalid OTP" });
 
     return res.json({ success: true, message: "OTP verified" });
   } catch (err) {
@@ -70,19 +84,43 @@ residentRouter.post("/register/verify-otp", async (req, res) => {
 
 residentRouter.post("/register/complete", async (req, res) => {
   try {
-    const { residentFirstname, residentLastname, uCode, contact, email, communityCode } = req.body;
-    if (!residentFirstname || !residentLastname || !uCode || !email || !communityCode) {
-      return res.status(400).json({ success: false, message: "Missing required fields" });
+    const {
+      residentFirstname,
+      residentLastname,
+      uCode,
+      contact,
+      email,
+      communityCode,
+    } = req.body;
+    if (
+      !residentFirstname ||
+      !residentLastname ||
+      !uCode ||
+      !email ||
+      !communityCode
+    ) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Missing required fields" });
     }
 
     const community = await Community.findOne({ communityCode });
     if (!community) {
-      return res.status(404).json({ success: false, message: "Invalid community code" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Invalid community code" });
     }
 
     let resident = await Resident.findOne({ email });
     if (!resident) {
-      resident = new Resident({ residentFirstname, residentLastname, uCode, contact, email, community: community._id });
+      resident = new Resident({
+        residentFirstname,
+        residentLastname,
+        uCode,
+        contact,
+        email,
+        community: community._id,
+      });
     } else {
       resident.residentFirstname = residentFirstname;
       resident.residentLastname = residentLastname;
@@ -92,7 +130,11 @@ residentRouter.post("/register/complete", async (req, res) => {
     }
 
     await resident.save();
-    return res.json({ success: true, message: "Resident registered", residentId: resident._id });
+    return res.json({
+      success: true,
+      message: "Resident registered",
+      residentId: resident._id,
+    });
   } catch (err) {
     console.error("Complete registration error:", err);
     return res.status(500).json({ success: false, message: "Server error" });
@@ -101,12 +143,12 @@ residentRouter.post("/register/complete", async (req, res) => {
 
 function generateCustomID(userEmail, facility, countOrRandom = null) {
   console.log("userEmail:", userEmail);
-  
+
   // Clean the userEmail (remove spaces)
   const code = userEmail.toUpperCase().trim();
-  
+
   const facilityCode = facility.toUpperCase().slice(0, 2);
-  
+
   const suffix = countOrRandom
     ? String(countOrRandom).padStart(4, "0")
     : String(Math.floor(1000 + Math.random() * 9000));
@@ -124,7 +166,6 @@ const storage = multer.diskStorage({
   },
 });
 const upload = multer({ storage: storage });
-
 
 residentRouter.get("/payment/community", async (req, res) => {
   try {
@@ -157,23 +198,21 @@ residentRouter.get("/ad", async (req, res) => {
     const ads = await Ad.find({
       community: req.user?.community,
       startDate: { $lte: new Date() },
-      endDate: { $gte: new Date() }
+      endDate: { $gte: new Date() },
     });
 
     return res.json({
       success: true,
-      ads
+      ads,
     });
   } catch (err) {
     console.error("Ads fetch error:", err);
     return res.status(500).json({
       success: false,
-      message: "Failed to fetch ads"
+      message: "Failed to fetch ads",
     });
   }
 });
-
-
 
 residentRouter.get("/commonSpace", async (req, res) => {
   try {
@@ -260,7 +299,7 @@ residentRouter.post("/commonSpace", async (req, res) => {
     }
 
     const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
-    if ((!timeRegex.test(from) || !timeRegex.test(to)) && Type === 'Slot' ) {
+    if ((!timeRegex.test(from) || !timeRegex.test(to)) && Type === "Slot") {
       console.log("invalid time format");
 
       return res.json({ success: false, message: "Invalid time format." });
@@ -356,6 +395,49 @@ residentRouter.post("/commonSpace", async (req, res) => {
 
     await b.populate("payment");
 
+    // Emit booking notification to community managers of this community
+    try {
+      const io = getIO();
+
+      const user = await CommunityManager.find({ assignedCommunity: req.user.community }).populate("notifications");
+
+      console.log("community manager : ", user);
+      
+      let isN=[];
+
+      if (user[0].notifications.length > 0) {
+        isN = user?.notifications?.filter(
+          (n) => n.title !== "New Common Space Bookings"
+        );
+      }
+
+      const payload = new Notifications({
+        type: "CommonSpaceBooking",
+        title: "New Common Space Bookings",
+        message: "There are new common space bookings",
+        referenceId: b._id,
+        referenceType: "CommonSpaces",
+      });
+
+      await payload.save();
+
+      user[0].notifications = [...isN, payload];
+
+      await user[0].save();
+
+
+      if (io) {
+        const communityId = req.user.community;
+        const room = `community_${communityId}`;
+        io.to(room).emit("booking:new", payload);
+        console.log(`✅ Booking emission sent successfully`);
+      } else {
+        console.error("❌ Socket.IO instance not available");
+      }
+    } catch (emitErr) {
+      console.error("❌ Failed to emit booking:new:", emitErr);
+    }
+
     return res.json({
       success: true,
       message: "Booking request submitted successfully!",
@@ -381,39 +463,47 @@ residentRouter.put("/booking/cancel/:id", async (req, res) => {
     });
 
     if (!booking) {
-      return res.status(404).json({ error: "Booking not found or unauthorized cancellation." });
+      return res
+        .status(404)
+        .json({ error: "Booking not found or unauthorized cancellation." });
     }
 
     const bookingDate = new Date(booking.Date);
     const now = new Date();
 
     if (bookingDate < now) {
-      return res.status(400).json({ error: "Cannot cancel past or ongoing bookings." });
+      return res
+        .status(400)
+        .json({ error: "Cannot cancel past or ongoing bookings." });
     }
 
     const diffHours = Math.abs((bookingDate - now) / (1000 * 60 * 60));
     const amount = Number(booking?.amount || 0);
-    console.log("booking : ",booking);
-    
+    console.log("booking : ", booking);
 
     if (isNaN(amount)) {
       return res.status(400).json({ error: "Invalid booking amount." });
     }
 
     console.log(diffHours);
-    
-
 
     let refundAmount = booking?.amount;
-    if (diffHours >= 48){ 
-     refundAmount = amount;console.log("greater than 48",refundAmount);}
-    else if (diffHours >= 24) {refundAmount = amount * 0.75;console.log("greater than 24",refundAmount);}
-    else if (diffHours >= 4) {refundAmount = amount * 0.25;console.log("greater than 4",refundAmount);}
-    else {console.log("greater than 0");refundAmount = 0;}
+    if (diffHours >= 48) {
+      refundAmount = amount;
+      console.log("greater than 48", refundAmount);
+    } else if (diffHours >= 24) {
+      refundAmount = amount * 0.75;
+      console.log("greater than 24", refundAmount);
+    } else if (diffHours >= 4) {
+      refundAmount = amount * 0.25;
+      console.log("greater than 4", refundAmount);
+    } else {
+      console.log("greater than 0");
+      refundAmount = 0;
+    }
 
     const refundId = generateCustomID(String(booking._id), "RF", null);
-    console.log("After block : ",refundAmount);
-    
+    console.log("After block : ", refundAmount);
 
     await CommonSpaces.findByIdAndUpdate(bookingId, {
       refundId,
@@ -442,7 +532,9 @@ residentRouter.put("/booking/cancel/:id", async (req, res) => {
 
 residentRouter.get("/api/facilities", async (req, res) => {
   try {
-    const community = await Community.findById(req.user.community).select("commonSpaces"); // Fixed: use req.user.community
+    const community = await Community.findById(req.user.community).select(
+      "commonSpaces"
+    ); // Fixed: use req.user.community
     const facilities = community.commonSpaces || [];
 
     console.log("Raw facilities from database:", facilities);
@@ -486,7 +578,7 @@ residentRouter.get("/api/dashboard", async (req, res) => {
     const ads = await Ad.find({
       community: req.user.community,
       startDate: { $lte: new Date() },
-      endDate: { $gte: new Date() }
+      endDate: { $gte: new Date() },
     });
 
     const issues = await Issue.find({ resident: req.user.id });
@@ -498,25 +590,25 @@ residentRouter.get("/api/dashboard", async (req, res) => {
 
     // Build recents list
     recents.push(
-      ...issues.map(issue => ({
+      ...issues.map((issue) => ({
         type: "Issue",
         title: issue.issueID,
-        date: issue.createdAt
+        date: issue.createdAt,
       })),
-      ...preApp.map(i => ({
+      ...preApp.map((i) => ({
         type: "PreApproval",
         title: i._id,
-        date: i.createdAt
+        date: i.createdAt,
       })),
-      ...commonSpaces.map(space => ({
+      ...commonSpaces.map((space) => ({
         type: "CommonSpace",
         title: space.name,
-        date: space.createdAt
+        date: space.createdAt,
       })),
-      ...payments.map(payment => ({
+      ...payments.map((payment) => ({
         type: "Payment",
         title: payment.title,
-        date: payment.paymentDate
+        date: payment.paymentDate,
       }))
     );
 
@@ -526,7 +618,7 @@ residentRouter.get("/api/dashboard", async (req, res) => {
     // Handle pending/overdue payments
     const pendingPayments = await Payment.find({
       sender: req.user.id,
-      status: { $in: ["Pending", "Overdue"] }
+      status: { $in: ["Pending", "Overdue"] },
     });
 
     for (const p of pendingPayments) {
@@ -537,14 +629,14 @@ residentRouter.get("/api/dashboard", async (req, res) => {
     }
 
     // Penalties
-    const overdues = pendingPayments.filter(p => p.status === "Overdue");
+    const overdues = pendingPayments.filter((p) => p.status === "Overdue");
     setPenalties(overdues);
 
     // Apply payment reminders
     getPaymentRemainders(pendingPayments, resident.notifications);
 
     // Add timeAgo to notifications
-    resident.notifications.forEach(n => {
+    resident.notifications.forEach((n) => {
       n.timeAgo = getTimeAgo(n.createdAt);
     });
 
@@ -557,7 +649,7 @@ residentRouter.get("/api/dashboard", async (req, res) => {
     const now = new Date();
     const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
-    const trimmedNotifications = resident.notifications.filter(n => {
+    const trimmedNotifications = resident.notifications.filter((n) => {
       return new Date(n.createdAt) >= oneDayAgo;
     });
 
@@ -570,14 +662,13 @@ residentRouter.get("/api/dashboard", async (req, res) => {
       ads,
       recents,
       notifications: trimmedNotifications,
-      pendingPayments
+      pendingPayments,
     });
-
   } catch (err) {
     console.error("Dashboard JSON API Error:", err);
     return res.status(500).json({
       success: false,
-      message: "Server error"
+      message: "Server error",
     });
   }
 });
@@ -586,7 +677,18 @@ residentRouter.get("/", (req, res) => {
   res.redirect("dashboard");
 });
 
-import { confirmIssue, rejectIssueResolution, raiseIssue, deleteIssue, getResidentIssues, getIssueDataById, submitFeedback} from "../controllers/issueController.js";
+import {
+  confirmIssue,
+  rejectIssueResolution,
+  raiseIssue,
+  deleteIssue,
+  getResidentIssues,
+  getIssueDataById,
+  submitFeedback,
+} from "../controllers/issueController.js";
+import Notifications from "../models/Notifications.js";
+import e from "express";
+import CommunityManager from "../models/cManager.js";
 
 residentRouter.post("/issue/confirmIssue/:id", confirmIssue);
 residentRouter.post("/issue/rejectIssueResolution/:id", rejectIssueResolution);
@@ -608,21 +710,20 @@ residentRouter.get("/payment/receipt/:id", async (req, res) => {
       .populate("sender");
 
     if (!payment) {
-      return res.status(404).json({ success: false, message: "Payment not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Payment not found" });
     }
 
     return res.json({ success: true, payment });
-
   } catch (err) {
     console.error("Payment receipt fetch error:", err);
     return res.status(500).json({
       success: false,
-      message: "Failed to fetch payment receipt"
+      message: "Failed to fetch payment receipt",
     });
   }
 });
-
-
 
 residentRouter.get("/payment/:paymentId", async (req, res) => {
   try {
@@ -773,8 +874,6 @@ residentRouter.get("/preapproval/qr/:id", auth, authorizeR, getQRcode);
 // });
 residentRouter.get("/profile", auth, authorizeR, getResidentProfile);
 
-
-
 residentRouter.post("/profile", upload.single("image"), async (req, res) => {
   const { firstName, lastName, contact, email, address } = req.body;
 
@@ -867,7 +966,6 @@ residentRouter.put("/update-profile", async (req, res) => {
         uCode: resident.uCode,
       },
     });
-
   } catch (error) {
     console.error("Profile update error:", error);
     return res.status(500).json({
@@ -876,7 +974,6 @@ residentRouter.put("/update-profile", async (req, res) => {
     });
   }
 });
-
 
 residentRouter.get("/clearNotification", async (req, res) => {
   const resi = await Resident.updateOne(

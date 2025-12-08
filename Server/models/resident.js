@@ -35,11 +35,9 @@ const residentSchema = new mongoose.Schema(
     },
     notifications: [
       {
-        n: { type: String },
-        createdAt: { type: Date },
-        timeAgo: String,
-        belongs: String,
-      },
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Notifications",
+      }
     ],
   },
   { timestamps: true }
