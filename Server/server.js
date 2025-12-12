@@ -1,3 +1,6 @@
+
+import dotenv from "dotenv";
+dotenv.config();
 import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -5,7 +8,6 @@ import session from "express-session";
 import mongoose from "mongoose";
 import cors from "cors";
 import jwt from "jsonwebtoken";
-import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import multer from "multer";
 
@@ -65,14 +67,14 @@ mongoose
   .catch((err) => console.error(" Database connection failed:", err));
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 // SOCKET SERVER CREATION
 const server = http.createServer(app);
 
 export const io = new Server(server, {
   cors: {
-    origin: "http://localhost:5173",
+    origin: process.env.CLIENT_ORIGIN || true, // allow all origins in production if not set
     credentials: true,
   },
 });
