@@ -19,7 +19,7 @@ export const Layout = ({ userType, ads }) => {
         // Fetch ads for the logged-in user's community
         const fetchAds = async () => {
             try {
-                const res = await fetch("http://localhost:3000/ads", {
+                const res = await fetch(`${import.meta.env.VITE_API_URL}/ads`, {
                     credentials: "include",
                 });
                 if (!res.ok) return;

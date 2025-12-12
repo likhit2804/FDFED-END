@@ -41,7 +41,7 @@ export default function CommunityManagers() {
   const API_BASE_URL =
     process.env.NODE_ENV === "production"
       ? `${window.location.origin}/admin/api`
-      : "http://localhost:3000/admin/api";
+      : `${import.meta.env.VITE_API_URL}/admin/api`;
 
   // ===== Fetch Community Managers =====
   useEffect(() => {

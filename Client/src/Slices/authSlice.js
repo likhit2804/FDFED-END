@@ -41,7 +41,7 @@ export const registerUser = createAsyncThunk(
   async ({ name, email, password, userType }, { rejectWithValue }) => {
     try {
       const response = await axios.post(
-        "http://localhost:5000/api/auth/register",
+        `${import.meta.env.VITE_API_URL}/api/auth/register`,
         { name, email, password, userType },
         { withCredentials: true }
       );

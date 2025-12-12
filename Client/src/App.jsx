@@ -62,7 +62,7 @@ function App() {
   const dispatch = useDispatch();
 
   useEffect(() => {
-    fetch("http://localhost:3000/api/auth/getUser", {
+    fetch(`${import.meta.env.VITE_API_URL}/api/auth/getUser`, {
       credentials: "include",
     })
       .then(res => res.json())

@@ -302,7 +302,7 @@ export function ManagerDashboard() {
                 setLoading(true);
                 setError(null);
 
-                const response = await fetch("http://localhost:3000/manager/api/dashboard", {
+                const response = await fetch(`${import.meta.env.VITE_API_URL}/manager/api/dashboard`, {
                     method: "GET",
                     credentials: "include",
                     headers: {
