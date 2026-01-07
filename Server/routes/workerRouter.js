@@ -3,6 +3,7 @@ import Issue from "../models/issues.js";
 const workerRouter = express.Router();
 import Ad from "../models/Ad.js";
 import Worker from "../models/workers.js";
+import checkSubscriptionStatus from "../middleware/subcriptionStatus.js";
 
 import multer from "multer";
 import bcrypt from "bcrypt";
@@ -19,6 +20,9 @@ const storage = multer.diskStorage({
 });
 
 const upload = multer({ storage: storage });
+
+// Block access for workers when community subscription is inactive/expired
+workerRouter.use(checkSubscriptionStatus);
 
 workerRouter.get("/getDashboardData", async (req, res) => {
 

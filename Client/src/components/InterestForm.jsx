@@ -1,8 +1,9 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import '../assets/css/InterestForm.css';
 
 export const InterestForm = () => {
+    const navigate = useNavigate();
     // Add CSS animation for loading spinner
     const spinnerStyle = `
         @keyframes spin {
@@ -117,6 +118,8 @@ export const InterestForm = () => {
                 });
                 setPhotos([]);
                 document.getElementById('photoInput').value = '';
+                // Redirect to login after a short delay so user sees the success message
+                setTimeout(() => navigate('/SignIn'), 1200);
             } else {
                 // Show specific error message from server
                 const errorMsg = result.message || 'Submission failed';

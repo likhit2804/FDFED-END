@@ -34,6 +34,19 @@ export const ProtectedRoute = ({ allowedUserType }) => {
     }
   }
 
+  // If Resident / Worker / Security without active subscription, show expiry page
+  if (
+    user &&
+    ["Resident", "Worker", "Security"].includes(user.userType) &&
+    user.subscriptionStatus &&
+    user.subscriptionStatus !== "active"
+  ) {
+    const onExpiredPage = location.pathname === "/subscription-expired";
+    if (!onExpiredPage) {
+      return <Navigate to="/subscription-expired" replace />;
+    }
+  }
+
   if (user.userType !== allowedUserType) {
     if (user.userType === "CommunityManager")
       return <Navigate to="/manager/dashboard" replace />;

@@ -42,6 +42,7 @@ import { SecurityDashboard } from "./components/security/Dashboard.jsx"
 import { VisitorManagement } from "./components/security/visitorManagement.jsx";
 import { SecurityPreApproval } from "./components/security/preapproval.jsx";
 import { SecurityProfile } from "./components/security/profile.jsx";
+import SubscriptionExpired from "./components/SubscriptionExpired.jsx";
 
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -90,6 +91,9 @@ function App() {
         <Route path='/SignUp' element={<SignUp />} />
         <Route path='/residentRegister' element={<ResidentRegister />} />
         <Route path='/interestForm' element={<InterestForm />} />
+
+        {/* Shared page when community subscription is inactive/expired */}
+        <Route path="/subscription-expired" element={<SubscriptionExpired />} />
 
         <Route path='/adminLogin' element={<AdminLogin/>} ></Route>
 

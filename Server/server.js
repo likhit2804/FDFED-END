@@ -423,9 +423,9 @@ app.post("/verify-otp", async (req, res) => {
       return res.status(401).json({ message: "Invalid OTP" });
     }
 
-    // Determine subscription status for community managers
+    // Determine subscription status for any user tied to a community
     let subscriptionStatus = "active";
-    if (payload.userType === "CommunityManager" && payload.community) {
+    if (payload.community) {
       try {
         const community = await Community.findById(payload.community).select(
           "subscriptionStatus"
@@ -503,11 +503,13 @@ app.get("/api/auth/getUser", auth, async (req, res) => {
   try {
     const data = jwt.verify(cookie, process.env.JWT_SECRET);
     
-    // Fetch subscription status for Community Manager
-    let subscriptionStatus = 'active';
-    if (data.userType === 'CommunityManager' && data.community) {
-      const community = await Community.findById(data.community);
-      if (community) {
+    // Fetch subscription status for any user associated with a community
+    let subscriptionStatus = "active";
+    if (data.community) {
+      const community = await Community.findById(data.community).select(
+        "subscriptionStatus"
+      );
+      if (community && community.subscriptionStatus) {
         subscriptionStatus = community.subscriptionStatus;
       }
     }

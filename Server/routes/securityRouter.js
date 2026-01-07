@@ -16,6 +16,7 @@ import bcrypt from "bcrypt";
 
 import { getDashboardInfo, UpdatePreApprovalData } from "../controllers/Security.js";
 import Visitor from "../models/visitors.js";
+import checkSubscriptionStatus from "../middleware/subcriptionStatus.js";
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -27,6 +28,9 @@ const storage = multer.diskStorage({
   },
 });
 const upload = multer({ storage: storage });
+
+// Block access for security staff when community subscription is inactive/expired
+securityRouter.use(checkSubscriptionStatus);
 
 function generateCustomID(userEmail, facility, countOrRandom = null) {
   const id = userEmail.toUpperCase().slice(0, 2);

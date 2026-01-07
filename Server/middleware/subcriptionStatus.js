@@ -37,17 +37,23 @@ const checkSubscriptionStatus = async (req, res, next) => {
     const community = await Community.findById(req.user.community);
 
     if (!community) {
-      return res.status(404).render('error', { 
-        message: 'Community not found',
-        error: { status: 404 }
+      return res.status(404).json({
+        success: false,
+        message: "Community not found",
       });
     }
 
-    if (community.subscriptionStatus === 'expired') {
-      console.log(community.subscriptionStatus)
-      return res.render('subscriptionExpired', {
-        user: req.user,
-        community
+    // Treat anything other than an active subscription as blocked
+    const isSubscriptionInactive = community.subscriptionStatus !== "active";
+
+    if (isSubscriptionInactive) {
+      console.log("Community subscription inactive or expired:", community.subscriptionStatus);
+      return res.status(402).json({
+        success: false,
+        code: "SUBSCRIPTION_EXPIRED",
+        message:
+          "Community subscription is inactive or expired. Please contact your Community Manager.",
+        subscriptionStatus: community.subscriptionStatus,
       });
     }
 
@@ -57,9 +63,9 @@ const checkSubscriptionStatus = async (req, res, next) => {
     next();
   } catch (error) {
     console.error('Error checking subscription status:', error);
-    return res.status(500).render('error', { 
+    return res.status(500).json({
+      success: false,
       message: 'Server error while checking subscription',
-      error: { status: 500 }
     });
   }
 };
