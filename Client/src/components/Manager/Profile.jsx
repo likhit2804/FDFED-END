@@ -1,5 +1,6 @@
 import React from "react";
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
     Mail,
     Phone,
@@ -15,6 +16,8 @@ import {
 import "bootstrap/dist/css/bootstrap.min.css";
 
 export const ManagerProfile = () => {
+
+    const navigate = useNavigate();
 
     const [formData, setFormData] = useState({
         name: "",
@@ -40,10 +43,21 @@ export const ManagerProfile = () => {
     const [passwordMessage, setPasswordMessage] = useState("");
     const [passwordValidation, setPasswordValidation] = useState({ minLength: false, caseMix: false, numberSpecial: false });
 
-    // Fetch manager profile data on component mount
+    const [subscriptionInfo, setSubscriptionInfo] = useState(null);
+    // state for in-profile change-plan form
+    const [showPlanForm, setShowPlanForm] = useState(false);
+    const [plans, setPlans] = useState(null);
+    const [selectedPlan, setSelectedPlan] = useState("standard");
+    const [planLoading, setPlanLoading] = useState(false);
+    const [planSubmitting, setPlanSubmitting] = useState(false);
+    const [planError, setPlanError] = useState("");
+
+    // Fetch manager profile and subscription data on component mount
     useEffect(() => {
         setLoading(true);
         setError(null);
+
+        // Manager profile
         fetch("http://localhost:3000/manager/profile/api", {
             method: "GET",
             headers: { "Content-Type": "application/json" },
@@ -72,6 +86,22 @@ export const ManagerProfile = () => {
                 setError("Failed to load profile data");
             })
             .finally(() => setLoading(false));
+
+        // Subscription status
+        fetch("http://localhost:3000/manager/subscription-status", {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include"
+        })
+            .then(r => r.json())
+            .then(sub => {
+                if (sub.success && sub.community) {
+                    setSubscriptionInfo(sub.community);
+                }
+            })
+            .catch(err => {
+                console.error("Subscription status load error", err);
+            });
     }, []);
 
     const handleChange = (e) => {
@@ -175,6 +205,84 @@ export const ManagerProfile = () => {
                 setPasswordMessage("Failed to change password");
             });
     };
+
+    const openPlanForm = () => {
+        setShowPlanForm(true);
+        setPlanError("");
+        if (plans) return;
+
+        setPlanLoading(true);
+        fetch("http://localhost:3000/manager/subscription-plans", {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include"
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success && data.plans) {
+                    setPlans(data.plans);
+                } else {
+                    setPlanError(data.message || "Failed to load plans");
+                }
+            })
+            .catch(err => {
+                console.error("Subscription plans load error", err);
+                setPlanError("Failed to load plans");
+            })
+            .finally(() => setPlanLoading(false));
+    };
+
+    const submitPlanChange = (e) => {
+        e.preventDefault();
+        setPlanError("");
+
+        if (!subscriptionInfo || !subscriptionInfo._id) {
+            setPlanError("Community information not available");
+            return;
+        }
+        if (!plans || !selectedPlan || !plans[selectedPlan]) {
+            setPlanError("Please select a valid plan");
+            return;
+        }
+
+        const plan = plans[selectedPlan];
+        setPlanSubmitting(true);
+        const now = new Date();
+
+        fetch("http://localhost:3000/manager/subscription-payment", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({
+                communityId: subscriptionInfo._id,
+                subscriptionPlan: selectedPlan,
+                amount: plan.price,
+                paymentMethod: "card",
+                planDuration: plan.duration || "monthly",
+                paymentDate: now.toISOString()
+            })
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    alert("Subscription plan updated successfully!");
+                    setSubscriptionInfo(prev => prev ? {
+                        ...prev,
+                        subscriptionPlan: selectedPlan,
+                        subscriptionStatus: data.subscriptionStatus || prev.subscriptionStatus,
+                        planEndDate: data.planEndDate || prev.planEndDate
+                    } : prev);
+                    setShowPlanForm(false);
+                } else {
+                    setPlanError(data.message || "Failed to update plan");
+                }
+            })
+            .catch(err => {
+                console.error("Subscription payment error", err);
+                setPlanError("Failed to update plan");
+            })
+            .finally(() => setPlanSubmitting(false));
+    };
     return (
         <>
             {loading ? (
@@ -238,6 +346,94 @@ export const ManagerProfile = () => {
                                 isPassword ? "Edit Profile" : "Change Password"
                             } </button>
                     </div>
+                    {/* Subscription summary + manage button */}
+                    <div className="card border-1 shadow-sm rounded-4 p-3 mt-3">
+                        <div className="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 className="mb-1 fw-semibold">Subscription</h6>
+                                <p className="mb-1 text-secondary">
+                                    Plan: <strong>{subscriptionInfo?.subscriptionPlan || "Not subscribed"}</strong>
+                                </p>
+                                <p className="mb-0 text-secondary">
+                                    Status: <strong>{subscriptionInfo?.subscriptionStatus || "pending"}</strong>
+                                </p>
+                                {typeof subscriptionInfo?.totalMembers === "number" && (
+                                    <p className="mb-0 text-secondary small">
+                                        Residents: <strong>{subscriptionInfo.totalMembers}</strong>
+                                    </p>
+                                )}
+                            </div>
+                            <button
+                                type="button"
+                                className="btn btn-outline-primary"
+                                onClick={openPlanForm}
+                            >
+                                Update / Next Plan
+                            </button>
+                        </div>
+                    </div>
+                    {showPlanForm && (
+                        <div className="card border-1 shadow-sm rounded-4 p-3 mt-3">
+                            <h6 className="mb-2 fw-semibold">Change Subscription Plan</h6>
+                            <p className="text-secondary mb-3">
+                                Select a new plan for your community. Changes will take effect immediately after payment.
+                            </p>
+                            {planError && (
+                                <div className="alert alert-danger" role="alert">
+                                    {planError}
+                                </div>
+                            )}
+                            {planLoading ? (
+                                <div className="text-secondary">Loading plans...</div>
+                            ) : plans ? (
+                                <form onSubmit={submitPlanChange}>
+                                    <div className="row g-3 mb-3">
+                                        {Object.entries(plans).map(([key, plan]) => (
+                                            <div className="col-md-4" key={key}>
+                                                <label className={`card h-100 p-3 shadow-sm ${selectedPlan === key ? "border-primary" : ""}`} style={{ cursor: "pointer" }}>
+                                                    <div className="form-check mb-2">
+                                                        <input
+                                                            className="form-check-input"
+                                                            type="radio"
+                                                            name="planOption"
+                                                            value={key}
+                                                            checked={selectedPlan === key}
+                                                            onChange={() => setSelectedPlan(key)}
+                                                        />
+                                                        <span className="form-check-label fw-semibold ms-1">{plan.name}</span>
+                                                    </div>
+                                                    <p className="mb-1">₹{plan.price} / {plan.duration}</p>
+                                                    <ul className="small mb-0">
+                                                        {plan.features?.map((f) => (
+                                                            <li key={f}>{f}</li>
+                                                        ))}
+                                                    </ul>
+                                                </label>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="d-flex gap-2">
+                                        <button
+                                            type="submit"
+                                            className="btn btn-primary"
+                                            disabled={planSubmitting}
+                                        >
+                                            {planSubmitting ? "Processing..." : "Confirm Plan Change"}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="btn btn-outline-secondary"
+                                            onClick={() => setShowPlanForm(false)}
+                                        >
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </form>
+                            ) : (
+                                <div className="text-secondary">No plans available.</div>
+                            )}
+                        </div>
+                    )}
                     {
                         isPassword ? (
                             <div id="passwordSection" className="form-section p-3">

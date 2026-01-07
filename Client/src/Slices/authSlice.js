@@ -93,6 +93,13 @@ const authSlice = createSlice({
           state.user = action.payload.user;
           state.token = action.payload.token;
           state.pending2fa = null;
+          // persist full user + token when there is no 2FA
+          try {
+            localStorage.setItem("token", action.payload.token);
+            localStorage.setItem("user", JSON.stringify(action.payload.user));
+          } catch (e) {
+            console.warn("Failed to persist auth to localStorage", e);
+          }
         }
       })
             .addCase(verifyOtp.pending, (state) => {
@@ -104,6 +111,13 @@ const authSlice = createSlice({
               state.user = action.payload.user;
               state.token = action.payload.token;
               state.pending2fa = null;
+              // persist full user + token after successful OTP
+              try {
+                localStorage.setItem("token", action.payload.token);
+                localStorage.setItem("user", JSON.stringify(action.payload.user));
+              } catch (e) {
+                console.warn("Failed to persist auth to localStorage", e);
+              }
             })
             .addCase(verifyOtp.rejected, (state, action) => {
               state.loading = false;

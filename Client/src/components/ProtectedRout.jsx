@@ -19,6 +19,21 @@ export const ProtectedRoute = ({ allowedUserType }) => {
     return <Navigate to="/SignIn" replace />;
   }
 
+  // If Community Manager without active subscription, force to subscription page
+  if (
+    user &&
+    user.userType === "CommunityManager" &&
+    user.subscriptionStatus &&
+    user.subscriptionStatus !== "active"
+  ) {
+    const onSubscriptionPage = location.pathname.startsWith(
+      "/manager/subscription"
+    );
+    if (!onSubscriptionPage) {
+      return <Navigate to="/manager/subscription" replace />;
+    }
+  }
+
   if (user.userType !== allowedUserType) {
     if (user.userType === "CommunityManager")
       return <Navigate to="/manager/dashboard" replace />;

@@ -119,7 +119,12 @@ export const SignIn = () => {
         }
         toast.success("Logged in successfully");
         if (formData.userType === 'communityManager') {
-          navigate('/manager/dashboard')
+          const subStatus = response?.user?.subscriptionStatus;
+          if (subStatus && subStatus !== 'active') {
+            navigate('/manager/subscription');
+          } else {
+            navigate('/manager/dashboard');
+          }
         } else if (formData.userType === 'Resident') {
           navigate('/resident/dashboard')
         } else if (formData.userType === 'Worker') {
@@ -142,14 +147,30 @@ export const SignIn = () => {
       return;
     }
     try {
-      await dispatch(verifyOtp({ otp, tempToken: pending2fa?.tempToken })).unwrap();
+      const result = await dispatch(
+        verifyOtp({ otp, tempToken: pending2fa?.tempToken })
+      ).unwrap();
       toast.success('OTP verified');
-      const role = pending2fa?.userType;
-      if (role === 'communityManager') navigate('/manager/dashboard');
-      else if (role === 'Resident') navigate('/resident/dashboard');
-      else if (role === 'Worker') navigate('/worker/dashboard');
-      else if (role === 'Security') navigate('/security/dashboard');
-      else navigate('/');
+
+      const loggedInUser = result?.user;
+      const role = loggedInUser?.userType || pending2fa?.userType;
+
+      if (role === 'communityManager' || role === 'CommunityManager') {
+        const subStatus = loggedInUser?.subscriptionStatus;
+        if (subStatus && subStatus !== 'active') {
+          navigate('/manager/subscription');
+        } else {
+          navigate('/manager/dashboard');
+        }
+      } else if (role === 'Resident') {
+        navigate('/resident/dashboard');
+      } else if (role === 'Worker') {
+        navigate('/worker/dashboard');
+      } else if (role === 'Security') {
+        navigate('/security/dashboard');
+      } else {
+        navigate('/');
+      }
     } catch (err) {
       toast.error(err || 'Verification failed');
     }
