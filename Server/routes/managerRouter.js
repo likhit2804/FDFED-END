@@ -648,6 +648,21 @@ managerRouter.post("/subscription-payment", async (req, res) => {
       return res.status(404).json({ message: "Community not found" });
     }
 
+    // Enforce resident-based plan capacity: prevent downgrades below current size
+    const capacity = PLAN_CAPACITY[subscriptionPlan];
+    if (capacity !== null && typeof capacity === "number") {
+      if (community.totalMembers && community.totalMembers > capacity) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Selected plan cannot support current number of residents. Please choose a higher plan.",
+          code: "PLAN_CAPACITY_EXCEEDED",
+          currentResidents: community.totalMembers,
+          maxAllowed: capacity,
+        });
+      }
+    }
+
     // Calculate plan end date
     const startDate = new Date(paymentDate);
     const endDate = new Date(startDate);
@@ -770,7 +785,7 @@ managerRouter.get("/subscription-status", async (req, res) => {
     const community = await Community.findById(
       manager.assignedCommunity
     ).select(
-      "name subscriptionPlan subscriptionStatus planStartDate planEndDate"
+      "_id name subscriptionPlan subscriptionStatus planStartDate planEndDate totalMembers"
     );
 
     if (!community) {
@@ -798,11 +813,13 @@ managerRouter.get("/subscription-status", async (req, res) => {
     res.json({
       success: true,
       community: {
+        _id: community._id,
         name: community.name,
         subscriptionPlan: community.subscriptionPlan,
         subscriptionStatus: community.subscriptionStatus,
         planStartDate: community.planStartDate,
         planEndDate: community.planEndDate,
+        totalMembers: community.totalMembers,
         daysUntilExpiry: daysUntilExpiry,
         isExpired: isExpired,
         isExpiringSoon:
@@ -1789,6 +1806,13 @@ managerRouter.get("/api/payments", async (req, res) => {
   }
 });
 
+// Helper: plan capacity (max residents); null = unlimited
+const PLAN_CAPACITY = {
+  basic: 50,
+  standard: 200,
+  premium: null,
+};
+
 // Get available subscription plans
 managerRouter.get("/subscription-plans", async (req, res) => {
   try {
@@ -1802,6 +1826,7 @@ managerRouter.get("/subscription-plans", async (req, res) => {
       basic: {
         name: "Basic Plan",
         price: 999,
+        maxResidents: PLAN_CAPACITY.basic,
         features: [
           "Up to 50 residents",
           "Basic payment tracking",
@@ -1812,6 +1837,7 @@ managerRouter.get("/subscription-plans", async (req, res) => {
       standard: {
         name: "Standard Plan",
         price: 1999,
+        maxResidents: PLAN_CAPACITY.standard,
         features: [
           "Up to 200 residents",
           "Advanced payment tracking",
@@ -1823,6 +1849,7 @@ managerRouter.get("/subscription-plans", async (req, res) => {
       premium: {
         name: "Premium Plan",
         price: 3999,
+        maxResidents: PLAN_CAPACITY.premium,
         features: [
           "Unlimited residents",
           "Full payment suite",

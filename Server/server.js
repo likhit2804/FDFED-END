@@ -423,6 +423,21 @@ app.post("/verify-otp", async (req, res) => {
       return res.status(401).json({ message: "Invalid OTP" });
     }
 
+    // Determine subscription status for community managers
+    let subscriptionStatus = "active";
+    if (payload.userType === "CommunityManager" && payload.community) {
+      try {
+        const community = await Community.findById(payload.community).select(
+          "subscriptionStatus"
+        );
+        if (community && community.subscriptionStatus) {
+          subscriptionStatus = community.subscriptionStatus;
+        }
+      } catch (e) {
+        console.error("Error fetching community subscription status", e);
+      }
+    }
+
     const finalToken = jwt.sign(
       {
         id: payload.id,
@@ -447,6 +462,7 @@ app.post("/verify-otp", async (req, res) => {
         email: payload.email,
         userType: payload.userType,
         community: payload.community ?? null,
+        subscriptionStatus,
       },
     });
   } catch (err) {
@@ -486,7 +502,17 @@ app.get("/api/auth/getUser", auth, async (req, res) => {
 
   try {
     const data = jwt.verify(cookie, process.env.JWT_SECRET);
-    return res.json({ user: data });
+    
+    // Fetch subscription status for Community Manager
+    let subscriptionStatus = 'active';
+    if (data.userType === 'CommunityManager' && data.community) {
+      const community = await Community.findById(data.community);
+      if (community) {
+        subscriptionStatus = community.subscriptionStatus;
+      }
+    }
+
+    return res.json({ user: { ...data, subscriptionStatus } });
   } catch (err) {
     return res.status(401).json({ message: "Unauthorized" });
   }
