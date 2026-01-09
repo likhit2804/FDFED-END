@@ -6,7 +6,7 @@ export const adminLogin = async (email, password) => {
     const response = await fetch(`${API_BASE}/AdminLogin`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      credentials: "include", // include cookies for JWT/session
+      credentials: "include",
       body: JSON.stringify({ email, password }),
     });
 
@@ -17,3 +17,4 @@ export const adminLogin = async (email, password) => {
     return { success: false, message: "Network error" };
   }
 };
+

@@ -14,6 +14,7 @@ import { useSidebar } from "../../context/AdminSidebarContext";
 import logoWhite from "../../imgs/logo_N_white.png";
 import logoWhiteCollapsed from "../../imgs/logo_white.png";
 import { useNavigate } from "react-router-dom";
+import { useAdminAuth } from "../../context/AdminAuthContext";
 
 export default function SidebarAdmin() {
   const {
@@ -25,6 +26,8 @@ export default function SidebarAdmin() {
     setHoveredItem,
   } = useSidebar();
 
+  const { logout } = useAdminAuth();
+
   const navItems = [
     { icon: LayoutGrid, label: "Overview", path: "/admin/dashboard" },
     { icon: Users, label: "All Communities", path: "/admin/communities" },
@@ -35,7 +38,7 @@ export default function SidebarAdmin() {
 
   const bottomItems = [
     { icon: User, label: "My Profile", path: "/admin/profile" },
-    { icon: LogOut, label: "Sign Out", path: "/adminLogin" },
+    { icon: LogOut, label: "Sign Out", path: "__logout__" },
   ];
 
   
@@ -46,9 +49,15 @@ export default function SidebarAdmin() {
 
   const navigate = useNavigate();
 
-  const handleClick = (path) => {
+  const handleClick = async (path) => {
+    if (path === "__logout__") {
+      await logout();
+      // Use replace so back button doesn't return to admin
+      window.location.replace("/adminLogin");
+      return;
+    }
     setActiveTab(path);
-    navigate(path); 
+    navigate(path);
   };
 
   const renderNavItem = (item, index) => {

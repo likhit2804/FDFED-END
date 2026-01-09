@@ -19,23 +19,8 @@ export default function CommunityManagers() {
     { header: "Created Date", accessor: "date" },
   ];
 
-  // ===== Actions =====
-  const actions = [
-    {
-      component: ({ row }) => (
-        <button className="btn btn-sm btn-warning bg-warning-subtle me-2">
-          ✏️
-        </button>
-      ),
-    },
-    {
-      component: ({ row }) => (
-        <button className="btn btn-sm btn-danger bg-danger-subtle">
-          🗑️
-        </button>
-      ),
-    },
-  ];
+  // ===== Actions (none: read-only view) =====
+  const actions = [];
 
   // ===== API BASE URL =====
   const API_BASE_URL =
@@ -67,6 +52,7 @@ export default function CommunityManagers() {
         const json = await res.json();
         if (json.success && json.data?.managers) {
           const formatted = json.data.managers.map((m) => ({
+            id: m._id,
             name: m.name,
             email: m.email,
             contact: m.contact || "N/A",

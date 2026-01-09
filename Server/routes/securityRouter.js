@@ -12,22 +12,15 @@ import visitor from "../models/visitors.js";
 import mongoose from "mongoose";
 
 import multer from "multer";
+import cloudinary from "../configs/cloudinary.js";
 import bcrypt from "bcrypt";
 
 import { getDashboardInfo, UpdatePreApprovalData } from "../controllers/Security.js";
 import Visitor from "../models/visitors.js";
 import checkSubscriptionStatus from "../middleware/subcriptionStatus.js";
 
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, "uploads/");
-  },
-  filename: function (req, file, cb) {
-    const uniqueName = Date.now() + "=profImg.png";
-    cb(null, uniqueName);
-  },
-});
-const upload = multer({ storage: storage });
+// Multer memory storage for security profile images (Cloudinary in handler)
+const upload = multer({ storage: multer.memoryStorage() });
 
 // Block access for security staff when community subscription is inactive/expired
 securityRouter.use(checkSubscriptionStatus);
@@ -397,8 +390,36 @@ securityRouter.post("/profile", upload.single("image"), async (req, res) => {
     if (contact) security.contact = contact;
     if (address) security.address = address;
 
-    if (req.file) {
-      security.image = req.file.path; // only update if new image uploaded
+    if (req.file && req.file.buffer) {
+      try {
+        const result = await new Promise((resolve, reject) => {
+          const uploadStream = cloudinary.uploader.upload_stream(
+            {
+              folder: "profiles/security",
+              resource_type: "image",
+              transformation: [
+                { width: 512, height: 512, crop: "limit" },
+                { quality: "auto:good" },
+              ],
+            },
+            (error, result) => {
+              if (error) return reject(error);
+              resolve(result);
+            }
+          );
+
+          uploadStream.end(req.file.buffer);
+        });
+
+        security.image = result.secure_url;
+        security.imagePublicId = result.public_id;
+      } catch (err) {
+        console.error("Security profile image upload error:", err);
+        return res.status(500).json({
+          success: false,
+          message: "Failed to upload profile image.",
+        });
+      }
     }
 
     await security.save();

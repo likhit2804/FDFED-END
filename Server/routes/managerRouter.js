@@ -21,6 +21,10 @@ import Ad from "../models/Ad.js";
 import Payment from "../models/payment.js";
 import visitor from "../models/visitors.js";
 
+import cloudinary from "../configs/cloudinary.js";
+
+import { createCommunitySubscription } from "../crud/index.js";
+
 import { sendPassword } from "../controllers/OTP.js";
 
 function generateCustomID(userEmail, facility, countOrRandom = null) {
@@ -717,6 +721,25 @@ managerRouter.post("/subscription-payment", async (req, res) => {
     // Save the community
     await community.save();
 
+    // Create a record in CommunitySubscription collection for admin visibility
+    const subscriptionRecord = {
+      communityId: community._id,
+      transactionId: subscriptionPayment.transactionId,
+      planName: subscriptionPayment.planName,
+      planType: subscriptionPayment.planType,
+      amount: subscriptionPayment.amount,
+      paymentMethod: subscriptionPayment.paymentMethod,
+      paymentDate: subscriptionPayment.paymentDate,
+      planStartDate: subscriptionPayment.planStartDate,
+      planEndDate: subscriptionPayment.planEndDate,
+      duration: subscriptionPayment.duration,
+      status: subscriptionPayment.status,
+      isRenewal: subscriptionPayment.isRenewal,
+      metadata: subscriptionPayment.metadata,
+    };
+
+    await createCommunitySubscription(subscriptionRecord);
+
     // Prepare response
     const response = {
       success: true,
@@ -834,34 +857,31 @@ managerRouter.get("/subscription-status", async (req, res) => {
 import fs from "fs";
 import Amenity from "../models/Amenities.js";
 
-const storage2 = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const dir = path.join("uploads", "something");
+// Cloudinary upload helper for community images
+const uploadCommunityImageToCloudinary = (buffer) => {
+  return new Promise((resolve, reject) => {
+    const uploadStream = cloudinary.uploader.upload_stream(
+      {
+        folder: "communities",
+        resource_type: "image",
+        transformation: [
+          { width: 1600, crop: "limit" },
+          { quality: "auto:good" },
+        ],
+      },
+      (error, result) => {
+        if (error) return reject(error);
+        resolve(result);
+      }
+    );
 
-    fs.mkdir(dir, { recursive: true }, (err) => {
-      if (err) return cb(err);
-      cb(null, dir); // ✅ tell multer where to store the file
-    });
-  },
-
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, uniqueSuffix + "-" + file.originalname);
-  },
-});
-
-const fileFilter = (req, file, cb) => {
-  // Check file type
-  if (file.mimetype.startsWith("image/")) {
-    cb(null, true);
-  } else {
-    cb(new Error("Only image files are allowed!"), false);
-  }
+    uploadStream.end(buffer);
+  });
 };
 
+// Multer memory storage for community image uploads (Cloudinary handled in route)
 const upload2 = multer({
-  storage: storage2,
-  fileFilter: fileFilter,
+  storage: multer.memoryStorage(),
   limits: {
     fileSize: 5 * 1024 * 1024, // 5MB limit
     files: 10, // Maximum 10 files
@@ -873,97 +893,60 @@ managerRouter.get("/new-community", (req, res) => {
 });
 
 // Create new community with photo upload
-managerRouter.post("/communities", async (req, res) => {
+managerRouter.post("/communities", upload2.array("photos", 10), async (req, res) => {
   try {
-    const { subscriptionPlan, paymentMethod } = req.body;
+    const managerId = req.session?.managerId || req.user?.id;
+    const manager = await CommunityManager.findById(managerId);
 
-    if (!paymentMethod) {
-      return res.status(400).json({
-        success: false,
-        message: "Please fill in all required fields.",
-      });
-    }
-
-    // Plan pricing
-    const planPrices = {
-      basic: 999,
-      standard: 1999,
-      premium: 3999,
-    };
-
-    const planStartDate = new Date();
-    const planEndDate = new Date();
-    planEndDate.setMonth(planEndDate.getMonth() + 1);
-
-    const transactionId = `TXN${Date.now()}${Math.random()
-      .toString(36)
-      .substr(2, 9)
-      .toUpperCase()}`;
-
-    // Find the manager and their assigned community
-
-    // Find the community and update it
-    const community = req.user.community;
-    if (!community) {
+    if (!manager) {
       return res.status(404).json({
         success: false,
-        message: "Assigned community not found.",
+        message: "Community manager not found.",
       });
     }
 
-    // Update subscription details
-    community.subscriptionPlan = subscriptionPlan;
-    community.subscriptionStatus = "active";
-    community.planStartDate = planStartDate;
-    community.planEndDate = planEndDate;
+    // Upload photos to Cloudinary if provided
+    const photoUrls = [];
+    if (req.files && Array.isArray(req.files)) {
+      for (const file of req.files) {
+        try {
+          const result = await uploadCommunityImageToCloudinary(file.buffer);
+          photoUrls.push({
+            url: result.secure_url,
+            publicId: result.public_id,
+          });
+        } catch (err) {
+          console.error("Error uploading community image:", err);
+          return res.status(500).json({
+            success: false,
+            message: "Failed to upload community images.",
+          });
+        }
+      }
+    }
 
-    // Add subscription history
-    community.subscriptionHistory.push({
-      transactionId,
-      planName: `${
-        subscriptionPlan.charAt(0).toUpperCase() + subscriptionPlan.slice(1)
-      } Plan`,
-      planType: subscriptionPlan,
-      amount: planPrices[subscriptionPlan],
-      paymentMethod,
-      paymentDate: new Date(),
-      planStartDate,
-      planEndDate,
-      duration: "monthly",
-      status: "completed",
-      isRenewal: true,
-      processedBy: req.session?.managerId || null,
-      metadata: {
-        userAgent: req.get("User-Agent"),
-        ipAddress: req.ip,
+    // Create community document with Cloudinary photo URLs in profile.photos
+    const communityData = {
+      ...req.body,
+      communityManager: manager._id,
+      profile: {
+        ...(req.body.profile || {}),
+        photos: photoUrls,
       },
-    });
+    };
 
-    // Legacy payment history
-    community.paymentHistory.push({
-      date: new Date(),
-      amount: planPrices[subscriptionPlan],
-      method: paymentMethod,
-      transactionId,
-      invoiceUrl: null,
-    });
+    const community = await Community.create(communityData);
 
-    await community.save();
-
-    res.status(200).json({
+    res.status(201).json({
       success: true,
-      message: "Community subscription updated successfully!",
-      data: {
-        communityId: community._id,
-        subscriptionPlan: community.subscriptionPlan,
-        transactionId,
-      },
+      message: "Community created successfully!",
+      data: community,
     });
   } catch (error) {
     console.error("Error updating community:", error);
     res.status(500).json({
       success: false,
-      message: "An error occurred while updating the community.",
+      message: "An error occurred while creating the community.",
     });
   }
 });

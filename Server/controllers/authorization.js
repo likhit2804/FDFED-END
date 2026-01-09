@@ -1,51 +1,44 @@
-const authorizeR = (req, res, next) => {
-    if (req.user?.userType !== "Resident") {
-        if (req.originalUrl.startsWith('/api') || req.headers.accept?.includes('application/json')) {
-            return res.status(403).json({ message: "Forbidden" });
-        }
-        return res.redirect("/login");
+// Shared helper: respond with JSON for API calls, redirect for others
+const handleForbidden = (req, res, redirectPath) => {
+    if (req.originalUrl.startsWith('/api') || req.headers.accept?.includes('application/json')) {
+        return res.status(403).json({ message: "Forbidden" });
     }
-    next();
+    return res.redirect(redirectPath);
 };
 
-const authorizeS = (req, res, next) => {
-    if (req.user?.userType !== "Security") {
-        if (req.originalUrl.startsWith('/api') || req.headers.accept?.includes('application/json')) {
-            return res.status(403).json({ message: "Forbidden" });
+// Factory to build single-role authorizers (keeps existing behaviour)
+const buildAuthorize = (requiredUserType, redirectPath) => {
+    return (req, res, next) => {
+        if (req.user?.userType !== requiredUserType) {
+            return handleForbidden(req, res, redirectPath);
         }
-        return res.redirect("/login");
-    }
-    next();
+        next();
+    };
 };
 
-const authorizeW = (req, res, next) => {
-    if (req.user?.userType !== "Worker") {
-        if (req.originalUrl.startsWith('/api') || req.headers.accept?.includes('application/json')) {
-            return res.status(403).json({ message: "Forbidden" });
+// Existing specific middlewares (backwards-compatible)
+const authorizeR = buildAuthorize("Resident", "/login");
+const authorizeS = buildAuthorize("Security", "/login");
+const authorizeW = buildAuthorize("Worker", "/login");
+const authorizeC = buildAuthorize("CommunityManager", "/login");
+const authorizeA = buildAuthorize("admin", "/AdminLogin");
+
+// New: generic role-based authorizer for specific routes
+// Usage examples:
+//   router.get('/api/admin-or-manager', auth, authorizeRoles(['admin', 'CommunityManager']), handler);
+//   router.post('/api/admin-only', auth, authorizeRoles('admin', '/AdminLogin'), handler);
+const authorizeRoles = (roles, redirectPath = "/login") => {
+    const allowed = Array.isArray(roles) ? roles : [roles];
+
+    return (req, res, next) => {
+        const userType = req.user?.userType;
+
+        if (!userType || !allowed.includes(userType)) {
+            return handleForbidden(req, res, redirectPath);
         }
-        return res.redirect("/login");
-    }
-    next();
+
+        next();
+    };
 };
 
-const authorizeC = (req, res, next) => {
-    if (req.user?.userType !== "CommunityManager") {
-        if (req.originalUrl.startsWith('/api') || req.headers.accept?.includes('application/json')) {
-            return res.status(403).json({ message: "Forbidden" });
-        }
-        return res.redirect("/login");
-    }
-    next();
-};
-
-const authorizeA = (req, res, next) => {
-    if (req.user?.userType !== "admin") {
-        if (req.originalUrl.startsWith('/api') || req.headers.accept?.includes('application/json')) {
-            return res.status(403).json({ message: "Forbidden" });
-        }
-        return res.redirect("/AdminLogin");
-    }
-    next();
-};
-
-export { authorizeR, authorizeS, authorizeW, authorizeC, authorizeA };
+export { authorizeR, authorizeS, authorizeW, authorizeC, authorizeA, authorizeRoles };

@@ -101,7 +101,6 @@ InterestSchema.pre('save', async function (next) {
   this.passwordChangedAt = Date.now() - 1000; // Ensures token is created after password change
   next();
 });
-
 // Generate verification token
 InterestSchema.methods.createVerificationToken = function () {
   const verificationToken = crypto.randomBytes(32).toString('hex');

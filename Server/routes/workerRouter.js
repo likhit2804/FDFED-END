@@ -8,18 +8,10 @@ import checkSubscriptionStatus from "../middleware/subcriptionStatus.js";
 import multer from "multer";
 import bcrypt from "bcrypt";
 import { noop } from "chart.js/helpers";
+import cloudinary from "../configs/cloudinary.js";
 
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, "uploads/");
-  },
-  filename: function (req, file, cb) {
-    const uniqueName = Date.now() + "=profImg.png";
-    cb(null, uniqueName);
-  },
-});
-
-const upload = multer({ storage: storage });
+// Multer memory storage for worker profile images (Cloudinary in handler)
+const upload = multer({ storage: multer.memoryStorage() });
 
 // Block access for workers when community subscription is inactive/expired
 workerRouter.use(checkSubscriptionStatus);
@@ -107,11 +99,39 @@ workerRouter.post("/profile", upload.single("image"), async (req, res) => {
 
 
   const r = await Worker.findById(req.user.id);
+  
+  let image = r.image;
 
-  let image = null;
+  if (req.file && req.file.buffer) {
+    try {
+      const result = await new Promise((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+          {
+            folder: "profiles/worker",
+            resource_type: "image",
+            transformation: [
+              { width: 512, height: 512, crop: "limit" },
+              { quality: "auto:good" },
+            ],
+          },
+          (error, result) => {
+            if (error) return reject(error);
+            resolve(result);
+          }
+        );
 
-  if (req.file) {
-    image = req.file.path;
+        uploadStream.end(req.file.buffer);
+      });
+
+      image = result.secure_url;
+      r.imagePublicId = result.public_id;
+    } catch (err) {
+      console.error("Worker profile image upload error:", err);
+      return res.status(500).json({
+        success: false,
+        message: "Failed to upload profile image.",
+      });
+    }
   }
 
   r.name = name;

@@ -54,6 +54,7 @@ export default function Communities() {
 
         if (json.success && json.data?.allCommunities) {
           const formatted = json.data.allCommunities.map((c) => ({
+            id: c._id,
             name: c.name,
             location: c.location,
             members: c.totalMembers || 0,
@@ -96,23 +97,8 @@ export default function Communities() {
     });
   }, [activeTab, location, search, data]); // ✅ added `data` here
 
-  // ===== Table Actions =====
-  const actions = [
-    {
-      component: ({ row }) => (
-        <button className="btn btn-sm btn-warning bg-warning-subtle me-2">
-          ✏️
-        </button>
-      ),
-    },
-    {
-      component: ({ row }) => (
-        <button className="btn btn-sm btn-danger bg-danger-subtle">
-          🗑️
-        </button>
-      ),
-    },
-  ];
+  // ===== Table Actions (none: read-only view) =====
+  const actions = [];
 
   // ===== Render =====
   return (

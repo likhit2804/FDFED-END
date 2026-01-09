@@ -1,6 +1,8 @@
 // src/context/AdminAuthContext.jsx
 import React, { createContext, useContext, useState, useEffect } from "react";
 
+const API_BASE = "http://localhost:3000";
+
 const AdminAuthContext = createContext();
 
 export const AdminAuthProvider = ({ children }) => {
@@ -20,10 +22,20 @@ export const AdminAuthProvider = ({ children }) => {
     setAdmin(adminData);
   };
 
-  // ✅ Logout and clear session
-  const logout = () => {
-    localStorage.removeItem("adminSession");
-    setAdmin(null);
+  // ✅ Logout and clear session (also clear server cookie)
+  const logout = async () => {
+    try {
+      await fetch(`${API_BASE}/logout`, {
+        method: "POST",
+        credentials: "include",
+      });
+    } catch (err) {
+      console.error("Admin logout error:", err);
+    } finally {
+      localStorage.removeItem("adminSession");
+      localStorage.removeItem("adminToken");
+      setAdmin(null);
+    }
   };
 
   return (

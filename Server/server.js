@@ -29,6 +29,7 @@ import {
   AuthenticateS,
   AuthenticateW,
   AuthenticateA,
+  VerifyA,
   VerifyC,
   VerifyR,
   VerifyS,
@@ -306,6 +307,21 @@ app.post("/resident-register/complete", async (req, res) => {
   }
 });
 
+// --- Logout route for all users (clears auth cookie) ---
+app.post("/logout", (req, res) => {
+  try {
+    res.clearCookie("token", {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+    });
+    return res.status(200).json({ success: true, message: "Logged out" });
+  } catch (err) {
+    console.error("Logout error:", err);
+    return res.status(500).json({ success: false, message: "Logout failed" });
+  }
+});
+
 // ---------------- ADMIN LOGIN ----------------
 
 app.post("/AdminLogin", async (req, res) => {
@@ -381,7 +397,7 @@ app.post("/login", async (req, res) => {
     else if (userType === "communityManager")
       verified = await VerifyC(email, password);
     else if (userType === "Admin")
-      return res.status(400).json({ message: "Use /AdminLogin" });
+      verified = await VerifyA(email, password);
     else return res.status(400).json({ message: "Invalid user type" });
 
     if (!verified)
