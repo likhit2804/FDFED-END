@@ -2,6 +2,7 @@ import Issue from "../models/issues.js";
 import Worker from "../models/workers.js";
 import Resident from "../models/resident.js";
 import CommunityManager from "../models/cManager.js";
+import Notifications from "../models/Notifications.js";
 import Payment from "../models/payment.js"; // Make sure this import is present at the top
 
 
@@ -20,10 +21,10 @@ function determineIssuePriority(category, categoryType, description = "", title 
   const isWeekend = now.getDay() === 0 || now.getDay() === 6;
   const isAfterHours = now.getHours() < 8 || now.getHours() > 18;
   const isLateNight = now.getHours() >= 22 || now.getHours() <= 5;
-  
+
   // Combine title and description for keyword analysis
   const content = `${title} ${description}`.toLowerCase();
-  
+
   // 🚨 URGENT - Immediate safety/security concerns
   const urgentKeywords = [
     'emergency', 'urgent', 'fire', 'smoke', 'gas', 'leak', 'flood', 'water damage',
@@ -32,19 +33,19 @@ function determineIssuePriority(category, categoryType, description = "", title 
     'stuck in elevator', 'elevator not working', 'can\'t get out', 'trapped',
     'no heat', 'no hot water', 'freezing', 'sewage backup', 'toilet overflow'
   ];
-  
+
   // ⚠️ HIGH - Significant impact on daily life
   const highPriorityKeywords = [
     'not working', 'broken', 'damaged', 'malfunctioning', 'severe',
     'multiple rooms', 'whole apartment', 'major issue', 'getting worse',
     'health concern', 'safety issue', 'pest infestation', 'mold', 'rodents'
   ];
-  
+
   // Check for urgent keywords
   if (urgentKeywords.some(keyword => content.includes(keyword))) {
     return 'Urgent';
   }
-  
+
   // 🚨 Category-based urgency rules
   if (category === 'Security') {
     if (isAfterHours || isWeekend || isLateNight) {
@@ -52,7 +53,7 @@ function determineIssuePriority(category, categoryType, description = "", title 
     }
     return 'High'; // Security issues during business hours are high priority
   }
-  
+
   if (category === 'Electrical') {
     if (content.includes('sparks') || content.includes('smell') || content.includes('outage')) {
       return 'Urgent'; // Electrical safety issues
@@ -62,7 +63,7 @@ function determineIssuePriority(category, categoryType, description = "", title 
     }
     return 'High'; // All electrical issues are at least high priority
   }
-  
+
   if (category === 'Plumbing') {
     if (content.includes('flood') || content.includes('leak') || content.includes('overflow') || content.includes('backup')) {
       return 'Urgent'; // Water damage issues
@@ -75,7 +76,7 @@ function determineIssuePriority(category, categoryType, description = "", title 
     }
     return 'Normal'; // Minor plumbing issues
   }
-  
+
   // 🏢 Community issues - location-based priorities
   if (categoryType === 'Community') {
     if (category === 'Elevator') {
@@ -84,14 +85,14 @@ function determineIssuePriority(category, categoryType, description = "", title 
       }
       return 'High'; // Mobility access
     }
-    
+
     if (category === 'Streetlight') {
       if (isAfterHours || isWeekend) {
         return 'High'; // Safety concern at night
       }
       return 'Normal';
     }
-    
+
     if (category === 'Common Area' || category === 'Garden') {
       if (content.includes('safety') || content.includes('broken glass') || content.includes('dangerous')) {
         return 'High'; // Safety hazards
@@ -99,12 +100,12 @@ function determineIssuePriority(category, categoryType, description = "", title 
       return 'Normal';
     }
   }
-  
+
   // Check for high priority keywords
   if (highPriorityKeywords.some(keyword => content.includes(keyword))) {
     return 'High';
   }
-  
+
   // 🐛 Pest Control - time-sensitive
   if (category === 'Pest Control') {
     if (content.includes('infestation') || content.includes('many') || content.includes('everywhere')) {
@@ -112,7 +113,7 @@ function determineIssuePriority(category, categoryType, description = "", title 
     }
     return 'Normal';
   }
-  
+
   // 🗑️ Waste Management
   if (category === 'Waste Management') {
     if (content.includes('overflow') || content.includes('smell') || content.includes('everywhere')) {
@@ -120,12 +121,12 @@ function determineIssuePriority(category, categoryType, description = "", title 
     }
     return 'Normal';
   }
-  
+
   // 🔧 Maintenance - default normal unless urgent keywords found
   if (category === 'Maintenance') {
     return 'Normal';
   }
-  
+
   // Default fallback
   return 'Normal';
 }
@@ -174,16 +175,16 @@ export const assignIssue = async (req, res) => {
     const workerData = await Worker.findById(worker);
     if (!workerData)
       return res.status(404).json({ success: false, message: "Worker not found" });
-    
+
     if (!workerData.isActive) {
       return res.status(400).json({ success: false, message: "Cannot assign to inactive worker" });
     }
-    
+
     // Check if worker is in same community
     if (workerData.community.toString() !== issue.community.toString()) {
       return res.status(400).json({ success: false, message: "Worker must be in same community as issue" });
     }
-    
+
     // Check workload - warn if overloaded
     if (workerData.assignedIssues.length >= 10) {
       console.warn(`Warning: Assigning to worker ${workerData.name} who already has ${workerData.assignedIssues.length} issues`);
@@ -270,12 +271,12 @@ export const getManagerIssues = async (req, res) => {
       .populate("resident")
       .populate("workerAssigned")
       .sort({ createdAt: -1 });
-     
+
 
     // Separate by type
     const residentIssues = issues.filter(i => i.categoryType === "Resident");
     const communityIssues = issues.filter(i => i.categoryType === "Community");
-    
+
     // Group community issues by location for prioritization
     const groupedCommunityIssues = {};
     communityIssues.forEach(issue => {
@@ -477,18 +478,18 @@ export const raiseIssue = async (req, res) => {
       finalLocation = (location && location.trim()) ? location.trim() : resident.uCode;
     } else {
       if (!location || !location.trim()) {
-        return res.status(400).json({ 
-          success: false, 
-          message: "Location is required for Community issues" 
+        return res.status(400).json({
+          success: false,
+          message: "Location is required for Community issues"
         });
       }
       finalLocation = location.trim();
     }
 
     if (!finalLocation) {
-      return res.status(400).json({ 
-        success: false, 
-        message: "Unable to determine location for this issue" 
+      return res.status(400).json({
+        success: false,
+        message: "Unable to determine location for this issue"
       });
     }
 
@@ -500,8 +501,8 @@ export const raiseIssue = async (req, res) => {
       duplicate = await checkDuplicateCommunityIssue(category, finalLocation);
     }
     if (duplicate) {
-      return res.status(409).json({ 
-        success: false, 
+      return res.status(409).json({
+        success: false,
         message: `Similar issue already exists: ${duplicate.title || duplicate.category}`,
         existingIssue: {
           id: duplicate._id,
@@ -547,7 +548,7 @@ export const raiseIssue = async (req, res) => {
 
     // Fetch the updated issue to return with worker assignment
     const updatedIssue = await Issue.findById(issue._id).populate('workerAssigned');
-    
+
     res.status(201).json({ success: true, issue: updatedIssue });
   } catch (error) {
     console.error("Raise Issue Error:", error);
@@ -697,11 +698,15 @@ export const resolveIssue = async (req, res) => {
     if (issue.categoryType === "Resident") {
       issue.status = "Resolved (Awaiting Confirmation)";
       issue.resolvedAt = new Date();
-      issue.resident.notifications.push({
-        n: `Your issue ${issue.issueID} has been resolved. Please confirm.`,
-        createdAt: new Date(),
-        belongs: "Issue",
+      const notification = new Notifications({
+        type: "Issue",
+        title: "Issue Resolved",
+        message: `Your issue ${issue.issueID || issue._id} has been resolved. Please confirm.`,
+        referenceId: issue._id,
+        referenceType: "Issue"
       });
+      await notification.save();
+      issue.resident.notifications.push(notification._id);
       await issue.resident.save();
     } else if (issue.categoryType === "Community") {
       issue.status = "Closed";

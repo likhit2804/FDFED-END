@@ -9,6 +9,7 @@ import bcrypt from "bcrypt";
 import multer from "multer";
 import mongoose from "mongoose";
 
+import fs from "fs";
 import Issue from "../models/issues.js";
 import Worker from "../models/workers.js";
 import Resident from "../models/resident.js";
@@ -19,6 +20,7 @@ import PaymentController from "../controllers/payments.js";
 import CommunityManager from "../models/cManager.js";
 import Ad from "../models/Ad.js";
 import Payment from "../models/payment.js";
+import Amenity from "../models/Amenities.js";
 import visitor from "../models/visitors.js";
 
 import cloudinary from "../configs/cloudinary.js";
@@ -131,12 +133,12 @@ managerRouter.get("/commonSpace/details/:id", async (req, res) => {
       ID: booking.ID,
       bookedBy: booking.bookedBy
         ? {
-            name:
-              booking.bookedBy.residentFirstname +
-              " " +
-              booking.bookedBy.residentLastname,
-            email: booking.bookedBy.email,
-          }
+          name:
+            booking.bookedBy.residentFirstname +
+            " " +
+            booking.bookedBy.residentLastname,
+          email: booking.bookedBy.email,
+        }
         : null,
       community: booking.community?.name || null,
       feedback: booking.feedback,
@@ -164,9 +166,8 @@ managerRouter.post("/commonSpace/reject/:id", async (req, res) => {
 
     b.bookedBy.notifications.push({
       belongs: "CS",
-      n: `Your common space booking ${
-        b.ID ? b.ID : b.title
-      } has been cancelled`,
+      n: `Your common space booking ${b.ID ? b.ID : b.title
+        } has been cancelled`,
       createdAt: new Date(),
     });
 
@@ -574,8 +575,8 @@ async function getSubscriptionStatus(req) {
       community.planEndDate && new Date(community.planEndDate) < now;
     const daysUntilExpiry = community.planEndDate
       ? Math.ceil(
-          (new Date(community.planEndDate) - now) / (1000 * 60 * 60 * 24)
-        )
+        (new Date(community.planEndDate) - now) / (1000 * 60 * 60 * 24)
+      )
       : 0;
 
     return {
@@ -781,8 +782,8 @@ managerRouter.get("/subscription-history", async (req, res) => {
     // Sort history by payment date (newest first)
     const sortedHistory = community.subscriptionHistory
       ? community.subscriptionHistory.sort(
-          (a, b) => new Date(b.paymentDate) - new Date(a.paymentDate)
-        )
+        (a, b) => new Date(b.paymentDate) - new Date(a.paymentDate)
+      )
       : [];
 
     res.json({
@@ -854,8 +855,6 @@ managerRouter.get("/subscription-status", async (req, res) => {
     res.status(500).json({ message: "Failed to fetch subscription status" });
   }
 });
-import fs from "fs";
-import Amenity from "../models/Amenities.js";
 
 // Cloudinary upload helper for community images
 const uploadCommunityImageToCloudinary = (buffer) => {
@@ -1427,7 +1426,7 @@ managerRouter.get("/api/dashboard", async (req, res) => {
 
     const notifications = await CommunityManager.findById(req.user.id).populate("notifications").lean();
     console.log(notifications);
-    
+
     // Calculate statistics
     const totalResidents = residents.length;
     const totalWorkers = workers.length;
@@ -1656,7 +1655,7 @@ managerRouter.get("/issueResolving/api/issues", async (req, res) => {
     });
   }
 });
-import {assignIssue,getManagerIssues,reassignIssue,closeIssueByManager,holdIssue,getIssueById} from "../controllers/issueController.js";
+import { assignIssue, getManagerIssues, reassignIssue, closeIssueByManager, holdIssue, getIssueById } from "../controllers/issueController.js";
 managerRouter.get("/issue/myIssues", getManagerIssues);
 managerRouter.post("/issue/assign/:id", assignIssue);
 managerRouter.post("/issue/reassign/:id", reassignIssue);
@@ -1932,9 +1931,8 @@ managerRouter.post("/change-plan", async (req, res) => {
         // Create payment record for the difference
         const paymentRecord = {
           transactionId,
-          planName: `${
-            newPlan.charAt(0).toUpperCase() + newPlan.slice(1)
-          } Plan (Upgrade)`,
+          planName: `${newPlan.charAt(0).toUpperCase() + newPlan.slice(1)
+            } Plan (Upgrade)`,
           planType: newPlan,
           amount: priceDifference,
           paymentMethod,
@@ -1994,9 +1992,8 @@ managerRouter.post("/change-plan", async (req, res) => {
           transactionId: `PLAN_CHANGE_${Date.now()}_${Math.random()
             .toString(36)
             .substr(2, 9)}`,
-          planName: `${
-            newPlan.charAt(0).toUpperCase() + newPlan.slice(1)
-          } Plan (Downgrade)`,
+          planName: `${newPlan.charAt(0).toUpperCase() + newPlan.slice(1)
+            } Plan (Downgrade)`,
           planType: newPlan,
           amount: 0,
           paymentMethod: "No Payment Required",

@@ -15,6 +15,7 @@ export const fetchuserBookings = createAsyncThunk("commonSpace/fetchBookings", a
       method: "GET",
       headers: {
         "Content-Type": "application/json",
+        "Accept": "application/json",
       },
       credentials: "include"
     });
@@ -42,6 +43,7 @@ export const ConfirmBooking = createAsyncThunk("commonSpace/ConfirmBooking", asy
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "Accept": "application/json",
       },
 
       credentials: "include",
@@ -68,6 +70,7 @@ export const fetchDataforManager = createAsyncThunk("commonSpace/fetchDataforMan
         method: "GET",
         headers: {
           "Content-Type": "application/json",
+          "Accept": "application/json",
         },
         credentials: "include",
       }
@@ -96,6 +99,7 @@ export const EditSpace = createAsyncThunk("commonSpace/EditSpace",
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
+            "Accept": "application/json",
           },
           credentials: "include",
 
@@ -123,6 +127,7 @@ export const DeleteSpace = createAsyncThunk(
           method: "DELETE",
           headers: {
             "Content-Type": "application/json",
+            "Accept": "application/json",
           },
 
           credentials: "include"
@@ -147,6 +152,7 @@ export const AddSpace = createAsyncThunk(
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Accept": "application/json",
         },
         credentials: "include",
         body: JSON.stringify(newSpaceData),
@@ -171,6 +177,7 @@ export const ProceedPayment = createAsyncThunk("commonSpace/ProceedPayment",
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Accept": "application/json",
         },
 
         credentials: "include",
@@ -198,6 +205,7 @@ export const cancelUserBooking = createAsyncThunk(
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
+            "Accept": "application/json",
           },
           credentials: "include"
         }
