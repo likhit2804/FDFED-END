@@ -4,6 +4,7 @@ import Resident from "../models/resident.js";
 import CommunityManager from "../models/cManager.js";
 import Notifications from "../models/Notifications.js";
 import Payment from "../models/payment.js"; // Make sure this import is present at the top
+import Ad from "../models/Ad.js"; // Add this for ads in issueResolving
 
 
 import {
@@ -15,136 +16,41 @@ import {
   flagMisassigned,  // Add this too if missing
 } from "../utils/issueAutomation.js";
 
-// 🧠 INTELLIGENT PRIORITY DETERMINATION
 function determineIssuePriority(category, categoryType, description = "", title = "") {
   const now = new Date();
-  const isWeekend = now.getDay() === 0 || now.getDay() === 6;
-  const isAfterHours = now.getHours() < 8 || now.getHours() > 18;
-  const isLateNight = now.getHours() >= 22 || now.getHours() <= 5;
+  const hour = now.getHours();
+  const isOffHours = hour < 8 || hour > 18 || now.getDay() === 0 || now.getDay() === 6;
 
-  // Combine title and description for keyword analysis
   const content = `${title} ${description}`.toLowerCase();
 
-  // 🚨 URGENT - Immediate safety/security concerns
-  const urgentKeywords = [
-    'emergency', 'urgent', 'fire', 'smoke', 'gas', 'leak', 'flood', 'water damage',
-    'break-in', 'robbery', 'suspicious', 'threat', 'violence', 'injury', 'accident',
-    'power outage', 'no electricity', 'no power', 'electrical sparks', 'burning smell',
-    'stuck in elevator', 'elevator not working', 'can\'t get out', 'trapped',
-    'no heat', 'no hot water', 'freezing', 'sewage backup', 'toilet overflow'
-  ];
-
-  // ⚠️ HIGH - Significant impact on daily life
-  const highPriorityKeywords = [
-    'not working', 'broken', 'damaged', 'malfunctioning', 'severe',
-    'multiple rooms', 'whole apartment', 'major issue', 'getting worse',
-    'health concern', 'safety issue', 'pest infestation', 'mold', 'rodents'
-  ];
-
-  // Check for urgent keywords
-  if (urgentKeywords.some(keyword => content.includes(keyword))) {
+  // 🔴 Immediate danger / system failure
+  if (/(flood|sewage|major water leak|power outage|no electricity|electrical sparks|stuck in elevator|can't get out)/.test(content)) {
     return 'Urgent';
   }
 
-  // 🚨 Category-based urgency rules
+  // 🔐 Security is always serious
   if (category === 'Security') {
-    if (isAfterHours || isWeekend || isLateNight) {
-      return 'Urgent'; // All security issues after hours are urgent
-    }
-    return 'High'; // Security issues during business hours are high priority
+    return isOffHours ? 'Urgent' : 'High';
   }
 
-  if (category === 'Electrical') {
-    if (content.includes('sparks') || content.includes('smell') || content.includes('outage')) {
-      return 'Urgent'; // Electrical safety issues
-    }
-    if (isAfterHours || isWeekend) {
-      return 'High'; // Electrical issues after hours
-    }
-    return 'High'; // All electrical issues are at least high priority
+  // 🛗 Elevator issues affect people directly
+  if (category === 'Elevator' && /stuck|not working/.test(content)) {
+    return 'Urgent';
   }
 
-  if (category === 'Plumbing') {
-    if (content.includes('flood') || content.includes('leak') || content.includes('overflow') || content.includes('backup')) {
-      return 'Urgent'; // Water damage issues
-    }
-    if (content.includes('no hot water') && (isWeekend || isAfterHours)) {
-      return 'High'; // No hot water on weekends/after hours
-    }
-    if (content.includes('no water') || content.includes('not working')) {
-      return 'High'; // Major plumbing failures
-    }
-    return 'Normal'; // Minor plumbing issues
-  }
-
-  // 🏢 Community issues - location-based priorities
-  if (categoryType === 'Community') {
-    if (category === 'Elevator') {
-      if (content.includes('stuck') || content.includes('not working')) {
-        return 'Urgent'; // People safety
-      }
-      return 'High'; // Mobility access
-    }
-
-    if (category === 'Streetlight') {
-      if (isAfterHours || isWeekend) {
-        return 'High'; // Safety concern at night
-      }
-      return 'Normal';
-    }
-
-    if (category === 'Common Area' || category === 'Garden') {
-      if (content.includes('safety') || content.includes('broken glass') || content.includes('dangerous')) {
-        return 'High'; // Safety hazards
-      }
-      return 'Normal';
-    }
-  }
-
-  // Check for high priority keywords
-  if (highPriorityKeywords.some(keyword => content.includes(keyword))) {
+  // 🟠 Major quality-of-life issues
+  if (/(broken|not working|overflow|infestation|mold|rodents|health|safety)/.test(content)) {
     return 'High';
   }
 
-  // 🐛 Pest Control - time-sensitive
-  if (category === 'Pest Control') {
-    if (content.includes('infestation') || content.includes('many') || content.includes('everywhere')) {
-      return 'High'; // Severe infestations
-    }
-    return 'Normal';
+  // 🌙 Context escalation (only if already concerning)
+  if (isOffHours && /(streetlight|dark|security)/.test(content)) {
+    return 'High';
   }
 
-  // 🗑️ Waste Management
-  if (category === 'Waste Management') {
-    if (content.includes('overflow') || content.includes('smell') || content.includes('everywhere')) {
-      return 'High'; // Health concerns
-    }
-    return 'Normal';
-  }
-
-  // 🔧 Maintenance - default normal unless urgent keywords found
-  if (category === 'Maintenance') {
-    return 'Normal';
-  }
-
-  // Default fallback
   return 'Normal';
 }
 
-function generateCustomID(uCode, facility, countOrRandom = null) {
-  console.log("uCode:", uCode);
-
-  // Clean the uCode (remove spaces)
-  const code = uCode.toUpperCase().trim(); // BLK1-101
-
-  const facilityCode = facility.toUpperCase().slice(0, 2); // IS
-
-  const suffix = countOrRandom
-    ? String(countOrRandom).padStart(4, "0")
-    : String(Math.floor(1000 + Math.random() * 9000));
-
-  return `${code}-${facilityCode}-${suffix}`;
-}
 
 // --------------------------------------------------
 // MANAGER: Assign Issue
@@ -153,7 +59,7 @@ export const assignIssue = async (req, res) => {
   const { worker, deadline, remarks } = req.body;
 
   try {
-    const issue = await Issue.findById(req.params.id);
+    const issue = await Issue.findById({ _id: req.params.id,community: req.user.community} );
     if (!issue)
       return res.status(404).json({ success: false, message: "Issue not found" });
 
@@ -172,22 +78,12 @@ export const assignIssue = async (req, res) => {
     }
 
     // Validate worker exists and is active
-    const workerData = await Worker.findById(worker);
+    const workerData = await Worker.findById({ _id: worker, community: req.user.community });
     if (!workerData)
       return res.status(404).json({ success: false, message: "Worker not found" });
 
     if (!workerData.isActive) {
       return res.status(400).json({ success: false, message: "Cannot assign to inactive worker" });
-    }
-
-    // Check if worker is in same community
-    if (workerData.community.toString() !== issue.community.toString()) {
-      return res.status(400).json({ success: false, message: "Worker must be in same community as issue" });
-    }
-
-    // Check workload - warn if overloaded
-    if (workerData.assignedIssues.length >= 10) {
-      console.warn(`Warning: Assigning to worker ${workerData.name} who already has ${workerData.assignedIssues.length} issues`);
     }
 
     // ✔ NEW: Manager can only assign if NO auto-assignment happened OR if auto-assignment failed
@@ -231,7 +127,7 @@ export const assignIssue = async (req, res) => {
       await workerData.save();
     }
 
-    const populated = await Issue.findById(issue._id)
+    const populated = await Issue.findById({  _id: issue._id,community: req.user.community} )
       .populate("resident")
       .populate("workerAssigned");
 
@@ -267,7 +163,7 @@ export const getManagerIssues = async (req, res) => {
     }
 
     // Fetch all issues for this community
-    const issues = await Issue.find({ community })
+    const issues = await Issue.find({  community: req.user.community })
       .populate("resident")
       .populate("workerAssigned")
       .sort({ createdAt: -1 });
@@ -378,7 +274,7 @@ export const reassignIssue = async (req, res) => {
       await workerData.save();
     }
 
-    const populated = await Issue.findById(issue._id)
+    const populated = await Issue.findById({ _id: issue._id, community: req.user.community })
       .populate("resident")
       .populate("workerAssigned")
       .populate("payment");
@@ -401,8 +297,7 @@ export const reassignIssue = async (req, res) => {
 // --------------------------------------------------
 export const closeIssueByManager = async (req, res) => {
   try {
-    const issue = await Issue.findById(req.params.id);
-
+    const issue = await Issue.findById({ _id: req.params.id, community: req.user.community });
     if (!issue) return res.status(404).json({ success: false, message: "Issue not found" });
 
     issue.status = "Closed";
@@ -417,25 +312,6 @@ export const closeIssueByManager = async (req, res) => {
 };
 
 
-// --------------------------------------------------
-// MANAGER: Put On Hold
-// --------------------------------------------------
-export const holdIssue = async (req, res) => {
-  try {
-    const issue = await Issue.findById(req.params.id);
-    if (!issue) return res.status(404).json({ success: false, message: "Issue not found" });
-
-    issue.status = "On Hold";
-    issue.remarks = req.body.remarks || "On Hold by Manager";
-    await issue.save();
-
-    res.json({ success: true, message: "Issue put on hold" });
-
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ success: false, message: "Server error" });
-  }
-};
 
 
 // --------------------------------------------------
@@ -444,7 +320,7 @@ export const holdIssue = async (req, res) => {
 export const getIssueById = async (req, res) => {
   const id = req.params.id;
 
-  const issue = await Issue.findById(id)
+  const issue = await Issue.findById({ _id: id, community: req.user.community })
     .populate("resident")
     .populate("workerAssigned")
     .populate("payment");
@@ -467,7 +343,7 @@ export const raiseIssue = async (req, res) => {
       return res.status(400).json({ success: false, message: "Missing required fields" });
     }
 
-    const resident = await Resident.findById(req.user.id);
+    const resident = await Resident.findById({ _id: req.user.id, community: req.user.community });
     if (!resident) return res.status(404).json({ success: false, message: "Resident not found" });
 
     // 🧠 INTELLIGENT PRIORITY ASSIGNMENT - No user input needed
@@ -547,7 +423,7 @@ export const raiseIssue = async (req, res) => {
     }
 
     // Fetch the updated issue to return with worker assignment
-    const updatedIssue = await Issue.findById(issue._id).populate('workerAssigned');
+    const updatedIssue = await Issue.findById({ _id: issue._id, community: req.user.community }).populate('workerAssigned');
 
     res.status(201).json({ success: true, issue: updatedIssue });
   } catch (error) {
@@ -561,7 +437,7 @@ export const raiseIssue = async (req, res) => {
 // --------------------------------------------------
 export const confirmIssue = async (req, res) => {
   try {
-    const issue = await Issue.findById(req.params.id);
+    const issue = await Issue.findById({ _id: req.params.id, community: req.user.community });
 
     if (!issue)
       return res.status(404).json({ success: false, message: "Issue not found" });
@@ -592,7 +468,7 @@ export const confirmIssue = async (req, res) => {
 // --------------------------------------------------
 export const rejectIssueResolution = async (req, res) => {
   try {
-    const issue = await Issue.findById(req.params.id);
+    const issue = await Issue.findById({ _id: req.params.id, community: req.user.community });
 
     if (!issue)
       return res.status(404).json({ success: false, message: "Issue not found" });
@@ -635,11 +511,11 @@ export const deleteIssue = async (req, res) => {
   try {
     const { issueID } = req.params;
 
-    const issue = await Issue.findOneAndDelete({ _id: issueID });
+    const issue = await Issue.findOneAndDelete({ _id: issueID, community: req.user.community });
     if (!issue)
       return res.status(404).json({ success: false, message: "Issue not found" });
 
-    const resident = await Resident.findById(req.user.id);
+    const resident = await Resident.findById({ _id: req.user.id, community: req.user.community });
     if (!resident)
       return res.status(404).json({ success: false, message: "Resident not found" });
 
@@ -662,7 +538,7 @@ export const deleteIssue = async (req, res) => {
 // --------------------------------------------------
 export const startIssue = async (req, res) => {
   try {
-    const issue = await Issue.findById(req.params.id);
+    const issue = await Issue.findById({ _id: req.params.id, community: req.user.community });
     if (!issue)
       return res.status(404).json({ success: false, message: "Issue not found" });
 
@@ -687,7 +563,7 @@ export const startIssue = async (req, res) => {
 // --------------------------------------------------
 export const resolveIssue = async (req, res) => {
   try {
-    const issue = await Issue.findById(req.params.id).populate("resident");
+    const issue = await Issue.findById({ _id: req.params.id, community: req.user.community }).populate("resident");
     if (!issue)
       return res.status(404).json({ success: false, message: "Issue not found" });
 
@@ -745,7 +621,7 @@ export const misassignedIssue = async (req, res) => {
 // Get all issues for a resident
 export const getResidentIssues = async (req, res) => {
   try {
-    const issues = await Issue.find({ resident: req.user.id })
+    const issues = await Issue.find({ resident: req.user.id, community: req.user.community})
       .populate("workerAssigned")
       .populate("payment");
 
@@ -761,7 +637,7 @@ export const getIssueDataById = async (req, res) => {
   try {
     const { issueID } = req.params;
     console.log("Fetching issue data for ID:", issueID);
-    const issue = await Issue.findById(issueID)
+    const issue = await Issue.findById(issueID, { community: req.user.community })
       .populate("resident")
       .populate("workerAssigned")
       .populate("payment");
@@ -830,5 +706,136 @@ export const submitFeedback = async (req, res) => {
   } catch (error) {
     console.error("Error submitting feedback:", error);
     res.status(500).json({ success: false, message: error.message || "Server error" });
+  }
+};
+
+// --------------------------------------------------
+// MANAGER: Get Rejected Pending Issues
+// --------------------------------------------------
+export const getRejectedPendingIssues = async (req, res) => {
+  try {
+    const managerId = req.user.id;
+    const manager = await CommunityManager.findById(managerId);
+
+    if (!manager) {
+      return res.status(404).json({ success: false, message: "Manager not found" });
+    }
+
+    const community = manager.assignedCommunity;
+
+    // Issues that were auto-assigned but rejected by resident
+    const rejectedIssues = await Issue.find({
+      community,
+      status: "Reopened",
+      autoAssigned: true,
+    })
+      .populate("resident")
+      .populate("workerAssigned")
+      .sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      count: rejectedIssues.length,
+      issues: rejectedIssues,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+// --------------------------------------------------
+// MANAGER: Get Issue Resolving API Issues
+// --------------------------------------------------
+export const getIssueResolvingApiIssues = async (req, res) => {
+  try {
+    const managerId = req.user.id;
+    const manager = await CommunityManager.findById(managerId);
+
+    if (!manager) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Community manager not found" });
+    }
+
+    const community = manager.assignedCommunity;
+    if (!community) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Community not found" });
+    }
+
+    const issues = await Issue.find({ community: community })
+      .populate("resident")
+      .populate("workerAssigned")
+      .sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      issues: issues,
+    });
+  } catch (error) {
+    console.error("Error fetching issues:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch issues",
+    });
+  }
+};
+
+// --------------------------------------------------
+// MANAGER: Get Issue Resolving Data
+// --------------------------------------------------
+export const getIssueResolvingData = async (req) => {
+  try {
+    const managerId = req.user.id;
+    const manager = await CommunityManager.findById(managerId);
+
+    const ads = await Ad.find({
+      community: req.user.community,
+      status: "Active",
+    });
+
+    if (!manager) {
+      throw new Error("Community manager not found");
+    }
+    const community = manager.assignedCommunity;
+
+    if (!community) {
+      throw new Error("Community not found");
+    }
+
+    const workers = await Worker.find({ community: community });
+    const issues = await Issue.find({ community: community })
+      .populate("resident")
+      .populate("workerAssigned");
+
+    console.log(issues);
+
+    return {
+      issues,
+      workers,
+      ads,
+    };
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+};
+
+// --------------------------------------------------
+// WORKER: Get Active Tasks
+// --------------------------------------------------
+export const getWorkerTasks = async (req, res) => {
+  try {
+    const tasks = await Issue.find({
+      workerAssigned: req.user.id,
+      status: { $in: ["Assigned", "In Progress", "Reopened"] }
+    })
+      .populate("workerAssigned")
+      .populate("resident");
+    res.json({ success: true, tasks });
+  } catch (err) {
+    res.status(500).json({ success: false, message: "Failed to fetch tasks" });
   }
 };

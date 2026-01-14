@@ -146,7 +146,7 @@ const PaymentsHistory = ({ onStats, filters = {} }) => {
         setLoading(true);
         setError(null);
 
-        fetch("http://localhost:3000/resident/api/payments", {
+        fetch("http://localhost:3000/resident/payments", {
             method: "GET",
             headers: { "Content-Type": "application/json" },
             credentials: "include",
