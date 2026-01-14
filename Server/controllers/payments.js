@@ -300,6 +300,12 @@ class PaymentController {
                 // If status is changed to completed, set payment date
                 if (status === 'Completed' && !payment.paymentDate) {
                     payment.paymentDate = new Date();
+                    
+                    // If this payment belongs to an issue, update issue status to Closed
+                    if (payment.belongTo === 'Issue' && payment.belongToId) {
+                        const Issue = (await import('../models/issues.js')).default;
+                        await Issue.findByIdAndUpdate(payment.belongToId, { status: 'Closed' });
+                    }
                 }
             }
             

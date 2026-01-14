@@ -1608,6 +1608,20 @@ managerRouter.get("/issueResolving/api/issues", getIssueResolvingApiIssues);
 // NEW: Route for handling rejected auto-assigned issues (resident rejects → goes to manager)
 managerRouter.get("/issue/rejected/pending", getRejectedPendingIssues);
 
+// Get workers for assignment
+managerRouter.get("/workers", async (req, res) => {
+  try {
+    const workers = await Worker.find({ 
+      community: req.user.community,
+      isActive: true 
+    }).select('name jobRole _id');
+    res.json({ success: true, workers });
+  } catch (error) {
+    console.error("Error fetching workers:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
 /*---------------------------------------------------------------------------------------------------- */
 managerRouter.get("/api/payments", async (req, res) => {
   try {

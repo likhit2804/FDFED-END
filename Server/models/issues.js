@@ -118,6 +118,11 @@ const issueSchema = new Schema({
     default: null,
   },
 
+  misassignedBy: [{
+    type: Schema.Types.ObjectId,
+    ref: "Worker",
+  }],
+
   resolvedAt: {
     type: String,
     default: null,

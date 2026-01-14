@@ -166,6 +166,7 @@ export const getManagerIssues = async (req, res) => {
     const issues = await Issue.find({  community: req.user.community })
       .populate("resident")
       .populate("workerAssigned")
+      .populate("misassignedBy")
       .sort({ createdAt: -1 });
 
 
@@ -323,6 +324,7 @@ export const getIssueById = async (req, res) => {
   const issue = await Issue.findById({ _id: id, community: req.user.community })
     .populate("resident")
     .populate("workerAssigned")
+    .populate("misassignedBy")
     .populate("payment");
 
   if (!issue) return res.status(404).json({ message: "Issue not found" });
@@ -451,10 +453,10 @@ export const confirmIssue = async (req, res) => {
       return res.status(400).json({ success: false, message: "Cannot confirm this issue" });
     }
 
-    issue.status = "Closed";
+    issue.status = "Payment Pending";
     await issue.save();
 
-    res.json({ success: true, message: "Issue closed successfully." });
+    res.json({ success: true, message: "Issue confirmed. Payment process initiated." });
 
   } catch (error) {
     console.error(error);
@@ -668,8 +670,8 @@ export const submitFeedback = async (req, res) => {
       return res.status(404).json({ success: false, message: "Issue not found." });
     }
     // Only allow for Resident issues
-    if (issue.categoryType !== "Resident" || issue.status !== "Closed") {
-      return res.status(400).json({ success: false, message: "Feedback can only be submitted for closed Resident issues." });
+    if (issue.categoryType !== "Resident" || issue.status !== "Payment Pending") {
+      return res.status(400).json({ success: false, message: "Feedback can only be submitted for confirmed Resident issues awaiting payment." });
     }
     if (issue.feedback) {
       return res.status(400).json({ success: false, message: "Feedback already submitted for this issue." });
@@ -678,7 +680,7 @@ export const submitFeedback = async (req, res) => {
     // Set feedback and rating
     issue.feedback = feedback;
     issue.rating = rating;
-    issue.status = "Payment Pending";
+    // Status remains "Payment Pending"
 
     // Get the community manager from the populated community
     const communityManagerId = issue.community?.communityManager;
