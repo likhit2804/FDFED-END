@@ -5,6 +5,7 @@ import CommunityManager from "../models/cManager.js";
 import Notifications from "../models/Notifications.js";
 import Payment from "../models/payment.js"; // Make sure this import is present at the top
 import Ad from "../models/Ad.js"; // Add this for ads in issueResolving
+import { getIO } from "../utils/socket.js";
 
 
 import {
@@ -15,6 +16,49 @@ import {
   checkDuplicateCommunityIssue,
   flagMisassigned,  // Add this too if missing
 } from "../utils/issueAutomation.js";
+
+const pushNotification = async (userModel, userId, notificationData) => {
+  if (!userId) return null;
+  const notification = new Notifications(notificationData);
+  await notification.save();
+  const user = await userModel.findById(userId);
+  if (user) {
+    user.notifications.push(notification._id);
+    await user.save();
+  }
+  return notification;
+};
+
+const getCommunityManagerForCommunity = async (communityId) => {
+  if (!communityId) return null;
+  return CommunityManager.findOne({ assignedCommunity: communityId });
+};
+
+const toId = (value) => (value && value._id ? value._id : value);
+
+const emitIssueUpdate = (issue, action = "updated") => {
+  const io = getIO();
+  if (!io || !issue) return;
+
+  const payload = {
+    action,
+    issueId: issue._id,
+    status: issue.status,
+    categoryType: issue.categoryType,
+    community: issue.community,
+    workerAssigned: toId(issue.workerAssigned) || null,
+    resident: toId(issue.resident) || null,
+    updatedAt: new Date().toISOString(),
+  };
+
+  const residentId = toId(issue.resident);
+  const workerId = toId(issue.workerAssigned);
+  const communityId = toId(issue.community);
+
+  if (residentId) io.to(`resident_${residentId}`).emit("issue:updated", payload);
+  if (workerId) io.to(`worker_${workerId}`).emit("issue:updated", payload);
+  if (communityId) io.to(`community_${communityId}`).emit("issue:updated", payload);
+};
 
 function determineIssuePriority(category, categoryType, description = "", title = "") {
   const now = new Date();
@@ -126,6 +170,16 @@ export const assignIssue = async (req, res) => {
       workerData.assignedIssues.push(issue._id);
       await workerData.save();
     }
+
+    await pushNotification(Worker, workerData._id, {
+      type: "Issue",
+      title: "Issue Assigned",
+      message: `You have been assigned issue ${issue.issueID || issue._id}.`,
+      referenceId: issue._id,
+      referenceType: "Issue"
+    });
+
+    emitIssueUpdate(issue, "assigned");
 
     const populated = await Issue.findById({  _id: issue._id,community: req.user.community} )
       .populate("resident")
@@ -275,6 +329,8 @@ export const reassignIssue = async (req, res) => {
       await workerData.save();
     }
 
+    emitIssueUpdate(issue, "reassigned");
+
     const populated = await Issue.findById({ _id: issue._id, community: req.user.community })
       .populate("resident")
       .populate("workerAssigned")
@@ -303,6 +359,8 @@ export const closeIssueByManager = async (req, res) => {
 
     issue.status = "Closed";
     await issue.save();
+
+    emitIssueUpdate(issue, "closed");
 
     res.json({ success: true, message: "Issue closed by manager" });
 
@@ -427,6 +485,29 @@ export const raiseIssue = async (req, res) => {
     // Fetch the updated issue to return with worker assignment
     const updatedIssue = await Issue.findById({ _id: issue._id, community: req.user.community }).populate('workerAssigned');
 
+    if (updatedIssue?.workerAssigned) {
+      await pushNotification(Worker, updatedIssue.workerAssigned._id, {
+        type: "Issue",
+        title: "New Issue Assigned",
+        message: `A new issue (${updatedIssue.issueID || updatedIssue._id}) has been assigned to you.`,
+        referenceId: updatedIssue._id,
+        referenceType: "Issue"
+      });
+    } else {
+      const manager = await getCommunityManagerForCommunity(updatedIssue.community);
+      if (manager) {
+        await pushNotification(CommunityManager, manager._id, {
+          type: "Issue",
+          title: "Issue Needs Assignment",
+          message: `A new issue (${updatedIssue.issueID || updatedIssue._id}) needs assignment.`,
+          referenceId: updatedIssue._id,
+          referenceType: "Issue"
+        });
+      }
+    }
+
+    emitIssueUpdate(updatedIssue, "created");
+
     res.status(201).json({ success: true, issue: updatedIssue });
   } catch (error) {
     console.error("Raise Issue Error:", error);
@@ -455,6 +536,18 @@ export const confirmIssue = async (req, res) => {
 
     issue.status = "Payment Pending";
     await issue.save();
+
+    if (issue.workerAssigned) {
+      await pushNotification(Worker, issue.workerAssigned, {
+        type: "Issue",
+        title: "Resident Confirmed",
+        message: `Resident confirmed issue ${issue.issueID || issue._id}. Payment is pending.`,
+        referenceId: issue._id,
+        referenceType: "Issue"
+      });
+    }
+
+    emitIssueUpdate(issue, "payment_pending");
 
     res.json({ success: true, message: "Issue confirmed. Payment process initiated." });
 
@@ -490,6 +583,18 @@ export const rejectIssueResolution = async (req, res) => {
     issue.status = "Reopened";
     issue.autoAssigned = false;
     await issue.save();
+
+    if (issue.workerAssigned) {
+      await pushNotification(Worker, issue.workerAssigned, {
+        type: "Issue",
+        title: "Issue Reopened",
+        message: `Resident rejected resolution for issue ${issue.issueID || issue._id}.`,
+        referenceId: issue._id,
+        referenceType: "Issue"
+      });
+    }
+
+    emitIssueUpdate(issue, "reopened");
 
     res.json({
       success: true,
@@ -551,6 +656,16 @@ export const startIssue = async (req, res) => {
     issue.status = "In Progress";
     await issue.save();
 
+    await pushNotification(Resident, issue.resident, {
+      type: "Issue",
+      title: "Work Started",
+      message: `Work has started on your issue ${issue.issueID || issue._id}.`,
+      referenceId: issue._id,
+      referenceType: "Issue"
+    });
+
+    emitIssueUpdate(issue, "in_progress");
+
     res.json({ success: true, message: "Issue marked as In Progress" });
 
   } catch (error) {
@@ -603,10 +718,21 @@ export const resolveIssue = async (req, res) => {
     } else if (issue.categoryType === "Community") {
       issue.status = "Closed";
       issue.resolvedAt = new Date();
-      // Optionally: Notify all reporters here
+      const manager = await getCommunityManagerForCommunity(issue.community);
+      if (manager) {
+        await pushNotification(CommunityManager, manager._id, {
+          type: "Issue",
+          title: "Community Issue Resolved",
+          message: `Community issue ${issue.issueID || issue._id} has been resolved.`,
+          referenceId: issue._id,
+          referenceType: "Issue"
+        });
+      }
     }
 
     await issue.save();
+
+    emitIssueUpdate(issue, "resolved");
 
     res.json({ success: true, message: "Issue resolved." });
 
@@ -717,6 +843,19 @@ export const submitFeedback = async (req, res) => {
 
     issue.payment = payment._id;
     await issue.save();
+
+    const manager = await getCommunityManagerForCommunity(issue.community?._id || issue.community);
+    if (manager) {
+      await pushNotification(CommunityManager, manager._id, {
+        type: "Payment",
+        title: "Payment Initiated",
+        message: `Payment initiated for issue ${issue.issueID || issue._id}.`,
+        referenceId: payment._id,
+        referenceType: "Payment"
+      });
+    }
+
+    emitIssueUpdate(issue, "payment_initiated");
 
     res.json({ success: true, message: "Feedback submitted and payment initiated." });
   } catch (error) {

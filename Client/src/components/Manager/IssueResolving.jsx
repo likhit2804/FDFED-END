@@ -13,9 +13,11 @@ import {
   fetchWorkers,
 } from "../../Slices/ManagerIssuesSlice";
 import { toast, ToastContainer } from "react-toastify";
+import { useSocket } from "../../hooks/useSocket";
 
 export const IssueResolving = () => {
   const dispatch = useDispatch();
+  const socket = useSocket("http://localhost:3000");
 
   // Use manager issues slice instead of mock data
   const managerState = useSelector((s) => s?.managerIssues) || {};
@@ -61,6 +63,19 @@ export const IssueResolving = () => {
     dispatch(fetchManagerIssues());
     dispatch(fetchWorkers());
   }, [dispatch]);
+
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleIssueUpdate = () => {
+      dispatch(fetchManagerIssues());
+    };
+
+    socket.on("issue:updated", handleIssueUpdate);
+    return () => {
+      socket.off("issue:updated", handleIssueUpdate);
+    };
+  }, [socket, dispatch]);
 
   // Filter by type
   const residentIssues = useMemo(

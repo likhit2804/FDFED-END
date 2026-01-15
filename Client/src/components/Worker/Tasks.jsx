@@ -2,6 +2,7 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { toast, ToastContainer } from "react-toastify";
 import { motion, AnimatePresence } from "framer-motion";
+import { useSocket } from "../../hooks/useSocket";
 
 const STATUS_ASSIGNED = "Assigned";
 const STATUS_IN_PROGRESS = "In Progress";
@@ -14,6 +15,7 @@ export const Tasks = () => {
   const [selectedTask, setSelectedTask] = useState(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [estimatedCost, setEstimatedCost] = useState("");
+  const socket = useSocket("http://localhost:3000");
   
   // Filters and sorting
   const [statusFilter, setStatusFilter] = useState("All");
@@ -22,23 +24,35 @@ export const Tasks = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState("grid"); // grid or list
 
+  const fetchTasks = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("http://localhost:3000/worker/api/tasks", {
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to fetch tasks");
+      const data = await res.json();
+      setTasks(data.tasks || []);
+    } catch (err) {
+      toast.error(err.message || "Error loading tasks");
+    }
+    setLoading(false);
+  };
+
   useEffect(() => {
-    const fetchTasks = async () => {
-      setLoading(true);
-      try {
-        const res = await fetch("http://localhost:3000/worker/api/tasks", {
-          credentials: "include",
-        });
-        if (!res.ok) throw new Error("Failed to fetch tasks");
-        const data = await res.json();
-        setTasks(data.tasks || []);
-      } catch (err) {
-        toast.error(err.message || "Error loading tasks");
-      }
-      setLoading(false);
-    };
     fetchTasks();
   }, []);
+
+  useEffect(() => {
+    if (!socket) return;
+    const handleIssueUpdate = () => {
+      fetchTasks();
+    };
+    socket.on("issue:updated", handleIssueUpdate);
+    return () => {
+      socket.off("issue:updated", handleIssueUpdate);
+    };
+  }, [socket]);
 
   // Filter and sort tasks
   const filteredTasks = useMemo(() => {

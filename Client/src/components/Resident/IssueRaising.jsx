@@ -4,6 +4,7 @@ import { toast, ToastContainer } from "react-toastify";
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchIssues, raiseIssue, submitFeedback } from '../../Slices/IssueSlice';
 import { Loader } from '../Loader';
+import { useSocket } from "../../hooks/useSocket";
 
 export const IssueRaising = () => {
   const dispatch = useDispatch();
@@ -16,6 +17,7 @@ export const IssueRaising = () => {
   const [feedbackText, setFeedbackText] = useState("");
   const [feedbackRating, setFeedbackRating] = useState(5);
   const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
+  const socket = useSocket("http://localhost:3000");
 
   const { register, handleSubmit, reset, watch } = useForm({
     defaultValues: {
@@ -61,6 +63,19 @@ export const IssueRaising = () => {
   useEffect(() => {
     dispatch(fetchIssues());
   }, [dispatch]);
+
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleIssueUpdate = () => {
+      dispatch(fetchIssues());
+    };
+
+    socket.on("issue:updated", handleIssueUpdate);
+    return () => {
+      socket.off("issue:updated", handleIssueUpdate);
+    };
+  }, [socket, dispatch]);
 
   useEffect(() => {
     if (formSubmitting && !loading) {
