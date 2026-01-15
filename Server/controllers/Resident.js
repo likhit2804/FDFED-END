@@ -459,35 +459,5 @@ const getQRcode = async (req, res) => {
   }
 };
 
-const getResidentProfile = async (req, res) => {
-  try {
-    const resident = await Resident.findById(req.user.id)
-      .populate("community", "communityName");
 
-    if (!resident) {
-      return res.json({
-        success: false,
-        message: "Resident not found"
-      });
-    }
-
-    return res.json({
-      success: true,
-      resident: {
-        firstname: resident.residentFirstname,
-        lastname: resident.residentLastname,
-        email: resident.email,
-        contact: resident.contact,
-        uCode: resident.uCode,
-        communityName: resident.community?.communityName || "",
-        image: resident.image || null
-      }
-    });
-
-  } catch (err) {
-    console.error("Error fetching profile:", err);
-    return res.status(500).json({ success: false, message: "Server error" });
-  }
-};
-
-export { getPreApprovals, getCommonSpace, getIssueData, getPaymentData, getQRcode, getResidentProfile };
+export { getPreApprovals, getCommonSpace, getIssueData, getPaymentData, getQRcode };

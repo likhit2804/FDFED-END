@@ -53,12 +53,12 @@ export const ResidentProfile = () => {
 
         if (data.success) {
           const fetched = {
-            firstname: data.resident.residentFirstname || "",
-            lastname: data.resident.residentLastname || "",
+            firstname: data.resident.firstname || "",
+            lastname: data.resident.lastname || "",
             email: data.resident.email || "",
             contact: data.resident.contact || "",
             uCode: data.resident.uCode || "",
-            communityName: data.resident.community?.communityName || "",
+            communityName: data.resident.communityName || "",
             image: data.resident.image || "",
           };
 
@@ -125,34 +125,71 @@ export const ResidentProfile = () => {
     }
   };
 
-  const handleSaveProfile = async () => {
+//   const handleSaveProfile = async () => {
+//   try {
+//     const res = await fetch("http://localhost:3000/resident/profile", {
+//       method: "POST",
+//       headers: { "Content-Type": "application/json" },
+//       credentials: "include",
+//       body: JSON.stringify({
+//         firstname: formData.firstname,
+//         lastname: formData.lastname,
+//         contact: formData.contact,
+//         uCode: formData.uCode,
+//       }),
+//     });
+
+//     const data = await res.json();
+
+//     if (!data.success) {
+//       alert(data.message);
+//       return;
+//     }
+
+//     alert("Profile updated!");
+    
+//   } catch (error) {
+//     console.error(error);
+//     alert("Error updating profile.");
+//   }
+// };
+
+const handleSaveProfile = async () => {
   try {
-    const res = await fetch("http://localhost:3000/resident/update-profile", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
+    const form = new FormData();
+
+    form.append("firstName", formData.firstname);
+    form.append("lastName", formData.lastname);
+    form.append("contact", formData.contact);
+    form.append("email", formData.email);
+    form.append("uCode", formData.uCode);
+
+    // only if image upload exists later
+    // form.append("image", selectedFile);
+
+    const res = await fetch("http://localhost:3000/resident/profile", {
+      method: "POST",
       credentials: "include",
-      body: JSON.stringify({
-        firstname: formData.firstname,
-        lastname: formData.lastname,
-        contact: formData.contact,
-        uCode: formData.uCode,
-      }),
+      body: form,
     });
 
     const data = await res.json();
 
     if (!data.success) {
-      alert(data.message);
+      alert(data.message || "Update failed");
       return;
     }
 
-    alert("Profile updated!");
-    
-  } catch (error) {
-    console.error(error);
-    alert("Error updating profile.");
+    setDisplayData(formData);
+    alert("Profile updated successfully!");
+  } catch (err) {
+    console.error(err);
+    alert("Error updating profile");
   }
 };
+
+
+
 
 
   // ------------------------------------------------

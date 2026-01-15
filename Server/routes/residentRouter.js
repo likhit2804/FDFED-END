@@ -25,8 +25,11 @@ import {
   getIssueData,
   getPaymentData,
   getQRcode,
-  getResidentProfile,
 } from "../controllers/Resident.js";
+
+import { updateProfile,changePassword,getResidentProfile } from "../controllers/Resident/index.js";
+
+
 import {
   getTimeAgo,
   getPaymentRemainders,
@@ -865,140 +868,11 @@ residentRouter.get("/preapproval/qr/:id", auth, authorizeR, getQRcode);
 
 //   res.render("resident/Profile", { path: "pr", ads, r });
 // });
+
+// Profile Routes
 residentRouter.get("/profile", auth, authorizeR, getResidentProfile);
-
-residentRouter.post("/profile", upload.single("image"), async (req, res) => {
-  const { firstName, lastName, contact, email, address } = req.body;
-
-  console.log("Profile update data:", req.body);
-
-  const r = await Resident.findById(req.user.id);
-
-  let image = r.image;
-
-  if (req.file && req.file.buffer) {
-    try {
-      const result = await new Promise((resolve, reject) => {
-        const uploadStream = cloudinary.uploader.upload_stream(
-          {
-            folder: "profiles/resident",
-            resource_type: "image",
-            transformation: [
-              { width: 512, height: 512, crop: "limit" },
-              { quality: "auto:good" },
-            ],
-          },
-          (error, result) => {
-            if (error) return reject(error);
-            resolve(result);
-          }
-        );
-
-        uploadStream.end(req.file.buffer);
-      });
-
-      image = result.secure_url;
-      r.imagePublicId = result.public_id;
-    } catch (err) {
-      console.error("Resident profile image upload error:", err);
-      return res.status(500).json({
-        success: false,
-        message: "Failed to upload profile image.",
-      });
-    }
-  }
-
-  r.residentFirstname = firstName;
-  r.residentLastname = lastName;
-  r.email = email;
-  r.contact = contact;
-  const blockNo = address.split(" ")[1] + " " + address.split(" ")[2];
-  const flatNo = address.split(" ")[3];
-
-  if (image) {
-    r.image = image;
-  }
-
-  r.blockNo = blockNo;
-  r.flatNo = flatNo;
-
-  await r.save();
-
-  return res.json({
-    success: true,
-    message: "Profile updated successfully",
-    r,
-  });
-});
-
-residentRouter.post("/change-password", async (req, res) => {
-  const { currentPassword, newPassword } = req.body;
-  const resident = await Resident.findById(req.user.id);
-
-  if (!resident) {
-    return res.json({ success: false, message: "Resident not found." });
-  }
-
-  const isMatch = await bcrypt.compare(currentPassword, resident.password);
-  if (!isMatch) {
-    return res.json({
-      success: false,
-      message: "Current password does not match.",
-    });
-  }
-
-  const salt = await bcrypt.genSalt(10);
-  resident.password = await bcrypt.hash(newPassword, salt);
-  await resident.save();
-
-  res.json({ ok: true, message: "Password changed successfully." });
-});
-
-residentRouter.put("/update-profile", async (req, res) => {
-  try {
-    const { firstname, lastname, contact, uCode } = req.body;
-
-    if (!firstname || !lastname || !contact || !uCode) {
-      return res.status(400).json({
-        success: false,
-        message: "All fields are required",
-      });
-    }
-
-    const resident = await Resident.findById(req.user.id);
-    if (!resident) {
-      return res.status(404).json({
-        success: false,
-        message: "Resident not found",
-      });
-    }
-
-    // Update fields
-    resident.residentFirstname = firstname;
-    resident.residentLastname = lastname;
-    resident.contact = contact;
-    resident.uCode = uCode.toUpperCase();
-
-    await resident.save();
-
-    return res.json({
-      success: true,
-      message: "Profile updated successfully",
-      resident: {
-        firstname: resident.residentFirstname,
-        lastname: resident.residentLastname,
-        contact: resident.contact,
-        uCode: resident.uCode,
-      },
-    });
-  } catch (error) {
-    console.error("Profile update error:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
-  }
-});
+residentRouter.post("/profile", auth, authorizeR, upload.single("image"), updateProfile);
+residentRouter.post("/change-password", auth, authorizeR, changePassword);
 
 residentRouter.get("/clearNotification", async (req, res) => {
   const resi = await Resident.updateOne(
