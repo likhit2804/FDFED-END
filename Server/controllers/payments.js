@@ -274,7 +274,7 @@ class PaymentController {
     static async updatePayment(req, res) {
         try {
             const { id } = req.params;
-            const { status, remarks, paymentMethod } = req.body;
+            const { status, remarks, paymentMethod, amount } = req.body;
             
             // Get manager's community
             const managerId = req.user.id;
@@ -311,6 +311,13 @@ class PaymentController {
             
             if (paymentMethod) payment.paymentMethod = paymentMethod;
             if (remarks !== undefined) payment.remarks = remarks;
+            if (amount !== undefined) {
+                const cost = parseFloat(amount);
+                if (isNaN(cost) || cost < 0) {
+                    return res.status(400).json({ message: 'Invalid amount' });
+                }
+                payment.amount = cost;
+            }
             
             await payment.save();
             
@@ -352,6 +359,12 @@ class PaymentController {
                 payment.status = status;
                 if (status === 'Completed') {
                     payment.paymentDate = paymentDate ? new Date(paymentDate) : new Date();
+
+                    // If this payment belongs to an issue, close the issue
+                    if (payment.belongTo === 'Issue' && payment.belongToId) {
+                        const Issue = (await import('../models/issues.js')).default;
+                        await Issue.findByIdAndUpdate(payment.belongToId, { status: 'Closed' });
+                    }
                 }
             }
             

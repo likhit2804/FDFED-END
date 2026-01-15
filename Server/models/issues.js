@@ -149,6 +149,12 @@ const issueSchema = new Schema({
     default: "Pending",
   },
 
+  estimatedCost: {
+    type: Number,
+    default: 0,
+    min: 0,
+  },
+
   feedback: String,
   rating: Number,
 }, { timestamps: true });

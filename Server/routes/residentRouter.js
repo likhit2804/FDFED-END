@@ -691,6 +691,7 @@ residentRouter.post("/issue/submitFeedback", submitFeedback);
 /*---------------------------------------------------------------------------------------------------- */
 // Payment routes - corrected version
 residentRouter.get("/payments", getPaymentData);
+residentRouter.patch("/payment/:id", PaymentController.updateResidentPayment);
 
 residentRouter.get("/payment/receipt/:id", async (req, res) => {
   const Id = req.params.id;

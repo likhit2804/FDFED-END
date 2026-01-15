@@ -564,6 +564,7 @@ export const startIssue = async (req, res) => {
 // WORKER: Resolve Issue
 // --------------------------------------------------
 export const resolveIssue = async (req, res) => {
+  const { estimatedCost } = req.body;
   try {
     const issue = await Issue.findById({ _id: req.params.id, community: req.user.community }).populate("resident");
     if (!issue)
@@ -572,6 +573,19 @@ export const resolveIssue = async (req, res) => {
     if (issue.status !== "In Progress") {
       return res.status(400).json({ success: false, message: "Issue must be In Progress to resolve" });
     }
+
+    // Check if the worker is assigned to this issue
+    if (issue.workerAssigned.toString() !== req.user.id) {
+      return res.status(403).json({ success: false, message: "You are not authorized to resolve this issue" });
+    }
+
+    // Validate estimatedCost (required and must be positive)
+    const parsedCost = Number(estimatedCost);
+    if (!Number.isFinite(parsedCost) || parsedCost <= 0) {
+      return res.status(400).json({ success: false, message: "Estimated cost must be a positive number" });
+    }
+
+    issue.estimatedCost = parsedCost;
 
     if (issue.categoryType === "Resident") {
       issue.status = "Resolved (Awaiting Confirmation)";

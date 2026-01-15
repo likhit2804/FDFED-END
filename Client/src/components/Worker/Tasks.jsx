@@ -3,12 +3,17 @@ import React, { useEffect, useState, useMemo } from "react";
 import { toast, ToastContainer } from "react-toastify";
 import { motion, AnimatePresence } from "framer-motion";
 
+const STATUS_ASSIGNED = "Assigned";
+const STATUS_IN_PROGRESS = "In Progress";
+const STATUS_RESOLVED = "Resolved (Awaiting Confirmation)";
+
 export const Tasks = () => {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [estimatedCost, setEstimatedCost] = useState("");
   
   // Filters and sorting
   const [statusFilter, setStatusFilter] = useState("All");
@@ -76,48 +81,10 @@ export const Tasks = () => {
   }, [tasks]);
 
   // Start issue
-  const handleStart = async (id) => {
-    setActionLoading(true);
-    try {
-      const res = await fetch(`http://localhost:3000/worker/issue/start/${id}`, {
-        method: "POST",
-        credentials: "include",
-      });
-      const data = await res.json();
-      if (!data.success) throw new Error(data.message);
-      toast.success("Marked as In Progress");
-      setTasks((prev) =>
-        prev.map((t) =>
-          t._id === id ? { ...t, status: "In Progress" } : t
-        )
-      );
-    } catch (err) {
-      toast.error(err.message || "Failed to start");
-    }
-    setActionLoading(false);
-  };
+  const handleStart = (id) => updateTaskStatus(id, STATUS_IN_PROGRESS);
 
-  // Resolve issue
-  const handleResolve = async (id) => {
-    setActionLoading(true);
-    try {
-      const res = await fetch(`http://localhost:3000/worker/issue/resolve/${id}`, {
-        method: "POST",
-        credentials: "include",
-      });
-      const data = await res.json();
-      if (!data.success) throw new Error(data.message);
-      toast.success("Marked as Resolved (Awaiting Confirmation)");
-      setTasks((prev) =>
-        prev.map((t) =>
-          t._id === id ? { ...t, status: "Resolved (Awaiting Confirmation)" } : t
-        )
-      );
-    } catch (err) {
-      toast.error(err.message || "Failed to resolve");
-    }
-    setActionLoading(false);
-  };
+  // Resolve issue (kept for compatibility with older UI triggers)
+  const handleResolve = (id, costValue = estimatedCost) => updateTaskStatus(id, STATUS_RESOLVED, costValue);
 
   // Flag as misassigned
   const handleMisassigned = async (id) => {
@@ -140,6 +107,7 @@ export const Tasks = () => {
   // Open task details modal
   const openTaskDetails = (task) => {
     setSelectedTask(task);
+    setEstimatedCost(task?.estimatedCost ?? "");
     setIsDetailModalOpen(true);
   };
 
@@ -147,6 +115,7 @@ export const Tasks = () => {
   const closeTaskDetails = () => {
     setIsDetailModalOpen(false);
     setSelectedTask(null);
+    setEstimatedCost("");
   };
 
   // Get priority color
@@ -201,27 +170,42 @@ export const Tasks = () => {
   // Open task modal
   const openTaskModal = (task) => {
     setSelectedTask(task);
+    setEstimatedCost(task?.estimatedCost ?? "");
     setIsDetailModalOpen(true);
   };
 
   // Update task status
-  const updateTaskStatus = async (taskId, newStatus) => {
+  const updateTaskStatus = async (taskId, newStatus, costValue = estimatedCost) => {
     setActionLoading(true);
     try {
-      const endpoint = newStatus === 'in-progress' ? 'start' : 'resolve';
+      const endpoint = newStatus === STATUS_IN_PROGRESS ? "start" : "resolve";
+      const payload = newStatus === STATUS_RESOLVED
+        ? { estimatedCost: Number(costValue) }
+        : null;
+
+      if (payload && (!Number.isFinite(payload.estimatedCost) || payload.estimatedCost <= 0)) {
+        setActionLoading(false);
+        toast.error("Enter a positive estimated cost before completing.");
+        return;
+      }
+
       const res = await fetch(`http://localhost:3000/worker/issue/${endpoint}/${taskId}`, {
         method: "POST",
         credentials: "include",
+        headers: payload ? { "Content-Type": "application/json" } : undefined,
+        body: payload ? JSON.stringify(payload) : undefined,
       });
       const data = await res.json();
       if (!data.success) throw new Error(data.message);
-      
-      const statusMessage = newStatus === 'in-progress' ? 'Started' : 'Completed';
+
+      const statusMessage = newStatus === STATUS_IN_PROGRESS ? "Started" : "Completed";
       toast.success(`Task ${statusMessage}`);
-      
+
       setTasks((prev) =>
         prev.map((t) =>
-          t._id === taskId ? { ...t, status: newStatus } : t
+          t._id === taskId
+            ? { ...t, status: newStatus, estimatedCost: payload?.estimatedCost ?? t.estimatedCost }
+            : t
         )
       );
     } catch (err) {
@@ -624,7 +608,7 @@ export const Tasks = () => {
                   <div className="task-card-header">
                     <span className="task-id">#{task._id.slice(-6)}</span>
                     <div>
-                      <span className={`status-badge ${task.status?.toLowerCase().replace(' ', '-')}`}>
+                      <span className={`status-badge ${task.status?.toLowerCase().replace(/\s+/g, '-')}`}>
                         {task.status}
                       </span>
                       <span className={`priority-badge ${task.priority?.toLowerCase()}`}>
@@ -649,18 +633,18 @@ export const Tasks = () => {
                   </div>
                   
                   <div className="task-actions">
-                    {task.status === 'assigned' && (
+                    {task.status === STATUS_ASSIGNED && (
                       <button 
                         className="action-btn primary"
-                        onClick={(e) => { e.stopPropagation(); updateTaskStatus(task._id, 'in-progress'); }}
+                        onClick={(e) => { e.stopPropagation(); updateTaskStatus(task._id, STATUS_IN_PROGRESS); }}
                       >
                         Start
                       </button>
                     )}
-                    {task.status === 'in-progress' && (
+                    {task.status === STATUS_IN_PROGRESS && (
                       <button 
                         className="action-btn success"
-                        onClick={(e) => { e.stopPropagation(); updateTaskStatus(task._id, 'resolved (awaiting confirmation)'); }}
+                        onClick={(e) => { e.stopPropagation(); openTaskModal(task); }}
                       >
                         Complete
                       </button>
@@ -708,26 +692,26 @@ export const Tasks = () => {
                   </div>
                   
                   <div>
-                    <span className={`status-badge ${task.status?.toLowerCase().replace(' ', '-')}`}>
+                    <span className={`status-badge ${task.status?.toLowerCase().replace(/\s+/g, '-')}`}>
                       {task.status}
                     </span>
                   </div>
                   
                   <div style={{ display: 'flex', gap: '8px' }}>
-                    {task.status === 'assigned' && (
+                    {task.status === STATUS_ASSIGNED && (
                       <button
                         className="action-btn primary"
                         style={{ minWidth: '70px', padding: '6px 12px', fontSize: '12px' }}
-                        onClick={(e) => { e.stopPropagation(); updateTaskStatus(task._id, 'in-progress'); }}
+                        onClick={(e) => { e.stopPropagation(); updateTaskStatus(task._id, STATUS_IN_PROGRESS); }}
                       >
                         Start
                       </button>
                     )}
-                    {task.status === 'in-progress' && (
+                    {task.status === STATUS_IN_PROGRESS && (
                       <button
                         className="action-btn success"
                         style={{ minWidth: '70px', padding: '6px 12px', fontSize: '12px' }}
-                        onClick={(e) => { e.stopPropagation(); updateTaskStatus(task._id, 'resolved (awaiting confirmation)'); }}
+                        onClick={(e) => { e.stopPropagation(); openTaskModal(task); }}
                       >
                         Complete
                       </button>
@@ -776,7 +760,7 @@ export const Tasks = () => {
                     </div>
                     <div className="detail-item">
                       <span className="detail-label">Status</span>
-                      <span className={`status-badge ${selectedTask.status?.toLowerCase().replace(' ', '-')}`}>
+                      <span className={`status-badge ${selectedTask.status?.toLowerCase().replace(/\s+/g, '-')}`}>
                         {selectedTask.status}
                       </span>
                     </div>
@@ -827,13 +811,13 @@ export const Tasks = () => {
                     Close
                   </button>
                   
-                  {selectedTask.status?.toLowerCase() === "assigned" && (
+                  {selectedTask.status === STATUS_ASSIGNED && (
                     <>
                       <button
                         className="btn-primary"
                         disabled={actionLoading}
                         onClick={() => {
-                          updateTaskStatus(selectedTask._id, 'in-progress');
+                          updateTaskStatus(selectedTask._id, STATUS_IN_PROGRESS);
                           closeTaskDetails();
                         }}
                       >
@@ -852,17 +836,40 @@ export const Tasks = () => {
                     </>
                   )}
                   
-                  {selectedTask.status?.toLowerCase() === "in-progress" && (
-                    <button
-                      className="btn-success"
-                      disabled={actionLoading}
-                      onClick={() => {
-                        updateTaskStatus(selectedTask._id, 'resolved (awaiting confirmation)');
-                        closeTaskDetails();
-                      }}
-                    >
-                      Mark Complete
-                    </button>
+                  {selectedTask.status === STATUS_IN_PROGRESS && (
+                    <>
+                      <div className="cost-input-container" style={{ marginBottom: '10px', width: '100%' }}>
+                        <label htmlFor="estimatedCost" style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                          Estimated Cost ($):
+                        </label>
+                        <input
+                          type="number"
+                          id="estimatedCost"
+                          value={estimatedCost}
+                          onChange={(e) => setEstimatedCost(e.target.value)}
+                          min="0"
+                          step="0.01"
+                          placeholder="Enter estimated cost"
+                          style={{
+                            width: '100%',
+                            padding: '8px',
+                            border: '1px solid #ccc',
+                            borderRadius: '4px',
+                            fontSize: '14px'
+                          }}
+                        />
+                      </div>
+                      <button
+                        className="btn-success"
+                        disabled={actionLoading}
+                        onClick={() => {
+                          updateTaskStatus(selectedTask._id, STATUS_RESOLVED, estimatedCost);
+                          closeTaskDetails();
+                        }}
+                      >
+                        Mark Complete
+                      </button>
+                    </>
                   )}
                 </div>
               </motion.div>
