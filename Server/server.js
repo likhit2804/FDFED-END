@@ -121,7 +121,6 @@ io.on("connection", (socket) => {
         community: payload.community,
       });
 
-      // Only community managers join community rooms
       if (payload.userType === "CommunityManager" && payload.community) {
         const room = `community_${payload.community}`;
         socket.join(room);
@@ -130,12 +129,34 @@ io.on("connection", (socket) => {
         socket.data.userType = payload.userType;
 
         console.log(`✅ Manager (${payload.id}) joined room: ${room}`);
-      } else if (payload.userType !== "CommunityManager") {
-        console.log(
-          `ℹ️ User type '${payload.userType}' is not CommunityManager, skipping room join`
-        );
+      } else if (payload.userType === "Resident") {
+        const room = `resident_${payload.id}`;
+        socket.join(room);
+        socket.data.userId = payload.id;
+        socket.data.userType = payload.userType;
+
+        if (payload.community) {
+          socket.data.communityId = payload.community;
+        }
+
+        console.log(`✅ Resident (${payload.id}) joined room: ${room}`);
+      } else if (payload.userType === "Worker") {
+        const room = `worker_${payload.id}`;
+        socket.join(room);
+        socket.data.userId = payload.id;
+        socket.data.userType = payload.userType;
+
+        if (payload.community) {
+          socket.data.communityId = payload.community;
+        }
+
+        console.log(`✅ Worker (${payload.id}) joined room: ${room}`);
       } else if (!payload.community) {
         console.log(`⚠️ No community ID found in token, skipping room join`);
+      } else {
+        console.log(
+          `ℹ️ User type '${payload.userType}' does not have a room mapping`
+        );
       }
     } else {
       console.warn("⚠️ No token provided in socket handshake");

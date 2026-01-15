@@ -59,21 +59,9 @@ workerRouter.get("/history", async (req, res) => {
 
 
 // JSON API endpoint for worker's active tasks (Assigned, In Progress, Reopened)
-workerRouter.get("/api/tasks", async (req, res) => {
-  try {
-    const tasks = await Issue.find({
-      workerAssigned: req.user.id,
-      status: { $in: ["Assigned", "In Progress", "Reopened"] }
-    })
-      .populate("workerAssigned")
-      .populate("resident");
-    res.json({ success: true, tasks });
-  } catch (err) {
-    res.status(500).json({ success: false, message: "Failed to fetch tasks" });
-  }
-});
+workerRouter.get("/api/tasks", getWorkerTasks);
 
-import {startIssue,resolveIssue,misassignedIssue}from "../controllers/issueController.js";
+import {startIssue,resolveIssue,misassignedIssue,getWorkerTasks}from "../controllers/issueController.js";
 
 workerRouter.post("/issue/start/:id", startIssue);
 workerRouter.post("/issue/resolve/:id", resolveIssue);
