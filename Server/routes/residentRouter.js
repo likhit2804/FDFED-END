@@ -27,7 +27,7 @@ import {
   getQRcode,
 } from "../controllers/Resident.js";
 
-import { updateProfile,changePassword,getResidentProfile } from "../controllers/Resident/index.js";
+import * as ResidentController from "../controllers/resident/index.js";
 
 
 import {
@@ -746,133 +746,17 @@ residentRouter.get("/payment/:paymentId", async (req, res) => {
   }
 });
 
-residentRouter.get("/preApprovals", auth, authorizeR, getPreApprovals);
+//Preapproval routes
+residentRouter.get("/preApprovals", auth, authorizeR, ResidentController.getPreApprovals);
+residentRouter.post("/preapproval", auth, authorizeR,ResidentController.createPreApproval);
+residentRouter.delete("/preapproval/cancel/:id",ResidentController,getQRcode);
+residentRouter.get("/preapproval/qr/:id", auth, authorizeR, ResidentController.getQRcode);
 
-residentRouter.post("/preapproval", auth, authorizeR, async (req, res) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
-  try {
-    const { visitorName, contactNumber, dateOfVisit, timeOfVisit, purpose } =
-      req.body;
-
-    if (
-      !visitorName ||
-      !contactNumber ||
-      !dateOfVisit ||
-      !timeOfVisit ||
-      !purpose
-    ) {
-      return res.status(400).json({ message: "Missing required fields" });
-    }
-
-    const resident = await Resident.findById(req.user.id).populate("community");
-    if (!resident)
-      return res.status(404).json({ message: "Resident not found" });
-
-    const date = formatDate(dateOfVisit);
-    const scheduledAt = new Date(`${dateOfVisit}T${timeOfVisit}`);
-    const tempId = new mongoose.Types.ObjectId();
-    const uniqueId = generateCustomID(tempId.toString(), "PA", null);
-
-    // Create Visitor instance (unsaved)
-    const newVisitor = new Visitor({
-      _id: tempId,
-      ID: uniqueId,
-      name: visitorName,
-      contactNumber,
-      purpose,
-      scheduledAt,
-      approvedBy: resident._id,
-      community: resident.community._id,
-      otp: OTP(), // if needed
-    });
-
-    // Generate JWT and QR
-    const payload = {
-      visitorId: newVisitor._id.toString(),
-      name: visitorName,
-      contactNumber,
-      purpose,
-      scheduledAt,
-    };
-    const token = jwt.sign(payload, process.env.JWT_SECRET, {
-      expiresIn: "24h",
-    });
-    newVisitor.qrToken = token;
-    newVisitor.qrCode = await QRCode.toDataURL(token);
-
-    // Save visitor and update resident in a transaction
-    await newVisitor.save({ session });
-    resident.preApprovedVisitors.push(newVisitor._id);
-    await resident.save({ session });
-
-    await session.commitTransaction();
-    session.endSession();
-
-    return res.status(201).json({
-      success: true,
-      preapproval: {
-        _id: newVisitor._id,
-        ID: uniqueId,
-        visitorName,
-        contactNumber,
-        dateOfVisit: date,
-        timeOfVisit,
-        purpose,
-        status: "approved",
-        qrToken: newVisitor.qrToken,
-        qrCode: newVisitor.qrCode,
-      },
-    });
-  } catch (err) {
-    await session.abortTransaction();
-    session.endSession();
-    console.error("Error in pre-approving visitor:", err);
-    return res
-      .status(500)
-      .json({ message: "Internal server error", error: err.message });
-  }
-});
-
-residentRouter.delete("/preapproval/cancel/:id", async (req, res) => {
-  const requestId = req.params.id;
-  console.log("Canceling request with ID:", requestId);
-
-  try {
-    const result = await Visitor.findByIdAndDelete(requestId);
-    if (!result) {
-      console.log("Request not found for ID:", requestId);
-      return res.status(404).json({ error: "Request not found" });
-    }
-
-    res
-      .status(200)
-      .json({ message: "Request canceled successfully", ok: true });
-  } catch (error) {
-    console.error("Error canceling request:", error);
-    return res.status(500).json({ error: "Failed to cancel request" });
-  }
-});
-
-residentRouter.get("/preapproval/qr/:id", auth, authorizeR, getQRcode);
-
-// residentRouter.get("/profile", async (req, res) => {
-//   const ads = await Ad.find({
-//     community: req.user.community,
-//     startDate: { $lte: new Date() },
-//     endDate: { $gte: new Date() },
-//   });
-
-//   const r = await Resident.findById(req.user.id);
-
-//   res.render("resident/Profile", { path: "pr", ads, r });
-// });
 
 // Profile Routes
-residentRouter.get("/profile", auth, authorizeR, getResidentProfile);
-residentRouter.post("/profile", auth, authorizeR, upload.single("image"), updateProfile);
-residentRouter.post("/change-password", auth, authorizeR, changePassword);
+residentRouter.get("/profile", auth, authorizeR, ResidentController.getResidentProfile);
+residentRouter.post("/profile", auth, authorizeR, upload.single("image"), ResidentController.updateProfile);
+residentRouter.post("/change-password", auth, authorizeR, ResidentController.changePassword);
 
 residentRouter.get("/clearNotification", async (req, res) => {
   const resi = await Resident.updateOne(
