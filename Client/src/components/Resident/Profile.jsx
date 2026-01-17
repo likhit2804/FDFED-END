@@ -38,6 +38,14 @@ export const ResidentProfile = () => {
     numberSpecial: false,
   });
 
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+
+  const [selectedImage, setSelectedImage] = useState(null);
+
   // ------------------------------------------------
   // Fetch Profile
   // ------------------------------------------------
@@ -53,12 +61,12 @@ export const ResidentProfile = () => {
 
         if (data.success) {
           const fetched = {
-            firstname: data.resident.residentFirstname || "",
-            lastname: data.resident.residentLastname || "",
+            firstname: data.resident.firstname || "",
+            lastname: data.resident.lastname || "",
             email: data.resident.email || "",
             contact: data.resident.contact || "",
             uCode: data.resident.uCode || "",
-            communityName: data.resident.community?.communityName || "",
+            communityName: data.resident.communityName || "",
             image: data.resident.image || "",
           };
 
@@ -86,12 +94,19 @@ export const ResidentProfile = () => {
   const handlePasswordSubmit = async (e) => {
     e.preventDefault();
 
-    const currentPassword = document.getElementById("currentPassword").value;
-    const newPassword = document.getElementById("newPassword").value;
-    const confirmPassword = document.getElementById("confirmPassword").value;
+    const { currentPassword, newPassword, confirmPassword } = passwordData;
 
     if (newPassword !== confirmPassword) {
       alert("New password and confirm password do not match.");
+      return;
+    }
+
+    if (
+      !passwordValidation.minLength ||
+      !passwordValidation.caseMix ||
+      !passwordValidation.numberSpecial
+    ) {
+      alert("Password does not meet security requirements.");
       return;
     }
 
@@ -118,6 +133,18 @@ export const ResidentProfile = () => {
         return;
       }
 
+      setPasswordData({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
+
+      setPasswordValidation({
+        minLength: false,
+        caseMix: false,
+        numberSpecial: false,
+      });
+
       alert("Password updated successfully!");
     } catch (err) {
       console.error(err);
@@ -126,46 +153,62 @@ export const ResidentProfile = () => {
   };
 
   const handleSaveProfile = async () => {
-  try {
-    const res = await fetch("http://localhost:3000/resident/update-profile", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({
-        firstname: formData.firstname,
-        lastname: formData.lastname,
-        contact: formData.contact,
-        uCode: formData.uCode,
-      }),
-    });
+    try {
+      const form = new FormData();
 
-    const data = await res.json();
+      form.append("firstName", formData.firstname);
+      form.append("lastName", formData.lastname);
+      form.append("contact", formData.contact);
+      form.append("email", formData.email);
+      form.append("uCode", formData.uCode);
 
-    if (!data.success) {
-      alert(data.message);
-      return;
+      if (selectedImage) {
+        form.append("image", selectedImage);
+      }
+
+      // only if image upload exists later
+      // form.append("image", selectedFile);
+
+      const res = await fetch("http://localhost:3000/resident/profile", {
+        method: "POST",
+        credentials: "include",
+        body: form,
+      });
+
+      const data = await res.json();
+
+      if (!data.success) {
+        alert(data.message || "Update failed");
+        return;
+      }
+
+      setDisplayData(formData);
+      alert("Profile updated successfully!");
+    } catch (err) {
+      console.error(err);
+      alert("Error updating profile");
     }
-
-    alert("Profile updated!");
-    
-  } catch (error) {
-    console.error(error);
-    alert("Error updating profile.");
-  }
-};
-
+  };
 
   // ------------------------------------------------
   // Password Validation
   // ------------------------------------------------
-  const handlePasswordChange = (e) => {
-    const password = e.target.value;
+  const handlePasswordInput = (e) => {
+    const { id, value } = e.target;
 
-    setPasswordValidation({
-      minLength: password.length >= 8,
-      caseMix: /^(?=.*[a-z])(?=.*[A-Z])/.test(password),
-      numberSpecial: /^(?=.*[0-9!@#$%^&*])/.test(password),
-    });
+    setPasswordData((prev) => ({
+      ...prev,
+      [id]: value,
+    }));
+
+    // Run validation only for new password
+    if (id === "newPassword") {
+      setPasswordValidation({
+        minLength: value.length >= 8,
+        caseMix: /^(?=.*[a-z])(?=.*[A-Z])/.test(value),
+        numberSpecial: /^(?=.*[0-9!@#$%^&*])/.test(value),
+      });
+    }
   };
 
   // ------------------------------------------------
@@ -197,6 +240,19 @@ export const ResidentProfile = () => {
               {initials}
             </div>
 
+            <input
+              type="file"
+              accept="image/*"
+              id="profileImageInput"
+              style={{ display: "none" }}
+              onChange={(e) => {
+                const file = e.target.files[0];
+                if (file) {
+                  setSelectedImage(file);
+                }
+              }}
+            />
+
             <button
               className="btn btn-light position-absolute p-1 d-flex align-items-center justify-content-center border rounded-circle"
               style={{
@@ -205,6 +261,9 @@ export const ResidentProfile = () => {
                 width: "26px",
                 height: "26px",
               }}
+              onClick={() =>
+                document.getElementById("profileImageInput").click()
+              }
             >
               <Camera size={14} />
             </button>
@@ -240,6 +299,8 @@ export const ResidentProfile = () => {
                 type="password"
                 className="form-control"
                 id="currentPassword"
+                value={passwordData.currentPassword}
+                onChange={handlePasswordInput}
               />
             </div>
 
@@ -250,7 +311,8 @@ export const ResidentProfile = () => {
                   type="password"
                   className="form-control"
                   id="newPassword"
-                  onChange={handlePasswordChange}
+                  value={passwordData.newPassword}
+                  onChange={handlePasswordInput}
                 />
               </div>
 
@@ -260,20 +322,44 @@ export const ResidentProfile = () => {
                   type="password"
                   className="form-control"
                   id="confirmPassword"
+                  value={passwordData.confirmPassword}
+                  onChange={handlePasswordInput}
                 />
               </div>
             </div>
 
             <div className="rule-box">
               <ul className="password-requirements px-2">
-                <li>Minimum 8 characters</li>
-                <li>One uppercase + one lowercase</li>
-                <li>One number or special character</li>
+                <li
+                  style={{
+                    color: passwordValidation.minLength ? "green" : "red",
+                  }}
+                >
+                  Minimum 8 characters
+                </li>
+                <li
+                  style={{
+                    color: passwordValidation.caseMix ? "green" : "red",
+                  }}
+                >
+                  One uppercase + one lowercase
+                </li>
+                <li
+                  style={{
+                    color: passwordValidation.numberSpecial ? "green" : "red",
+                  }}
+                >
+                  One number or special character
+                </li>
               </ul>
             </div>
 
             <div className="d-flex justify-content-end">
-              <button type="submit" className="btn btn-primary" onClick={handlePasswordSubmit}>
+              <button
+                type="submit"
+                className="btn btn-primary"
+                onClick={handlePasswordSubmit}
+              >
                 Update Password
               </button>
             </div>
@@ -358,7 +444,12 @@ export const ResidentProfile = () => {
                 </div>
 
                 <div className="d-flex py-2 justify-content-end">
-                  <button className="btn w-50 btn-primary" onClick={handleSaveProfile} >Save Changes</button>
+                  <button
+                    className="btn w-50 btn-primary"
+                    onClick={handleSaveProfile}
+                  >
+                    Save Changes
+                  </button>
                 </div>
               </div>
             </div>

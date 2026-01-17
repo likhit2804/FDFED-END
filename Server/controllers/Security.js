@@ -2,7 +2,6 @@ import Security from "../models/security.js";
 import visitor from "../models/visitors.js";
 import Ad from "../models/Ad.js";
 import Community from "../models/communities.js";
-import { getPreApprovals } from "./Resident.js";
 import Visitor from "../models/visitors.js";
 import mongoose from "mongoose";
 

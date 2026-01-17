@@ -16,5 +16,15 @@ export const updateCommunityById = (id, updates, options) =>
 export const aggregateCommunities = (pipeline) => communityCrud.Model.aggregate(pipeline);
 export const countCommunities = (filter = {}) => communityCrud.Model.countDocuments(filter);
 export const updateManyCommunities = (filter, updates, options) => communityCrud.updateMany(filter, updates, options);
+// used for code generation 
+export const getCommunityByIdWithFreshCode = async (id, projection, options) => {
+  const community = await communityCrud.findById(id, projection, options);
+
+  if (!community) return null;
+  // 🔑 Domain logic injected here
+  await community.rotateCodeIfExpired();
+  return community;
+};
+
 
 export default communityCrud;

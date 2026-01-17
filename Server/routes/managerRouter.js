@@ -2299,7 +2299,16 @@ managerRouter.get("/profile/api", async (req, res) => {
 
     const community = await Community.findById(
       manager.assignedCommunity
-    ).select("name");
+    );
+    if (!community) {
+      return res.status(404).json({
+        success: false,
+        message: "Community not found",
+      });
+    }
+
+    await community.rotateCodeIfExpired();
+    const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
 
     res.json({
       success: true,
@@ -2312,6 +2321,10 @@ managerRouter.get("/profile/api", async (req, res) => {
       },
       community: {
         name: community?.name || "",
+        communityCode : community.communityCode,
+        codeExpiresAt: new Date(
+          community.communityCodeLastRotatedAt.getTime() + SEVEN_DAYS
+        ),
       },
     });
   } catch (error) {

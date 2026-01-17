@@ -100,3 +100,28 @@ export function getPaymentRemainders(pending, notifications) {
     return;
   }
 }
+
+export const formatDate = (rawDate) => {
+  return new Date(rawDate).toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    timeZone: "Asia/Kolkata",
+  });
+};
+
+export const generateCustomID = (
+  baseId,
+  typeCode,
+  sequence = null
+) => {
+  const cleanBase = String(baseId).toUpperCase().replace(/\s+/g, "");
+
+  const code = typeCode.toUpperCase();
+
+  const suffix = sequence !== null
+    ? String(sequence).padStart(4, "0")
+    : Date.now().toString().slice(-6); // collision-resistant
+
+  return `${cleanBase}-${code}-${suffix}`;
+};
