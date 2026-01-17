@@ -114,6 +114,16 @@ residentRouter.post("/register/complete", async (req, res) => {
         .json({ success: false, message: "Invalid community code" });
     }
 
+    const rotated = await community.rotateCodeIfExpired();
+    if (rotated) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Community code expired. Please request a new code from the manager.",
+      });
+    }
+
+
     let resident = await Resident.findOne({ email });
     if (!resident) {
       resident = new Resident({
@@ -124,13 +134,7 @@ residentRouter.post("/register/complete", async (req, res) => {
         email,
         community: community._id,
       });
-    } else {
-      resident.residentFirstname = residentFirstname;
-      resident.residentLastname = residentLastname;
-      resident.uCode = uCode;
-      resident.contact = contact;
-      resident.community = community._id;
-    }
+    } 
 
     await resident.save();
     return res.json({
