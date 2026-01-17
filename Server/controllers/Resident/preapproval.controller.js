@@ -197,18 +197,3 @@ export const getQRcode = async (req, res) => {
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

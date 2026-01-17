@@ -20,14 +20,13 @@ import PaymentController from "../controllers/payments.js";
 import { OTP } from "../controllers/OTP.js";
 import { verify } from "../controllers/OTP.js";
 import {
-  getPreApprovals,
   getCommonSpace,
   getIssueData,
   getPaymentData,
-  getQRcode,
 } from "../controllers/Resident.js";
 
-import * as ResidentController from "../controllers/resident/index.js";
+import * as ResidentController from "../controllers/Resident/index.js";
+// The imports are 
 
 
 import {
@@ -180,15 +179,7 @@ residentRouter.get("/payment/community", async (req, res) => {
   }
 });
 
-// residentRouter.get("/ad", async (req, res) => {
-//   const ads = await Ad.find({
-//     community: req.user?.community,
-//     startDate: { $lte: new Date() },
-//     endDate: { $gte: new Date() },
-//   });
 
-//   res.render("resident/Advertisement", { path: "ad", ads });
-// });
 residentRouter.get("/ad", async (req, res) => {
   try {
     const ads = await Ad.find({
@@ -557,14 +548,7 @@ residentRouter.get("/api/bookings", async (req, res) => {
   }
 });
 
-const formatDate = (rawDate) => {
-  return new Date(rawDate).toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    timeZone: "Asia/Kolkata",
-  });
-};
+
 
 residentRouter.get("/api/dashboard", async (req, res) => {
   try {
@@ -749,7 +733,7 @@ residentRouter.get("/payment/:paymentId", async (req, res) => {
 //Preapproval routes
 residentRouter.get("/preApprovals", auth, authorizeR, ResidentController.getPreApprovals);
 residentRouter.post("/preapproval", auth, authorizeR,ResidentController.createPreApproval);
-residentRouter.delete("/preapproval/cancel/:id",ResidentController,getQRcode);
+residentRouter.delete("/preapproval/cancel/:id",ResidentController.cancelPreApproval);
 residentRouter.get("/preapproval/qr/:id", auth, authorizeR, ResidentController.getQRcode);
 
 
