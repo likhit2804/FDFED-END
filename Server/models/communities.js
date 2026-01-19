@@ -153,5 +153,13 @@ CommunitySchema.methods.rotateCodeIfExpired = async function () {
   return false;
 };
 
+CommunitySchema.methods.forceRotateCode = async function () {
+  this.communityCode = await generateUniqueCode(this.name, this.location);
+  this.communityCodeLastRotatedAt = new Date();
+  await this.save();
+  return this.communityCode;
+};
+
+
 const Community = mongoose.model("Community", CommunitySchema);
 export default Community;

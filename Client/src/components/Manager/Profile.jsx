@@ -52,6 +52,11 @@ export const ManagerProfile = () => {
     const [planSubmitting, setPlanSubmitting] = useState(false);
     const [planError, setPlanError] = useState("");
 
+    //state for community code and details
+    const [communityCode, setCommunityCode] = useState("");
+    const [codeLoading, setCodeLoading] = useState(false);
+
+
     // Fetch manager profile and subscription data on component mount
     useEffect(() => {
         setLoading(true);
@@ -77,6 +82,7 @@ export const ManagerProfile = () => {
                         communityName: data.community?.name || "",
                         workEmail: data.manager.email || ""
                     });
+                    setCommunityCode(data.community.communityCode);
                 } else {
                     setError(data.message || "Failed to load profile");
                 }
@@ -283,6 +289,31 @@ export const ManagerProfile = () => {
             })
             .finally(() => setPlanSubmitting(false));
     };
+
+const handleRotateCommunityCode = () => {
+  setCodeLoading(true);
+
+  fetch("http://localhost:3000/manager/community/rotate-code", {
+    method: "POST",
+    credentials: "include",
+  })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        setCommunityCode(data.communityCode);
+        alert("Community code updated successfully");
+      } else {
+        alert(data.message || "Failed to update code");
+      }
+    })
+    .catch(err => {
+      console.error("Rotate code error", err);
+      alert("Failed to update community code");
+    })
+    .finally(() => setCodeLoading(false));
+};
+
+
     return (
         <>
             {loading ? (
@@ -347,6 +378,7 @@ export const ManagerProfile = () => {
                             } </button>
                     </div>
                     {/* Subscription summary + manage button */}
+                    <div>
                     <div className="card border-1 shadow-sm rounded-4 p-3 mt-3">
                         <div className="d-flex justify-content-between align-items-center">
                             <div>
@@ -371,6 +403,25 @@ export const ManagerProfile = () => {
                                 Update / Next Plan
                             </button>
                         </div>
+                    </div>
+                    <div className="card border-1 shadow-sm rounded-4 p-3 mt-3">
+                        <div className="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 className="mb-1 fw-semibold">Community details</h6>                                
+                            </div>
+                            <p className="mb-1 text-secondary">
+                            Community Code: <strong>{communityCode || "—"}</strong>
+                            </p>
+
+                            <button
+                                type="button"
+                                className="btn btn-outline-primary"
+                                onClick={handleRotateCommunityCode}
+                            >
+                                Update code
+                            </button>
+                        </div>
+                    </div>
                     </div>
                     {showPlanForm && (
                         <div className="card border-1 shadow-sm rounded-4 p-3 mt-3">
