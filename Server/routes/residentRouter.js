@@ -20,13 +20,15 @@ import PaymentController from "../controllers/payments.js";
 import { OTP } from "../controllers/OTP.js";
 import { verify } from "../controllers/OTP.js";
 import {
-  getPreApprovals,
   getCommonSpace,
   getIssueData,
   getPaymentData,
-  getQRcode,
-  getResidentProfile,
 } from "../controllers/Resident.js";
+
+import * as ResidentController from "../controllers/Resident/index.js";
+// The imports are 
+
+
 import {
   getTimeAgo,
   getPaymentRemainders,
@@ -112,6 +114,16 @@ residentRouter.post("/register/complete", async (req, res) => {
         .json({ success: false, message: "Invalid community code" });
     }
 
+    const rotated = await community.rotateCodeIfExpired();
+    if (rotated) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Community code expired. Please request a new code from the manager.",
+      });
+    }
+
+
     let resident = await Resident.findOne({ email });
     if (!resident) {
       resident = new Resident({
@@ -122,13 +134,7 @@ residentRouter.post("/register/complete", async (req, res) => {
         email,
         community: community._id,
       });
-    } else {
-      resident.residentFirstname = residentFirstname;
-      resident.residentLastname = residentLastname;
-      resident.uCode = uCode;
-      resident.contact = contact;
-      resident.community = community._id;
-    }
+    } 
 
     await resident.save();
     return res.json({
@@ -177,15 +183,7 @@ residentRouter.get("/payment/community", async (req, res) => {
   }
 });
 
-// residentRouter.get("/ad", async (req, res) => {
-//   const ads = await Ad.find({
-//     community: req.user?.community,
-//     startDate: { $lte: new Date() },
-//     endDate: { $gte: new Date() },
-//   });
 
-//   res.render("resident/Advertisement", { path: "ad", ads });
-// });
 residentRouter.get("/ad", async (req, res) => {
   try {
     const ads = await Ad.find({
@@ -554,14 +552,7 @@ residentRouter.get("/api/bookings", async (req, res) => {
   }
 });
 
-const formatDate = (rawDate) => {
-  return new Date(rawDate).toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    timeZone: "Asia/Kolkata",
-  });
-};
+
 
 residentRouter.get("/api/dashboard", async (req, res) => {
   try {
@@ -743,262 +734,17 @@ residentRouter.get("/payment/:paymentId", async (req, res) => {
   }
 });
 
-residentRouter.get("/preApprovals", auth, authorizeR, getPreApprovals);
+//Preapproval routes
+residentRouter.get("/preApprovals", auth, authorizeR, ResidentController.getPreApprovals);
+residentRouter.post("/preapproval", auth, authorizeR,ResidentController.createPreApproval);
+residentRouter.delete("/preapproval/cancel/:id",ResidentController.cancelPreApproval);
+residentRouter.get("/preapproval/qr/:id", auth, authorizeR, ResidentController.getQRcode);
 
-residentRouter.post("/preapproval", auth, authorizeR, async (req, res) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
 
-  try {
-    const { visitorName, contactNumber, dateOfVisit, timeOfVisit, purpose } =
-      req.body;
-
-    if (
-      !visitorName ||
-      !contactNumber ||
-      !dateOfVisit ||
-      !timeOfVisit ||
-      !purpose
-    ) {
-      return res.status(400).json({ message: "Missing required fields" });
-    }
-
-    const resident = await Resident.findById(req.user.id).populate("community");
-    if (!resident)
-      return res.status(404).json({ message: "Resident not found" });
-
-    const date = formatDate(dateOfVisit);
-    const scheduledAt = new Date(`${dateOfVisit}T${timeOfVisit}`);
-    const tempId = new mongoose.Types.ObjectId();
-    const uniqueId = generateCustomID(tempId.toString(), "PA", null);
-
-    // Create Visitor instance (unsaved)
-    const newVisitor = new Visitor({
-      _id: tempId,
-      ID: uniqueId,
-      name: visitorName,
-      contactNumber,
-      purpose,
-      scheduledAt,
-      approvedBy: resident._id,
-      community: resident.community._id,
-      otp: OTP(), // if needed
-    });
-
-    // Generate JWT and QR
-    const payload = {
-      visitorId: newVisitor._id.toString(),
-      name: visitorName,
-      contactNumber,
-      purpose,
-      scheduledAt,
-    };
-    const token = jwt.sign(payload, process.env.JWT_SECRET, {
-      expiresIn: "24h",
-    });
-    newVisitor.qrToken = token;
-    newVisitor.qrCode = await QRCode.toDataURL(token);
-
-    // Save visitor and update resident in a transaction
-    await newVisitor.save({ session });
-    resident.preApprovedVisitors.push(newVisitor._id);
-    await resident.save({ session });
-
-    await session.commitTransaction();
-    session.endSession();
-
-    return res.status(201).json({
-      success: true,
-      preapproval: {
-        _id: newVisitor._id,
-        ID: uniqueId,
-        visitorName,
-        contactNumber,
-        dateOfVisit: date,
-        timeOfVisit,
-        purpose,
-        status: "approved",
-        qrToken: newVisitor.qrToken,
-        qrCode: newVisitor.qrCode,
-      },
-    });
-  } catch (err) {
-    await session.abortTransaction();
-    session.endSession();
-    console.error("Error in pre-approving visitor:", err);
-    return res
-      .status(500)
-      .json({ message: "Internal server error", error: err.message });
-  }
-});
-
-residentRouter.delete("/preapproval/cancel/:id", async (req, res) => {
-  const requestId = req.params.id;
-  console.log("Canceling request with ID:", requestId);
-
-  try {
-    const result = await Visitor.findByIdAndDelete(requestId);
-    if (!result) {
-      console.log("Request not found for ID:", requestId);
-      return res.status(404).json({ error: "Request not found" });
-    }
-
-    res
-      .status(200)
-      .json({ message: "Request canceled successfully", ok: true });
-  } catch (error) {
-    console.error("Error canceling request:", error);
-    return res.status(500).json({ error: "Failed to cancel request" });
-  }
-});
-
-residentRouter.get("/preapproval/qr/:id", auth, authorizeR, getQRcode);
-
-// residentRouter.get("/profile", async (req, res) => {
-//   const ads = await Ad.find({
-//     community: req.user.community,
-//     startDate: { $lte: new Date() },
-//     endDate: { $gte: new Date() },
-//   });
-
-//   const r = await Resident.findById(req.user.id);
-
-//   res.render("resident/Profile", { path: "pr", ads, r });
-// });
-residentRouter.get("/profile", auth, authorizeR, getResidentProfile);
-
-residentRouter.post("/profile", upload.single("image"), async (req, res) => {
-  const { firstName, lastName, contact, email, address } = req.body;
-
-  console.log("Profile update data:", req.body);
-
-  const r = await Resident.findById(req.user.id);
-
-  let image = r.image;
-
-  if (req.file && req.file.buffer) {
-    try {
-      const result = await new Promise((resolve, reject) => {
-        const uploadStream = cloudinary.uploader.upload_stream(
-          {
-            folder: "profiles/resident",
-            resource_type: "image",
-            transformation: [
-              { width: 512, height: 512, crop: "limit" },
-              { quality: "auto:good" },
-            ],
-          },
-          (error, result) => {
-            if (error) return reject(error);
-            resolve(result);
-          }
-        );
-
-        uploadStream.end(req.file.buffer);
-      });
-
-      image = result.secure_url;
-      r.imagePublicId = result.public_id;
-    } catch (err) {
-      console.error("Resident profile image upload error:", err);
-      return res.status(500).json({
-        success: false,
-        message: "Failed to upload profile image.",
-      });
-    }
-  }
-
-  r.residentFirstname = firstName;
-  r.residentLastname = lastName;
-  r.email = email;
-  r.contact = contact;
-  const blockNo = address.split(" ")[1] + " " + address.split(" ")[2];
-  const flatNo = address.split(" ")[3];
-
-  if (image) {
-    r.image = image;
-  }
-
-  r.blockNo = blockNo;
-  r.flatNo = flatNo;
-
-  await r.save();
-
-  return res.json({
-    success: true,
-    message: "Profile updated successfully",
-    r,
-  });
-});
-
-residentRouter.post("/change-password", async (req, res) => {
-  const { currentPassword, newPassword } = req.body;
-  const resident = await Resident.findById(req.user.id);
-
-  if (!resident) {
-    return res.json({ success: false, message: "Resident not found." });
-  }
-
-  const isMatch = await bcrypt.compare(currentPassword, resident.password);
-  if (!isMatch) {
-    return res.json({
-      success: false,
-      message: "Current password does not match.",
-    });
-  }
-
-  const salt = await bcrypt.genSalt(10);
-  resident.password = await bcrypt.hash(newPassword, salt);
-  await resident.save();
-
-  res.json({ ok: true, message: "Password changed successfully." });
-});
-
-residentRouter.put("/update-profile", async (req, res) => {
-  try {
-    const { firstname, lastname, contact, uCode } = req.body;
-
-    if (!firstname || !lastname || !contact || !uCode) {
-      return res.status(400).json({
-        success: false,
-        message: "All fields are required",
-      });
-    }
-
-    const resident = await Resident.findById(req.user.id);
-    if (!resident) {
-      return res.status(404).json({
-        success: false,
-        message: "Resident not found",
-      });
-    }
-
-    // Update fields
-    resident.residentFirstname = firstname;
-    resident.residentLastname = lastname;
-    resident.contact = contact;
-    resident.uCode = uCode.toUpperCase();
-
-    await resident.save();
-
-    return res.json({
-      success: true,
-      message: "Profile updated successfully",
-      resident: {
-        firstname: resident.residentFirstname,
-        lastname: resident.residentLastname,
-        contact: resident.contact,
-        uCode: resident.uCode,
-      },
-    });
-  } catch (error) {
-    console.error("Profile update error:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
-  }
-});
+// Profile Routes
+residentRouter.get("/profile", auth, authorizeR, ResidentController.getResidentProfile);
+residentRouter.post("/profile", auth, authorizeR, upload.single("image"), ResidentController.updateProfile);
+residentRouter.post("/change-password", auth, authorizeR, ResidentController.changePassword);
 
 residentRouter.get("/clearNotification", async (req, res) => {
   const resi = await Resident.updateOne(

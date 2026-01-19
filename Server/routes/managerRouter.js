@@ -472,7 +472,8 @@ async function checkSubscription(req, res, next) {
       req.path === "/subscription-payment" ||
       req.path === "/all-payments" ||
       req.path === "/new-community" ||
-      req.path === "/create-with-payment"
+      req.path === "/create-with-payment" ||
+      req.path === "/community/rotate-code" 
     ) {
       return next();
     }
@@ -2373,7 +2374,16 @@ managerRouter.get("/profile/api", async (req, res) => {
 
     const community = await Community.findById(
       manager.assignedCommunity
-    ).select("name");
+    );
+    if (!community) {
+      return res.status(404).json({
+        success: false,
+        message: "Community not found",
+      });
+    }
+
+    await community.rotateCodeIfExpired();
+    const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
 
     res.json({
       success: true,
@@ -2386,6 +2396,10 @@ managerRouter.get("/profile/api", async (req, res) => {
       },
       community: {
         name: community?.name || "",
+        communityCode : community.communityCode,
+        codeExpiresAt: new Date(
+          community.communityCodeLastRotatedAt.getTime() + SEVEN_DAYS
+        ),
       },
     });
   } catch (error) {
@@ -2485,6 +2499,43 @@ managerRouter.post("/profile/changePassword", async (req, res) => {
     res
       .status(500)
       .json({ success: false, message: "Failed to change password" });
+  }
+});
+
+
+managerRouter.post("/community/rotate-code", async (req, res) => {
+  try {
+    const managerId = req.user.id;
+    const manager = await CommunityManager.findById(managerId);
+
+    if (!manager || !manager.assignedCommunity) {
+      return res.status(404).json({
+        success: false,
+        message: "Community manager not found",
+      });
+    }
+
+    const community = await Community.findById(manager.assignedCommunity);
+    if (!community) {
+      return res.status(404).json({
+        success: false,
+        message: "Community not found",
+      });
+    }
+
+    const newCode = await community.forceRotateCode();
+
+    res.json({
+      success: true,
+      communityCode: newCode,
+      rotatedAt: community.communityCodeLastRotatedAt,
+    });
+  } catch (err) {
+    console.error("Rotate community code error:", err);
+    res.status(500).json({
+      success: false,
+      message: "Failed to rotate community code",
+    });
   }
 });
 
