@@ -1,6 +1,8 @@
 import Payment from '../models/payment.js';
 import Resident from '../models/resident.js';
 import CommunityManager from "../models/cManager.js";
+import Notifications from "../models/Notifications.js";
+import { getIO } from "../utils/socket.js";
 
 class PaymentController {
     /**
@@ -274,7 +276,7 @@ class PaymentController {
     static async updatePayment(req, res) {
         try {
             const { id } = req.params;
-            const { status, remarks, paymentMethod } = req.body;
+            const { status, remarks, paymentMethod, amount } = req.body;
             
             // Get manager's community
             const managerId = req.user.id;
@@ -300,11 +302,24 @@ class PaymentController {
                 // If status is changed to completed, set payment date
                 if (status === 'Completed' && !payment.paymentDate) {
                     payment.paymentDate = new Date();
+                    
+                    // If this payment belongs to an issue, update issue status to Closed
+                    if (payment.belongTo === 'Issue' && payment.belongToId) {
+                        const Issue = (await import('../models/issues.js')).default;
+                        await Issue.findByIdAndUpdate(payment.belongToId, { status: 'Closed' });
+                    }
                 }
             }
             
             if (paymentMethod) payment.paymentMethod = paymentMethod;
             if (remarks !== undefined) payment.remarks = remarks;
+            if (amount !== undefined) {
+                const cost = parseFloat(amount);
+                if (isNaN(cost) || cost < 0) {
+                    return res.status(400).json({ message: 'Invalid amount' });
+                }
+                payment.amount = cost;
+            }
             
             await payment.save();
             
@@ -346,6 +361,45 @@ class PaymentController {
                 payment.status = status;
                 if (status === 'Completed') {
                     payment.paymentDate = paymentDate ? new Date(paymentDate) : new Date();
+
+                    // If this payment belongs to an issue, close the issue
+                    if (payment.belongTo === 'Issue' && payment.belongToId) {
+                        const Issue = (await import('../models/issues.js')).default;
+                        await Issue.findByIdAndUpdate(payment.belongToId, { status: 'Closed' });
+
+                        if (payment.community) {
+                            const manager = await CommunityManager.findOne({ assignedCommunity: payment.community });
+                            if (manager) {
+                                const notification = new Notifications({
+                                    type: "Payment",
+                                    title: "Issue Payment Completed",
+                                    message: `Payment completed for issue ${payment.belongToId}.`,
+                                    referenceId: payment._id,
+                                    referenceType: "Payment"
+                                });
+                                await notification.save();
+                                manager.notifications.push(notification._id);
+                                await manager.save();
+                            }
+                        }
+
+                        const io = getIO();
+                        if (io) {
+                            io.to(`community_${payment.community}`).emit("issue:updated", {
+                                action: "payment_completed",
+                                issueId: payment.belongToId,
+                                status: "Closed",
+                                community: payment.community,
+                                updatedAt: new Date().toISOString(),
+                            });
+                            io.to(`resident_${residentId}`).emit("issue:updated", {
+                                action: "payment_completed",
+                                issueId: payment.belongToId,
+                                status: "Closed",
+                                updatedAt: new Date().toISOString(),
+                            });
+                        }
+                    }
                 }
             }
             

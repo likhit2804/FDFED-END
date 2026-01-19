@@ -1582,37 +1582,14 @@ managerRouter.get("/api/dashboard", async (req, res) => {
   }
 });
 
+
+/*---------------------------------------------------------------------------------------------------- */
 managerRouter.get("/issueResolving", async (req, res) => {
   try {
-    const managerId = req.user.id;
-    const manager = await CommunityManager.findById(managerId);
-
-    const ads = await Ad.find({
-      community: req.user.community,
-      status: "Active",
-    });
-
-    if (!manager) {
-      return res.status(404).json({ message: "Community manager not found" });
-    }
-    const community = manager.assignedCommunity;
-
-    if (!community) {
-      return res.status(404).json({ message: "Community not found" });
-    }
-
-    const workers = await Worker.find({ community: community });
-    const issues = await Issue.find({ community: community })
-      .populate("resident")
-      .populate("workerAssigned");
-
-    console.log(issues);
-
+    const data = await getIssueResolvingData(req);
     res.render("communityManager/issueResolving", {
       path: "ir",
-      issues: issues,
-      workers: workers,
-      ads,
+      ...data,
     });
   } catch (error) {
     console.error(error);
@@ -1620,84 +1597,33 @@ managerRouter.get("/issueResolving", async (req, res) => {
   }
 });
 
-// API endpoint to fetch issues data for auto-refresh
-managerRouter.get("/issueResolving/api/issues", async (req, res) => {
-  try {
-    const managerId = req.user.id;
-    const manager = await CommunityManager.findById(managerId);
-
-    if (!manager) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Community manager not found" });
-    }
-
-    const community = manager.assignedCommunity;
-    if (!community) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Community not found" });
-    }
-
-    const issues = await Issue.find({ community: community })
-      .populate("resident")
-      .populate("workerAssigned")
-      .sort({ createdAt: -1 });
-
-    res.json({
-      success: true,
-      issues: issues,
-    });
-  } catch (error) {
-    console.error("Error fetching issues:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to fetch issues",
-    });
-  }
-});
-import { assignIssue, getManagerIssues, reassignIssue, closeIssueByManager, holdIssue, getIssueById } from "../controllers/issueController.js";
+import { assignIssue, getManagerIssues, reassignIssue, closeIssueByManager, getIssueById, getRejectedPendingIssues, getIssueResolvingApiIssues, getIssueResolvingData } from "../controllers/issueController.js";
 managerRouter.get("/issue/myIssues", getManagerIssues);
 managerRouter.post("/issue/assign/:id", assignIssue);
 managerRouter.post("/issue/reassign/:id", reassignIssue);
 managerRouter.post("/issue/close/:id", closeIssueByManager);
-managerRouter.post("/issue/hold/:id", holdIssue);
 managerRouter.get("/issue/:id", getIssueById);
 
+// API endpoint to fetch issues data for auto-refresh
+managerRouter.get("/issueResolving/api/issues", getIssueResolvingApiIssues);
 // NEW: Route for handling rejected auto-assigned issues (resident rejects → goes to manager)
-managerRouter.get("/issue/rejected/pending", async (req, res) => {
+managerRouter.get("/issue/rejected/pending", getRejectedPendingIssues);
+
+// Get workers for assignment
+managerRouter.get("/workers", async (req, res) => {
   try {
-    const managerId = req.user.id;
-    const manager = await CommunityManager.findById(managerId);
-
-    if (!manager) {
-      return res.status(404).json({ success: false, message: "Manager not found" });
-    }
-
-    const community = manager.assignedCommunity;
-
-    // Issues that were auto-assigned but rejected by resident
-    const rejectedIssues = await Issue.find({
-      community,
-      status: "Reopened",
-      autoAssigned: true,
-    })
-      .populate("resident")
-      .populate("workerAssigned")
-      .sort({ createdAt: -1 });
-
-    res.json({
-      success: true,
-      count: rejectedIssues.length,
-      issues: rejectedIssues,
-    });
+    const workers = await Worker.find({ 
+      community: req.user.community,
+      isActive: true 
+    }).select('name jobRole _id');
+    res.json({ success: true, workers });
   } catch (error) {
-    console.error(error);
+    console.error("Error fetching workers:", error);
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
 
-
+/*---------------------------------------------------------------------------------------------------- */
 managerRouter.get("/api/payments", async (req, res) => {
   try {
     const managerId = req.user && req.user.id;
@@ -2540,3 +2466,4 @@ managerRouter.post("/community/rotate-code", async (req, res) => {
 });
 
 export default managerRouter;
+

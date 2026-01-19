@@ -118,6 +118,11 @@ const issueSchema = new Schema({
     default: null,
   },
 
+  misassignedBy: [{
+    type: Schema.Types.ObjectId,
+    ref: "Worker",
+  }],
+
   resolvedAt: {
     type: String,
     default: null,
@@ -142,6 +147,12 @@ const issueSchema = new Schema({
   paymentStatus: {
     type: String,
     default: "Pending",
+  },
+
+  estimatedCost: {
+    type: Number,
+    default: 0,
+    min: 0,
   },
 
   feedback: String,

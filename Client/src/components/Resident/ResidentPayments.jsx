@@ -141,12 +141,32 @@ const PaymentsHistory = ({ onStats, filters = {} }) => {
     const [selected, setSelected] = useState(null);
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [showPayModal, setShowPayModal] = useState(false);
+    const [paying, setPaying] = useState(false);
+    const [payMethod, setPayMethod] = useState("UPI");
+
+    const computeStats = (list) => {
+        const overduePayments = list.filter(p => (p.status || "").toLowerCase() === "overdue");
+        const pendingPayments = list.filter(p => (p.status || "").toLowerCase() === "pending");
+        const completedPayments = list.filter(p => (p.status || "").toLowerCase() === "completed");
+
+        return {
+            overdueCount: overduePayments.length,
+            pendingCount: pendingPayments.length,
+            completedCount: completedPayments.length,
+            totalBills: list.length,
+            overdueAmount: overduePayments.reduce((s, p) => s + (p.amount || 0), 0),
+            pendingAmount: pendingPayments.reduce((s, p) => s + (p.amount || 0), 0),
+            paidAmount: completedPayments.reduce((s, p) => s + (p.amount || 0), 0),
+            totalTransactions: list.length,
+        };
+    };
 
     useEffect(() => {
         setLoading(true);
         setError(null);
 
-        fetch("http://localhost:3000/resident/api/payments", {
+        fetch("http://localhost:3000/resident/payments", {
             method: "GET",
             headers: { "Content-Type": "application/json" },
             credentials: "include",
@@ -157,8 +177,9 @@ const PaymentsHistory = ({ onStats, filters = {} }) => {
             })
             .then((data) => {
                 console.log("Resident payments data received:", data);
-                setPayments(data.payments || []);
-                if (onStats) onStats(data.stats || {});
+                const list = data.payments || [];
+                setPayments(list);
+                if (onStats) onStats(data.stats || computeStats(list));
             })
             .catch((err) => {
                 console.error("Failed to load resident payments", err);
@@ -167,6 +188,46 @@ const PaymentsHistory = ({ onStats, filters = {} }) => {
             })
             .finally(() => setLoading(false));
     }, [onStats]);
+
+    const openPayModal = (payment) => {
+        setSelected(payment);
+        setPayMethod(payment?.paymentMethod || "UPI");
+        setShowPayModal(true);
+    };
+
+    const closePayModal = () => {
+        setShowPayModal(false);
+        setSelected(null);
+    };
+
+    const handlePayNow = async () => {
+        if (!selected?._id) return;
+        setPaying(true);
+        try {
+            const res = await fetch(`http://localhost:3000/resident/payment/${selected._id}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify({ status: "Completed", paymentMethod: payMethod })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data?.message || "Payment failed");
+
+            const updated = payments.map((p) =>
+                p._id === selected._id
+                    ? { ...p, status: "Completed", paymentMethod: payMethod, paymentDate: new Date().toISOString() }
+                    : p
+            );
+            setPayments(updated);
+            if (onStats) onStats(computeStats(updated));
+            setShowPayModal(false);
+        } catch (err) {
+            console.error("Payment update failed", err);
+            setError(err.message || "Payment update failed");
+        } finally {
+            setPaying(false);
+        }
+    };
 
     // apply client-side filters
     const { search = "", status = "all", type = "all" } = filters;
@@ -243,15 +304,25 @@ const PaymentsHistory = ({ onStats, filters = {} }) => {
                                 <p><strong>Type:</strong> {p.paymentType || p.type || "-"}</p>
                                 <p><strong>Payment ID:</strong> {p.ID || p.transactionId || p._id || "-"}</p>
 
-                                <button
-                                    className="reciept-btn w-100 mt-2"
-                                    onClick={() => {
-                                        setSelected(p);
-                                        setShowPopup(true);
-                                    }}
-                                >
-                                    View Receipt
-                                </button>
+                                <div className="d-flex gap-2 mt-2">
+                                    {['pending', 'overdue'].includes((p.status || '').toLowerCase()) && (
+                                        <button
+                                            className="btn btn-success w-100"
+                                            onClick={() => openPayModal(p)}
+                                        >
+                                            Pay Now
+                                        </button>
+                                    )}
+                                    <button
+                                        className="reciept-btn w-100"
+                                        onClick={() => {
+                                            setSelected(p);
+                                            setShowPopup(true);
+                                        }}
+                                    >
+                                        View Receipt
+                                    </button>
+                                </div>
                             </div>
                         </motion.div>
                     ))}
@@ -263,6 +334,50 @@ const PaymentsHistory = ({ onStats, filters = {} }) => {
                 close={() => setShowPopup(false)}
                 details={selected}
             />
+
+            <AnimatePresence>
+                {showPayModal && selected && (
+                    <motion.div
+                        className="popup"
+                        onClick={closePayModal}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                    >
+                        <motion.div
+                            className="popup-content bg-white rounded-4 p-4 shadow"
+                            onClick={(e) => e.stopPropagation()}
+                            initial={{ scale: 0.9 }}
+                            animate={{ scale: 1 }}
+                            exit={{ scale: 0.9 }}
+                        >
+                            <div className="d-flex justify-content-between align-items-center">
+                                <h5 className="fw-semibold">Complete Payment</h5>
+                                <button className="btn btn-sm btn-outline-secondary" onClick={closePayModal}>✕</button>
+                            </div>
+                            <hr />
+                            <p className="mb-2"><strong>Title:</strong> {selected.title || "Payment"}</p>
+                            <p className="mb-2"><strong>Amount:</strong> ₹{selected.amount || 0}</p>
+                            <div className="mb-3">
+                                <label className="form-label">Payment Method</label>
+                                <select className="form-select" value={payMethod} onChange={(e) => setPayMethod(e.target.value)}>
+                                    <option value="UPI">UPI</option>
+                                    <option value="Debit">Debit Card</option>
+                                    <option value="Credit">Credit Card</option>
+                                    <option value="Netbanking">Net Banking</option>
+                                    <option value="Cash">Cash</option>
+                                </select>
+                            </div>
+                            <div className="d-flex gap-2">
+                                <button className="btn btn-secondary w-100" onClick={closePayModal} disabled={paying}>Cancel</button>
+                                <button className="btn btn-success w-100" onClick={handlePayNow} disabled={paying}>
+                                    {paying ? "Processing..." : "Pay Now"}
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };
