@@ -17,8 +17,8 @@ import { authorizeR } from "../controllers/authorization.js";
 import { getIO } from "../utils/socket.js";
 import Ad from "../models/Ad.js";
 import PaymentController from "../controllers/payments.js";
-import { OTP } from "../controllers/OTP.js";
-import { verify } from "../controllers/OTP.js";
+// import { OTP } from "../controllers/OTP.js";
+// import { verify } from "../controllers/OTP.js";
 import {
   getCommonSpace,
   getIssueData,
@@ -26,7 +26,9 @@ import {
 } from "../controllers/Resident.js";
 
 import * as ResidentController from "../controllers/Resident/index.js";
-// The imports are 
+// The imports are Profile : updateProfile, changePassword, getResidentProfile
+// Preapproval : createPreApproval, cancelPreApproval, getPreApprovals, getQRcode
+// Registration : requestOtp,verifyOtp,completeRegistration
 
 
 import {
@@ -43,110 +45,114 @@ import Amenity from "../models/Amenities.js";
 
 residentRouter.use(checkSubscriptionStatus);
 // Resident Self-Registration (OTP + Community Code)
-residentRouter.post("/register/request-otp", async (req, res) => {
-  try {
-    const { email } = req.body;
-    if (!email)
-      return res
-        .status(400)
-        .json({ success: false, message: "Email is required" });
+// residentRouter.post("/register/request-otp", async (req, res) => {
+//   try {
+//     const { email } = req.body;
+//     if (!email)
+//       return res
+//         .status(400)
+//         .json({ success: false, message: "Email is required" });
 
-    const existing = await Resident.findOne({ email });
-    if (existing && existing.password) {
-      return res
-        .status(409)
-        .json({ success: false, message: "Account already exists" });
-    }
+//     const existing = await Resident.findOne({ email });
+//     if (existing && existing.password) {
+//       return res
+//         .status(409)
+//         .json({ success: false, message: "Account already exists" });
+//     }
 
-    await OTP(email);
-    return res.json({ success: true, message: "OTP sent to email" });
-  } catch (err) {
-    console.error("OTP request error:", err);
-    return res.status(500).json({ success: false, message: "Server error" });
-  }
-});
+//     await OTP(email);
+//     return res.json({ success: true, message: "OTP sent to email" });
+//   } catch (err) {
+//     console.error("OTP request error:", err);
+//     return res.status(500).json({ success: false, message: "Server error" });
+//   }
+// });
 
-residentRouter.post("/register/verify-otp", async (req, res) => {
-  try {
-    const { email, otp } = req.body;
-    if (!email || !otp)
-      return res
-        .status(400)
-        .json({ success: false, message: "Email and OTP required" });
+// residentRouter.post("/register/verify-otp", async (req, res) => {
+//   try {
+//     const { email, otp } = req.body;
+//     if (!email || !otp)
+//       return res
+//         .status(400)
+//         .json({ success: false, message: "Email and OTP required" });
 
-    const isValid = verify(email, otp);
-    if (!isValid)
-      return res.status(401).json({ success: false, message: "Invalid OTP" });
+//     const isValid = verify(email, otp);
+//     if (!isValid)
+//       return res.status(401).json({ success: false, message: "Invalid OTP" });
 
-    return res.json({ success: true, message: "OTP verified" });
-  } catch (err) {
-    console.error("Verify OTP error:", err);
-    return res.status(500).json({ success: false, message: "Server error" });
-  }
-});
+//     return res.json({ success: true, message: "OTP verified" });
+//   } catch (err) {
+//     console.error("Verify OTP error:", err);
+//     return res.status(500).json({ success: false, message: "Server error" });
+//   }
+// });
 
-residentRouter.post("/register/complete", async (req, res) => {
-  try {
-    const {
-      residentFirstname,
-      residentLastname,
-      uCode,
-      contact,
-      email,
-      communityCode,
-    } = req.body;
-    if (
-      !residentFirstname ||
-      !residentLastname ||
-      !uCode ||
-      !email ||
-      !communityCode
-    ) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Missing required fields" });
-    }
+// residentRouter.post("/register/complete", async (req, res) => {
+//   try {
+//     const {
+//       residentFirstname,
+//       residentLastname,
+//       uCode,
+//       contact,
+//       email,
+//       communityCode,
+//     } = req.body;
+//     if (
+//       !residentFirstname ||
+//       !residentLastname ||
+//       !uCode ||
+//       !email ||
+//       !communityCode
+//     ) {
+//       return res
+//         .status(400)
+//         .json({ success: false, message: "Missing required fields" });
+//     }
 
-    const community = await Community.findOne({ communityCode });
-    if (!community) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Invalid community code" });
-    }
+//     const community = await Community.findOne({ communityCode });
+//     if (!community) {
+//       return res
+//         .status(404)
+//         .json({ success: false, message: "Invalid community code" });
+//     }
 
-    const rotated = await community.rotateCodeIfExpired();
-    if (rotated) {
-      return res.status(400).json({
-        success: false,
-        message:
-          "Community code expired. Please request a new code from the manager.",
-      });
-    }
+//     const rotated = await community.rotateCodeIfExpired();
+//     if (rotated) {
+//       return res.status(400).json({
+//         success: false,
+//         message:
+//           "Community code expired. Please request a new code from the manager.",
+//       });
+//     }
 
 
-    let resident = await Resident.findOne({ email });
-    if (!resident) {
-      resident = new Resident({
-        residentFirstname,
-        residentLastname,
-        uCode,
-        contact,
-        email,
-        community: community._id,
-      });
-    } 
+//     let resident = await Resident.findOne({ email });
+//     if (!resident) {
+//       resident = new Resident({
+//         residentFirstname,
+//         residentLastname,
+//         uCode,
+//         contact,
+//         email,
+//         community: community._id,
+//       });
+//     } 
 
-    await resident.save();
-    return res.json({
-      success: true,
-      message: "Resident registered",
-      residentId: resident._id,
-    });
-  } catch (err) {
-    console.error("Complete registration error:", err);
-    return res.status(500).json({ success: false, message: "Server error" });
-  }
-});
+//     await resident.save();
+//     return res.json({
+//       success: true,
+//       message: "Resident registered",
+//       residentId: resident._id,
+//     });
+//   } catch (err) {
+//     console.error("Complete registration error:", err);
+//     return res.status(500).json({ success: false, message: "Server error" });
+//   }
+// });
+residentRouter.post("/register/request-otp", ResidentController.requestOtp);
+residentRouter.post("/register/verify-otp", ResidentController.verifyOtp);
+residentRouter.post("/register/complete", ResidentController.completeRegistration);
+
 
 function generateCustomID(userEmail, facility, countOrRandom = null) {
   console.log("userEmail:", userEmail);
@@ -671,7 +677,6 @@ import {
   submitFeedback,
 } from "../controllers/issueController.js";
 import Notifications from "../models/Notifications.js";
-import e from "express";
 import CommunityManager from "../models/cManager.js";
 
 residentRouter.post("/issue/confirmIssue/:id", confirmIssue);
