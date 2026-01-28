@@ -15,7 +15,7 @@ import multer from "multer";
 import cloudinary from "../configs/cloudinary.js";
 import bcrypt from "bcrypt";
 
-import { getDashboardInfo, UpdatePreApprovalData } from "../controllers/Security.js";
+import { getDashboardInfo} from "../controllers/Security.js";
 import Visitor from "../models/visitors.js";
 import checkSubscriptionStatus from "../middleware/subcriptionStatus.js";
 import * as SecurityController from  "../controllers/Security/index.js"
@@ -81,51 +81,10 @@ securityRouter.get("/dashboard", (req, res) => {
 // API route your React fetches
 securityRouter.get("/dashboard/api", getDashboardInfo);
 
-// securityRouter.get("/preApproval", async (req, res) => {
-//   const pa = await Visitor.find({
-//     community: req.user.community,
-//   }).populate("approvedBy");
-
-
-//   console.log(pa);
-
-
-//   const ads = await Ad.find({ community: req.user.community, startDate: { $lte: new Date() }, endDate: { $gte: new Date() } });
-
-
-
-
-//   // res.render("security/preApproval", { path: "pa", pa, ads });
-// });
-securityRouter.get("/preApproval", async (req, res) => {
-  try {
-    const pa = await Visitor.find({
-      community: req.user.community,
-    }).populate("approvedBy");
-
-    const ads = await Ad.find({
-      community: req.user.community,
-      startDate: { $lte: new Date() },
-      endDate: { $gte: new Date() },
-    });
-
-    return res.json({
-      success: true,
-      preApprovalList: pa,
-      ads,
-    });
-
-  } catch (err) {
-    console.error("PreApproval fetch error:", err);
-    return res.status(500).json({
-      success: false,
-      message: "Server error loading pre-approval data",
-    });
-  }
-});
-
-
-securityRouter.post("/preApproval/action", UpdatePreApprovalData);
+//Preapproval routes
+securityRouter.get("/preApproval", auth, authorizeS, SecurityController.getPreApprovals);
+securityRouter.post("/preApproval/action", auth, authorizeS, SecurityController.updatePreApprovalStatus);
+securityRouter.post("/verify-qr", auth, authorizeS, SecurityController.verifyQr);
 
 
 // Visitor mamagement routes
