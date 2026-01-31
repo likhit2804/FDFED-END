@@ -473,7 +473,7 @@ async function checkSubscription(req, res, next) {
       req.path === "/all-payments" ||
       req.path === "/new-community" ||
       req.path === "/create-with-payment" ||
-      req.path === "/community/rotate-code" 
+      req.path === "/community/rotate-code"
     ) {
       return next();
     }
@@ -1612,9 +1612,9 @@ managerRouter.get("/issue/rejected/pending", getRejectedPendingIssues);
 // Get workers for assignment
 managerRouter.get("/workers", async (req, res) => {
   try {
-    const workers = await Worker.find({ 
+    const workers = await Worker.find({
       community: req.user.community,
-      isActive: true 
+      isActive: true
     }).select('name jobRole _id');
     res.json({ success: true, workers });
   } catch (error) {
@@ -2322,7 +2322,7 @@ managerRouter.get("/profile/api", async (req, res) => {
       },
       community: {
         name: community?.name || "",
-        communityCode : community.communityCode,
+        communityCode: community.communityCode,
         codeExpiresAt: new Date(
           community.communityCodeLastRotatedAt.getTime() + SEVEN_DAYS
         ),
@@ -2462,6 +2462,78 @@ managerRouter.post("/community/rotate-code", async (req, res) => {
       success: false,
       message: "Failed to rotate community code",
     });
+  }
+});
+
+// ---------------- COMMUNITY STRUCTURE SETUP ----------------
+
+managerRouter.post("/setup-structure", async (req, res) => {
+  try {
+    const { blocks } = req.body; // Expects [{ name: "A", totalFloors: 5, flatsPerFloor: 4 }, ...]
+
+    if (!blocks || !Array.isArray(blocks) || blocks.length === 0) {
+      return res.status(400).json({ success: false, message: "Invalid blocks configuration" });
+    }
+
+    const managerId = req.user.id;
+    const manager = await CommunityManager.findById(managerId);
+
+    if (!manager || !manager.assignedCommunity) {
+      return res.status(404).json({ success: false, message: "Community not found" });
+    }
+
+    const community = await Community.findById(manager.assignedCommunity);
+    if (!community) {
+      return res.status(404).json({ success: false, message: "Community not found" });
+    }
+
+    if (community.hasStructure) {
+      return res.status(400).json({ success: false, message: "Community structure is already set up." });
+    }
+
+    // Generate Blocks & Flats
+    const generatedBlocks = blocks.map(block => {
+      const { name, totalFloors, flatsPerFloor } = block;
+      const flats = [];
+
+      for (let floor = 1; floor <= totalFloors; floor++) {
+        for (let flat = 1; flat <= flatsPerFloor; flat++) {
+          // Standard convention: Floor * 100 + Flat. (Floor 1, Flat 1 => 101).
+          // If > 99 flats/floor... unusual but handle simply.
+          let flatNumberSuffix = (floor * 100) + flat;
+
+          const flatNumber = `${name}-${flatNumberSuffix}`;
+
+          flats.push({
+            flatNumber,
+            floor,
+            status: "Vacant"
+          });
+        }
+      }
+
+      return {
+        name,
+        totalFloors,
+        flatsPerFloor,
+        flats
+      };
+    });
+
+    community.blocks = generatedBlocks;
+    community.hasStructure = true;
+    await community.save();
+
+    res.json({
+      success: true,
+      message: "Community structure setup successfully!",
+      totalBlocks: generatedBlocks.length,
+      redirect: "/manager/dashboard"
+    });
+
+  } catch (err) {
+    console.error("Setup structure error:", err);
+    res.status(500).json({ success: false, message: "Server error during setup" });
   }
 });
 

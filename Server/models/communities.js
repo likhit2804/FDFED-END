@@ -11,7 +11,7 @@ const CommunitySchema = new mongoose.Schema(
     // Unique short code used to route sign-ups to this community
     // used for inviting people using residnet registration
     communityCode: { type: String, required: true, unique: true, index: true },
-    communityCodeLastRotatedAt: {type: Date, default: Date.now},
+    communityCodeLastRotatedAt: { type: Date, default: Date.now },
 
     status: { type: String, enum: ["Active", "Inactive"], default: "Active" },
     totalMembers: { type: Number, default: 0 },
@@ -50,6 +50,24 @@ const CommunitySchema = new mongoose.Schema(
     },
     planStartDate: Date,
     planEndDate: Date,
+
+    // Community Structure (Blocks & Flats)
+    hasStructure: { type: Boolean, default: false },
+    blocks: [
+      {
+        name: { type: String, required: true }, // e.g., "Block A"
+        totalFloors: { type: Number, required: true },
+        flatsPerFloor: { type: Number, required: true },
+        flats: [
+          {
+            flatNumber: { type: String, required: true }, // e.g., "A-101"
+            floor: { type: Number, required: true },      // e.g., 1
+            status: { type: String, enum: ["Vacant", "Occupied", "Owner"], default: "Vacant" },
+            residentId: { type: mongoose.Schema.Types.ObjectId, ref: "Resident" }
+          }
+        ]
+      }
+    ],
 
     // legacy (optional)
     paymentHistory: [

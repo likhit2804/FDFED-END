@@ -54,6 +54,18 @@ const InterestSchema = new mongoose.Schema({
     type: mongoose.Schema.ObjectId,
     ref: 'admin'
   },
+  paymentStatus: {
+    type: String,
+    enum: ['pending', 'completed', 'failed'],
+    default: 'pending'
+  },
+  onboardingToken: {
+    type: String,
+    index: true // Indexed for faster lookups
+  },
+  onboardingTokenExpires: {
+    type: Date
+  },
   rejectedBy: {
     type: mongoose.Schema.ObjectId,
     ref: 'admin'
@@ -78,13 +90,13 @@ const InterestSchema = new mongoose.Schema({
 });
 
 // Update the updatedAt field before saving
-InterestSchema.pre('save', function(next) {
+InterestSchema.pre('save', function (next) {
   this.updatedAt = Date.now();
   next();
 });
 
 // Query middleware to populate admin fields
-InterestSchema.pre(/^find/, function(next) {
+InterestSchema.pre(/^find/, function (next) {
   this.populate({
     path: 'approvedBy rejectedBy',
     select: 'name email'
