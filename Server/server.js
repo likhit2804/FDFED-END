@@ -539,19 +539,23 @@ app.get("/api/auth/getUser", auth, async (req, res) => {
 
   try {
     const data = jwt.verify(cookie, process.env.JWT_SECRET);
-    
+
     // Fetch subscription status for any user associated with a community
+    // Fetch subscription and structure status for any user associated with a community
     let subscriptionStatus = "active";
+    let hasStructure = true; // Default to true for non-managers to avoid redirect loops
+
     if (data.community) {
       const community = await Community.findById(data.community).select(
-        "subscriptionStatus"
+        "subscriptionStatus hasStructure"
       );
-      if (community && community.subscriptionStatus) {
-        subscriptionStatus = community.subscriptionStatus;
+      if (community) {
+        if (community.subscriptionStatus) subscriptionStatus = community.subscriptionStatus;
+        if (community.hasStructure !== undefined) hasStructure = community.hasStructure;
       }
     }
 
-    return res.json({ user: { ...data, subscriptionStatus } });
+    return res.json({ user: { ...data, subscriptionStatus, hasStructure } });
   } catch (err) {
     return res.status(401).json({ message: "Unauthorized" });
   }

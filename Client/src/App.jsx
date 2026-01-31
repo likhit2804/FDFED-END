@@ -24,6 +24,7 @@ import { Advertisement } from './components/Manager/Advertisement';
 import { Payments } from './components/Manager/Payments';
 import UserManagement from './components/Manager/UserManagement.jsx';
 import Subscription from './components/Manager/Subscription.jsx';
+import ManagerSetup from './components/Manager/ManagerSetup.jsx';
 
 import { CommonSpaceBooking } from './components/Resident/CommonSpace';
 import { IssueRaising } from './components/Resident/IssueRaising';
@@ -118,6 +119,7 @@ function App() {
         <Route element={<ProtectedRoute allowedUserType="CommunityManager" />}>
           <Route path="/manager" element={<Layout userType="manager" />}>
             <Route path="subscription" element={<Subscription />} />
+            <Route path="setup" element={<ManagerSetup />} />
             <Route path="dashboard" element={<ManagerDashboard />} />
             <Route path="issueResolving" element={<IssueResolving />} />
             <Route path="commonSpace" element={<CommonSpace />} />
