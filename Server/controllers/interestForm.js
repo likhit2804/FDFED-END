@@ -74,7 +74,7 @@ export const uploadPhoto = async (req, res) => {
   try {
     console.log('Upload photo endpoint hit');
     console.log('File received:', !!req.file);
-    
+
     if (!req.file) {
       console.log('No file provided');
       return res.status(400).json({ success: false, message: 'No file provided' });
@@ -107,7 +107,7 @@ export const uploadPhoto = async (req, res) => {
           }
         }
       );
-      
+
       uploadStream.end(req.file.buffer);
     });
 
@@ -126,13 +126,13 @@ export const uploadPhoto = async (req, res) => {
   }
 };
 // Email transporter setup - Simplified version
-const transporter = nodemailer.createTransport({
+const emailTransporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
   port: 587,
   secure: false,
   auth: {
     user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS 
+    pass: process.env.EMAIL_PASS
   }
 });
 
@@ -221,14 +221,14 @@ export const submitInterestForm = async (req, res) => {
                 else resolve(result);
               }
             );
-            
+
             // Write file buffer to upload stream
             uploadStream.end(file.buffer);
           });
-          
+
           // Store Cloudinary URL
           photoUrls.push(result.secure_url);
-          
+
         } catch (uploadError) {
           console.error('Cloudinary upload error:', uploadError);
           throw new Error('Failed to upload photo to cloud storage');
@@ -311,7 +311,10 @@ export const getAllApplications = async (req, res) => {
       rejectedBy: app.rejectedBy,
       approvedAt: app.approvedAt,
       rejectedAt: app.rejectedAt,
-      rejectionReason: app.rejectionReason
+      approvedAt: app.approvedAt,
+      rejectedAt: app.rejectedAt,
+      rejectionReason: app.rejectionReason,
+      paymentStatus: app.paymentStatus || 'pending'
     }));
 
     // 3️⃣ Send JSON response
@@ -363,93 +366,57 @@ export const approveApplication = async (req, res) => {
   session.startTransaction();
 
   try {
-    // 1. Generate credentials
-    const randomPassword = crypto.randomBytes(8).toString('hex');
-    const hashedPassword = await bcrypt.hash(randomPassword, 12);
-    console.log("[Step 1] Generated credentials");
+    // 1. Generate onboarding token (secure hex string)
+    const onboardingToken = crypto.randomBytes(32).toString('hex');
+    const onboardingTokenExpires = Date.now() + 7 * 24 * 60 * 60 * 1000; // Case: Valid for 7 days
 
-    // 2. Get the interest application
-    const interest = await Interest.findById(req.params.id).session(session);
-    if (!interest) {
-      throw new Error('Application not found');
-    }
-    console.log("[Step 2] Fetched interest:", interest._id);
-
-    // 3. Check for existing manager
-    const existingManager = await CommunityManager.findOne({ email: interest.email }).session(session);
-    if (existingManager) {
-      throw new Error('Manager already exists with this email');
-    }
-
-    // 4. Create manager
-    const newManager = await CommunityManager.create(
-      [{
-        name: `${interest.firstName} ${interest.lastName}`,
-        email: interest.email,
-        password: hashedPassword,
-        contact: interest.phone || "0000000000",
-      }],
-      { session }
-    );
-    console.log("[Step 4] New manager created:", newManager[0]._id);
-
-    // 5. Create community (communityCode auto-generates in schema)
-    const newCommunity = await Community.create(
-      [{
-        name: interest.communityName?.trim() || '',
-        location: interest.location?.trim() || '',
-        description: interest.description?.trim() || '',
-        totalMembers: 0,
-        communityManager: newManager[0]._id
-      }],
-      { session }
-    );
-    console.log("[Step 5] New community created:", newCommunity[0]._id);
-
-    // Link community to manager
-    newManager[0].assignedCommunity = newCommunity[0]._id;
-    await newManager[0].save({ session });
-
-    // 6. Update interest status
-    await Interest.findByIdAndUpdate(
+    // 2. Update interest status and set token
+    const interest = await Interest.findByIdAndUpdate(
       req.params.id,
       {
         status: 'approved',
         approvedBy: req.user.id,
-        approvedAt: Date.now()
+        approvedAt: Date.now(),
+        paymentStatus: 'pending',
+        onboardingToken,
+        onboardingTokenExpires
       },
       { new: true, session }
     );
-    console.log("[Step 6] Interest status updated");
 
-    // 7. Commit transaction
+    if (!interest) {
+      throw new Error('Application not found');
+    }
+
+    // 3. Commit transaction
     await session.commitTransaction();
     session.endSession();
 
-    // 8. Get admin name for email
+    // 4. Get admin name for email
     const adminUser = await admin.findById(req.user.id);
     const adminName = adminUser?.name || 'Admin';
 
-    // 9. Send email
-    console.log("[Step 8] Sending approval email to:", interest.email);
-    // Include the generated community code in the approval email
-    const communityCode = newCommunity[0].communityCode;
+    // 5. Send Email with Payment Link
+    const clientUrl = process.env.CLIENT_BASE_URL || 'http://localhost:5173';
+    const paymentLink = `${clientUrl}/onboarding/payment?token=${onboardingToken}`;
+
+    console.log("[Approval] Sending payment link to:", interest.email);
+
     await sendStatusEmail(
       interest.email,
       'approved',
       adminName,
-      `Your community code is <strong>${communityCode}</strong>. Share this code with residents for routing their sign-ups to your community.`,
-      randomPassword
+      `Your application has been approved! <br/><br/><strong>Next Step:</strong> Please complete your subscription payment to activate your account and receive your login credentials.<br/><br/><a href="${paymentLink}" class="btn" style="color: white; text-decoration: none;">Complete Payment & Activate Account</a>`,
+      null // No password yet
     );
-    console.log("[Step 8] Email sent successfully");
 
     res.json({
       success: true,
-      message: 'Manager account and community created successfully',
+      message: 'Application approved. Onboarding link sent to applicant.',
       data: {
-        managerId: newManager[0]._id,
-        communityId: newCommunity[0]._id,
-        communityCode
+        interestId: interest._id,
+        status: interest.status,
+        paymentStatus: interest.paymentStatus
       }
     });
 
@@ -460,12 +427,10 @@ export const approveApplication = async (req, res) => {
     await session.abortTransaction();
     session.endSession();
 
-    let errorMessage = 'Error creating manager account';
-    if (error.message) errorMessage = error.message;
-    
     res.status(500).json({
       success: false,
-      message: errorMessage
+      message: 'Error approving application',
+      error: error.message
     });
   }
 };
@@ -504,9 +469,9 @@ export const rejectApplication = async (req, res) => {
     const adminName = adminUser?.name || 'Admin';
 
     await sendStatusEmail(
-      interest.email, 
-      'rejected', 
-      adminName, 
+      interest.email,
+      'rejected',
+      adminName,
       validator.escape(req.body.reason.trim())
     );
 
@@ -523,8 +488,8 @@ export const rejectApplication = async (req, res) => {
     console.error('Rejection error:', error);
     res.status(500).json({
       success: false,
-      message: error.name === 'ValidationError' 
-        ? 'Invalid rejection data' 
+      message: error.name === 'ValidationError'
+        ? 'Invalid rejection data'
         : 'Error rejecting application'
     });
   }
@@ -538,10 +503,10 @@ export const rejectApplication = async (req, res) => {
 
 
 const sendStatusEmail = async (email, status, adminName, reason = '', password = '') => {
-  const subject = status === 'approved' 
-    ? 'Your Application Has Been Approved' 
-    : status === 'rejected' 
-      ? 'Your Application Has Been Rejected' 
+  const subject = status === 'approved'
+    ? 'Your Application Has Been Approved'
+    : status === 'rejected'
+      ? 'Your Application Has Been Rejected'
       : 'Your Application Status Update';
 
   const htmlTemplate = `
@@ -552,141 +517,67 @@ const sendStatusEmail = async (email, status, adminName, reason = '', password =
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>${subject}</title>
 <style>
-  body {
-    margin: 0;
-    padding: 0;
-    background-color: #f4f6f8;
-    font-family: 'Segoe UI', Tahoma, sans-serif;
-    color: #333;
-  }
-  .container {
-    max-width: 600px;
-    margin: 30px auto;
-    background: #ffffff;
-    border-radius: 10px;
-    overflow: hidden;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-  }
-  .header {
-    padding: 40px 20px;
-    text-align: center;
-    color: white;
-  }
+  body { margin:0; padding:0; background:#f4f6f8; font-family:'Segoe UI', Tahoma, sans-serif; color:#333 }
+  .container { max-width:600px; margin:30px auto; background:#fff; border-radius:10px; overflow:hidden; box-shadow:0 4px 20px rgba(0,0,0,0.08) }
+  .header { padding:36px 20px; text-align:center; color:#fff; }
   .header.approved { background: linear-gradient(135deg, #4CAF50, #2e7d32); }
+  .header.activated { background: linear-gradient(135deg, #2196F3, #1976D2); }
   .header.rejected { background: linear-gradient(135deg, #e53935, #b71c1c); }
   .header.pending  { background: linear-gradient(135deg, #fb8c00, #ef6c00); }
-  .icon {
-    font-size: 40px;
-    display: inline-block;
-    margin-bottom: 15px;
-  }
-  .content {
-    padding: 30px 25px;
-    line-height: 1.6;
-    font-size: 16px;
-    color: #444;
-  }
-  .section {
-    background: #f9fafb;
-    border-left: 4px solid #ccc;
-    padding: 15px 20px;
-    margin: 20px 0;
-    border-radius: 6px;
-  }
-  .credentials {
-    background: #e3f2fd;
-    border: 1px solid #90caf9;
-    padding: 20px;
-    border-radius: 6px;
-    margin: 20px 0;
-  }
-  .credentials code {
-    background: #f1f3f4;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-family: monospace;
-    font-size: 14px;
-  }
-  .btn {
-    display: inline-block;
-    padding: 14px 28px;
-    margin-top: 25px;
-    background: #4CAF50;
-    color: white !important;
-    text-decoration: none;
-    border-radius: 6px;
-    font-weight: bold;
-    text-transform: uppercase;
-    font-size: 14px;
-    box-shadow: 0 3px 6px rgba(76, 175, 80, 0.3);
-  }
-  .btn:hover { opacity: 0.9; }
-  .footer {
-    text-align: center;
-    font-size: 12px;
-    color: #888;
-    padding: 20px;
-    background: #f1f3f4;
-  }
-  @media (max-width: 600px) {
-    .container { margin: 0; border-radius: 0; }
-    .content { padding: 20px; }
-  }
+  .icon { font-size:40px; margin-bottom:10px }
+  .content { padding:28px 24px; line-height:1.6; font-size:16px; color:#444 }
+  .credentials { background:#e3f2fd; border:1px solid #90caf9; padding:18px; border-radius:6px; margin:18px 0 }
+  .credentials code { background:#f1f3f4; padding:4px 8px; border-radius:4px; font-family:monospace; font-size:14px; color: #d32f2f; font-weight: bold; }
+  .btn { display:inline-block; padding:14px 24px; margin-top:18px; background:#4CAF50; color:#fff !important; text-decoration:none; border-radius:6px; font-weight:600; text-transform:uppercase; font-size:14px; box-shadow:0 3px 6px rgba(0,0,0,0.2) }
+  .btn:hover { opacity:0.9 }
+  .footer { text-align:center; font-size:12px; color:#888; padding:16px; background:#f1f3f4 }
+  @media (max-width:600px){ .container{ margin:0; border-radius:0 } .content{ padding:20px } }
 </style>
 </head>
 <body>
   <div class="container">
-    <!-- Header -->
     <div class="header ${status}">
       <div class="icon">
-        ${status === 'approved' ? '✅' : status === 'rejected' ? '❌' : '⏳'}
+        ${status === 'approved' ? '✅' : status === 'rejected' ? '❌' : status === 'activated' ? '🚀' : '🔔'}
       </div>
-      <h1>Application ${status.charAt(0).toUpperCase() + status.slice(1)}</h1>
+      <h1 style="margin:0; font-size:24px;">
+        ${status === 'approved' ? 'Application Approved!' : status === 'rejected' ? 'Application Status' : status === 'activated' ? 'Welcome to UrbanEase!' : 'Notification'}
+      </h1>
     </div>
-
-    <!-- Content -->
     <div class="content">
       <p>Hello,</p>
-      <p>
-        Thank you for your application. Below are the details regarding your application status.
-      </p>
+      
+      ${reason ? `<div style="margin-bottom:20px;">${reason}</div>` : ''}
 
-      ${reason ? `
-      <div class="section">
-        <strong>Additional Information:</strong><br>${reason}
-      </div>
-      ` : ''}
-
-      ${status === 'approved' && password ? `
+      ${status === 'activated' ? `
       <div class="credentials">
-        <h3>🔑 Your Login Credentials</h3>
-        <p><strong>Email:</strong> ${email}</p>
-        <p><strong>Temporary Password:</strong> <code>${password}</code></p>
+        <h3 style="margin-top:0; color:#1565c0;">🚀 Account Activated!</h3>
+        <p style="margin:5px 0;"><strong>Email:</strong> ${email}</p>
+        <p style="margin:5px 0;"><strong>Password:</strong> <code>${password}</code></p>
       </div>
-      <a class="btn" href="${process.env.CLIENT_BASE_URL || 'http://localhost:5173'}/SignIn">Login to Your Account</a>
-      <p style="margin-top:16px;color:#555;">After login, complete your subscription to access manager features.</p>
-      <a class="btn" style="background:#1976d2;box-shadow:0 3px 6px rgba(25,118,210,0.3)" href="${process.env.CLIENT_BASE_URL || 'http://localhost:5173'}/manager/payments">Make Subscription Payment</a>
+      <p style="text-align: center;">Please login and change your password immediately.</p>
+      <div style="text-align:center;">
+        <a class="btn" href="${process.env.CLIENT_BASE_URL || 'http://localhost:5173'}/SignIn">Login to Dashboard</a>
+      </div>
       ` : ''}
 
-      ${status === 'rejected' ? `
-      <p>If you have questions or would like to reapply, please contact our support team.</p>
+      ${(status === 'approved' && !password) ? `
+       <div style="text-align:center; margin-top: 20px;">
+          <a class="btn" href="#" style="background: #1976d2; pointer-events: none; cursor: default;">Awaiting Payment</a>
+       </div>
       ` : ''}
 
     </div>
-
-    <!-- Footer -->
     <div class="footer">
-      This is an automated message regarding your application.<br>
-      Need help? Email us at 
-      <a href="mailto:support@company.com" style="color:#1976d2;">support@company.com</a>
+      This is an automated message from Urban Ease.<br />
+      Need help? Contact <a href="mailto:support@urbaneaseapp.com" style="color:#1976d2;text-decoration:none;">support@urbaneaseapp.com</a>
     </div>
   </div>
 </body>
-</html>
-`;
+</html>`;
 
   try {
-    await transporter.sendMail({
+    await emailTransporter.sendMail({
       from: process.env.EMAIL_FROM,
       to: email,
       subject,
@@ -695,5 +586,243 @@ const sendStatusEmail = async (email, status, adminName, reason = '', password =
     console.log('Status email sent to:', email);
   } catch (error) {
     console.error('Error sending status email:', error);
+  }
+};
+
+
+// ---------------------------------------------------------
+// NEW ONBOARDING ENDPOINTS
+// ---------------------------------------------------------
+
+// Smart Resend: Link if pending, Credentials if completed
+export const resendPaymentLink = async (req, res) => {
+  try {
+    const interest = await Interest.findById(req.params.id);
+    if (!interest) {
+      return res.status(404).json({ success: false, message: 'Application not found' });
+    }
+
+    if (interest.status !== 'approved' && interest.status !== 'onboarded') {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot resend info. Application is rejected or pending.'
+      });
+    }
+
+    // CASE 1: ALREADY COMPLETED -> ERROR (Feature removed)
+    if (interest.paymentStatus === 'completed') {
+      return res.status(400).json({
+        success: false,
+        message: 'Payment already completed. Account is active.'
+      });
+    }
+
+    // CASE 2: PENDING -> RESEND PAYMENT LINK
+    // Generate new token
+    const onboardingToken = crypto.randomBytes(32).toString('hex');
+    const onboardingTokenExpires = Date.now() + 7 * 24 * 60 * 60 * 1000; // 7 days from now
+
+    interest.onboardingToken = onboardingToken;
+    interest.onboardingTokenExpires = onboardingTokenExpires;
+    await interest.save();
+
+    // Send email
+    const adminUser = await admin.findById(req.user.id);
+    const adminName = adminUser?.name || 'Admin';
+    const clientUrl = process.env.CLIENT_BASE_URL || 'http://localhost:5173';
+    const paymentLink = `${clientUrl}/onboarding/payment?token=${onboardingToken}`;
+
+    await sendStatusEmail(
+      interest.email,
+      'approved', // Keep as 'approved' template or customized
+      adminName,
+      `<strong>Payment Link Resent:</strong><br/>Please use the link below to complete your account setup.<br/><br/><a href="${paymentLink}" class="btn" style="color: white; text-decoration: none;">Complete Payment & Activate Account</a>`,
+      null
+    );
+
+    res.json({
+      success: true,
+      message: 'Payment link resent successfully',
+      data: {
+        interestId: interest._id,
+        newExpiry: onboardingTokenExpires
+      }
+    });
+
+  } catch (error) {
+    console.error('Error resending info:', error);
+    res.status(500).json({ success: false, message: 'Error performing resend action' });
+  }
+};
+
+// Public: Get onboarding details by token
+export const getOnboardingDetails = async (req, res) => {
+  try {
+    const { token } = req.params;
+
+    // Find interest by token and check expiry
+    const interest = await Interest.findOne({
+      onboardingToken: token,
+      onboardingTokenExpires: { $gt: Date.now() } // Must not be expired
+    });
+
+    if (!interest) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or expired onboarding link. Please contact support.'
+      });
+    }
+
+    if (interest.paymentStatus === 'completed') {
+      return res.status(400).json({
+        success: false,
+        message: 'This account has already been activated. Please login directly.'
+      });
+    }
+
+    // Define available plans (or fetch from DB/Config)
+    const plans = {
+      standard: {
+        name: "Standard Plan",
+        price: 2999,
+        duration: "monthly",
+        features: ["Resident Management", "Basic Reports", "Email Support", "Up to 500 residents"],
+        maxResidents: 500
+      },
+      premium: {
+        name: "Premium Plan",
+        price: 7999,
+        duration: "monthly",
+        features: ["All Standard Features", "Advanced Analytics", "Priority Support", "Unlimited residents"],
+        maxResidents: null
+      },
+      yearly: {
+        name: "Yearly Saver",
+        price: 29999,
+        duration: "yearly",
+        features: ["All Premium Features", "2 Months Free", "Dedicated Account Manager"],
+        maxResidents: null
+      }
+    };
+
+    res.json({
+      success: true,
+      data: {
+        firstName: interest.firstName,
+        lastName: interest.lastName,
+        email: interest.email,
+        communityName: interest.communityName,
+        paymentStatus: interest.paymentStatus,
+        plans // Return plans here
+      }
+    });
+
+  } catch (error) {
+    console.error('Error fetching onboarding details:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+// Public: Complete Onboarding Payment & Activate Account
+export const completeOnboardingPayment = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const { token, paymentDetails } = req.body;
+
+    // 1. Validate Token
+    const interest = await Interest.findOne({
+      onboardingToken: token,
+      onboardingTokenExpires: { $gt: Date.now() }
+    }).session(session);
+
+    if (!interest) {
+      throw new Error('Invalid or expired onboarding session');
+    }
+
+    if (interest.paymentStatus === 'completed') {
+      throw new Error('Account already activated');
+    }
+
+    // 2. "Process" Payment 
+    // In a real app, you'd verify Stripe/Razorpay signature here.
+    // For now, we assume success if this endpoint is called with paymentDetails.
+    console.log(`[Payment] Processing payment for ${interest.email}`, paymentDetails);
+
+    // 3. Generate Credentials
+    const randomPassword = crypto.randomBytes(8).toString('hex');
+    const hashedPassword = await bcrypt.hash(randomPassword, 12);
+
+    // 4. Create Manager
+    const newManager = await CommunityManager.create(
+      [{
+        name: `${interest.firstName} ${interest.lastName}`,
+        email: interest.email,
+        password: hashedPassword,
+        contact: interest.phone || "0000000000",
+        subscriptionStatus: 'active' // Important: they just paid!
+      }],
+      { session }
+    );
+
+    // 5. Create Community
+    const newCommunity = await Community.create(
+      [{
+        name: interest.communityName?.trim() || '',
+        location: interest.location?.trim() || '',
+        description: interest.description?.trim() || '',
+        totalMembers: 0,
+        communityManager: newManager[0]._id,
+        subscriptionStatus: 'active',
+        subscriptionPlan: paymentDetails?.plan || 'standard',
+        planStartDate: new Date(),
+        // Set expiry based on plan duration
+        planEndDate: new Date(Date.now() + (paymentDetails?.duration === 'yearly' ? 365 : 30) * 24 * 60 * 60 * 1000)
+      }],
+      { session }
+    );
+
+    // Link community
+    newManager[0].assignedCommunity = newCommunity[0]._id;
+    await newManager[0].save({ session });
+
+    // 6. Update Interest Status
+    interest.paymentStatus = 'completed';
+    // interest.status = 'onboarded'; // Optional: change status or keep 'approved'
+    interest.onboardingToken = undefined; // Clear token
+    interest.onboardingTokenExpires = undefined;
+    await interest.save({ session });
+
+    // 7. Commit
+    await session.commitTransaction();
+    session.endSession();
+
+    // 8. Send Welcome Email with Credentials
+    const communityCode = newCommunity[0].communityCode;
+
+    await sendStatusEmail(
+      interest.email,
+      'activated', // New status for Welcome email
+      'UrbanEase Team',
+      `<p>Your payment was successful and your account is now active.</p>
+       <p><strong>Community Code:</strong> ${communityCode}</p>
+       <p>You can now manage your community, residents, and maintain requests.</p>`,
+      randomPassword // Pass password to trigger credentials block
+    );
+
+    res.json({
+      success: true,
+      message: 'Account activated successfully! Check your email for login credentials.',
+      data: {
+        managerId: newManager[0]._id
+      }
+    });
+
+  } catch (error) {
+    console.error('[Onboarding Error]', error);
+    await session.abortTransaction();
+    session.endSession();
+    res.status(500).json({ success: false, message: error.message });
   }
 };

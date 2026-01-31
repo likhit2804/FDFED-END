@@ -1,7 +1,7 @@
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap-icons/font/bootstrap-icons.css";
 
-import {io} from "socket.io-client";
+import { io } from "socket.io-client";
 
 
 import { Layout } from "../src/Layout";
@@ -60,6 +60,8 @@ import React, { useEffect } from "react";
 import { useDispatch } from "react-redux";
 import { setUser } from "./Slices/authSlice";
 
+import OnboardingPayment from "./components/Onboarding/OnboardingPayment";
+
 function App() {
   const dispatch = useDispatch();
 
@@ -86,16 +88,19 @@ function App() {
         <Route path="/SignUp" element={<SignUp />} />
         <Route path="/interestForm" element={<InterestForm />} />
 
-        <Route path='/' element={<Landingpage/>} />
+        <Route path='/' element={<Landingpage />} />
         <Route path='/SignIn' element={<SignIn />} />
         <Route path='/SignUp' element={<SignUp />} />
         <Route path='/residentRegister' element={<ResidentRegister />} />
         <Route path='/interestForm' element={<InterestForm />} />
 
+        {/* Public Onboarding Route */}
+        <Route path="/onboarding/payment" element={<OnboardingPayment />} />
+
         {/* Shared page when community subscription is inactive/expired */}
         <Route path="/subscription-expired" element={<SubscriptionExpired />} />
 
-        <Route path='/adminLogin' element={<AdminLogin/>} ></Route>
+        <Route path='/adminLogin' element={<AdminLogin />} ></Route>
 
         <Route
           path="/admin/*"

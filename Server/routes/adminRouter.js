@@ -5,7 +5,8 @@ import {
   getAllApplications,
   getAllApplicationsJSON,
   approveApplication,
-  rejectApplication
+  rejectApplication,
+  resendPaymentLink
 } from '../controllers/interestForm.js';
 import {
   getDashboard,
@@ -38,6 +39,7 @@ AdminRouter.get('/api/interests', getAllApplications);
 AdminRouter.get('/interests', getAllApplications);
 AdminRouter.post('/interests/:id/approve', approveApplication);
 AdminRouter.post('/interests/:id/reject', rejectApplication);
+AdminRouter.post('/interests/:id/resend-link', resendPaymentLink);
 
 // Admin dashboard & overview routes (delegated to controller)
 AdminRouter.get('/api/dashboard', getDashboard);
