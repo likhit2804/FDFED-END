@@ -108,8 +108,9 @@ nav a:hover {
 }
 
 .Nactive {
-  color: var(--secondary) !important;
-  border-bottom: 3px solid var(--secondary);
+  color: #ff6b35 !important;
+  font-weight: 600 !important;
+  border-bottom: 3px solid #ff6b35;
 }
 
 .log-out-con {
