@@ -8,11 +8,17 @@ import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import multer from "multer";
+import helmet from "helmet";
+import compression from "compression";
+import rateLimit from "express-rate-limit";
 
 // SOCKET.IO NEW IMPORTS
 import http from "http";
 import { Server } from "socket.io";
 import { setIO } from "./utils/socket.js";
+
+// Logger
+import logger from "./utils/logger.js";
 
 import auth from "./controllers/auth.js";
 import {
@@ -59,11 +65,36 @@ import Community from "./models/communities.js";
 
 dotenv.config();
 
+// --- Environment Variable Validation ---
+const requiredEnvVars = [
+  'JWT_SECRET',
+  'MONGO_URI1',
+  'EMAIL_USER',
+  'EMAIL_PASS'
+];
+
+for (const envVar of requiredEnvVars) {
+  if (!process.env[envVar]) {
+    logger.error(`Missing required environment variable: ${envVar}`);
+    throw new Error(`Missing required environment variable: ${envVar}`);
+  }
+}
+
+// Validate JWT_SECRET strength
+if (process.env.JWT_SECRET.length < 32) {
+  logger.warn('JWT_SECRET should be at least 32 characters long for security');
+}
+
+logger.info('Environment variables validated successfully');
+
 // --- DB Connection ---
 mongoose
   .connect(process.env.MONGO_URI1)
-  .then(() => console.log(" Database connected"))
-  .catch((err) => console.error(" Database connection failed:", err));
+  .then(() => logger.info('✅ Database connected'))
+  .catch((err) => {
+    logger.error('❌ Database connection failed:', err);
+    process.exit(1);
+  });
 
 const app = express();
 const PORT = 3000;
@@ -173,6 +204,16 @@ io.on("connection", (socket) => {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// --- Security & Performance Middleware ---
+// Helmet for security headers
+app.use(helmet({
+  contentSecurityPolicy: false, // Disable for now to avoid breaking existing app
+  crossOriginEmbedderPolicy: false
+}));
+
+// Compression for response optimization
+app.use(compression());
+
 app.use(
   session({
     secret: "your-secret-key",
@@ -215,9 +256,44 @@ app.use("/manager", auth, authorizeC, managerRouter);
 app.use("/interest", interestRouter);
 app.use("/interest", interestUploadRouter);
 
+// ---------------- RATE LIMITERS FOR AUTH ENDPOINTS ----------------
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // 5 attempts per window
+  message: {
+    success: false,
+    message: 'Too many login attempts, please try again after 15 minutes'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: false,
+  handler: (req, res) => {
+    logger.warn(`Rate limit exceeded for IP: ${req.ip}`, { 
+      path: req.path, 
+      email: req.body?.email 
+    });
+    res.status(429).json({
+      success: false,
+      message: 'Too many login attempts, please try again after 15 minutes'
+    });
+  }
+});
+
+const otpLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000, // 5 minutes
+  max: 3, // 3 OTP requests per window
+  message: {
+    success: false,
+    message: 'Too many OTP requests, please try again after 5 minutes'
+  },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
 // ---------------- PUBLIC RESIDENT REGISTRATION APIS ----------------
 
-app.post("/resident-register/request-otp", async (req, res) => {
+app.post("/resident-register/request-otp", otpLimiter, async (req, res) => {
   try {
     const { email } = req.body || {};
     if (!email)
@@ -338,30 +414,40 @@ app.post("/logout", (req, res) => {
     });
     return res.status(200).json({ success: true, message: "Logged out" });
   } catch (err) {
-    console.error("Logout error:", err);
+    logger.error("Logout error:", err);
     return res.status(500).json({ success: false, message: "Logout failed" });
   }
 });
 
 // ---------------- ADMIN LOGIN ----------------
 
-app.post("/AdminLogin", async (req, res) => {
+app.post("/AdminLogin", authLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
 
     const result = await AuthenticateA(email, password, res);
     if (!result) {
+      logger.logAuth('admin_login_failed', email, false, { ip: req.ip });
       return res.status(401).json({
         success: false,
         message: "Invalid email or password",
       });
     }
 
+    // Update last login time
+    const Admin = (await import('./models/admin.js')).default;
+    await Admin.findByIdAndUpdate(result.user.id, { 
+      lastLogin: new Date(),
+      $inc: { failedLoginAttempts: -999 } // Reset failed attempts on successful login
+    });
+
     res.cookie("token", result.token, {
       httpOnly: true,
       maxAge: 7 * 24 * 60 * 60 * 1000,
       sameSite: "lax",
     });
+
+    logger.logAuth('admin_login_success', email, true, { ip: req.ip });
 
     return res.json({
       success: true,
@@ -370,7 +456,7 @@ app.post("/AdminLogin", async (req, res) => {
       redirect: "/admin/dashboard",
     });
   } catch (error) {
-    console.error("Admin login error:", error);
+    logger.error("Admin login error:", error);
     return res.status(500).json({
       success: false,
       message: "Server error",
@@ -407,7 +493,7 @@ app.get("/ads", auth, async (req, res) => {
 
 // ---------------- USER LOGIN (2FA) ----------------
 
-app.post("/login", async (req, res) => {
+app.post("/login", authLimiter, async (req, res) => {
   try {
     const { email, password, userType } = req.body;
 
@@ -421,7 +507,10 @@ app.post("/login", async (req, res) => {
       verified = await VerifyA(email, password);
     else return res.status(400).json({ message: "Invalid user type" });
 
-    if (!verified)
+    if (!verified) {
+      logger.logAuth(`${userType}_login_failed`, email, false, { ip: req.ip });
+      return res.status(401).json({ message: "Invalid email or password" });
+    }
       return res.status(401).json({ message: "Invalid email or password" });
 
     await sendLoginOtp(email);

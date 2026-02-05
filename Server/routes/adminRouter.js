@@ -1,6 +1,8 @@
 import express from "express";
 import path from 'path';
 import multer from 'multer';
+import { requirePermission } from '../middleware/rbac.js';
+import { validateCommunity, validateObjectId, validatePasswordChange } from '../middleware/validation.js';
 import {
   getAllApplications,
   getAllApplicationsJSON,
@@ -25,6 +27,9 @@ import {
   getManagersList,
   getCommunityStats,
   bulkUpdateStatus,
+  restoreCommunity,
+  getAdminActivity,
+  getFailedLogins,
 } from '../controllers/adminController.js';
 
 const AdminRouter = express.Router();
@@ -45,27 +50,34 @@ AdminRouter.post('/interests/:id/resend-link', resendPaymentLink);
 // Admin dashboard & overview routes (delegated to controller)
 AdminRouter.get('/api/dashboard', getDashboard);
 AdminRouter.get('/api/communities/overview', getCommunitiesOverview);
-// Communities CRUD
-AdminRouter.get('/api/communities', getAllCommunities);
-AdminRouter.get('/api/communities/stats', getCommunityStats);
-AdminRouter.get('/api/communities/:id/delete-preview', getDeletePreview);
-AdminRouter.get('/api/communities/:id', getCommunityById);
-AdminRouter.post('/api/communities', createCommunity);
-AdminRouter.put('/api/communities/:id', updateCommunity);
-AdminRouter.delete('/api/communities/:id', deleteCommunity);
+// Communities CRUD with RBAC
+AdminRouter.get('/api/communities', requirePermission('read:communities'), getAllCommunities);
+AdminRouter.get('/api/communities/stats', requirePermission('read:communities'), getCommunityStats);
+AdminRouter.get('/api/communities/:id/delete-preview', requirePermission('delete:critical'), getDeletePreview);
+AdminRouter.get('/api/communities/:id', requirePermission('read:communities'), getCommunityById);
+AdminRouter.post('/api/communities', requirePermission('write:communities'), createCommunity);
+AdminRouter.put('/api/communities/:id', requirePermission('write:communities'), updateCommunity);
+AdminRouter.delete('/api/communities/:id', requirePermission('delete:critical'), deleteCommunity);
 
-AdminRouter.get('/api/community-managers', getCommunityManagers);
-AdminRouter.get('/api/payments', getPayments);
+// Community restore
+AdminRouter.post('/api/communities/:backupId/restore', requirePermission('delete:critical'), restoreCommunity);
+
+AdminRouter.get('/api/community-managers', requirePermission('read:users'), getCommunityManagers);
+AdminRouter.get('/api/payments', requirePermission('read:payments'), getPayments);
 
 // Managers list (lightweight)
-AdminRouter.get('/api/managers', getManagersList);
+AdminRouter.get('/api/managers', requirePermission('read:users'), getManagersList);
 
 // Bulk operations
-AdminRouter.post('/api/communities/bulk-update', bulkUpdateStatus);
+AdminRouter.post('/api/communities/bulk-update', requirePermission('write:communities'), bulkUpdateStatus);
+
+// Admin activity & security monitoring
+AdminRouter.get('/api/admin/activity', requirePermission('read:analytics'), getAdminActivity);
+AdminRouter.get('/api/admin/security/failed-logins', requirePermission('read:analytics'), getFailedLogins);
 
 // Profile routes
 AdminRouter.get('/api/profile', getProfile);
 AdminRouter.post('/api/profile/update', upload.single('image'), updateProfile);
-AdminRouter.post('/api/profile/change-password', changePassword);
+AdminRouter.post('/api/profile/change-password', validatePasswordChange, changePassword);
 
 export default AdminRouter;
