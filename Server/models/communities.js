@@ -40,8 +40,7 @@ const CommunitySchema = new mongoose.Schema(
     // CURRENT subscription status only
     subscriptionPlan: {
       type: String,
-      enum: ["basic", "standard", "premium"],
-      default: "basic",
+      default: null,
     },
     subscriptionStatus: {
       type: String,

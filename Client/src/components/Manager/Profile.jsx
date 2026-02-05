@@ -384,7 +384,7 @@ const handleRotateCommunityCode = () => {
                             <div>
                                 <h6 className="mb-1 fw-semibold">Subscription</h6>
                                 <p className="mb-1 text-secondary">
-                                    Plan: <strong>{subscriptionInfo?.subscriptionPlan || "Not subscribed"}</strong>
+                                    Plan: <strong>{subscriptionInfo?.planName || subscriptionInfo?.subscriptionPlan || "Not subscribed"}</strong>
                                 </p>
                                 <p className="mb-0 text-secondary">
                                     Status: <strong>{subscriptionInfo?.subscriptionStatus || "pending"}</strong>
@@ -419,6 +419,23 @@ const handleRotateCommunityCode = () => {
                                 onClick={handleRotateCommunityCode}
                             >
                                 Update code
+                            </button>
+                        </div>
+                    </div>
+                    <div className="card border-1 shadow-sm rounded-4 p-3 mt-3">
+                        <div className="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 className="mb-1 fw-semibold">Community Structure</h6>
+                                <p className="mb-0 text-secondary small">Manage blocks, floors, and flats</p>                                
+                            </div>
+
+                            <button
+                                type="button"
+                                className="btn btn-outline-primary d-flex align-items-center gap-2"
+                                onClick={() => navigate('/manager/setup')}
+                            >
+                                <Building2 size={18} />
+                                Manage Structure
                             </button>
                         </div>
                     </div>

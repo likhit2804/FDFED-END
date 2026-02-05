@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { setUser } from '../../Slices/authSlice';
+import { toast } from 'react-toastify';
 import axios from 'axios';
 import {
     Building2,
@@ -21,10 +22,52 @@ const ManagerSetup = () => {
     const navigate = useNavigate();
     const dispatch = useDispatch();
     const user = useSelector((state) => state.auth.user);
-    const [blocks, setBlocks] = useState([
-        { name: 'A', totalFloors: 5, flatsPerFloor: 4 }
-    ]);
+    const [blocks, setBlocks] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [fetchingStructure, setFetchingStructure] = useState(true);
+    const [existingStructure, setExistingStructure] = useState(false);
+
+    // Fetch existing structure on mount
+    useEffect(() => {
+        const fetchExistingStructure = async () => {
+            try {
+                const res = await axios.get(`${API_BASE_URL}/manager/profile/api`, {
+                    withCredentials: true
+                });
+                
+                console.log('Profile API Response:', res.data);
+                
+                // Fetch community details separately to get blocks
+                if (res.data.success) {
+                    const communityRes = await axios.get(`${API_BASE_URL}/manager/currentcManager`, {
+                        withCredentials: true
+                    });
+                    
+                    console.log('Current Manager Response:', communityRes.data);
+                    
+                    if (communityRes.data?.assignedCommunity?.blocks?.length > 0) {
+                        setBlocks(communityRes.data.assignedCommunity.blocks.map(b => ({
+                            name: b.name,
+                            totalFloors: b.totalFloors,
+                            flatsPerFloor: b.flatsPerFloor
+                        })));
+                        setExistingStructure(true);
+                    } else {
+                        // No existing structure, start with default block
+                        setBlocks([{ name: 'A', totalFloors: 5, flatsPerFloor: 4 }]);
+                    }
+                }
+            } catch (err) {
+                console.error('Error fetching structure:', err);
+                // On error, start with default block
+                setBlocks([{ name: 'A', totalFloors: 5, flatsPerFloor: 4 }]);
+            } finally {
+                setFetchingStructure(false);
+            }
+        };
+
+        fetchExistingStructure();
+    }, []);
 
     // Add a new block
     const handleAddBlock = () => {
@@ -73,24 +116,43 @@ const ManagerSetup = () => {
                     hasStructure: true
                 }));
                 
+                toast.success(existingStructure ? 'Community structure updated successfully!' : 'Community structure created successfully!');
+                
                 // Navigate to dashboard
-                navigate('/manager/dashboard', { replace: true });
+                setTimeout(() => {
+                    navigate('/manager/dashboard', { replace: true });
+                }, 1500);
             }
         } catch (err) {
             console.error(err);
-            alert(err.response?.data?.message || 'Setup failed.');
+            toast.error(err.response?.data?.message || 'Failed to save structure. Please try again.');
         } finally {
             setLoading(false);
         }
     };
+
+    if (fetchingStructure) {
+        return (
+            <div className="setup-container">
+                <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '400px' }}>
+                    <div className="text-center">
+                        <div className="spinner-border text-primary mb-3" role="status">
+                            <span className="visually-hidden">Loading...</span>
+                        </div>
+                        <p className="text-secondary">Loading community structure...</p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="setup-container">
             {/* Header */}
             <div className="setup-header">
                 <div>
-                    <h2><LayoutTemplate className="text-primary" size={28} /> Community Structure Setup</h2>
-                    <p>Define the physical layout of your community to generate resident units.</p>
+                    <h2><LayoutTemplate className="text-primary" size={28} /> Community Structure {existingStructure ? 'Management' : 'Setup'}</h2>
+                    <p>{existingStructure ? 'Update your community structure by modifying blocks, floors, and units.' : 'Define the physical layout of your community to generate resident units.'}</p>
                 </div>
             </div>
 
@@ -187,9 +249,9 @@ const ManagerSetup = () => {
                 </div>
                 <button className="save-btn" onClick={handleSubmit} disabled={loading}>
                     {loading ? (
-                        <>Generating...</>
+                        <>Saving...</>
                     ) : (
-                        <><CheckCircle size={18} /> Save & Build Community</>
+                        <><CheckCircle size={18} /> {existingStructure ? 'Update Structure' : 'Save & Build Community'}</>
                     )}
                 </button>
             </div>
