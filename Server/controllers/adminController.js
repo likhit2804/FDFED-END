@@ -269,11 +269,11 @@ export const getPayments = async (req, res) => {
       });
     }
 
-    const planDistribution = {
-      basic: communities.filter((c) => c.subscriptionPlan === "basic").length,
-      standard: communities.filter((c) => c.subscriptionPlan === "standard").length,
-      premium: communities.filter((c) => c.subscriptionPlan === "premium").length,
-    };
+    const planDistribution = communities.reduce((acc, c) => {
+      const plan = c.subscriptionPlan || "unassigned";
+      acc[plan] = (acc[plan] || 0) + 1;
+      return acc;
+    }, {});
 
     res.json({
       success: true,

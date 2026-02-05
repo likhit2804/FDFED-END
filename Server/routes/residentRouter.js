@@ -677,7 +677,6 @@ import {
   getIssueDataById,
   submitFeedback,
 } from "../controllers/issueController.js";
-import Notifications from "../models/Notifications.js";
 import CommunityManager from "../models/cManager.js";
 
 residentRouter.post("/issue/confirmIssue/:id", confirmIssue);

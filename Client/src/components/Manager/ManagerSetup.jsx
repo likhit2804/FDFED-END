@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
@@ -21,6 +21,29 @@ const ManagerSetup = () => {
         { name: 'A', totalFloors: 5, flatsPerFloor: 4 }
     ]);
     const [loading, setLoading] = useState(false);
+    const [fetchingStructure, setFetchingStructure] = useState(true);
+
+    // Fetch existing structure on mount
+    useEffect(() => {
+        const fetchStructure = async () => {
+            try {
+                const res = await axios.get(`${API_BASE_URL}/manager/get-structure`, {
+                    withCredentials: true
+                });
+
+                if (res.data.success && res.data.blocks && res.data.blocks.length > 0) {
+                    setBlocks(res.data.blocks);
+                }
+            } catch (err) {
+                console.error('Error fetching structure:', err);
+                // Keep default single block if fetch fails
+            } finally {
+                setFetchingStructure(false);
+            }
+        };
+
+        fetchStructure();
+    }, []);
 
     // Add a new block
     const handleAddBlock = () => {
@@ -84,8 +107,14 @@ const ManagerSetup = () => {
                 </div>
             </div>
 
-            {/* Stats Overview */}
-            <div className="stats-grid">
+            {fetchingStructure ? (
+                <div style={{ textAlign: 'center', padding: '40px' }}>
+                    <p>Loading structure...</p>
+                </div>
+            ) : (
+                <>
+                    {/* Stats Overview */}
+                    <div className="stats-grid">
                 <div className="stat-card">
                     <div className="stat-icon blue"><Building2 size={24} /></div>
                     <div className="stat-info">
@@ -183,6 +212,8 @@ const ManagerSetup = () => {
                     )}
                 </button>
             </div>
+            </>
+            )}
 
         </div>
     );

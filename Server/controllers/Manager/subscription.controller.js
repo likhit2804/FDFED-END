@@ -1,34 +1,9 @@
 import Community from "../../models/communities.js";
 import CommunityManager from "../../models/cManager.js";
 import Payment from "../../models/payment.js";
+import SubscriptionPlan from "../../models/subscriptionPlan.js";
 import { sendError, sendSuccess } from "./helpers.js";
 import { createCommunitySubscription } from "../../crud/index.js";
-
-// Helper: plan capacity (max residents); null = unlimited
-const PLAN_CAPACITY = {
-    basic: 50,
-    standard: 200,
-    premium: null,
-};
-
-// Helper functions for plan pricing
-function getPlanPrice(planType) {
-    const planPrices = {
-        basic: 999,
-        standard: 1999,
-        premium: 3999,
-    };
-    return planPrices[planType] || 0;
-}
-
-function getSubscriptionPlanName(planType) {
-    const planNames = {
-        basic: "Basic Plan",
-        standard: "Standard Plan",
-        premium: "Premium Plan",
-    };
-    return planNames[planType] || "Unknown Plan";
-}
 
 export const getCommunityDetails = async (req, res) => {
     try {
@@ -86,8 +61,18 @@ export const processSubscriptionPayment = async (req, res) => {
             return sendError(res, 404, "Community not found");
         }
 
+        // Fetch plan details from database
+        const planDoc = await SubscriptionPlan.findOne({ 
+            planKey: subscriptionPlan,
+            isActive: true 
+        });
+
+        if (!planDoc) {
+            return sendError(res, 400, "Invalid or inactive subscription plan");
+        }
+
         // Enforce resident-based plan capacity
-        const capacity = PLAN_CAPACITY[subscriptionPlan];
+        const capacity = planDoc.maxResidents;
         if (capacity !== null && typeof capacity === "number") {
             if (community.totalMembers && community.totalMembers > capacity) {
                 return res.status(400).json({
@@ -100,13 +85,13 @@ export const processSubscriptionPayment = async (req, res) => {
             }
         }
 
-        // Calculate plan end date
+        // Calculate plan end date based on plan duration
         const startDate = new Date(paymentDate);
         const endDate = new Date(startDate);
 
-        if (planDuration === "monthly") {
+        if (planDoc.duration === "monthly") {
             endDate.setMonth(endDate.getMonth() + 1);
-        } else if (planDuration === "yearly") {
+        } else if (planDoc.duration === "yearly") {
             endDate.setFullYear(endDate.getFullYear() + 1);
         }
 
@@ -115,14 +100,14 @@ export const processSubscriptionPayment = async (req, res) => {
             transactionId:
                 transactionId ||
                 `TXN_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            planName: getSubscriptionPlanName(subscriptionPlan),
-            planType: subscriptionPlan,
+            planName: planDoc.name,
+            planType: planDoc.planKey,
             amount: amount,
             paymentMethod: paymentMethod,
             paymentDate: new Date(paymentDate),
             planStartDate: startDate,
             planEndDate: endDate,
-            duration: planDuration,
+            duration: planDoc.duration,
             status: "completed",
             isRenewal: isRenewal || false,
             processedBy: managerId,
@@ -139,7 +124,7 @@ export const processSubscriptionPayment = async (req, res) => {
         };
 
         // Update community subscription details
-        community.subscriptionPlan = subscriptionPlan;
+        community.subscriptionPlan = planDoc.planKey;
         community.subscriptionStatus = "active";
         community.planStartDate = startDate;
         community.planEndDate = endDate;
@@ -256,6 +241,25 @@ export const getSubscriptionStatus = async (req, res) => {
             );
         }
 
+        // Fetch plan details from database
+        let planDetails = null;
+        if (community.subscriptionPlan) {
+            const planDoc = await SubscriptionPlan.findOne({
+                planKey: community.subscriptionPlan,
+                isActive: true
+            }).lean();
+
+            if (planDoc) {
+                planDetails = {
+                    planName: planDoc.name,
+                    planPrice: planDoc.price,
+                    planDuration: planDoc.duration,
+                    planMaxResidents: planDoc.maxResidents,
+                    planFeatures: planDoc.features
+                };
+            }
+        }
+
         res.json({
             success: true,
             community: {
@@ -270,6 +274,7 @@ export const getSubscriptionStatus = async (req, res) => {
                 isExpired: isExpired,
                 isExpiringSoon:
                     daysUntilExpiry && daysUntilExpiry <= 7 && daysUntilExpiry > 0,
+                ...planDetails
             },
         });
     } catch (error) {
@@ -360,50 +365,28 @@ export const getPaymentsData = async (req, res) => {
 
 export const getSubscriptionPlans = async (req, res) => {
     try {
-        const planPrices = {
-            basic: 999,
-            standard: 1999,
-            premium: 3999,
-        };
+        // Fetch active plans from database
+        const activePlans = await SubscriptionPlan.find({ isActive: true })
+            .sort({ displayOrder: 1 })
+            .lean();
 
-        const planDetails = {
-            basic: {
-                name: "Basic Plan",
-                price: 999,
-                maxResidents: PLAN_CAPACITY.basic,
-                features: [
-                    "Up to 50 residents",
-                    "Basic payment tracking",
-                    "Email support",
-                ],
-                duration: "monthly",
-            },
-            standard: {
-                name: "Standard Plan",
-                price: 1999,
-                maxResidents: PLAN_CAPACITY.standard,
-                features: [
-                    "Up to 200 residents",
-                    "Advanced payment tracking",
-                    "SMS notifications",
-                    "Priority support",
-                ],
-                duration: "monthly",
-            },
-            premium: {
-                name: "Premium Plan",
-                price: 3999,
-                maxResidents: PLAN_CAPACITY.premium,
-                features: [
-                    "Unlimited residents",
-                    "Full payment suite",
-                    "SMS + Email notifications",
-                    "Dedicated support",
-                    "Analytics dashboard",
-                ],
-                duration: "monthly",
-            },
-        };
+        // Transform to client-friendly format
+        const planDetails = activePlans.reduce((acc, plan) => {
+            acc[plan.planKey] = {
+                name: plan.name,
+                price: plan.price,
+                maxResidents: plan.maxResidents,
+                features: plan.features,
+                duration: plan.duration,
+            };
+            return acc;
+        }, {});
+
+        // Also create planPrices map for backward compatibility
+        const planPrices = activePlans.reduce((acc, plan) => {
+            acc[plan.planKey] = plan.price;
+            return acc;
+        }, {});
 
         res.json({
             success: true,
@@ -436,22 +419,40 @@ export const changePlan = async (req, res) => {
             return sendError(res, 404, "Community not found");
         }
 
-        const planPrices = {
-            basic: 999,
-            standard: 1999,
-            premium: 3999,
-        };
+        // Fetch plan details from database
+        const newPlanDoc = await SubscriptionPlan.findOne({
+            planKey: newPlan,
+            isActive: true
+        });
 
-        const currentPlan = community.subscriptionPlan || "basic";
-        const currentPrice = planPrices[currentPlan];
-        const newPrice = planPrices[newPlan];
-
-        if (!newPrice) {
-            return sendError(res, 400, "Invalid plan selected");
+        if (!newPlanDoc) {
+            return sendError(res, 400, "Invalid or inactive plan selected");
         }
+
+        const currentPlan = community.subscriptionPlan || null;
+        
+        let currentPlanDoc = null;
+        if (currentPlan) {
+            currentPlanDoc = await SubscriptionPlan.findOne({
+                planKey: currentPlan,
+                isActive: true
+            });
+        }
+
+        const currentPrice = currentPlanDoc ? currentPlanDoc.price : 0;
+        const newPrice = newPlanDoc.price;
 
         if (currentPlan === newPlan) {
             return sendError(res, 400, "You are already on this plan");
+        }
+
+        // Validate capacity for new plan
+        if (newPlanDoc.maxResidents !== null && community.totalMembers > newPlanDoc.maxResidents) {
+            return res.status(400).json({
+                success: false,
+                message: `Selected plan cannot support ${community.totalMembers} residents. Max allowed: ${newPlanDoc.maxResidents}`,
+                code: "PLAN_CAPACITY_EXCEEDED",
+            });
         }
 
         const now = new Date();
@@ -466,17 +467,24 @@ export const changePlan = async (req, res) => {
                     .toString(36)
                     .substr(2, 9)}`;
 
+                // Calculate end date based on plan duration
+                const endDate = new Date(now);
+                if (newPlanDoc.duration === "monthly") {
+                    endDate.setMonth(endDate.getMonth() + 1);
+                } else if (newPlanDoc.duration === "yearly") {
+                    endDate.setFullYear(endDate.getFullYear() + 1);
+                }
+
                 const paymentRecord = {
                     transactionId,
-                    planName: `${newPlan.charAt(0).toUpperCase() + newPlan.slice(1)
-                        } Plan (Upgrade)`,
+                    planName: `${newPlanDoc.name} (Upgrade)`,
                     planType: newPlan,
                     amount: priceDifference,
                     paymentMethod,
                     paymentDate: now,
                     planStartDate: now,
-                    planEndDate: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
-                    duration: "monthly",
+                    planEndDate: endDate,
+                    duration: newPlanDoc.duration,
                     status: "completed",
                     isRenewal: false,
                     isPlanChange: true,
@@ -492,9 +500,7 @@ export const changePlan = async (req, res) => {
                 community.subscriptionPlan = newPlan;
                 community.subscriptionStatus = "active";
                 community.planStartDate = now;
-                community.planEndDate = new Date(
-                    now.getTime() + 30 * 24 * 60 * 60 * 1000
-                );
+                community.planEndDate = endDate;
 
                 if (!community.subscriptionHistory) {
                     community.subscriptionHistory = [];
@@ -502,6 +508,28 @@ export const changePlan = async (req, res) => {
                 community.subscriptionHistory.push(paymentRecord);
 
                 await community.save();
+
+                // Create CommunitySubscription record
+                await createCommunitySubscription({
+                    communityId: community._id,
+                    managerId: managerId,
+                    transactionId: paymentRecord.transactionId,
+                    planName: paymentRecord.planName,
+                    planType: paymentRecord.planType,
+                    amount: paymentRecord.amount,
+                    paymentMethod: paymentRecord.paymentMethod,
+                    paymentDate: paymentRecord.paymentDate,
+                    planStartDate: paymentRecord.planStartDate,
+                    planEndDate: paymentRecord.planEndDate,
+                    duration: paymentRecord.duration,
+                    status: paymentRecord.status,
+                    isRenewal: paymentRecord.isRenewal,
+                    metadata: {
+                        ...paymentRecord.metadata,
+                        isPlanChange: true,
+                        previousPlan: currentPlan,
+                    },
+                });
 
                 res.json({
                     success: true,
@@ -512,11 +540,17 @@ export const changePlan = async (req, res) => {
                     planEndDate: community.planEndDate,
                 });
             } else if (priceDifference <= 0) {
+                // Calculate end date for downgrade
+                const endDate = new Date(now);
+                if (newPlanDoc.duration === "monthly") {
+                    endDate.setMonth(endDate.getMonth() + 1);
+                } else if (newPlanDoc.duration === "yearly") {
+                    endDate.setFullYear(endDate.getFullYear() + 1);
+                }
+
                 community.subscriptionPlan = newPlan;
                 community.planStartDate = now;
-                community.planEndDate = new Date(
-                    now.getTime() + 30 * 24 * 60 * 60 * 1000
-                );
+                community.planEndDate = endDate;
 
                 if (!community.subscriptionHistory) {
                     community.subscriptionHistory = [];
@@ -525,15 +559,14 @@ export const changePlan = async (req, res) => {
                     transactionId: `PLAN_CHANGE_${Date.now()}_${Math.random()
                         .toString(36)
                         .substr(2, 9)}`,
-                    planName: `${newPlan.charAt(0).toUpperCase() + newPlan.slice(1)
-                        } Plan (Downgrade)`,
+                    planName: `${newPlanDoc.name} (Downgrade)`,
                     planType: newPlan,
                     amount: 0,
                     paymentMethod: "No Payment Required",
                     paymentDate: now,
                     planStartDate: now,
-                    planEndDate: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
-                    duration: "monthly",
+                    planEndDate: endDate,
+                    duration: newPlanDoc.duration,
                     status: "completed",
                     isRenewal: false,
                     isPlanChange: true,

@@ -2,6 +2,8 @@ import Interest from '../models/interestForm.js';
 import CommunityManager from '../models/cManager.js';
 import admin from '../models/admin.js';
 import Community from '../models/communities.js';
+import SubscriptionPlan from '../models/subscriptionPlan.js';
+import CommunitySubscription from '../models/communitySubscription.js';
 import nodemailer from 'nodemailer';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
@@ -680,30 +682,22 @@ export const getOnboardingDetails = async (req, res) => {
       });
     }
 
-    // Define available plans (or fetch from DB/Config)
-    const plans = {
-      standard: {
-        name: "Standard Plan",
-        price: 2999,
-        duration: "monthly",
-        features: ["Resident Management", "Basic Reports", "Email Support", "Up to 500 residents"],
-        maxResidents: 500
-      },
-      premium: {
-        name: "Premium Plan",
-        price: 7999,
-        duration: "monthly",
-        features: ["All Standard Features", "Advanced Analytics", "Priority Support", "Unlimited residents"],
-        maxResidents: null
-      },
-      yearly: {
-        name: "Yearly Saver",
-        price: 29999,
-        duration: "yearly",
-        features: ["All Premium Features", "2 Months Free", "Dedicated Account Manager"],
-        maxResidents: null
-      }
-    };
+    // Fetch available plans from database
+    const activePlans = await SubscriptionPlan.find({ isActive: true })
+      .sort({ displayOrder: 1 })
+      .lean();
+
+    // Transform plans into client-friendly format
+    const plans = activePlans.reduce((acc, plan) => {
+      acc[plan.planKey] = {
+        name: plan.name,
+        price: plan.price,
+        duration: plan.duration,
+        features: plan.features,
+        maxResidents: plan.maxResidents
+      };
+      return acc;
+    }, {});
 
     res.json({
       success: true,
@@ -745,16 +739,26 @@ export const completeOnboardingPayment = async (req, res) => {
       throw new Error('Account already activated');
     }
 
-    // 2. "Process" Payment 
+    // 2. Validate Plan
+    const planDoc = await SubscriptionPlan.findOne({
+      planKey: paymentDetails?.plan,
+      isActive: true
+    }).session(session);
+
+    if (!planDoc) {
+      throw new Error('Invalid or inactive subscription plan selected');
+    }
+
+    // 3. "Process" Payment 
     // In a real app, you'd verify Stripe/Razorpay signature here.
     // For now, we assume success if this endpoint is called with paymentDetails.
     console.log(`[Payment] Processing payment for ${interest.email}`, paymentDetails);
 
-    // 3. Generate Credentials
+    // 4. Generate Credentials
     const randomPassword = crypto.randomBytes(8).toString('hex');
     const hashedPassword = await bcrypt.hash(randomPassword, 12);
 
-    // 4. Create Manager
+    // 5. Create Manager
     const newManager = await CommunityManager.create(
       [{
         name: `${interest.firstName} ${interest.lastName}`,
@@ -766,7 +770,11 @@ export const completeOnboardingPayment = async (req, res) => {
       { session }
     );
 
-    // 5. Create Community
+    // 6. Calculate plan end date based on plan duration
+    const daysToAdd = planDoc.duration === 'yearly' ? 365 : 30;
+    const planEndDate = new Date(Date.now() + daysToAdd * 24 * 60 * 60 * 1000);
+
+    // 7. Create Community
     const newCommunity = await Community.create(
       [{
         name: interest.communityName?.trim() || '',
@@ -775,10 +783,9 @@ export const completeOnboardingPayment = async (req, res) => {
         totalMembers: 0,
         communityManager: newManager[0]._id,
         subscriptionStatus: 'active',
-        subscriptionPlan: paymentDetails?.plan || 'standard',
+        subscriptionPlan: planDoc.planKey,
         planStartDate: new Date(),
-        // Set expiry based on plan duration
-        planEndDate: new Date(Date.now() + (paymentDetails?.duration === 'yearly' ? 365 : 30) * 24 * 60 * 60 * 1000)
+        planEndDate: planEndDate
       }],
       { session }
     );
@@ -787,18 +794,41 @@ export const completeOnboardingPayment = async (req, res) => {
     newManager[0].assignedCommunity = newCommunity[0]._id;
     await newManager[0].save({ session });
 
-    // 6. Update Interest Status
+    // 8. Create CommunitySubscription record for billing
+    await CommunitySubscription.create(
+      [{
+        communityId: newCommunity[0]._id,
+        transactionId: paymentDetails?.transactionId || `TXN-${Date.now()}`,
+        planName: planDoc.name,
+        planType: planDoc.planKey,
+        amount: planDoc.price,
+        paymentMethod: paymentDetails?.paymentMethod || 'online',
+        paymentDate: new Date(),
+        planStartDate: new Date(),
+        planEndDate: planEndDate,
+        duration: planDoc.duration,
+        status: 'completed',
+        isRenewal: false,
+        metadata: {
+          userAgent: req.headers['user-agent'],
+          ipAddress: req.ip || req.connection.remoteAddress
+        }
+      }],
+      { session }
+    );
+
+    // 9. Update Interest Status
     interest.paymentStatus = 'completed';
     // interest.status = 'onboarded'; // Optional: change status or keep 'approved'
     interest.onboardingToken = undefined; // Clear token
     interest.onboardingTokenExpires = undefined;
     await interest.save({ session });
 
-    // 7. Commit
+    // 10. Commit
     await session.commitTransaction();
     session.endSession();
 
-    // 8. Send Welcome Email with Credentials
+    // 11. Send Welcome Email with Credentials
     const communityCode = newCommunity[0].communityCode;
 
     await sendStatusEmail(

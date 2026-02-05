@@ -32,7 +32,7 @@ import {
   createSecurity, getSecurity, deleteSecurity,
   createWorker, getWorker, deleteWorker, getWorkers,
   getManagerProfile, getProfileWithCommunity, updateManagerProfile, changePassword,
-  updateBookingRules, getSpaces, rotateCommunityCode, setupCommunityStructure,
+  updateBookingRules, getSpaces, rotateCommunityCode, setupCommunityStructure, getCommunityStructure,
   getAdvertisements, createAdvertisement, updateAdvertisement, deleteAdvertisement,
   getPaymentsData, getSubscriptionPlans, changePlan,
   getCommunityDetails, processSubscriptionPayment, getSubscriptionHistory, getSubscriptionStatus,
@@ -476,6 +476,7 @@ managerRouter.post("/profile/changePassword", changePassword);
 
 managerRouter.post("/community/rotate-code", rotateCommunityCode);
 
+managerRouter.get("/get-structure", getCommunityStructure);
 managerRouter.post("/setup-structure", setupCommunityStructure);
 
 export default managerRouter;

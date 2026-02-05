@@ -69,30 +69,69 @@ export const rotateCommunityCode = async (req, res) => {
     }
 };
 
-export const setupCommunityStructure = async (req, res) => {
+export const getCommunityStructure = async (req, res) => {
     try {
-        const { blocks } = req.body;
-
-        if (!blocks || !Array.isArray(blocks) || blocks.length === 0) {
-            return sendError(res, 400, "Invalid blocks configuration");
-        }
-
         const managerId = req.user.id;
         const manager = await CommunityManager.findById(managerId);
 
         if (!manager || !manager.assignedCommunity) {
-            return sendError(res, 404, "Community not found");
+            return sendError(res, 404, "Community manager not found");
         }
 
-        const community = await Community.findById(manager.assignedCommunity);
+        const community = await Community.findById(manager.assignedCommunity).select('blocks hasStructure name');
         if (!community) {
             return sendError(res, 404, "Community not found");
         }
 
-        if (community.hasStructure) {
-            return sendError(res, 400, "Community structure is already set up.");
+        // Transform blocks to frontend format (just the config, not the flats)
+        const blocksConfig = (community.blocks || []).map(block => ({
+            name: block.name,
+            totalFloors: block.totalFloors,
+            flatsPerFloor: block.flatsPerFloor
+        }));
+
+        return sendSuccess(res, "Community structure fetched successfully", {
+            hasStructure: community.hasStructure,
+            blocks: blocksConfig,
+            totalBlocks: blocksConfig.length
+        });
+    } catch (err) {
+        console.error("Get community structure error:", err);
+        return sendError(res, 500, "Failed to fetch community structure", err);
+    }
+};
+
+export const setupCommunityStructure = async (req, res) => {
+    try {
+        const { blocks } = req.body;
+        console.log('📦 Setup structure called with blocks:', JSON.stringify(blocks, null, 2));
+
+        if (!blocks || !Array.isArray(blocks) || blocks.length === 0) {
+            console.log('❌ Invalid blocks configuration');
+            return sendError(res, 400, "Invalid blocks configuration");
         }
 
+        const managerId = req.user.id;
+        console.log('👤 Manager ID:', managerId);
+        const manager = await CommunityManager.findById(managerId);
+
+        if (!manager || !manager.assignedCommunity) {
+            console.log('❌ Manager or community not found');
+            return sendError(res, 404, "Community not found");
+        }
+
+        console.log('🏘️ Community ID:', manager.assignedCommunity);
+        const community = await Community.findById(manager.assignedCommunity);
+        if (!community) {
+            console.log('❌ Community document not found');
+            return sendError(res, 404, "Community not found");
+        }
+
+        // Check if this is an update BEFORE modifying blocks
+        const isUpdate = community.blocks && community.blocks.length > 0;
+        console.log('🔄 Is update:', isUpdate, '(existing blocks:', community.blocks?.length || 0, ')');
+
+        // Allow updates - no longer blocking if hasStructure is true
         const generatedBlocks = blocks.map(block => {
             const { name, totalFloors, flatsPerFloor } = block;
             const flats = [];
@@ -120,9 +159,16 @@ export const setupCommunityStructure = async (req, res) => {
 
         community.blocks = generatedBlocks;
         community.hasStructure = true;
+        console.log('💾 Saving community with', generatedBlocks.length, 'blocks');
         await community.save();
+        console.log('✅ Community saved successfully');
 
-        return sendSuccess(res, "Community structure setup successfully!", {
+        const successMessage = isUpdate 
+            ? "Community structure updated successfully!" 
+            : "Community structure setup successfully!";
+
+        console.log('📤 Sending success response:', successMessage);
+        return sendSuccess(res, successMessage, {
             totalBlocks: generatedBlocks.length,
             redirect: "/manager/dashboard"
         });

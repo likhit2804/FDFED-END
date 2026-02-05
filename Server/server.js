@@ -53,6 +53,7 @@ import managerRouter from "./routes/managerRouter.js";
 import interestRouter from "./routes/InterestRouter.js";
 import Ad from "./models/Ad.js";
 import { interestUploadRouter } from "./controllers/interestForm.js";
+import { initializeDefaultPlans } from "./controllers/subscriptionPlanController.js";
 
 import Resident from "./models/resident.js";
 import Community from "./models/communities.js";
@@ -62,7 +63,11 @@ dotenv.config();
 // --- DB Connection ---
 mongoose
   .connect(process.env.MONGO_URI1)
-  .then(() => console.log(" Database connected"))
+  .then(() => {
+    console.log(" Database connected");
+    // Initialize default subscription plans
+    initializeDefaultPlans();
+  })
   .catch((err) => console.error(" Database connection failed:", err));
 
 const app = express();
