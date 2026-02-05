@@ -121,7 +121,6 @@ io.on("connection", (socket) => {
         community: payload.community,
       });
 
-      // Only community managers join community rooms
       if (payload.userType === "CommunityManager" && payload.community) {
         const room = `community_${payload.community}`;
         socket.join(room);
@@ -130,12 +129,34 @@ io.on("connection", (socket) => {
         socket.data.userType = payload.userType;
 
         console.log(`✅ Manager (${payload.id}) joined room: ${room}`);
-      } else if (payload.userType !== "CommunityManager") {
-        console.log(
-          `ℹ️ User type '${payload.userType}' is not CommunityManager, skipping room join`
-        );
+      } else if (payload.userType === "Resident") {
+        const room = `resident_${payload.id}`;
+        socket.join(room);
+        socket.data.userId = payload.id;
+        socket.data.userType = payload.userType;
+
+        if (payload.community) {
+          socket.data.communityId = payload.community;
+        }
+
+        console.log(`✅ Resident (${payload.id}) joined room: ${room}`);
+      } else if (payload.userType === "Worker") {
+        const room = `worker_${payload.id}`;
+        socket.join(room);
+        socket.data.userId = payload.id;
+        socket.data.userType = payload.userType;
+
+        if (payload.community) {
+          socket.data.communityId = payload.community;
+        }
+
+        console.log(`✅ Worker (${payload.id}) joined room: ${room}`);
       } else if (!payload.community) {
         console.log(`⚠️ No community ID found in token, skipping room join`);
+      } else {
+        console.log(
+          `ℹ️ User type '${payload.userType}' does not have a room mapping`
+        );
       }
     } else {
       console.warn("⚠️ No token provided in socket handshake");
@@ -518,19 +539,23 @@ app.get("/api/auth/getUser", auth, async (req, res) => {
 
   try {
     const data = jwt.verify(cookie, process.env.JWT_SECRET);
-    
+
     // Fetch subscription status for any user associated with a community
+    // Fetch subscription and structure status for any user associated with a community
     let subscriptionStatus = "active";
+    let hasStructure = true; // Default to true for non-managers to avoid redirect loops
+
     if (data.community) {
       const community = await Community.findById(data.community).select(
-        "subscriptionStatus"
+        "subscriptionStatus hasStructure"
       );
-      if (community && community.subscriptionStatus) {
-        subscriptionStatus = community.subscriptionStatus;
+      if (community) {
+        if (community.subscriptionStatus) subscriptionStatus = community.subscriptionStatus;
+        if (community.hasStructure !== undefined) hasStructure = community.hasStructure;
       }
     }
 
-    return res.json({ user: { ...data, subscriptionStatus } });
+    return res.json({ user: { ...data, subscriptionStatus, hasStructure } });
   } catch (err) {
     return res.status(401).json({ message: "Unauthorized" });
   }

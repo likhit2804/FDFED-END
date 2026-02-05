@@ -4,6 +4,7 @@ import { toast, ToastContainer } from "react-toastify";
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchIssues, raiseIssue, submitFeedback } from '../../Slices/IssueSlice';
 import { Loader } from '../Loader';
+import { useSocket } from "../../hooks/useSocket";
 
 export const IssueRaising = () => {
   const dispatch = useDispatch();
@@ -16,10 +17,10 @@ export const IssueRaising = () => {
   const [feedbackText, setFeedbackText] = useState("");
   const [feedbackRating, setFeedbackRating] = useState(5);
   const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
+  const socket = useSocket("http://localhost:3000");
 
   const { register, handleSubmit, reset, watch } = useForm({
     defaultValues: {
-      categoryType: 'Resident', // Added
       title: '',
       category: '',
       // Priority automatically determined by system based on category and content
@@ -29,7 +30,6 @@ export const IssueRaising = () => {
     },
   });
 
-  const categoryType = watch('categoryType');
   const category = watch('category');
 
   const pendingIssuesCount = issues?.filter((i) => i?.status === 'Pending')?.length || 0;
@@ -40,9 +40,9 @@ export const IssueRaising = () => {
     { key: 'Pending Assignment', label: 'Pending', icon: 'bi-hourglass-split' },
     { key: 'Assigned', label: 'Assigned', icon: 'bi-person-check' },
     { key: 'In Progress', label: 'In Progress', icon: 'bi-gear' },
-    { key: 'Resolved (Awaiting Confirmation)', label: 'Resolved', icon: 'bi-check-circle' },
-    { key: 'Closed', label: 'Closed', icon: 'bi-check-circle-fill' },
+    { key: 'Resolved (Awaiting Confirmation)', label: 'Awaiting Confirmation', icon: 'bi-check-circle' },
     { key: 'Payment Pending', label: 'Payment Pending', icon: 'bi-cash-coin' },
+    { key: 'Closed', label: 'Closed', icon: 'bi-check-circle-fill' },
     { key: 'Payment Completed', label: 'Payment Completed', icon: 'bi-cash-stack' }
   ];
 
@@ -65,6 +65,19 @@ export const IssueRaising = () => {
   }, [dispatch]);
 
   useEffect(() => {
+    if (!socket) return;
+
+    const handleIssueUpdate = () => {
+      dispatch(fetchIssues());
+    };
+
+    socket.on("issue:updated", handleIssueUpdate);
+    return () => {
+      socket.off("issue:updated", handleIssueUpdate);
+    };
+  }, [socket, dispatch]);
+
+  useEffect(() => {
     if (formSubmitting && !loading) {
       setFormSubmitting(false);
       setIsIssueFormOpen(false);
@@ -78,6 +91,7 @@ export const IssueRaising = () => {
     // If category is "Other", send otherCategory
     const payload = {
       ...data,
+      categoryType: activeTab, // Set based on selected tab
       otherCategory: data.category === 'Other' ? data.otherCategory : undefined,
     };
 
@@ -130,7 +144,7 @@ export const IssueRaising = () => {
       const text = await res.text();
       const data = text ? JSON.parse(text) : {};
       if (!data.success) throw new Error(data.message || "Failed to confirm");
-      toast.success("Issue closed!");
+      toast.success("Issue confirmed! Payment process initiated.");
       setIsDetailsPopupOpen(false);
       dispatch(fetchIssues());
     } catch (err) {
@@ -679,6 +693,18 @@ export const IssueRaising = () => {
             )}
             <div className="popup-header">
               <h3>Raise an Issue</h3>
+              <div className="issue-type-indicator" style={{
+                background: activeTab === 'Resident' ? '#e8f5e8' : '#fff3e0',
+                color: activeTab === 'Resident' ? '#2e7d32' : '#ef6c00',
+                padding: '8px 12px',
+                borderRadius: '6px',
+                fontSize: '14px',
+                fontWeight: '500',
+                marginTop: '8px'
+              }}>
+                <i className={`bi ${activeTab === 'Resident' ? 'bi-house-door' : 'bi-building'}`} style={{marginRight: '6px'}}></i>
+                {activeTab} Issue
+              </div>
               <button 
                 type="button" 
                 className="close-btn" 
@@ -689,18 +715,7 @@ export const IssueRaising = () => {
             </div>
             <div className="booking-form-grid">
               <div className="form-column">
-                {/* Category Type */}
-                <div className="form-group">
-                  <label htmlFor="categoryType">Issue Type *</label>
-                  <select
-                    id="categoryType"
-                    {...register('categoryType', { required: true })}
-                    disabled={formSubmitting}
-                  >
-                    <option value="Resident">Resident</option>
-                    <option value="Community">Community</option>
-                  </select>
-                </div>
+                {/* Category Type is automatically set based on selected tab */}
 
                 {/* Title (optional, backend ignores) */}
                 <div className="form-group">
@@ -723,7 +738,7 @@ export const IssueRaising = () => {
                     disabled={formSubmitting}
                   >
                     <option value="">Choose a category...</option>
-                    {(categoryType === 'Resident' ? RissueCategories : CissueCategories).map((cat) => (
+                    {(activeTab === 'Resident' ? RissueCategories : CissueCategories).map((cat) => (
                       <option key={cat} value={cat}>
                         {cat}
                       </option>
@@ -764,13 +779,13 @@ export const IssueRaising = () => {
                 {/* Location (required if Community) */}
                 <div className="form-group">
                   <label htmlFor="location">
-                    Location {categoryType === 'Community' ? '*' : '(Optional)'}
+                    Location {activeTab === 'Community' ? '*' : '(Optional)'}
                   </label>
                   <input
                     type="text"
                     id="location"
                     {...register('location', {
-                      required: categoryType === 'Community',
+                      required: activeTab === 'Community',
                     })}
                     placeholder="e.g., Block A, Floor 3, Apt 302"
                     disabled={formSubmitting}
@@ -1018,9 +1033,9 @@ export const IssueRaising = () => {
                   </>
                 )}
 
-              {/* Feedback form for closed Resident issues */}
+              {/* Feedback form for confirmed Resident issues awaiting payment */}
               {selectedIssue.categoryType === "Resident" &&
-                selectedIssue.status === "Closed" &&
+                selectedIssue.status === "Payment Pending" &&
                 !selectedIssue.feedback && (
                 <div style={{ width: "100%" }}>
                   <div className="mb-2">

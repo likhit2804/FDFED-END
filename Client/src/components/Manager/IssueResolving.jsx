@@ -9,13 +9,15 @@ import {
   assignManagerIssue,
   reassignManagerIssue,
   closeManagerIssue,
-  holdManagerIssue,
   clearIssueDetails,
+  fetchWorkers,
 } from "../../Slices/ManagerIssuesSlice";
 import { toast, ToastContainer } from "react-toastify";
+import { useSocket } from "../../hooks/useSocket";
 
 export const IssueResolving = () => {
   const dispatch = useDispatch();
+  const socket = useSocket("http://localhost:3000");
 
   // Use manager issues slice instead of mock data
   const managerState = useSelector((s) => s?.managerIssues) || {};
@@ -25,6 +27,8 @@ export const IssueResolving = () => {
     loading = false,
     error = null,
     issueDetails = null,
+    workers = [],
+    workersLoading = false,
   } = managerState;
 
   // Main tab
@@ -47,18 +51,31 @@ export const IssueResolving = () => {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewIssue, setPreviewIssue] = useState(null);
 
-  // Assign/Reassign modals
   const [assignOpen, setAssignOpen] = useState(false);
   const [reassignOpen, setReassignOpen] = useState(false);
-  const [workerId, setWorkerId] = useState("");
-  const [newWorkerId, setNewWorkerId] = useState("");
+  const [selectedWorker, setSelectedWorker] = useState("");
+  const [selectedNewWorker, setSelectedNewWorker] = useState("");
   const [deadline, setDeadline] = useState("");
   const [remarks, setRemarks] = useState("");
 
-  // Load issues from backend on mount
+  // Load issues and workers from backend on mount
   useEffect(() => {
     dispatch(fetchManagerIssues());
+    dispatch(fetchWorkers());
   }, [dispatch]);
+
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleIssueUpdate = () => {
+      dispatch(fetchManagerIssues());
+    };
+
+    socket.on("issue:updated", handleIssueUpdate);
+    return () => {
+      socket.off("issue:updated", handleIssueUpdate);
+    };
+  }, [socket, dispatch]);
 
   // Filter by type
   const residentIssues = useMemo(
@@ -130,6 +147,7 @@ export const IssueResolving = () => {
     pending: issues.filter((i) => i.status === "Pending Assignment").length,
     assigned: issues.filter((i) => i.status === "Assigned").length,
     inProgress: issues.filter((i) => i.status === "In Progress").length,
+    paymentPending: issues.filter((i) => i.status === "Payment Pending").length,
   };
 
   // Check if can assign - for issues that need initial assignment
@@ -154,7 +172,7 @@ export const IssueResolving = () => {
   // Open modals
   const openAssign = (issue) => {
     setPreviewIssue(issue);
-    setWorkerId("");
+    setSelectedWorker("");
     setDeadline("");
     setRemarks("");
     setAssignOpen(true);
@@ -163,7 +181,7 @@ export const IssueResolving = () => {
 
   const openReassign = (issue) => {
     setPreviewIssue(issue);
-    setNewWorkerId("");
+    setSelectedNewWorker("");
     setDeadline(issue.deadline ? issue.deadline.split('T')[0] : "");
     setRemarks(issue.remarks || "");
     setReassignOpen(true);
@@ -178,12 +196,12 @@ export const IssueResolving = () => {
 
   // Actions
   const doAssign = async () => {
-    if (!workerId.trim()) return toast.error("Enter worker ID");
+    if (!selectedWorker.trim()) return toast.error("Select a worker");
     try {
       await dispatch(
         assignManagerIssue({
           id: previewIssue._id,
-          worker: workerId,
+          worker: selectedWorker,
           deadline: deadline || null,
           remarks: remarks || null,
         })
@@ -197,12 +215,12 @@ export const IssueResolving = () => {
   };
 
   const doReassign = async () => {
-    if (!newWorkerId.trim()) return toast.error("Enter new worker ID");
+    if (!selectedNewWorker.trim()) return toast.error("Select a new worker");
     try {
       await dispatch(
         reassignManagerIssue({
           id: previewIssue._id,
-          newWorker: newWorkerId,
+          newWorker: selectedNewWorker,
           deadline: deadline || null,
           remarks: remarks || null,
         })
@@ -219,16 +237,6 @@ export const IssueResolving = () => {
     try {
       await dispatch(closeManagerIssue({ id: issue._id })).unwrap();
       toast.success("Issue closed");
-      dispatch(fetchManagerIssues());
-    } catch (e) {
-      toast.error(String(e));
-    }
-  };
-
-  const doHold = async (issue) => {
-    try {
-      await dispatch(holdManagerIssue({ id: issue._id, remarks: "" })).unwrap();
-      toast.success("Issue put on hold");
       dispatch(fetchManagerIssues());
     } catch (e) {
       toast.error(String(e));
@@ -267,7 +275,7 @@ export const IssueResolving = () => {
         .status-badge.pending { background: #fef3c7; color: #92400e; }
         .status-badge.assigned { background: #dbeafe; color: #1e40af; }
         .status-badge.in-progress { background: #fed7aa; color: #92400e; }
-        .status-badge.on-hold { background: #f3e8ff; color: #6b21a8; }
+        .status-badge.payment-pending { background: #fef3c7; color: #92400e; }
         .status-badge.closed { background: #d1fae5; color: #065f46; }
         .status-badge.reopened { background: #fee2e2; color: #991b1b; }
         .status-badge.resolved { background: #d1fae5; color: #065f46; }
@@ -347,7 +355,11 @@ export const IssueResolving = () => {
             <div className="stat-number">{stats.pending}</div>
           </div>
           <div className="stat-card">
-            <h3>👤 Resident</h3>
+            <h3>� Payment Pending</h3>
+            <div className="stat-number">{stats.paymentPending}</div>
+          </div>
+          <div className="stat-card">
+            <h3>�👤 Resident</h3>
             <div className="stat-number">{stats.resident}</div>
           </div>
           <div className="stat-card">
@@ -399,9 +411,9 @@ export const IssueResolving = () => {
               <option value="Pending Assignment">Pending</option>
               <option value="Assigned">Assigned</option>
               <option value="In Progress">In Progress</option>
-              <option value="On Hold">On Hold</option>
               <option value="Reopened">Reopened</option>
               <option value="Resolved (Awaiting Confirmation)">Resolved</option>
+              <option value="Payment Pending">Payment Pending</option>
               <option value="Closed">Closed</option>
             </select>
             <select
@@ -534,17 +546,6 @@ export const IssueResolving = () => {
                       Close
                     </button>
                   )}
-                  {(issue.status === "Assigned" || issue.status === "In Progress") && (
-                    <button
-                      className="action-btn secondary"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        doHold(issue);
-                      }}
-                    >
-                      Hold
-                    </button>
-                  )}
                 </div>
               </motion.div>
             ))}
@@ -672,17 +673,53 @@ export const IssueResolving = () => {
                 <p style={{ marginBottom: "16px", color: "#6b7280", fontSize: "14px" }}>
                   <strong>Issue:</strong> {previewIssue.title || previewIssue.category}
                 </p>
-                <p style={{ marginBottom: "16px", color: "#6b7280", fontSize: "12px" }}>
-                  This issue has not been auto-assigned. Please manually assign a worker.
-                </p>
+                {previewIssue.workerAssigned ? (
+                  <p style={{ marginBottom: "16px", color: "#6b7280", fontSize: "12px" }}>
+                    <strong>Previously Assigned:</strong> {previewIssue.workerAssigned.name} - {Array.isArray(previewIssue.workerAssigned.jobRole) ? previewIssue.workerAssigned.jobRole.join(', ') : previewIssue.workerAssigned.jobRole}
+                    <br />
+                    <em>Please select a different worker for reassignment.</em>
+                  </p>
+                ) : previewIssue.misassignedBy && previewIssue.misassignedBy.length > 0 ? (
+                  <p style={{ marginBottom: "16px", color: "#dc2626", fontSize: "12px" }}>
+                    <strong>Misassigned by:</strong> {previewIssue.misassignedBy.map(w => w.name).join(', ')}
+                    <br />
+                    <em>These workers reported this issue as misassigned. Please assign a different worker.</em>
+                  </p>
+                ) : (
+                  <p style={{ marginBottom: "16px", color: "#6b7280", fontSize: "12px" }}>
+                    This issue has not been assigned yet. Please manually assign a worker.
+                  </p>
+                )}
                 <div className="form-group">
-                  <label>Worker ID</label>
-                  <input
-                    type="text"
-                    placeholder="e.g., W-001"
-                    value={workerId}
-                    onChange={(e) => setWorkerId(e.target.value)}
-                  />
+                  <label>Select Worker</label>
+                  <select
+                    value={selectedWorker}
+                    onChange={(e) => setSelectedWorker(e.target.value)}
+                    disabled={workersLoading}
+                  >
+                    <option value="">Choose a worker...</option>
+                    {previewIssue.workerAssigned && (
+                      <option value={previewIssue.workerAssigned._id} disabled style={{ color: '#6b7280' }}>
+                        {previewIssue.workerAssigned.name} - {Array.isArray(previewIssue.workerAssigned.jobRole) ? previewIssue.workerAssigned.jobRole.join(', ') : previewIssue.workerAssigned.jobRole} (Previously Assigned)
+                      </option>
+                    )}
+                    {previewIssue.misassignedBy && previewIssue.misassignedBy.map((worker) => (
+                      <option key={worker._id} value={worker._id} disabled style={{ color: '#dc2626' }}>
+                        {worker.name} - {Array.isArray(worker.jobRole) ? worker.jobRole.join(', ') : worker.jobRole} (Reported Misassigned)
+                      </option>
+                    ))}
+                    {workers
+                      .filter(worker => 
+                        (!previewIssue.workerAssigned || worker._id !== previewIssue.workerAssigned._id) &&
+                        (!previewIssue.misassignedBy || !previewIssue.misassignedBy.some(misassignedWorker => misassignedWorker._id === worker._id))
+                      )
+                      .map((worker) => (
+                        <option key={worker._id} value={worker._id}>
+                          {worker.name} - {Array.isArray(worker.jobRole) ? worker.jobRole.join(', ') : worker.jobRole}
+                        </option>
+                      ))}
+                  </select>
+                  {workersLoading && <small className="text-muted">Loading workers...</small>}
                 </div>
                 <div className="form-group">
                   <label>Deadline (optional)</label>
@@ -733,13 +770,27 @@ export const IssueResolving = () => {
                   <strong>Reason:</strong> {previewIssue.autoAssigned ? "Auto-assigned but rejected by resident" : "Manual reassignment"}
                 </p>
                 <div className="form-group">
-                  <label>New Worker ID</label>
-                  <input
-                    type="text"
-                    placeholder="e.g., W-002"
-                    value={newWorkerId}
-                    onChange={(e) => setNewWorkerId(e.target.value)}
-                  />
+                  <label>Select New Worker</label>
+                  <select
+                    value={selectedNewWorker}
+                    onChange={(e) => setSelectedNewWorker(e.target.value)}
+                    disabled={workersLoading}
+                  >
+                    <option value="">Choose a worker...</option>
+                    {previewIssue.workerAssigned && (
+                      <option value={previewIssue.workerAssigned._id} disabled style={{ color: '#6b7280' }}>
+                        {previewIssue.workerAssigned.name} - {Array.isArray(previewIssue.workerAssigned.jobRole) ? previewIssue.workerAssigned.jobRole.join(', ') : previewIssue.workerAssigned.jobRole} (Current)
+                      </option>
+                    )}
+                    {workers
+                      .filter(worker => !previewIssue.workerAssigned || worker._id !== previewIssue.workerAssigned._id)
+                      .map((worker) => (
+                        <option key={worker._id} value={worker._id}>
+                          {worker.name} - {Array.isArray(worker.jobRole) ? worker.jobRole.join(', ') : worker.jobRole}
+                        </option>
+                      ))}
+                  </select>
+                  {workersLoading && <small className="text-muted">Loading workers...</small>}
                 </div>
                 <div className="form-group">
                   <label>Deadline (optional)</label>

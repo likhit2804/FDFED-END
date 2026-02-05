@@ -136,32 +136,6 @@ export const closeManagerIssue = createAsyncThunk(
   }
 );
 
-// POST: put on hold
-export const holdManagerIssue = createAsyncThunk(
-  "managerIssues/holdManagerIssue",
-  async ({ id, remarks }, { rejectWithValue }) => {
-    try {
-      const res = await fetch(`${API}/hold/${id}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ remarks }),
-      });
-      
-      const data = await res.json();
-      
-      if (!res.ok || !data.success) {
-        throw new Error(data.message || "Hold failed");
-      }
-      
-      return { id, status: "On Hold", remarks };
-    } catch (err) {
-      console.error("holdManagerIssue error:", err);
-      return rejectWithValue(err.message || "Failed to put on hold");
-    }
-  }
-);
-
 // GET: fetch rejected (auto-assigned but resident rejected) issues
 export const fetchRejectedIssues = createAsyncThunk(
   "managerIssues/fetchRejectedIssues",
@@ -188,14 +162,42 @@ export const fetchRejectedIssues = createAsyncThunk(
   }
 );
 
+// GET: workers for assignment
+export const fetchWorkers = createAsyncThunk(
+  "managerIssues/fetchWorkers",
+  async (_, { rejectWithValue }) => {
+    try {
+      const res = await fetch("http://localhost:3000/manager/workers", { credentials: "include" });
+      
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.message || `HTTP ${res.status}`);
+      }
+      
+      const data = await res.json();
+      
+      if (!data.success) {
+        throw new Error(data.message || "Failed to fetch workers");
+      }
+      
+      return data.workers || [];
+    } catch (err) {
+      console.error("fetchWorkers error:", err);
+      return rejectWithValue(err.message || "Failed to fetch workers");
+    }
+  }
+);
+
 const initialState = {
   issues: [],
   rejectedIssues: [],
   analytics: null,
   groupedCommunityIssues: {},
   issueDetails: null,
+  workers: [],
   loading: false,
   rejectedLoading: false,
+  workersLoading: false,
   error: null,
 };
 
@@ -298,25 +300,6 @@ const managerIssuesSlice = createSlice({
         state.error = action.payload || "Failed to close issue";
       })
 
-      // hold
-      .addCase(holdManagerIssue.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
-      .addCase(holdManagerIssue.fulfilled, (state, action) => {
-        state.loading = false;
-        const { id, status, remarks } = action.payload;
-        const idx = state.issues.findIndex((i) => i._id === id);
-        if (idx !== -1) {
-          state.issues[idx].status = status;
-          state.issues[idx].remarks = remarks || "On Hold by Manager";
-        }
-      })
-      .addCase(holdManagerIssue.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload || "Failed to put on hold";
-      })
-
       // fetch rejected issues (auto-assigned but resident rejected)
       .addCase(fetchRejectedIssues.pending, (state) => {
         state.rejectedLoading = true;
@@ -328,6 +311,19 @@ const managerIssuesSlice = createSlice({
       .addCase(fetchRejectedIssues.rejected, (state, action) => {
         state.rejectedLoading = false;
         state.rejectedIssues = [];
+      })
+
+      // fetch workers
+      .addCase(fetchWorkers.pending, (state) => {
+        state.workersLoading = true;
+      })
+      .addCase(fetchWorkers.fulfilled, (state, action) => {
+        state.workersLoading = false;
+        state.workers = action.payload || [];
+      })
+      .addCase(fetchWorkers.rejected, (state, action) => {
+        state.workersLoading = false;
+        state.workers = [];
       });
   },
 });

@@ -7,6 +7,7 @@ import QRCode from "qrcode";
 import jwt from "jsonwebtoken";
 
 import Issue from "../models/issues.js";
+import Notifications from "../models/Notifications.js";
 import Resident from "../models/resident.js";
 import CommonSpaces from "../models/commonSpaces.js";
 import Payment from "../models/payment.js";
@@ -666,7 +667,7 @@ residentRouter.get("/api/dashboard", async (req, res) => {
 residentRouter.get("/", (req, res) => {
   res.redirect("dashboard");
 });
-
+/*---------------------------------------------------------------------------------------------------- */
 import {
   confirmIssue,
   rejectIssueResolution,
@@ -686,9 +687,10 @@ residentRouter.delete("/issue/delete/:issueID", deleteIssue);
 residentRouter.get("/issue/data", getResidentIssues);
 residentRouter.get("/issue/data/:id", getIssueDataById);
 residentRouter.post("/issue/submitFeedback", submitFeedback);
-
+/*---------------------------------------------------------------------------------------------------- */
 // Payment routes - corrected version
 residentRouter.get("/payments", getPaymentData);
+residentRouter.patch("/payment/:id", PaymentController.updateResidentPayment);
 
 residentRouter.get("/payment/receipt/:id", async (req, res) => {
   const Id = req.params.id;

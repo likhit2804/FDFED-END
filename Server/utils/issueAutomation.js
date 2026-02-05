@@ -434,6 +434,11 @@ export async function flagMisassigned(issueId) {
   const issue = await Issue.findById(issueId);
   if (!issue) return;
 
+  // Add the current worker to misassignedBy array if not already there
+  if (issue.workerAssigned && !issue.misassignedBy.includes(issue.workerAssigned.toString())) {
+    issue.misassignedBy.push(issue.workerAssigned);
+  }
+
   issue.workerAssigned = null;
   issue.status = "Pending Assignment";
   await issue.save();

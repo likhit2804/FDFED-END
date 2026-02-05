@@ -109,6 +109,11 @@ export default function ManagerApplications() {
             rejectionReason: app.rejectionReason || null,
             approvedAt: app.approvedAt ? new Date(app.approvedAt).toLocaleDateString("en-IN") : null,
             rejectedAt: app.rejectedAt ? new Date(app.rejectedAt).toLocaleDateString("en-IN") : null,
+            paymentStatus: app.paymentStatus || 'pending',
+            // Computed status for UI
+            uiStatus: (app.status?.toUpperCase() === 'APPROVED' && (!app.paymentStatus || app.paymentStatus === 'pending'))
+              ? 'AWAITING PAYMENT'
+              : ((app.paymentStatus === 'completed') ? 'COMPLETED' : (app.status?.toUpperCase() || "PENDING"))
           }));
           setApplications(formatted);
         } else {
@@ -140,7 +145,7 @@ export default function ManagerApplications() {
       });
 
       if (res.ok) {
-        const updatedApp = { ...selectedApp, status: "APPROVED" };
+        const updatedApp = { ...selectedApp, status: "APPROVED", uiStatus: "AWAITING PAYMENT", paymentStatus: "pending" };
         setApplications(prev =>
           prev.map(app =>
             app.id === appId
@@ -153,7 +158,7 @@ export default function ManagerApplications() {
           setSelectedApp(updatedApp);
         }
         setError("");
-        setSuccessMessage("Application approved successfully! Community manager account created.");
+        setSuccessMessage("Application approved! Payment link sent to applicant.");
         setTimeout(() => setSuccessMessage(""), 5000);
       } else {
         const errorData = await res.json();
@@ -225,11 +230,15 @@ export default function ManagerApplications() {
 
   // ===== Tab Filtering =====
   const filteredApps = useMemo(() => {
-    return activeTab === "All"
-      ? applications
-      : applications.filter(
-          (a) => a.status.toUpperCase() === activeTab.toUpperCase()
-        );
+    if (activeTab === "All") return applications;
+
+    return applications.filter((a) => {
+      // Map tab names to status checks
+      if (activeTab === "Approved") return a.status === "APPROVED" && a.paymentStatus !== "pending"; // Legacy
+      if (activeTab === "Completed") return a.paymentStatus === "completed";
+      if (activeTab === "Awaiting Payment") return a.uiStatus === "AWAITING PAYMENT";
+      return a.uiStatus === activeTab.toUpperCase() || a.status === activeTab.toUpperCase();
+    });
   }, [activeTab, applications]);
 
   // ===== Inline Styles =====
@@ -300,7 +309,7 @@ export default function ManagerApplications() {
           animation: "slideInDown 0.3s ease-out",
         }}>
           <div style={{ fontSize: "20px", marginRight: "10px", minWidth: "24px" }}>✅</div>
-          <div style={{ 
+          <div style={{
             flex: 1,
             whiteSpace: "nowrap",
             overflow: "hidden",
@@ -358,7 +367,7 @@ export default function ManagerApplications() {
           animation: "slideInDown 0.3s ease-out",
         }}>
           <div style={{ fontSize: "20px", marginRight: "10px", minWidth: "24px" }}>⚠</div>
-          <div style={{ 
+          <div style={{
             flex: 1,
             overflow: 'hidden',
             lineHeight: '1.2'
@@ -424,7 +433,7 @@ export default function ManagerApplications() {
 
         {/* === Tabs === */}
         <Tabs
-          options={["All", "Approved", "Pending"]}
+          options={["All", "Pending", "Awaiting Payment", "Completed", "Rejected"]}
           active={activeTab}
           onChange={setActiveTab}
         />
@@ -443,11 +452,13 @@ export default function ManagerApplications() {
               style={{
                 ...styles.cardItem,
                 borderLeftColor:
-                  app.status === "APPROVED"
-                    ? "#22c55e"
-                    : app.status === "PENDING"
-                    ? "#fbbf24"
-                    : "#ef4444",
+                  app.uiStatus === "COMPLETED" || app.status === "ONBOARDED"
+                    ? "#22c55e" // Green
+                    : app.uiStatus === "AWAITING PAYMENT"
+                      ? "#3b82f6" // Blue
+                      : app.status === "PENDING"
+                        ? "#fbbf24" // Yellow
+                        : "#ef4444", // Red
               }}
               onClick={() => {
                 setSelectedApp(app);
@@ -456,7 +467,7 @@ export default function ManagerApplications() {
             >
               <div style={styles.headerRow}>
                 <div style={styles.name}>{app.name}</div>
-                <Status status={app.status} />
+                <Status status={app.uiStatus || app.status} />
               </div>
               <div style={{ fontSize: "14px", color: "#64748b" }}>
                 {app.email} · {app.phone}
@@ -516,7 +527,7 @@ export default function ManagerApplications() {
             <strong>Location:</strong> {selectedApp.location}
           </div>
           <div style={{ marginBottom: "8px", color: "#475569" }}>
-            <strong>Status:</strong> <Status status={selectedApp.status} />
+            <strong>Status:</strong> <Status status={selectedApp.uiStatus || selectedApp.status} />
           </div>
           <div style={{ marginBottom: "16px", color: "#475569" }}>
             <strong>Description:</strong> {selectedApp.description}
@@ -560,7 +571,7 @@ export default function ManagerApplications() {
                   </div>
                 ))}
               </div>
-              
+
               {/* Large photo preview */}
               {activePhoto && (
                 <div style={{
@@ -584,6 +595,64 @@ export default function ManagerApplications() {
               )}
             </div>
           )}
+
+          {/* Resend Link Button */}
+          {selectedApp.uiStatus === "AWAITING PAYMENT" && (
+            <div style={{ display: "flex", gap: "12px", marginTop: "16px" }}>
+              <button
+                onClick={async () => {
+                  try {
+                    setActionLoading(selectedApp.id);
+                    setActionType('resend');
+                    const res = await fetch(`${API_BASE_URL}/admin/interests/${selectedApp.id}/resend-link`, {
+                      method: "POST",
+                      headers: {
+                        Authorization: `Bearer ${localStorage.getItem("adminToken") || ""}`,
+                      },
+                    });
+                    if (res.ok) {
+                      setSuccessMessage("Payment link resent successfully!");
+                      setTimeout(() => setSuccessMessage(""), 5000);
+                    } else {
+                      const data = await res.json();
+                      setError(data.message || "Failed to resend link");
+                    }
+                  } catch (err) {
+                    setError("Error resending link");
+                  } finally {
+                    setActionLoading(null);
+                  }
+                }}
+                disabled={actionLoading === selectedApp.id}
+                style={{
+                  backgroundColor: "#3b82f6",
+                  color: "white",
+                  border: "none",
+                  padding: "10px 20px",
+                  borderRadius: "8px",
+                  cursor: actionLoading === selectedApp.id ? "not-allowed" : "pointer",
+                  fontSize: "14px",
+                  fontWeight: "500",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  minWidth: "140px",
+                  justifyContent: "center",
+                }}
+              >
+                {actionLoading === selectedApp.id && actionType === 'resend' ? (
+                  <>
+                    <Spinner size={14} />
+                    Sending...
+                  </>
+                ) : (
+                  "Resend Payment Link"
+                )}
+              </button>
+            </div>
+          )}
+
+
 
           {/* Action Buttons */}
           {selectedApp.status === "PENDING" && (
@@ -697,7 +766,7 @@ export default function ManagerApplications() {
                 }}
               />
             </div>
-            
+
             <div style={{ marginBottom: "16px", color: "#475569" }}>
               <strong>Applicant:</strong> {selectedApp.name}
             </div>

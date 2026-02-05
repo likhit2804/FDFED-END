@@ -2,14 +2,16 @@ import express from 'express';
 import {
   submitInterestForm,
   showInterestForm,
-  uploadPhoto
+  uploadPhoto,
+  getOnboardingDetails,
+  completeOnboardingPayment
 } from '../controllers/interestForm.js';
 import multer from 'multer';
 
 const interestRouter = express.Router();
 
 // Configure multer for memory storage
-const upload = multer({ 
+const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
     fileSize: 5 * 1024 * 1024 // 5MB limit
@@ -25,5 +27,9 @@ interestRouter.get('/test', (req, res) => {
 interestRouter.get('/', showInterestForm);
 interestRouter.post('/upload-photo', upload.single('photo'), uploadPhoto);
 interestRouter.post('/submit', upload.array('photos', 5), submitInterestForm);
+
+// Onboarding Routes
+interestRouter.get('/onboarding/:token', getOnboardingDetails);
+interestRouter.post('/onboarding/complete', completeOnboardingPayment);
 
 export default interestRouter;
