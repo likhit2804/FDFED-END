@@ -16,6 +16,7 @@ import Resident from "../models/resident.js";
 import Security from "../models/security.js";
 import Community from "../models/communities.js";
 import CommonSpaces from "../models/commonSpaces.js";
+import SubscriptionPlan from "../models/subscriptionPlan.js";
 import PaymentController from "../controllers/payments.js";
 import CommunityManager from "../models/cManager.js";
 import Ad from "../models/Ad.js";
@@ -635,7 +636,7 @@ managerRouter.post("/subscription-payment", async (req, res) => {
     } = req.body;
 
     // Validate required fields
-    if (!subscriptionPlan || !amount || !paymentMethod) {
+    if (!subscriptionPlan || !paymentMethod) {
       return res
         .status(400)
         .json({ message: "Missing required payment information" });
@@ -649,13 +650,26 @@ managerRouter.post("/subscription-payment", async (req, res) => {
       return res.status(404).json({ message: "Community manager not found" });
     }
 
-    const community = await Community.findById(communityId);
+    const resolvedCommunityId = communityId || manager.assignedCommunity;
+    const community = await Community.findById(resolvedCommunityId);
     if (!community) {
       return res.status(404).json({ message: "Community not found" });
     }
 
+    const planDoc = await SubscriptionPlan.findOne({
+      planKey: subscriptionPlan,
+      isActive: true,
+    }).lean();
+
+    if (!planDoc) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or inactive subscription plan.",
+      });
+    }
+
     // Enforce resident-based plan capacity: prevent downgrades below current size
-    const capacity = PLAN_CAPACITY[subscriptionPlan];
+    const capacity = planDoc.maxResidents ?? null;
     if (capacity !== null && typeof capacity === "number") {
       if (community.totalMembers && community.totalMembers > capacity) {
         return res.status(400).json({
@@ -670,29 +684,40 @@ managerRouter.post("/subscription-payment", async (req, res) => {
     }
 
     // Calculate plan end date
-    const startDate = new Date(paymentDate);
+    const normalizedPaymentDate = paymentDate
+      ? new Date(paymentDate)
+      : new Date();
+    const startDate = normalizedPaymentDate;
     const endDate = new Date(startDate);
 
-    if (planDuration === "monthly") {
+    const resolvedDuration =
+      planDuration || planDoc.duration || "monthly";
+
+    if (resolvedDuration === "monthly") {
       endDate.setMonth(endDate.getMonth() + 1);
-    } else if (planDuration === "yearly") {
+    } else if (resolvedDuration === "yearly") {
       endDate.setFullYear(endDate.getFullYear() + 1);
     }
+
+    const resolvedAmount =
+      typeof planDoc.price === "number"
+        ? planDoc.price
+        : Number(amount) || 0;
 
     // Create subscription payment record
     const subscriptionPayment = {
       transactionId:
         transactionId ||
         `TXN_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      planName: getSubscriptionPlanName(subscriptionPlan),
-      planType: subscriptionPlan,
-      amount: amount,
+      planName: planDoc.name,
+      planType: planDoc.planKey,
+      amount: resolvedAmount,
       paymentMethod: paymentMethod,
 
-      paymentDate: new Date(paymentDate),
+      paymentDate: normalizedPaymentDate,
       planStartDate: startDate,
       planEndDate: endDate,
-      duration: planDuration,
+      duration: resolvedDuration,
       status: "completed",
       isRenewal: isRenewal || false,
       processedBy: managerId,
@@ -709,7 +734,7 @@ managerRouter.post("/subscription-payment", async (req, res) => {
     };
 
     // Update community subscription details
-    community.subscriptionPlan = subscriptionPlan;
+    community.subscriptionPlan = planDoc.planKey;
     community.subscriptionStatus = "active";
     community.planStartDate = startDate;
     community.planEndDate = endDate;
@@ -835,12 +860,26 @@ managerRouter.get("/subscription-status", async (req, res) => {
       );
     }
 
+    let planMeta = null;
+    if (community.subscriptionPlan) {
+      planMeta = await SubscriptionPlan.findOne({
+        planKey: community.subscriptionPlan,
+        isActive: true,
+      })
+        .select("name price duration maxResidents")
+        .lean();
+    }
+
     res.json({
       success: true,
       community: {
         _id: community._id,
         name: community.name,
         subscriptionPlan: community.subscriptionPlan,
+        planName: planMeta?.name || null,
+        planPrice: planMeta?.price ?? null,
+        planDuration: planMeta?.duration || null,
+        planMaxResidents: planMeta?.maxResidents ?? null,
         subscriptionStatus: community.subscriptionStatus,
         planStartDate: community.planStartDate,
         planEndDate: community.planEndDate,
@@ -1078,23 +1117,6 @@ managerRouter.get("/payment-stats", async (req, res) => {
     });
   }
 });
-function getSubscriptionPlanName(planType) {
-  const planNames = {
-    basic: "Basic Plan",
-    standard: "Standard Plan",
-    premium: "Premium Plan",
-  };
-  return planNames[planType] || "Unknown Plan";
-}
-// Helper function to get plan price
-function getPlanPrice(planType) {
-  const planPrices = {
-    basic: 999,
-    standard: 1999,
-    premium: 3999,
-  };
-  return planPrices[planType] || 0;
-}
 
 managerRouter.get("/all-payments", PaymentController.getAllPayments);
 
@@ -1715,60 +1737,26 @@ managerRouter.get("/api/payments", async (req, res) => {
   }
 });
 
-// Helper: plan capacity (max residents); null = unlimited
-const PLAN_CAPACITY = {
-  basic: 50,
-  standard: 200,
-  premium: null,
-};
-
 // Get available subscription plans
 managerRouter.get("/subscription-plans", async (req, res) => {
   try {
-    const planPrices = {
-      basic: 999,
-      standard: 1999,
-      premium: 3999,
-    };
+    const plans = await SubscriptionPlan.find({ isActive: true })
+      .sort({ displayOrder: 1 })
+      .lean();
 
-    const planDetails = {
-      basic: {
-        name: "Basic Plan",
-        price: 999,
-        maxResidents: PLAN_CAPACITY.basic,
-        features: [
-          "Up to 50 residents",
-          "Basic payment tracking",
-          "Email support",
-        ],
-        duration: "monthly",
-      },
-      standard: {
-        name: "Standard Plan",
-        price: 1999,
-        maxResidents: PLAN_CAPACITY.standard,
-        features: [
-          "Up to 200 residents",
-          "Advanced payment tracking",
-          "SMS notifications",
-          "Priority support",
-        ],
-        duration: "monthly",
-      },
-      premium: {
-        name: "Premium Plan",
-        price: 3999,
-        maxResidents: PLAN_CAPACITY.premium,
-        features: [
-          "Unlimited residents",
-          "Full payment suite",
-          "SMS + Email notifications",
-          "Dedicated support",
-          "Analytics dashboard",
-        ],
-        duration: "monthly",
-      },
-    };
+    const planDetails = {};
+    const planPrices = {};
+
+    plans.forEach((plan) => {
+      planDetails[plan.planKey] = {
+        name: plan.name,
+        price: plan.price,
+        maxResidents: plan.maxResidents ?? null,
+        features: plan.features || [],
+        duration: plan.duration || "monthly",
+      };
+      planPrices[plan.planKey] = plan.price;
+    });
 
     res.json({
       success: true,
@@ -1816,30 +1804,63 @@ managerRouter.post("/change-plan", async (req, res) => {
       });
     }
 
-    // Plan pricing
-    const planPrices = {
-      basic: 999,
-      standard: 1999,
-      premium: 3999,
-    };
+    const currentPlanKey = community.subscriptionPlan || null;
+    const [currentPlanDoc, newPlanDoc] = await Promise.all([
+      currentPlanKey
+        ? SubscriptionPlan.findOne({
+          planKey: currentPlanKey,
+          isActive: true,
+        }).lean()
+        : Promise.resolve(null),
+      SubscriptionPlan.findOne({
+        planKey: newPlan,
+        isActive: true,
+      }).lean(),
+    ]);
 
-    const currentPlan = community.subscriptionPlan || "basic";
-    const currentPrice = planPrices[currentPlan];
-    const newPrice = planPrices[newPlan];
-
-    if (!newPrice) {
+    if (!newPlanDoc) {
       return res.status(400).json({
         success: false,
         message: "Invalid plan selected",
       });
     }
 
-    if (currentPlan === newPlan) {
+    if (currentPlanKey === newPlanDoc.planKey) {
       return res.status(400).json({
         success: false,
         message: "You are already on this plan",
       });
     }
+
+    const maxResidents = newPlanDoc.maxResidents ?? null;
+    if (maxResidents !== null && typeof maxResidents === "number") {
+      if (community.totalMembers && community.totalMembers > maxResidents) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Selected plan cannot support current number of residents. Please choose a higher plan.",
+          code: "PLAN_CAPACITY_EXCEEDED",
+          currentResidents: community.totalMembers,
+          maxAllowed: maxResidents,
+        });
+      }
+    }
+
+    const currentPrice =
+      typeof currentPlanDoc?.price === "number" ? currentPlanDoc.price : 0;
+    const newPrice =
+      typeof newPlanDoc.price === "number" ? newPlanDoc.price : 0;
+    const resolvedDuration = newPlanDoc.duration || "monthly";
+
+    const computePlanEndDate = (start, duration) => {
+      const end = new Date(start);
+      if (duration === "yearly") {
+        end.setFullYear(end.getFullYear() + 1);
+      } else {
+        end.setMonth(end.getMonth() + 1);
+      }
+      return end;
+    };
 
     const now = new Date();
     const planEndDate = new Date(community.planEndDate);
@@ -1858,20 +1879,19 @@ managerRouter.post("/change-plan", async (req, res) => {
         // Create payment record for the difference
         const paymentRecord = {
           transactionId,
-          planName: `${newPlan.charAt(0).toUpperCase() + newPlan.slice(1)
-            } Plan (Upgrade)`,
-          planType: newPlan,
+          planName: `${newPlanDoc.name} (Upgrade)`,
+          planType: newPlanDoc.planKey,
           amount: priceDifference,
           paymentMethod,
           paymentDate: now,
           planStartDate: now,
-          planEndDate: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
-          duration: "monthly",
+          planEndDate: computePlanEndDate(now, resolvedDuration),
+          duration: resolvedDuration,
           status: "completed",
           isRenewal: false,
           isPlanChange: true,
           changeType: "immediate",
-          previousPlan: currentPlan,
+          previousPlan: currentPlanKey,
           processedBy: managerId,
           metadata: {
             userAgent: req.get("User-Agent"),
@@ -1880,12 +1900,10 @@ managerRouter.post("/change-plan", async (req, res) => {
         };
 
         // Update community subscription
-        community.subscriptionPlan = newPlan;
+        community.subscriptionPlan = newPlanDoc.planKey;
         community.subscriptionStatus = "active";
         community.planStartDate = now;
-        community.planEndDate = new Date(
-          now.getTime() + 30 * 24 * 60 * 60 * 1000
-        );
+        community.planEndDate = computePlanEndDate(now, resolvedDuration);
 
         // Add to subscription history
         if (!community.subscriptionHistory) {
@@ -1894,6 +1912,22 @@ managerRouter.post("/change-plan", async (req, res) => {
         community.subscriptionHistory.push(paymentRecord);
 
         await community.save();
+
+        await createCommunitySubscription({
+          communityId: community._id,
+          transactionId: paymentRecord.transactionId,
+          planName: paymentRecord.planName,
+          planType: paymentRecord.planType,
+          amount: paymentRecord.amount,
+          paymentMethod: paymentRecord.paymentMethod,
+          paymentDate: paymentRecord.paymentDate,
+          planStartDate: paymentRecord.planStartDate,
+          planEndDate: paymentRecord.planEndDate,
+          duration: paymentRecord.duration,
+          status: paymentRecord.status,
+          isRenewal: paymentRecord.isRenewal,
+          metadata: paymentRecord.metadata,
+        });
 
         res.json({
           success: true,
@@ -1905,11 +1939,10 @@ managerRouter.post("/change-plan", async (req, res) => {
         });
       } else if (priceDifference <= 0) {
         // Downgrade - no payment needed, just update plan
-        community.subscriptionPlan = newPlan;
+        community.subscriptionPlan = newPlanDoc.planKey;
+        community.subscriptionStatus = "active";
         community.planStartDate = now;
-        community.planEndDate = new Date(
-          now.getTime() + 30 * 24 * 60 * 60 * 1000
-        );
+        community.planEndDate = computePlanEndDate(now, resolvedDuration);
 
         // Add change record to history
         if (!community.subscriptionHistory) {
@@ -1919,20 +1952,19 @@ managerRouter.post("/change-plan", async (req, res) => {
           transactionId: `PLAN_CHANGE_${Date.now()}_${Math.random()
             .toString(36)
             .substr(2, 9)}`,
-          planName: `${newPlan.charAt(0).toUpperCase() + newPlan.slice(1)
-            } Plan (Downgrade)`,
-          planType: newPlan,
+          planName: `${newPlanDoc.name} (Downgrade)`,
+          planType: newPlanDoc.planKey,
           amount: 0,
           paymentMethod: "No Payment Required",
           paymentDate: now,
           planStartDate: now,
-          planEndDate: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
-          duration: "monthly",
+          planEndDate: computePlanEndDate(now, resolvedDuration),
+          duration: resolvedDuration,
           status: "completed",
           isRenewal: false,
           isPlanChange: true,
           changeType: "immediate",
-          previousPlan: currentPlan,
+          previousPlan: currentPlanKey,
           processedBy: managerId,
         });
 
@@ -2487,9 +2519,7 @@ managerRouter.post("/setup-structure", async (req, res) => {
       return res.status(404).json({ success: false, message: "Community not found" });
     }
 
-    if (community.hasStructure) {
-      return res.status(400).json({ success: false, message: "Community structure is already set up." });
-    }
+    // Allow editing even if structure exists (removed the hasStructure check)
 
     // Generate Blocks & Flats
     const generatedBlocks = blocks.map(block => {
