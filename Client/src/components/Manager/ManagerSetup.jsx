@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
+import { setUser } from '../../Slices/authSlice';
 import axios from 'axios';
 import {
     Building2,
@@ -17,6 +19,8 @@ const API_BASE_URL = 'http://localhost:3000';
 
 const ManagerSetup = () => {
     const navigate = useNavigate();
+    const dispatch = useDispatch();
+    const user = useSelector((state) => state.auth.user);
     const [blocks, setBlocks] = useState([
         { name: 'A', totalFloors: 5, flatsPerFloor: 4 }
     ]);
@@ -63,8 +67,14 @@ const ManagerSetup = () => {
             });
 
             if (res.data.success) {
-                // alert('Community setup complete!');
-                window.location.href = '/manager/dashboard';
+                // Update Redux state to mark structure as complete
+                dispatch(setUser({
+                    ...user,
+                    hasStructure: true
+                }));
+                
+                // Navigate to dashboard
+                navigate('/manager/dashboard', { replace: true });
             }
         } catch (err) {
             console.error(err);

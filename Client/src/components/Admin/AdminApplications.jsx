@@ -606,7 +606,9 @@ export default function ManagerApplications() {
                     setActionType('resend');
                     const res = await fetch(`${API_BASE_URL}/admin/interests/${selectedApp.id}/resend-link`, {
                       method: "POST",
+                      credentials: "include",
                       headers: {
+                        "Content-Type": "application/json",
                         Authorization: `Bearer ${localStorage.getItem("adminToken") || ""}`,
                       },
                     });
