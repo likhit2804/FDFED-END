@@ -767,6 +767,10 @@ export const completeOnboardingPayment = async (req, res) => {
     );
 
     // 5. Create Community
+    const planStartDate = new Date();
+    const planEndDate = new Date(Date.now() + (paymentDetails?.duration === 'yearly' ? 365 : 30) * 24 * 60 * 60 * 1000);
+    const transactionId = `TXN_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
     const newCommunity = await Community.create(
       [{
         name: interest.communityName?.trim() || '',
@@ -776,9 +780,24 @@ export const completeOnboardingPayment = async (req, res) => {
         communityManager: newManager[0]._id,
         subscriptionStatus: 'active',
         subscriptionPlan: paymentDetails?.plan || 'standard',
-        planStartDate: new Date(),
-        // Set expiry based on plan duration
-        planEndDate: new Date(Date.now() + (paymentDetails?.duration === 'yearly' ? 365 : 30) * 24 * 60 * 60 * 1000)
+        planStartDate,
+        planEndDate,
+        subscriptionHistory: [{
+          transactionId,
+          planName: `${(paymentDetails?.plan || 'standard').charAt(0).toUpperCase() + (paymentDetails?.plan || 'standard').slice(1)} Plan (Initial)`,
+          planType: paymentDetails?.plan || 'standard',
+          amount: paymentDetails?.amount || 0,
+          paymentMethod: paymentDetails?.method || 'card',
+          paymentDate: new Date(paymentDetails?.date || Date.now()),
+          planStartDate,
+          planEndDate,
+          duration: paymentDetails?.duration || 'monthly',
+          status: 'completed',
+          isRenewal: false,
+          metadata: {
+            source: 'onboarding'
+          }
+        }]
       }],
       { session }
     );
