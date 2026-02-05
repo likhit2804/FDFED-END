@@ -2,6 +2,8 @@ import Interest from '../models/interestForm.js';
 import CommunityManager from '../models/cManager.js';
 import admin from '../models/admin.js';
 import Community from '../models/communities.js';
+import CommunitySubscription from '../models/communitySubscription.js';
+import SubscriptionPlan from '../models/subscriptionPlan.js';
 import nodemailer from 'nodemailer';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
@@ -680,30 +682,32 @@ export const getOnboardingDetails = async (req, res) => {
       });
     }
 
-    // Define available plans (or fetch from DB/Config)
-    const plans = {
-      standard: {
-        name: "Standard Plan",
-        price: 2999,
+    // Fetch active subscription plans from database
+    const { default: SubscriptionPlan } = await import('../models/subscriptionPlan.js');
+    const dbPlans = await SubscriptionPlan.find({ isActive: true }).sort({ displayOrder: 1 });
+    
+    // Convert array to object with planKey as key
+    const plans = {};
+    dbPlans.forEach(plan => {
+      plans[plan.planKey] = {
+        name: plan.name,
+        price: plan.price,
+        duration: plan.duration,
+        features: plan.features,
+        maxResidents: plan.maxResidents
+      };
+    });
+    
+    // Fallback to default plans if no plans in database
+    if (Object.keys(plans).length === 0) {
+      plans.standard = {
+        name: "Up to 300 Residents",
+        price: 3999,
         duration: "monthly",
-        features: ["Resident Management", "Basic Reports", "Email Support", "Up to 500 residents"],
-        maxResidents: 500
-      },
-      premium: {
-        name: "Premium Plan",
-        price: 7999,
-        duration: "monthly",
-        features: ["All Standard Features", "Advanced Analytics", "Priority Support", "Unlimited residents"],
-        maxResidents: null
-      },
-      yearly: {
-        name: "Yearly Saver",
-        price: 29999,
-        duration: "yearly",
-        features: ["All Premium Features", "2 Months Free", "Dedicated Account Manager"],
-        maxResidents: null
-      }
-    };
+        features: ["All Basic Features", "Advanced Reports", "Priority Support", "Worker Management"],
+        maxResidents: 300
+      };
+    }
 
     res.json({
       success: true,
@@ -766,9 +770,34 @@ export const completeOnboardingPayment = async (req, res) => {
       { session }
     );
 
-    // 5. Create Community
+    // 5. Validate plan and create community
+    const selectedPlanKey = paymentDetails?.plan;
+    if (!selectedPlanKey) {
+      throw new Error('Missing subscription plan selection');
+    }
+
+    const planDoc = await SubscriptionPlan.findOne({
+      planKey: selectedPlanKey,
+      isActive: true,
+    }).session(session);
+
+    if (!planDoc) {
+      throw new Error('Invalid or inactive subscription plan');
+    }
+
     const planStartDate = new Date();
-    const planEndDate = new Date(Date.now() + (paymentDetails?.duration === 'yearly' ? 365 : 30) * 24 * 60 * 60 * 1000);
+    const resolvedDuration = paymentDetails?.duration || planDoc.duration || 'monthly';
+    const planEndDate = new Date(planStartDate);
+    if (resolvedDuration === 'yearly') {
+      planEndDate.setFullYear(planEndDate.getFullYear() + 1);
+    } else {
+      planEndDate.setMonth(planEndDate.getMonth() + 1);
+    }
+
+    const resolvedAmount = typeof planDoc.price === 'number'
+      ? planDoc.price
+      : (paymentDetails?.amount || 0);
+
     const transactionId = `TXN_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
     const newCommunity = await Community.create(
@@ -779,19 +808,19 @@ export const completeOnboardingPayment = async (req, res) => {
         totalMembers: 0,
         communityManager: newManager[0]._id,
         subscriptionStatus: 'active',
-        subscriptionPlan: paymentDetails?.plan || 'standard',
+        subscriptionPlan: planDoc.planKey,
         planStartDate,
         planEndDate,
         subscriptionHistory: [{
           transactionId,
-          planName: `${(paymentDetails?.plan || 'standard').charAt(0).toUpperCase() + (paymentDetails?.plan || 'standard').slice(1)} Plan (Initial)`,
-          planType: paymentDetails?.plan || 'standard',
-          amount: paymentDetails?.amount || 0,
+          planName: `${planDoc.name} (Initial)`,
+          planType: planDoc.planKey,
+          amount: resolvedAmount,
           paymentMethod: paymentDetails?.method || 'card',
           paymentDate: new Date(paymentDetails?.date || Date.now()),
           planStartDate,
           planEndDate,
-          duration: paymentDetails?.duration || 'monthly',
+          duration: resolvedDuration,
           status: 'completed',
           isRenewal: false,
           metadata: {
@@ -801,6 +830,27 @@ export const completeOnboardingPayment = async (req, res) => {
       }],
       { session }
     );
+
+    // Create a record in CommunitySubscription collection for admin billing
+    const subscriptionRecord = {
+      communityId: newCommunity[0]._id,
+      transactionId,
+      planName: `${planDoc.name} (Initial)`,
+      planType: planDoc.planKey,
+      amount: resolvedAmount,
+      paymentMethod: paymentDetails?.method || 'card',
+      paymentDate: new Date(paymentDetails?.date || Date.now()),
+      planStartDate,
+      planEndDate,
+      duration: resolvedDuration,
+      status: 'completed',
+      isRenewal: false,
+      metadata: {
+        source: 'onboarding'
+      }
+    };
+
+    await CommunitySubscription.create([subscriptionRecord], { session });
 
     // Link community
     newManager[0].assignedCommunity = newCommunity[0]._id;

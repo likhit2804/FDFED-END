@@ -9,6 +9,7 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
+  Tag,
 } from "lucide-react";
 import { useSidebar } from "../../context/AdminSidebarContext";
 import logoWhite from "../../imgs/logo_N_white.png";
@@ -34,6 +35,7 @@ export default function SidebarAdmin() {
     { icon: UserCog, label: "Managers", path: "/admin/managers" },
     { icon: FileText, label: "Applications", path: "/admin/applications" },
     { icon: CreditCard, label: "Billing", path: "/admin/payments" },
+    { icon: Tag, label: "Subscription Plans", path: "/admin/subscription-plans" },
   ];
 
   const bottomItems = [

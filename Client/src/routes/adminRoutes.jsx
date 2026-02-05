@@ -5,6 +5,7 @@ import AdminCommunityManagers from "../components/Admin/AdminCommunityManagers";
 import AdminPayments from "../components/Admin/AdminPayments";
 import AdminApplications from "../components/Admin/AdminApplications";
 import AdminProfile from "../components/Admin/AdminProfile";
+import AdminSubscriptionPlans from "../components/Admin/AdminSubscriptionPlans";
 
 export const adminRoutes = [
   { path: "dashboard", element: <AdminDashboard /> },
@@ -12,5 +13,6 @@ export const adminRoutes = [
   { path: "managers", element: <AdminCommunityManagers /> },
   { path: "payments", element: <AdminPayments /> },
   { path: "applications", element: <AdminApplications /> },
+  { path: "subscription-plans", element: <AdminSubscriptionPlans /> },
   { path: "profile", element: <AdminProfile /> },
 ];

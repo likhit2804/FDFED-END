@@ -597,6 +597,10 @@ async function changeAdStatuses() {
 
 setInterval(changeAdStatuses, 60 * 60 * 1000); // Every hour
 
+// ---------------- INITIALIZE SUBSCRIPTION PLANS ----------------
+import { initializeDefaultPlans } from './controllers/subscriptionPlanController.js';
+initializeDefaultPlans();
+
 // ---------------- START SERVER WITH SOCKET.IO ----------------
 
 server.listen(PORT, () => {

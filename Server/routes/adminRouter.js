@@ -25,6 +25,13 @@ import {
   getCommunityStats,
   bulkUpdateStatus,
 } from '../controllers/adminController.js';
+import {
+  getAllPlans,
+  getPlanById,
+  createPlan,
+  updatePlan,
+  deletePlan
+} from '../controllers/subscriptionPlanController.js';
 
 const AdminRouter = express.Router();
 
@@ -65,5 +72,12 @@ AdminRouter.post('/api/communities/bulk-update', bulkUpdateStatus);
 AdminRouter.get('/api/profile', getProfile);
 AdminRouter.post('/api/profile/update', upload.single('image'), updateProfile);
 AdminRouter.post('/api/profile/change-password', changePassword);
+
+// Subscription Plans Management
+AdminRouter.get('/api/subscription-plans', getAllPlans);
+AdminRouter.get('/api/subscription-plans/:id', getPlanById);
+AdminRouter.post('/api/subscription-plans', createPlan);
+AdminRouter.put('/api/subscription-plans/:id', updatePlan);
+AdminRouter.delete('/api/subscription-plans/:id', deletePlan);
 
 export default AdminRouter;
