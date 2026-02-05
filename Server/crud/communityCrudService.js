@@ -2,6 +2,7 @@
 
 import CrudService from './baseCrudService.js';
 import Community from '../models/communities.js';
+import { deleteCommunityCascade } from "../utils/communityCascadeDelete.js";
 
 const communityCrud = new CrudService(Community);
 
@@ -13,6 +14,11 @@ export const listCommunities = (filter, projection, options) =>
   communityCrud.findMany(filter, projection, options);
 export const updateCommunityById = (id, updates, options) =>
   communityCrud.updateById(id, updates, options);
+export const deleteCommunityById = async (id) => {
+  const exists = await communityCrud.findById(id);
+  if (!exists) return null;
+  return deleteCommunityCascade(id);
+};
 export const aggregateCommunities = (pipeline) => communityCrud.Model.aggregate(pipeline);
 export const countCommunities = (filter = {}) => communityCrud.Model.countDocuments(filter);
 export const updateManyCommunities = (filter, updates, options) => communityCrud.updateMany(filter, updates, options);

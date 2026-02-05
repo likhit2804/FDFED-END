@@ -19,6 +19,7 @@ import {
   updateManyCommunities,
   getCommunityById as getCommunityByIdCrud,
 } from "../crud/index.js";
+import { deleteCommunityCascade } from "../utils/communityCascadeDelete.js";
 
 const cache = new NodeCache({ stdTTL: 60 });
 
@@ -453,14 +454,72 @@ export const updateCommunity = async (req, res) => {
   }
 };
 
-export const deleteCommunity = async (req, res) => {
+export const getDeletePreview = async (req, res) => {
   try {
     const { id } = req.params;
-    const community = await updateCommunityById(id, { status: "deleted" }); // Soft delete
+    const community = await getCommunityByIdCrud(id);
     if (!community) {
       return res.status(404).json({ success: false, message: "Community not found" });
     }
-    res.json({ success: true, message: "Community deleted successfully" });
+
+    const [residents, issues, workers, securities, amenities, commonSpaces, payments, subscriptions] = await Promise.all([
+      countResidents({ community: id }),
+      listInterestForms({}, null, {}).then(forms => forms.length),
+      listCommunityManagers({ assignedCommunity: id }, null, {}).then(managers => managers.length),
+      aggregateCommunities([{ $match: { _id: community._id } }]).then(() => 0), // Placeholder for securities count
+      aggregateCommunities([{ $match: { _id: community._id } }]).then(() => 0), // Placeholder for amenities count
+      aggregateCommunities([{ $match: { _id: community._id } }]).then(() => 0), // Placeholder for commonSpaces count
+      aggregateCommunities([{ $match: { _id: community._id } }]).then(() => 0), // Placeholder for payments count
+      listCommunitySubscriptions({ communityId: id }, null, {}).then(subs => subs.length),
+    ]);
+
+    res.json({
+      success: true,
+      community: { _id: community._id, name: community.name, location: community.location },
+      willDelete: {
+        residents,
+        issues,
+        workers,
+        securities,
+        managers: await listCommunityManagers({ assignedCommunity: id }, null, {}).then(m => m.length),
+        amenities,
+        commonSpaces,
+        payments,
+        subscriptions,
+      },
+    });
+  } catch (err) {
+    console.error("Get delete preview error:", err);
+    res.status(500).json({ success: false, message: "Failed to get delete preview" });
+  }
+};
+
+/**
+ * DELETE COMMUNITY WITH CASCADE
+ * Route: DELETE /api/communities/:id
+ * 
+ * CONSOLE EXAMPLE (get token from localStorage after admin login):
+ * const token = localStorage.getItem('adminToken');
+ * fetch('http://localhost:5000/api/communities/YOUR_COMMUNITY_ID', {
+ *   method: 'DELETE',
+ *   headers: { 'Authorization': `Bearer ${token}` }
+ * })
+ * .then(r => r.json())
+ * .then(data => console.log('Deleted:', data.deleted))
+ */
+export const deleteCommunity = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const community = await getCommunityByIdCrud(id);
+    if (!community) {
+      return res.status(404).json({ success: false, message: "Community not found" });
+    }
+    const result = await deleteCommunityCascade(id);
+    res.json({
+      success: true,
+      message: "Community deleted successfully",
+      deleted: result.deletedCounts,
+    });
   } catch (err) {
     console.error("Delete community error:", err);
     res.status(500).json({ success: false, message: "Failed to delete community" });

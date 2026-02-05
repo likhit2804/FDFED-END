@@ -39,4 +39,9 @@ export default class CrudService {
   async updateMany(filter, updates, options = {}) {
     return await this.Model.updateMany(filter, updates, options);
   }
+
+  // Delete by id
+  async deleteById(id, options = {}) {
+    return await this.Model.findByIdAndDelete(id, options).exec();
+  }
 }

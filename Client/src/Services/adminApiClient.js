@@ -99,6 +99,14 @@ class AdminApiClient {
     return this.get("/communities/overview");
   }
 
+  async getDeletePreview(communityId) {
+    return this.get(`/communities/${communityId}/delete-preview`);
+  }
+
+  async deleteCommunity(communityId) {
+    return this.delete(`/communities/${communityId}`);
+  }
+
   // Community Managers API
   async getCommunityManagers() {
     return this.get("/community-managers");

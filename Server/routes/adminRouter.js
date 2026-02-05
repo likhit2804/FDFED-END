@@ -21,6 +21,7 @@ import {
   createCommunity,
   updateCommunity,
   deleteCommunity,
+  getDeletePreview,
   getManagersList,
   getCommunityStats,
   bulkUpdateStatus,
@@ -47,6 +48,7 @@ AdminRouter.get('/api/communities/overview', getCommunitiesOverview);
 // Communities CRUD
 AdminRouter.get('/api/communities', getAllCommunities);
 AdminRouter.get('/api/communities/stats', getCommunityStats);
+AdminRouter.get('/api/communities/:id/delete-preview', getDeletePreview);
 AdminRouter.get('/api/communities/:id', getCommunityById);
 AdminRouter.post('/api/communities', createCommunity);
 AdminRouter.put('/api/communities/:id', updateCommunity);
