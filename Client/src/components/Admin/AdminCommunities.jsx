@@ -1,25 +1,32 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useEffect } from "react";
+import { Trash2 } from "lucide-react";
 import Header from "./Header";
 import Tabs from "./Tabs";
 import SearchBar from "./SearchBar";
 import Dropdown from "./Dropdown";
 import AdminTable from "./AdminTables";
+import DeleteCommunityModal from "./DeleteCommunityModal";
+import adminApiClient from "../../services/adminApiClient";
+import { useTableFilter } from "../../hooks/useAdminHooks";
+import { LoadingOverlay } from "../common/Loader";
 
 export default function Communities() {
-  // ===== States =====
   const [activeTab, setActiveTab] = useState("All");
   const [search, setSearch] = useState("");
   const [location, setLocation] = useState("All Locations");
   const [locations, setLocations] = useState(["All Locations"]);
-
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  
+  // Delete modal state
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [communityToDelete, setCommunityToDelete] = useState(null);
+  const [deletionCounts, setDeletionCounts] = useState({});
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  // ===== Tabs =====
   const tabs = ["All", "Active", "Pending"];
 
-  // ===== Columns =====
   const columns = [
     { header: "Name", accessor: "name" },
     { header: "Location", accessor: "location" },
@@ -29,28 +36,16 @@ export default function Communities() {
     { header: "Manager", accessor: "manager" },
   ];
 
-  // ===== API BASE URL =====
-  const API_BASE_URL =
-    process.env.NODE_ENV === "production"
-      ? `${window.location.origin}/admin/api`
-      : "http://localhost:3000/admin/api";
-
-  // ===== Fetch Communities Data =====
+  // Fetch Communities Data
   useEffect(() => {
     const fetchCommunities = async () => {
       try {
         setLoading(true);
-
-        const res = await fetch(`${API_BASE_URL}/communities/overview`, {
-          method: "GET",
-          credentials: "include", // allows cookie-based auth
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("adminToken") || ""}`, // for JWT header
-          },
-        });
-
-        const json = await res.json();
+        setError("");
+        console.log('Fetching communities...');
+        
+        const json = await adminApiClient.getCommunities();
+        console.log('Communities response:', json);
 
         if (json.success && json.data?.allCommunities) {
           const formatted = json.data.allCommunities.map((c) => ({
@@ -63,17 +58,18 @@ export default function Communities() {
             manager: c.communityManager ? c.communityManager.name : "Unassigned",
           }));
 
+          console.log('Formatted communities:', formatted);
           setData(formatted);
           setLocations([
             "All Locations",
             ...new Set(formatted.map((c) => c.location)),
           ]);
         } else {
-          throw new Error("Invalid response");
+          setError("No communities data received");
         }
       } catch (err) {
         console.error("Error fetching communities:", err);
-        setError("Failed to load data");
+        setError(err.message || "Failed to load data");
       } finally {
         setLoading(false);
       }
@@ -82,28 +78,86 @@ export default function Communities() {
     fetchCommunities();
   }, []);
 
-  // ===== Filtering Logic =====
-  const filteredData = useMemo(() => {
-    return data.filter((row) => {
-      const matchesTab =
-        activeTab === "All" || row.status === activeTab.toUpperCase();
-      const matchesLocation =
-        location === "All Locations" ||
-        row.location?.toLowerCase() === location.toLowerCase();
-      const matchesSearch =
-        row.name?.toLowerCase().includes(search.toLowerCase()) ||
-        row.manager?.toLowerCase().includes(search.toLowerCase());
-      return matchesTab && matchesLocation && matchesSearch;
-    });
-  }, [activeTab, location, search, data]); // ✅ added `data` here
+  // Use custom filter hook
+  const filteredData = useTableFilter(data, {
+    tab: activeTab,
+    search: search,
+    searchFields: ['name', 'manager'],
+    custom: location !== "All Locations" ? { location: location } : {},
+  });
 
-  // ===== Table Actions (none: read-only view) =====
-  const actions = [];
+  // Handle delete click
+  const handleDeleteClick = async (community) => {
+    try {
+      setLoading(true);
+      const preview = await adminApiClient.getDeletePreview(community.id);
+      if (preview.success) {
+        setCommunityToDelete({
+          id: community.id,
+          name: community.name,
+          location: community.location,
+        });
+        setDeletionCounts(preview.willDelete);
+        setDeleteModalOpen(true);
+      }
+    } catch (err) {
+      console.error('Error fetching delete preview:', err);
+      alert('Failed to load deletion preview');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  // ===== Render =====
+  // Handle delete confirmation
+  const handleDeleteConfirm = async () => {
+    try {
+      setIsDeleting(true);
+      const result = await adminApiClient.deleteCommunity(communityToDelete.id);
+      
+      if (result.success) {
+        // Remove from local state
+        setData(prev => prev.filter(c => c.id !== communityToDelete.id));
+        
+        // Show success message
+        alert(`Community deleted successfully!\n\nDeleted:\n${Object.entries(result.deleted)
+          .map(([key, count]) => `${key}: ${count}`)
+          .join('\n')}`);
+        
+        // Close modal
+        setDeleteModalOpen(false);
+        setCommunityToDelete(null);
+        setDeletionCounts({});
+      }
+    } catch (err) {
+      console.error('Error deleting community:', err);
+      alert('Failed to delete community: ' + err.message);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const actions = [
+    {
+      component: ({ row }) => (
+        <button
+          onClick={() => handleDeleteClick(row)}
+          className="btn btn-danger btn-sm d-flex align-items-center gap-2"
+          style={{
+            padding: '6px 12px',
+            fontSize: '13px',
+            fontWeight: '500',
+          }}
+        >
+          <Trash2 size={14} />
+          Delete
+        </button>
+      ),
+    },
+  ];
+
   return (
     <>
-      {/* ===== Header ===== */}
+      {/* Header */}
       <div
         className="sticky-top border-bottom bg-white rounded-3 shadow-sm px-4 py-3 mb-4 d-flex justify-content-between align-items-center"
         style={{ zIndex: 100 }}
@@ -111,7 +165,7 @@ export default function Communities() {
         <Header title="Communities" />
       </div>
 
-      {/* ===== Filters Row ===== */}
+      {/* Filters Row */}
       <div
         className="bg-white rounded-4 shadow-sm mb-4 d-flex align-items-center justify-content-between flex-wrap gap-4 px-4 py-4"
         style={{
@@ -119,14 +173,7 @@ export default function Communities() {
           minHeight: "84px",
         }}
       >
-        {/* 🟢 Search Bar */}
-        <div
-          style={{
-            flex: "1 1 auto",
-            minWidth: "280px",
-            marginRight: "16px",
-          }}
-        >
+        <div style={{ flex: "1 1 auto", minWidth: "280px", marginRight: "16px" }}>
           <SearchBar
             placeholder="Search communities..."
             value={search}
@@ -134,7 +181,6 @@ export default function Communities() {
           />
         </div>
 
-        {/* 🟡 Tabs */}
         <div
           className="d-flex justify-content-center align-items-center"
           style={{
@@ -147,13 +193,7 @@ export default function Communities() {
           <Tabs options={tabs} active={activeTab} onChange={setActiveTab} />
         </div>
 
-        {/* 🔵 Dropdown */}
-        <div
-          style={{
-            flex: "0 0 200px",
-            minWidth: "160px",
-          }}
-        >
+        <div style={{ flex: "0 0 200px", minWidth: "160px" }}>
           <Dropdown
             options={locations}
             selected={location}
@@ -162,15 +202,29 @@ export default function Communities() {
         </div>
       </div>
 
-      {/* ===== Data Table ===== */}
+      {/* Data Table */}
       {loading ? (
-        <div className="text-center py-5 text-muted fw-semibold">
-          Loading communities...
-        </div>
+        <LoadingOverlay message="Loading communities..." />
       ) : error ? (
         <div className="text-center text-danger py-5">{error}</div>
       ) : (
         <AdminTable columns={columns} data={filteredData} actions={actions} />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {communityToDelete && (
+        <DeleteCommunityModal
+          isOpen={deleteModalOpen}
+          onClose={() => {
+            setDeleteModalOpen(false);
+            setCommunityToDelete(null);
+            setDeletionCounts({});
+          }}
+          community={communityToDelete}
+          deletionCounts={deletionCounts}
+          onConfirm={handleDeleteConfirm}
+          isDeleting={isDeleting}
+        />
       )}
     </>
   );

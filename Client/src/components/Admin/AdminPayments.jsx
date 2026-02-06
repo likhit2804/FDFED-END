@@ -185,7 +185,11 @@ const filteredGraphData = useMemo(() => {
       revenueByPeriod[`${d.getDate()}/${d.getMonth() + 1}`] = 0;
     }
   } else if (graphRange === "Monthly") {
-    for (let i = 1; i <= 4; i++) {
+    const year = now.getFullYear();
+    const month = now.getMonth();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const totalWeeks = Math.ceil(daysInMonth / 7);
+    for (let i = 1; i <= totalWeeks; i++) {
       expectedLabels.push(`Week ${i}`);
       revenueByPeriod[`Week ${i}`] = 0;
     }
@@ -198,9 +202,12 @@ const filteredGraphData = useMemo(() => {
   // Filter completed payments within selected range
   const filteredPayments = data.filter((payment) => {
     if (payment.status.toLowerCase() !== "completed") return false;
+    if (!payment.date || payment.date === "N/A") return false;
 
     const [day, month, year] = payment.date.split(/[-/]/).map(Number);
+    if (!day || !month || !year) return false;
     const paymentDate = new Date(year, month - 1, day);
+    if (Number.isNaN(paymentDate.getTime())) return false;
 
     switch (graphRange) {
       case "Weekly": {
@@ -209,9 +216,9 @@ const filteredGraphData = useMemo(() => {
         return paymentDate >= weekAgo;
       }
       case "Monthly": {
-        const monthAgo = new Date(now);
-        monthAgo.setMonth(now.getMonth() - 1);
-        return paymentDate >= monthAgo;
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+        return paymentDate >= startOfMonth && paymentDate <= endOfMonth;
       }
       case "Yearly": {
         const yearAgo = new Date(now);
@@ -219,14 +226,16 @@ const filteredGraphData = useMemo(() => {
         return paymentDate >= yearAgo;
       }
       default:
-        return true;
+        return false;
     }
   });
 
   // Fill in existing revenue
   filteredPayments.forEach((payment) => {
     const [day, month, year] = payment.date.split(/[-/]/).map(Number);
+    if (!day || !month || !year) return;
     const paymentDate = new Date(year, month - 1, day);
+    if (Number.isNaN(paymentDate.getTime())) return;
 
     let key;
     if (graphRange === "Weekly") {
@@ -256,8 +265,8 @@ const filteredGraphData = useMemo(() => {
   // ===== Pie Chart (Payment Distribution) =====
   const paymentStatusData = useMemo(() => {
     const { totalTransactions, pendingPayments, failedPayments } = stats;
-    const completed = totalTransactions - pendingPayments - failedPayments;
-    const total = totalTransactions || 1;
+    const completed = totalTransactions || 0;
+    const total = completed + pendingPayments + failedPayments || 1;
 
     return [
       { name: "Completed", value: (completed / total) * 100 },

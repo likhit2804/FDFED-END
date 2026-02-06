@@ -1,16 +1,17 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import Header from "./Header";
 import SearchBar from "./SearchBar";
 import AdminTable from "./AdminTables";
+import adminApiClient from "../../services/adminApiClient";
+import { useTableFilter } from "../../hooks/useAdminHooks";
+import { LoadingOverlay } from "../common/Loader";
 
 export default function CommunityManagers() {
-  // ===== States =====
   const [search, setSearch] = useState("");
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // ===== Columns =====
   const columns = [
     { header: "Name", accessor: "name" },
     { header: "Email", accessor: "email" },
@@ -19,37 +20,15 @@ export default function CommunityManagers() {
     { header: "Created Date", accessor: "date" },
   ];
 
-  // ===== Actions (none: read-only view) =====
   const actions = [];
 
-  // ===== API BASE URL =====
-  const API_BASE_URL =
-    process.env.NODE_ENV === "production"
-      ? `${window.location.origin}/admin/api`
-      : "http://localhost:3000/admin/api";
-
-  // ===== Fetch Community Managers =====
+  // Fetch Community Managers
   useEffect(() => {
     const fetchManagers = async () => {
       try {
         setLoading(true);
+        const json = await adminApiClient.getCommunityManagers();
 
-        const res = await fetch(`${API_BASE_URL}/community-managers`, {
-          method: "GET",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("adminToken") || ""}`,
-          },
-        });
-
-        if (res.status === 401) {
-          localStorage.removeItem("adminToken");
-          window.location.href = "/adminLogin";
-          return;
-        }
-
-        const json = await res.json();
         if (json.success && json.data?.managers) {
           const formatted = json.data.managers.map((m) => ({
             id: m._id,
@@ -63,8 +42,6 @@ export default function CommunityManagers() {
           }));
 
           setData(formatted);
-        } else {
-          throw new Error("Invalid response");
         }
       } catch (err) {
         console.error("Error fetching community managers:", err);
@@ -77,23 +54,15 @@ export default function CommunityManagers() {
     fetchManagers();
   }, []);
 
-  // ===== Filtering Logic =====
-  const filteredData = useMemo(() => {
-    return data.filter((row) => {
-      const matchesSearch =
-        row.name?.toLowerCase().includes(search.toLowerCase()) ||
-        row.email?.toLowerCase().includes(search.toLowerCase()) ||
-        row.assigned_communities
-          ?.toLowerCase()
-          .includes(search.toLowerCase());
-      return matchesSearch;
-    });
-  }, [search, data]);
+  // Use custom filter hook
+  const filteredData = useTableFilter(data, {
+    search: search,
+    searchFields: ['name', 'email', 'assigned_communities'],
+  });
 
-  // ===== Render =====
   return (
     <>
-      {/* ===== Header ===== */}
+      {/* Header */}
       <div
         className="sticky-top border-bottom bg-white rounded-3 shadow-sm px-4 py-3 mb-4 d-flex justify-content-between align-items-center"
         style={{ zIndex: 100 }}
@@ -101,7 +70,7 @@ export default function CommunityManagers() {
         <Header title="Community Managers" />
       </div>
 
-      {/* ===== Filters Row ===== */}
+      {/* Filters Row */}
       <div
         className="bg-white rounded-4 shadow-sm mb-4 d-flex align-items-center justify-content-between flex-wrap gap-4 px-4 py-4"
         style={{
@@ -109,14 +78,7 @@ export default function CommunityManagers() {
           minHeight: "84px",
         }}
       >
-        {/* 🟢 Search Bar */}
-        <div
-          style={{
-            flex: "1 1 auto",
-            minWidth: "280px",
-            marginRight: "16px",
-          }}
-        >
+        <div style={{ flex: "1 1 auto", minWidth: "280px", marginRight: "16px" }}>
           <SearchBar
             placeholder="Search community managers..."
             value={search}
@@ -125,11 +87,9 @@ export default function CommunityManagers() {
         </div>
       </div>
 
-      {/* ===== Data Table ===== */}
+      {/* Data Table */}
       {loading ? (
-        <div className="text-center py-5 text-muted fw-semibold">
-          Loading managers...
-        </div>
+        <LoadingOverlay message="Loading managers..." />
       ) : error ? (
         <div className="text-center text-danger py-5">{error}</div>
       ) : (

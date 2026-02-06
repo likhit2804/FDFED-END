@@ -5,12 +5,12 @@ import {
   getCommunityById,
   listCommunities,
   updateCommunityById,
-  deleteCommunityById,
   aggregateCommunities,
   countCommunities,
   updateManyCommunities,
 } from '../crud/communityCrudService.js';
 import { listCommunityManagers } from '../crud/cManagerCrudService.js';
+import { deleteCommunityCascade } from "../utils/communityCascadeDelete.js";
 
 // POST /api/communities
 export const createCommunityController = async (req, res) => {
@@ -63,13 +63,39 @@ export const updateCommunityController = async (req, res) => {
 };
 
 // DELETE /api/communities/:id
+/**
+ * BROWSER CONSOLE DELETE EXAMPLE:
+ * 
+ * // Step 1: Get your admin token (after logging in as admin)
+ * const token = localStorage.getItem('adminToken');
+ * 
+ * // Step 2: Delete community (replace COMMUNITY_ID)
+ * fetch('http://localhost:5000/api/communities/COMMUNITY_ID', {
+ *   method: 'DELETE',
+ *   headers: {
+ *     'Authorization': `Bearer ${token}`,
+ *     'Content-Type': 'application/json'
+ *   }
+ * })
+ * .then(response => response.json())
+ * .then(data => {
+ *   console.log('✅ Deletion complete!');
+ *   console.log('Deleted counts:', data.deleted);
+ * })
+ * .catch(err => console.error('❌ Error:', err));
+ */
 export const deleteCommunityController = async (req, res) => {
   try {
-    const deleted = await deleteCommunityById(req.params.id);
-    if (!deleted) {
+    const community = await getCommunityById(req.params.id);
+    if (!community) {
       return res.status(404).json({ success: false, message: 'Community not found' });
     }
-    res.json({ success: true, message: 'Community deleted successfully' });
+    const result = await deleteCommunityCascade(req.params.id);
+    res.json({
+      success: true,
+      message: 'Community deleted successfully',
+      deleted: result.deletedCounts,
+    });
   } catch (error) {
     console.error('Error deleting community:', error);
     res.status(500).json({ success: false, message: 'Server error' });
@@ -167,15 +193,12 @@ export const deleteCommunity = async (req, res) => {
     const community = await getCommunityById(req.params.id);
     if (!community)
       return res.status(404).json({ success: false, error: "Community not found" });
-
-    if (community.totalMembers > 0)
-      return res.status(400).json({
-        success: false,
-        error: "Cannot delete community with existing members",
-      });
-
-    await deleteCommunityById(req.params.id);
-    res.json({ success: true, message: "Community deleted successfully" });
+    const result = await deleteCommunityCascade(req.params.id);
+    res.json({
+      success: true,
+      message: "Community deleted successfully",
+      deleted: result.deletedCounts,
+    });
   } catch (error) {
     console.error("Error deleting community:", error);
     res.status(500).json({ success: false, error: "Server Error" });

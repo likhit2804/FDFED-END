@@ -3,6 +3,7 @@ import "bootstrap-icons/font/bootstrap-icons.css";
 
 import { io } from "socket.io-client";
 
+import ErrorBoundary from "./components/ErrorBoundary";
 
 import { Layout } from "../src/Layout";
 import {
@@ -164,8 +165,10 @@ function App() {
 
   return (
     <AdminAuthProvider>
-      <ToastContainer />
-      <RouterProvider router={router} />
+      <ErrorBoundary>
+        <ToastContainer />
+        <RouterProvider router={router} />
+      </ErrorBoundary>
     </AdminAuthProvider>
   );
 }
