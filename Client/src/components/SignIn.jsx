@@ -30,6 +30,10 @@ export const SignIn = () => {
   const [otpDigits, setOtpDigits] = useState(Array(6).fill(''));
   const otpRefs = useRef([]);
   const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotPasswordEmail, setForgotPasswordEmail] = useState('');
+  const [forgotPasswordUserType, setForgotPasswordUserType] = useState('');
+  const [isSendingReset, setIsSendingReset] = useState(false);
   const [isResending, setIsResending] = useState(false);
   const initialTimer = 300; // 5 minutes
   const [secondsLeft, setSecondsLeft] = useState(initialTimer);
@@ -241,6 +245,45 @@ export const SignIn = () => {
     setTimeout(() => otpRefs.current?.[focusIndex]?.focus(), 0);
   };
 
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    if (!forgotPasswordEmail.trim()) {
+      toast.error('Please enter your email');
+      return;
+    }
+    if (!/^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$/.test(forgotPasswordEmail)) {
+      toast.error('Please enter a valid email');
+      return;
+    }
+    if (!forgotPasswordUserType) {
+      toast.error('Please select your role');
+      return;
+    }
+
+    try {
+      setIsSendingReset(true);
+      const response = await axios.post(
+        'http://localhost:3000/forgot-password',
+        {
+          email: forgotPasswordEmail,
+          userType: forgotPasswordUserType,
+        },
+        { withCredentials: true }
+      );
+
+      if (response.data.success) {
+        toast.success('Password reset email sent! Check your inbox.');
+        setShowForgotPassword(false);
+        setForgotPasswordEmail('');
+        setForgotPasswordUserType('');
+      }
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Failed to send reset email');
+    } finally {
+      setIsSendingReset(false);
+    }
+  };
+
   return (
     <div className='SignInCon'>
       {(isSendingEmail || isResending) && (
@@ -325,7 +368,15 @@ export const SignIn = () => {
                 {errors.userType && <p className="error-text">{errors.userType}</p>}
                 <button type="submit" className="continue-btn">Login</button>
               </form>
-              <div style={{ textAlign: 'right', marginTop: '5px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '5px' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowForgotPassword(true)}
+                  className="login-link"
+                  style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}
+                >
+                  Forgot Password?
+                </button>
                 <NavLink to="/interestForm" className="login-link">
                   New? Register here
                 </NavLink>
@@ -372,6 +423,87 @@ export const SignIn = () => {
             </>
           )}
         </div>
+
+        {/* Forgot Password Modal */}
+        {showForgotPassword && (
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(0, 0, 0, 0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 9998,
+            }}
+            onClick={() => setShowForgotPassword(false)}
+          >
+            <div
+              style={{
+                background: '#fff',
+                padding: '32px',
+                borderRadius: '12px',
+                maxWidth: '450px',
+                width: '90%',
+                boxShadow: '0 10px 40px rgba(0, 0, 0, 0.2)',
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h2 style={{ marginBottom: '8px', fontSize: '24px', color: '#333' }}>Forgot Password?</h2>
+              <p style={{ marginBottom: '20px', color: '#666', fontSize: '14px' }}>
+                Enter your email and role, and we'll send you a new password.
+              </p>
+              <form onSubmit={handleForgotPassword}>
+                <input
+                  type="email"
+                  className="input"
+                  placeholder="Email Address"
+                  value={forgotPasswordEmail}
+                  onChange={(e) => setForgotPasswordEmail(e.target.value)}
+                  style={{ marginBottom: '12px' }}
+                />
+                <select
+                  className="input"
+                  value={forgotPasswordUserType}
+                  onChange={(e) => setForgotPasswordUserType(e.target.value)}
+                  style={{ marginBottom: '20px' }}
+                >
+                  <option value="" disabled>Select your role</option>
+                  <option value="Resident">Resident</option>
+                  <option value="Security">Security</option>
+                  <option value="Worker">Worker</option>
+                  <option value="communityManager">Community Manager</option>
+                </select>
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowForgotPassword(false)}
+                    style={{
+                      flex: 1,
+                      padding: '12px',
+                      border: '1px solid #ccc',
+                      background: '#fff',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSendingReset}
+                    className="continue-btn"
+                    style={{ flex: 1, margin: 0 }}
+                  >
+                    {isSendingReset ? 'Sending...' : 'Send Reset Email'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

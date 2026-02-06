@@ -274,9 +274,9 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
   skipSuccessfulRequests: false,
   handler: (req, res) => {
-    logger.warn(`Rate limit exceeded for IP: ${req.ip}`, { 
-      path: req.path, 
-      email: req.body?.email 
+    logger.warn(`Rate limit exceeded for IP: ${req.ip}`, {
+      path: req.path,
+      email: req.body?.email
     });
     res.status(429).json({
       success: false,
@@ -441,7 +441,7 @@ app.post("/AdminLogin", authLimiter, async (req, res) => {
 
     // Update last login time
     const Admin = (await import('./models/admin.js')).default;
-    await Admin.findByIdAndUpdate(result.user.id, { 
+    await Admin.findByIdAndUpdate(result.user.id, {
       lastLogin: new Date(),
       $inc: { failedLoginAttempts: -999 } // Reset failed attempts on successful login
     });
@@ -516,7 +516,6 @@ app.post("/login", authLimiter, async (req, res) => {
       logger.logAuth(`${userType}_login_failed`, email, false, { ip: req.ip });
       return res.status(401).json({ message: "Invalid email or password" });
     }
-      return res.status(401).json({ message: "Invalid email or password" });
 
     await sendLoginOtp(email);
 
@@ -625,6 +624,109 @@ app.post("/resend-otp", async (req, res) => {
     return res.status(500).json({ message: "Server error" });
   }
 });
+
+// ---------------- FORGOT PASSWORD ----------------
+
+const forgotPasswordLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 3, // 3 attempts per window
+  message: {
+    success: false,
+    message: 'Too many password reset requests, please try again after 15 minutes'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => {
+    logger.warn(`Forgot password rate limit exceeded for IP: ${req.ip}`, {
+      email: req.body?.email
+    });
+    res.status(429).json({
+      success: false,
+      message: 'Too many password reset requests, please try again after 15 minutes'
+    });
+  }
+});
+
+app.post("/forgot-password", forgotPasswordLimiter, async (req, res) => {
+  try {
+    const { email, userType } = req.body;
+
+    // Validate input
+    if (!email || !userType) {
+      return res.status(400).json({
+        success: false,
+        message: "Email and user type are required"
+      });
+    }
+
+    // Email format validation
+    const emailRegex = /^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid email format"
+      });
+    }
+
+    // Import appropriate model based on user type
+    let UserModel;
+    if (userType === 'Resident') {
+      UserModel = (await import('./models/resident.js')).default;
+    } else if (userType === 'Security') {
+      UserModel = (await import('./models/security.js')).default;
+    } else if (userType === 'Worker') {
+      UserModel = (await import('./models/workers.js')).default;
+    } else if (userType === 'communityManager' || userType === 'CommunityManager') {
+      UserModel = (await import('./models/cManager.js')).default;
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid user type"
+      });
+    }
+
+    // Find user by email
+    const user = await UserModel.findOne({ email });
+
+    // Security: Don't reveal if email exists or not
+    // Always return success to prevent user enumeration
+    if (!user) {
+      logger.warn(`Forgot password attempt for non-existent email: ${email}, userType: ${userType}`);
+      // Return success even if user doesn't exist (security best practice)
+      return res.json({
+        success: true,
+        message: "If this email exists, a password reset link has been sent"
+      });
+    }
+
+    // Generate random secure password (12 characters)
+    const newPassword = Math.random().toString(36).slice(-10) + Math.random().toString(36).slice(-2).toUpperCase();
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+
+    // Update user's password
+    user.password = hashedPassword;
+    await user.save();
+
+    // Send email with new password
+    await sendTemporaryPassword(email, newPassword);
+
+    logger.info(`Password reset successful for email: ${email}, userType: ${userType}`);
+
+    return res.json({
+      success: true,
+      message: "Password reset email sent. Please check your inbox."
+    });
+
+  } catch (err) {
+    console.error("Forgot password error:", err);
+    logger.error("Forgot password error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Server error. Please try again later."
+    });
+  }
+});
+
 
 // ---------------- AUTH CHECK ----------------
 

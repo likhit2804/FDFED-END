@@ -1,0 +1,29 @@
+{"level":"\u001b[33mwarn\u001b[39m","message":"\u001b[33mJWT_SECRET should be at least 32 characters long for security\u001b[39m","timestamp":"2026-02-06 09:47:35:4735"}
+{"level":"\u001b[32minfo\u001b[39m","message":"\u001b[32mEnvironment variables validated successfully\u001b[39m","timestamp":"2026-02-06 09:47:35:4735"}
+{"level":"\u001b[32minfo\u001b[39m","message":"\u001b[32m✅ Database connected\u001b[39m","timestamp":"2026-02-06 09:47:36:4736"}
+{"level":"\u001b[33mwarn\u001b[39m","message":"\u001b[33mJWT_SECRET should be at least 32 characters long for security\u001b[39m","timestamp":"2026-02-06 09:58:18:5818"}
+{"level":"\u001b[32minfo\u001b[39m","message":"\u001b[32mEnvironment variables validated successfully\u001b[39m","timestamp":"2026-02-06 09:58:18:5818"}
+{"level":"\u001b[32minfo\u001b[39m","message":"\u001b[32m✅ Database connected\u001b[39m","timestamp":"2026-02-06 09:58:19:5819"}
+{"level":"\u001b[32minfo\u001b[39m","message":"\u001b[32mPassword reset successful for email: sathvik.c23@iiits.in, userType: communityManager\u001b[39m","timestamp":"2026-02-06 10:03:12:312"}
+{"level":"\u001b[33mwarn\u001b[39m","message":"\u001b[33mJWT_SECRET should be at least 32 characters long for security\u001b[39m","timestamp":"2026-02-06 10:25:25:2525"}
+{"level":"\u001b[32minfo\u001b[39m","message":"\u001b[32mEnvironment variables validated successfully\u001b[39m","timestamp":"2026-02-06 10:25:25:2525"}
+{"level":"\u001b[32minfo\u001b[39m","message":"\u001b[32m✅ Database connected\u001b[39m","timestamp":"2026-02-06 10:25:30:2530"}
+{"level":"\u001b[33mwarn\u001b[39m","message":"\u001b[33mJWT_SECRET should be at least 32 characters long for security\u001b[39m","timestamp":"2026-02-06 10:26:07:267"}
+{"level":"\u001b[32minfo\u001b[39m","message":"\u001b[32mEnvironment variables validated successfully\u001b[39m","timestamp":"2026-02-06 10:26:07:267"}
+{"level":"\u001b[32minfo\u001b[39m","message":"\u001b[32m✅ Database connected\u001b[39m","timestamp":"2026-02-06 10:26:08:268"}
+{"level":"\u001b[33mwarn\u001b[39m","message":"\u001b[33mJWT_SECRET should be at least 32 characters long for security\u001b[39m","timestamp":"2026-02-06 10:26:12:2612"}
+{"level":"\u001b[32minfo\u001b[39m","message":"\u001b[32mEnvironment variables validated successfully\u001b[39m","timestamp":"2026-02-06 10:26:12:2612"}
+{"level":"\u001b[32minfo\u001b[39m","message":"\u001b[32m✅ Database connected\u001b[39m","timestamp":"2026-02-06 10:26:13:2613"}
+{"level":"\u001b[33mwarn\u001b[39m","message":"\u001b[33mJWT_SECRET should be at least 32 characters long for security\u001b[39m","timestamp":"2026-02-06 10:26:50:2650"}
+{"level":"\u001b[32minfo\u001b[39m","message":"\u001b[32mEnvironment variables validated successfully\u001b[39m","timestamp":"2026-02-06 10:26:50:2650"}
+{"level":"\u001b[32minfo\u001b[39m","message":"\u001b[32m✅ Database connected\u001b[39m","timestamp":"2026-02-06 10:26:54:2654"}
+{"level":"\u001b[33mwarn\u001b[39m","message":"\u001b[33mJWT_SECRET should be at least 32 characters long for security\u001b[39m","timestamp":"2026-02-06 10:27:00:270"}
+{"level":"\u001b[32minfo\u001b[39m","message":"\u001b[32mEnvironment variables validated successfully\u001b[39m","timestamp":"2026-02-06 10:27:00:270"}
+{"level":"\u001b[32minfo\u001b[39m","message":"\u001b[32m✅ Database connected\u001b[39m","timestamp":"2026-02-06 10:27:01:271"}
+{"level":"\u001b[33mwarn\u001b[39m","message":"\u001b[33mJWT_SECRET should be at least 32 characters long for security\u001b[39m","timestamp":"2026-02-06 10:27:46:2746"}
+{"level":"\u001b[32minfo\u001b[39m","message":"\u001b[32mEnvironment variables validated successfully\u001b[39m","timestamp":"2026-02-06 10:27:46:2746"}
+{"level":"\u001b[32minfo\u001b[39m","message":"\u001b[32m✅ Database connected\u001b[39m","timestamp":"2026-02-06 10:27:47:2747"}
+{"level":"\u001b[33mwarn\u001b[39m","message":"\u001b[33mJWT_SECRET should be at least 32 characters long for security\u001b[39m","timestamp":"2026-02-06 10:31:13:3113"}
+{"level":"\u001b[32minfo\u001b[39m","message":"\u001b[32mEnvironment variables validated successfully\u001b[39m","timestamp":"2026-02-06 10:31:13:3113"}
+{"level":"\u001b[32minfo\u001b[39m","message":"\u001b[32m✅ Database connected\u001b[39m","timestamp":"2026-02-06 10:31:16:3116"}
+{"level":"\u001b[32minfo\u001b[39m","message":"\u001b[32mPassword reset successful for email: sathvik.c23@iiits.in, userType: communityManager\u001b[39m","timestamp":"2026-02-06 10:34:04:344"}
