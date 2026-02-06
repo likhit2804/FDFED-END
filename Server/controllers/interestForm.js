@@ -12,6 +12,7 @@ import mongoose from 'mongoose';
 import cloudinary from '../configs/cloudinary.js';
 import fs from 'fs';
 import dotenv from 'dotenv';
+import { sendApplicationApprovedEmail, sendApplicationRejectedEmail, sendAccountActivatedEmail, sendPaymentLinkEmail } from '../utils/emailService.js';
 dotenv.config();
 
 // Lightweight router for direct submit with Cloudinary uploads
@@ -127,17 +128,6 @@ export const uploadPhoto = async (req, res) => {
     });
   }
 };
-// Email transporter setup - Simplified version
-const emailTransporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 587,
-  secure: false,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
-  }
-});
-
 // Display interest form (Public)
 export const showInterestForm = (req, res) => {
   res.render('interestForms', {
@@ -404,12 +394,11 @@ export const approveApplication = async (req, res) => {
 
     console.log("[Approval] Sending payment link to:", interest.email);
 
-    await sendStatusEmail(
+    await sendApplicationApprovedEmail(
       interest.email,
-      'approved',
       adminName,
-      `Your application has been approved! <br/><br/><strong>Next Step:</strong> Please complete your subscription payment to activate your account and receive your login credentials.<br/><br/><a href="${paymentLink}" class="btn" style="color: white; text-decoration: none;">Complete Payment & Activate Account</a>`,
-      null // No password yet
+      paymentLink,
+      'Your application has been approved! Please complete your subscription payment to activate your account and receive your login credentials.'
     );
 
     res.json({
@@ -470,11 +459,10 @@ export const rejectApplication = async (req, res) => {
     const adminUser = await admin.findById(req.user.id);
     const adminName = adminUser?.name || 'Admin';
 
-    await sendStatusEmail(
+    await sendApplicationRejectedEmail(
       interest.email,
-      'rejected',
       adminName,
-      validator.escape(req.body.reason.trim())
+      req.body.reason.trim()
     );
 
     res.json({
@@ -497,100 +485,6 @@ export const rejectApplication = async (req, res) => {
   }
 };
 // Admin: Suspend application
-
-
-
-
-
-
-
-const sendStatusEmail = async (email, status, adminName, reason = '', password = '') => {
-  const subject = status === 'approved'
-    ? 'Your Application Has Been Approved'
-    : status === 'rejected'
-      ? 'Your Application Has Been Rejected'
-      : 'Your Application Status Update';
-
-  const htmlTemplate = `
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>${subject}</title>
-<style>
-  body { margin:0; padding:0; background:#f4f6f8; font-family:'Segoe UI', Tahoma, sans-serif; color:#333 }
-  .container { max-width:600px; margin:30px auto; background:#fff; border-radius:10px; overflow:hidden; box-shadow:0 4px 20px rgba(0,0,0,0.08) }
-  .header { padding:36px 20px; text-align:center; color:#fff; }
-  .header.approved { background: linear-gradient(135deg, #4CAF50, #2e7d32); }
-  .header.activated { background: linear-gradient(135deg, #2196F3, #1976D2); }
-  .header.rejected { background: linear-gradient(135deg, #e53935, #b71c1c); }
-  .header.pending  { background: linear-gradient(135deg, #fb8c00, #ef6c00); }
-  .icon { font-size:40px; margin-bottom:10px }
-  .content { padding:28px 24px; line-height:1.6; font-size:16px; color:#444 }
-  .credentials { background:#e3f2fd; border:1px solid #90caf9; padding:18px; border-radius:6px; margin:18px 0 }
-  .credentials code { background:#f1f3f4; padding:4px 8px; border-radius:4px; font-family:monospace; font-size:14px; color: #d32f2f; font-weight: bold; }
-  .btn { display:inline-block; padding:14px 24px; margin-top:18px; background:#4CAF50; color:#fff !important; text-decoration:none; border-radius:6px; font-weight:600; text-transform:uppercase; font-size:14px; box-shadow:0 3px 6px rgba(0,0,0,0.2) }
-  .btn:hover { opacity:0.9 }
-  .footer { text-align:center; font-size:12px; color:#888; padding:16px; background:#f1f3f4 }
-  @media (max-width:600px){ .container{ margin:0; border-radius:0 } .content{ padding:20px } }
-</style>
-</head>
-<body>
-  <div class="container">
-    <div class="header ${status}">
-      <div class="icon">
-        ${status === 'approved' ? '✅' : status === 'rejected' ? '❌' : status === 'activated' ? '🚀' : '🔔'}
-      </div>
-      <h1 style="margin:0; font-size:24px;">
-        ${status === 'approved' ? 'Application Approved!' : status === 'rejected' ? 'Application Status' : status === 'activated' ? 'Welcome to UrbanEase!' : 'Notification'}
-      </h1>
-    </div>
-    <div class="content">
-      <p>Hello,</p>
-      
-      ${reason ? `<div style="margin-bottom:20px;">${reason}</div>` : ''}
-
-      ${status === 'activated' ? `
-      <div class="credentials">
-        <h3 style="margin-top:0; color:#1565c0;">🚀 Account Activated!</h3>
-        <p style="margin:5px 0;"><strong>Email:</strong> ${email}</p>
-        <p style="margin:5px 0;"><strong>Password:</strong> <code>${password}</code></p>
-      </div>
-      <p style="text-align: center;">Please login and change your password immediately.</p>
-      <div style="text-align:center;">
-        <a class="btn" href="${process.env.CLIENT_BASE_URL || 'http://localhost:5173'}/SignIn">Login to Dashboard</a>
-      </div>
-      ` : ''}
-
-      ${(status === 'approved' && !password) ? `
-       <div style="text-align:center; margin-top: 20px;">
-          <a class="btn" href="#" style="background: #1976d2; pointer-events: none; cursor: default;">Awaiting Payment</a>
-       </div>
-      ` : ''}
-
-    </div>
-    <div class="footer">
-      This is an automated message from Urban Ease.<br />
-      Need help? Contact <a href="mailto:support@urbaneaseapp.com" style="color:#1976d2;text-decoration:none;">support@urbaneaseapp.com</a>
-    </div>
-  </div>
-</body>
-</html>`;
-
-  try {
-    await emailTransporter.sendMail({
-      from: process.env.EMAIL_FROM,
-      to: email,
-      subject,
-      html: htmlTemplate
-    });
-    console.log('Status email sent to:', email);
-  } catch (error) {
-    console.error('Error sending status email:', error);
-  }
-};
-
 
 // ---------------------------------------------------------
 // NEW ONBOARDING ENDPOINTS
@@ -618,7 +512,6 @@ export const resendPaymentLink = async (req, res) => {
         message: 'Payment already completed. Account is active.'
       });
     }
-
     // CASE 2: PENDING -> RESEND PAYMENT LINK
     // Generate new token
     const onboardingToken = crypto.randomBytes(32).toString('hex');
@@ -629,18 +522,22 @@ export const resendPaymentLink = async (req, res) => {
     await interest.save();
 
     // Send email
-    const adminUser = await admin.findById(req.user.id);
-    const adminName = adminUser?.name || 'Admin';
     const clientUrl = process.env.CLIENT_BASE_URL || 'http://localhost:5173';
     const paymentLink = `${clientUrl}/onboarding/payment?token=${onboardingToken}`;
 
-    await sendStatusEmail(
-      interest.email,
-      'approved', // Keep as 'approved' template or customized
-      adminName,
-      `<strong>Payment Link Resent:</strong><br/>Please use the link below to complete your account setup.<br/><br/><a href="${paymentLink}" class="btn" style="color: white; text-decoration: none;">Complete Payment & Activate Account</a>`,
-      null
-    );
+    console.log(`[Resend Payment Link] Sending to ${interest.email} with token: ${onboardingToken.substring(0, 8)}...`);
+
+    try {
+      await sendPaymentLinkEmail(
+        interest.email,
+        paymentLink,
+        7 // 7 days expiry
+      );
+      console.log(`[Resend Payment Link] Email sent successfully to ${interest.email}`);
+    } catch (emailError) {
+      console.error('[Resend Payment Link] Email send failed:', emailError);
+      throw new Error(`Failed to send email: ${emailError.message}`);
+    }
 
     res.json({
       success: true,
@@ -652,8 +549,13 @@ export const resendPaymentLink = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error resending info:', error);
-    res.status(500).json({ success: false, message: 'Error performing resend action' });
+    console.error('[Resend Payment Link Error]:', error.message);
+    console.error('Stack:', error.stack);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error performing resend action',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 };
 
@@ -831,14 +733,9 @@ export const completeOnboardingPayment = async (req, res) => {
     // 11. Send Welcome Email with Credentials
     const communityCode = newCommunity[0].communityCode;
 
-    await sendStatusEmail(
+    await sendAccountActivatedEmail(
       interest.email,
-      'activated', // New status for Welcome email
-      'UrbanEase Team',
-      `<p>Your payment was successful and your account is now active.</p>
-       <p><strong>Community Code:</strong> ${communityCode}</p>
-       <p>You can now manage your community, residents, and maintain requests.</p>`,
-      randomPassword // Pass password to trigger credentials block
+      randomPassword
     );
 
     res.json({
