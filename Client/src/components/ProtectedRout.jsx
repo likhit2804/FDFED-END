@@ -34,17 +34,7 @@ export const ProtectedRoute = ({ allowedUserType }) => {
     }
   }
 
-  // If Community Manager has not set up structure, force to setup page
-  if (
-    user &&
-    user.userType === "CommunityManager" &&
-    user.hasStructure === false
-  ) {
-    const onSetupPage = location.pathname.startsWith("/manager/setup");
-    if (!onSetupPage) {
-      return <Navigate to="/manager/setup" replace />;
-    }
-  }
+  // Structure setup is now optional - removed forced redirect
 
   // If Resident / Worker / Security without active subscription, show expiry page
   if (

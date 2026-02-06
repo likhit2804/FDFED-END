@@ -31,6 +31,13 @@ import {
   getAdminActivity,
   getFailedLogins,
 } from '../controllers/adminController.js';
+import {
+  getAllPlans,
+  getPlanById,
+  createPlan,
+  updatePlan,
+  deletePlan,
+} from '../controllers/subscriptionPlanController.js';
 
 const AdminRouter = express.Router();
 
@@ -64,6 +71,13 @@ AdminRouter.post('/api/communities/:backupId/restore', requirePermission('delete
 
 AdminRouter.get('/api/community-managers', requirePermission('read:users'), getCommunityManagers);
 AdminRouter.get('/api/payments', requirePermission('read:payments'), getPayments);
+
+// Subscription Plans
+AdminRouter.get('/api/subscription-plans', getAllPlans);
+AdminRouter.get('/api/subscription-plans/:id', getPlanById);
+AdminRouter.post('/api/subscription-plans', createPlan);
+AdminRouter.put('/api/subscription-plans/:id', updatePlan);
+AdminRouter.delete('/api/subscription-plans/:id', deletePlan);
 
 // Managers list (lightweight)
 AdminRouter.get('/api/managers', requirePermission('read:users'), getManagersList);

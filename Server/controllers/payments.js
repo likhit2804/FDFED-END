@@ -206,7 +206,9 @@ class PaymentController {
         try {
             const userId = req.user.id;
         
-            const user = await CommunityManager.findById(userId).select('name email assignedCommunity');
+            const user = await CommunityManager.findById(userId)
+                .select('name email assignedCommunity')
+                .populate('assignedCommunity', 'name blocks');
             
             if (!user) {
                 return res.status(404).json({ message: 'cManager not found' });

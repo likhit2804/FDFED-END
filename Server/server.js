@@ -59,6 +59,7 @@ import managerRouter from "./routes/managerRouter.js";
 import interestRouter from "./routes/InterestRouter.js";
 import Ad from "./models/Ad.js";
 import { interestUploadRouter } from "./controllers/interestForm.js";
+import { initializeDefaultPlans } from "./controllers/subscriptionPlanController.js";
 
 import Resident from "./models/resident.js";
 import Community from "./models/communities.js";
@@ -90,7 +91,11 @@ logger.info('Environment variables validated successfully');
 // --- DB Connection ---
 mongoose
   .connect(process.env.MONGO_URI1)
-  .then(() => logger.info('✅ Database connected'))
+  .then(() => {
+    logger.info('✅ Database connected');
+    // Initialize default subscription plans
+    initializeDefaultPlans();
+  })
   .catch((err) => {
     logger.error('❌ Database connection failed:', err);
     process.exit(1);

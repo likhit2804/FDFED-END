@@ -239,16 +239,18 @@
   background: rgba(17, 24, 39, 0.6);
   z-index: 1000;
 }
+
 .popup-content {
   background: #fff;
   border-radius: 12px;
   width: 90%;
-  max-width: 1000px;
+  max-width: 1300px;
   max-height: 95vh;
   overflow-y: auto;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
   animation: fadeIn 0.3s ease-in-out;
 }
+
 .popup-header {
   display: flex;
   justify-content: space-between;
@@ -371,7 +373,7 @@
   }
 }
 #bookingForm {
-  max-width: 1000px;
+  max-width: 1300px;
   margin: 0 auto;
   padding: 1.5rem;
   background-color: rgba(248, 249, 250, 0.5);

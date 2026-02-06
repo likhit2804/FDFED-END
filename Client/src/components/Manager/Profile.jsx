@@ -384,14 +384,24 @@ const handleRotateCommunityCode = () => {
                             <div>
                                 <h6 className="mb-1 fw-semibold">Subscription</h6>
                                 <p className="mb-1 text-secondary">
-                                    Plan: <strong>{subscriptionInfo?.subscriptionPlan || "Not subscribed"}</strong>
+                                    Plan: <strong>{subscriptionInfo?.planName || subscriptionInfo?.subscriptionPlan || "Not subscribed"}</strong>
                                 </p>
-                                <p className="mb-0 text-secondary">
+                                <p className="mb-1 text-secondary">
                                     Status: <strong>{subscriptionInfo?.subscriptionStatus || "pending"}</strong>
                                 </p>
+                                {subscriptionInfo?.planPrice && (
+                                    <p className="mb-1 text-secondary small">
+                                        Price: <strong>₹{subscriptionInfo.planPrice}/{subscriptionInfo.planDuration || "monthly"}</strong>
+                                    </p>
+                                )}
+                                {subscriptionInfo?.planMaxResidents !== undefined && (
+                                    <p className="mb-1 text-secondary small">
+                                        Max Residents: <strong>{subscriptionInfo.planMaxResidents || "Unlimited"}</strong>
+                                    </p>
+                                )}
                                 {typeof subscriptionInfo?.totalMembers === "number" && (
                                     <p className="mb-0 text-secondary small">
-                                        Residents: <strong>{subscriptionInfo.totalMembers}</strong>
+                                        Current Residents: <strong>{subscriptionInfo.totalMembers}</strong>
                                     </p>
                                 )}
                             </div>
@@ -420,6 +430,22 @@ const handleRotateCommunityCode = () => {
                             >
                                 Update code
                             </button>
+                        </div>
+                    </div>
+                    <div className="card border-1 shadow-sm rounded-4 p-3 mt-3">
+                        <div className="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 className="mb-1 fw-semibold">Manage Structure</h6>
+                                <p className="mb-0 text-secondary small">
+                                    Set up or update blocks and flats for your community
+                                </p>
+                            </div>
+                            <a
+                                href="/manager/setup"
+                                className="btn btn-outline-primary"
+                            >
+                                Go to Setup
+                            </a>
                         </div>
                     </div>
                     </div>
