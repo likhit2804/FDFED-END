@@ -1,4 +1,4 @@
-import logger from '../../utils/logger.js';
+
 import { createAuditLog } from '../../utils/auditLogger.js';
 import DeletedCommunityBackup from '../../models/deletedCommunityBackup.js';
 import cache from './adminCache.js';
@@ -61,11 +61,11 @@ export const createCommunity = async (req, res) => {
       userAgent: req.headers['user-agent']
     });
 
-    logger.info(`Community created: ${newCommunity.name}`, { adminEmail: req.user.email });
+    console.log(`Community created: ${newCommunity.name}`, { adminEmail: req.user.email });
 
     res.json({ success: true, message: 'Community created successfully', community: newCommunity });
   } catch (err) {
-    logger.error('Create community error:', err);
+    console.error('Create community error:', err);
     res.status(500).json({ success: false, message: 'Failed to create community' });
   }
 };
@@ -137,7 +137,7 @@ export const deleteCommunity = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Community not found' });
     }
 
-    logger.info(`Starting community deletion: ${community.name}`, {
+    console.log(`Starting community deletion: ${community.name}`, {
       adminEmail: req.user.email,
       communityId: id
     });
@@ -160,20 +160,20 @@ export const deleteCommunity = async (req, res) => {
     // Fetch all related data
     const [residents, issues, workers, securities, managers, amenities, commonSpaces,
       payments, subscriptions, visitors, preapprovals, notifications, ads] = await Promise.all([
-      Resident.find({ community: id }).lean(),
-      Issue.find({ community: id }).lean(),
-      Worker.find({ community: id }).lean(),
-      Security.find({ community: id }).lean(),
-      CommunityManager.find({ assignedCommunity: id }).lean(),
-      Amenity.find({ community: id }).lean(),
-      CommonSpace.find({ community: id }).lean(),
-      Payment.find({ community: id }).lean(),
-      CommunitySubscription.find({ community: id }).lean(),
-      Visitor.find({ community: id }).lean(),
-      PreApproval.find({ community: id }).lean(),
-      Notification.find({ community: id }).lean(),
-      Ad.find({ community: id }).lean()
-    ]);
+        Resident.find({ community: id }).lean(),
+        Issue.find({ community: id }).lean(),
+        Worker.find({ community: id }).lean(),
+        Security.find({ community: id }).lean(),
+        CommunityManager.find({ assignedCommunity: id }).lean(),
+        Amenity.find({ community: id }).lean(),
+        CommonSpace.find({ community: id }).lean(),
+        Payment.find({ community: id }).lean(),
+        CommunitySubscription.find({ community: id }).lean(),
+        Visitor.find({ community: id }).lean(),
+        PreApproval.find({ community: id }).lean(),
+        Notification.find({ community: id }).lean(),
+        Ad.find({ community: id }).lean()
+      ]);
 
     // Create backup before deletion
     const backup = await DeletedCommunityBackup.create({
@@ -216,7 +216,7 @@ export const deleteCommunity = async (req, res) => {
       }
     });
 
-    logger.info(`Created deletion backup for community: ${community.name}`, { backupId: backup._id });
+    console.log(`Created deletion backup for community: ${community.name}`, { backupId: backup._id });
 
     // Perform cascade deletion
     const result = await deleteCommunityCascade(id);
@@ -243,7 +243,7 @@ export const deleteCommunity = async (req, res) => {
       userAgent: req.headers['user-agent']
     });
 
-    logger.info(`Community deleted successfully: ${community.name}`, {
+    console.log(`Community deleted successfully: ${community.name}`, {
       deletedCounts: result.deletedCounts,
       backupId: backup._id
     });
@@ -258,7 +258,7 @@ export const deleteCommunity = async (req, res) => {
       }
     });
   } catch (err) {
-    logger.error('Delete community error:', err);
+    console.error('Delete community error:', err);
     res.status(500).json({ success: false, message: 'Failed to delete community', error: err.message });
   }
 };
@@ -286,7 +286,7 @@ export const bulkUpdateStatus = async (req, res) => {
 
     res.json({ success: true, message: `${result.modifiedCount} communities updated successfully` });
   } catch (err) {
-    logger.error('Bulk update status error:', err);
+    console.error('Bulk update status error:', err);
     res.status(500).json({ success: false, message: 'Failed to bulk update status' });
   }
 };
@@ -316,7 +316,7 @@ export const restoreCommunity = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Backup expired, cannot restore' });
     }
 
-    logger.info(`Starting community restoration from backup: ${backupId}`, { adminEmail: req.user.email });
+    console.log(`Starting community restoration from backup: ${backupId}`, { adminEmail: req.user.email });
 
     // Import models
     const Community = (await import('../../models/communities.js')).default;
@@ -417,7 +417,7 @@ export const restoreCommunity = async (req, res) => {
       userAgent: req.headers['user-agent']
     });
 
-    logger.info(`Community restored successfully: ${community.name}`, { restoredCounts });
+    console.log(`Community restored successfully: ${community.name}`, { restoredCounts });
 
     res.json({
       success: true,
@@ -426,7 +426,7 @@ export const restoreCommunity = async (req, res) => {
       restored: restoredCounts
     });
   } catch (err) {
-    logger.error('Restore community error:', err);
+    console.error('Restore community error:', err);
     res.status(500).json({ success: false, message: 'Failed to restore community', error: err.message });
   }
 };

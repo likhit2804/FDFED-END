@@ -1,5 +1,5 @@
 import AdminAuditLog from '../models/adminAuditLog.js';
-import logger from './logger.js';
+
 
 /**
  * Create an audit log entry for admin actions
@@ -48,11 +48,11 @@ export async function createAuditLog({
       errorMessage
     });
 
-    logger.logAdmin(action, adminEmail, targetType, targetId, { status, metadata });
+    console.log(`Admin action: ${action} by ${adminEmail}`, { targetType, targetId, status, metadata });
 
     return auditLog;
   } catch (error) {
-    logger.logError(error, { context: 'createAuditLog', adminEmail, action });
+    console.error('Create audit log error:', error, { context: 'createAuditLog', adminEmail, action });
     // Don't throw - audit logging shouldn't break the main operation
     return null;
   }
@@ -72,7 +72,7 @@ export async function getRecentActions(limit = 10, filter = {}) {
       .select('-changes') // Exclude detailed changes for performance
       .lean();
   } catch (error) {
-    logger.logError(error, { context: 'getRecentActions' });
+    console.error('Get recent actions error:', error, { context: 'getRecentActions' });
     return [];
   }
 }
@@ -104,7 +104,7 @@ export async function getActivityStats(startDate, endDate) {
 
     return stats;
   } catch (error) {
-    logger.logError(error, { context: 'getActivityStats' });
+    console.error('Get activity stats error:', error, { context: 'getActivityStats' });
     return [];
   }
 }
@@ -117,16 +117,16 @@ export async function getActivityStats(startDate, endDate) {
 export async function getFailedLogins(hours = 24) {
   try {
     const since = new Date(Date.now() - hours * 60 * 60 * 1000);
-    
+
     return await AdminAuditLog.find({
       action: 'failed_login',
       createdAt: { $gte: since }
     })
-    .sort({ createdAt: -1 })
-    .select('adminEmail ip createdAt metadata')
-    .lean();
+      .sort({ createdAt: -1 })
+      .select('adminEmail ip createdAt metadata')
+      .lean();
   } catch (error) {
-    logger.logError(error, { context: 'getFailedLogins' });
+    console.error('Get failed logins error:', error, { context: 'getFailedLogins' });
     return [];
   }
 }

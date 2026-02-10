@@ -3,8 +3,6 @@ const securityRouter = express.Router();
 
 import Security from "../models/security.js";
 import VisitorPreApproval from "../models/preapproval.js";
-import auth from "../controllers/auth.js";
-import { authorizeS } from "../controllers/authorization.js";
 import Ad from "../models/Ad.js";
 
 import visitor from "../models/visitors.js";
@@ -15,10 +13,10 @@ import multer from "multer";
 import cloudinary from "../configs/cloudinary.js";
 import bcrypt from "bcrypt";
 
-import { getDashboardInfo} from "../controllers/Security.js";
+import { getDashboardInfo } from "../controllers/Security.js";
 import Visitor from "../models/visitors.js";
 import checkSubscriptionStatus from "../middleware/subcriptionStatus.js";
-import * as SecurityController from  "../controllers/Security/index.js"
+import * as SecurityController from "../controllers/Security/index.js"
 
 // Multer memory storage for security profile images (Cloudinary in handler)
 const upload = multer({ storage: multer.memoryStorage() });
@@ -82,15 +80,15 @@ securityRouter.get("/dashboard", (req, res) => {
 securityRouter.get("/dashboard/api", getDashboardInfo);
 
 //Preapproval routes
-securityRouter.get("/preApproval", auth, authorizeS, SecurityController.getPreApprovals);
-securityRouter.post("/preApproval/action", auth, authorizeS, SecurityController.updatePreApprovalStatus);
-securityRouter.post("/verify-qr", auth, authorizeS, SecurityController.verifyQr);
+securityRouter.get("/preApproval", SecurityController.getPreApprovals);
+securityRouter.post("/preApproval/action", SecurityController.updatePreApprovalStatus);
+securityRouter.post("/verify-qr", SecurityController.verifyQr);
 
 
 // Visitor mamagement routes
-securityRouter.get("/visitorManagement", auth, authorizeS, SecurityController.getVisitorManagementPage);
-securityRouter.get("/visitorManagement/api/visitors", auth, authorizeS, SecurityController.getVisitorsApi);
-securityRouter.get("/visitorManagement/:action/:id", auth, authorizeS, SecurityController.updateVisitorStatus);
+securityRouter.get("/visitorManagement", SecurityController.getVisitorManagementPage);
+securityRouter.get("/visitorManagement/api/visitors", SecurityController.getVisitorsApi);
+securityRouter.get("/visitorManagement/:action/:id", SecurityController.updateVisitorStatus);
 
 // Profile routes
 securityRouter.get("/profile", SecurityController.getProfile);

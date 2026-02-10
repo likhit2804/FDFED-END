@@ -13,8 +13,6 @@ import CommonSpaces from "../models/commonSpaces.js";
 import Payment from "../models/payment.js";
 import Visitor from "../models/visitors.js";
 import Community from "../models/communities.js";
-import auth from "../controllers/auth.js";
-import { authorizeR } from "../controllers/authorization.js";
 import { getIO } from "../utils/socket.js";
 import Ad from "../models/Ad.js";
 import PaymentController from "../controllers/payments.js";
@@ -400,8 +398,8 @@ residentRouter.post("/commonSpace", async (req, res) => {
       const user = await CommunityManager.find({ assignedCommunity: req.user.community }).populate("notifications");
 
       console.log("community manager : ", user);
-      
-      let isN=[];
+
+      let isN = [];
 
       if (user[0].notifications.length > 0) {
         isN = user?.notifications?.filter(
@@ -741,16 +739,16 @@ residentRouter.get("/payment/:paymentId", async (req, res) => {
 });
 
 //Preapproval routes
-residentRouter.get("/preApprovals", auth, authorizeR, ResidentController.getPreApprovals);
-residentRouter.post("/preapproval", auth, authorizeR,ResidentController.createPreApproval);
-residentRouter.delete("/preapproval/cancel/:id",ResidentController.cancelPreApproval);
-residentRouter.get("/preapproval/qr/:id", auth, authorizeR, ResidentController.getQRcode);
+residentRouter.get("/preApprovals", ResidentController.getPreApprovals);
+residentRouter.post("/preapproval", ResidentController.createPreApproval);
+residentRouter.delete("/preapproval/cancel/:id", ResidentController.cancelPreApproval);
+residentRouter.get("/preapproval/qr/:id", ResidentController.getQRcode);
 
 
 // Profile Routes
-residentRouter.get("/profile", auth, authorizeR, ResidentController.getResidentProfile);
-residentRouter.post("/profile", auth, authorizeR, upload.single("image"), ResidentController.updateProfile);
-residentRouter.post("/change-password", auth, authorizeR, ResidentController.changePassword);
+residentRouter.get("/profile", ResidentController.getResidentProfile);
+residentRouter.post("/profile", upload.single("image"), ResidentController.updateProfile);
+residentRouter.post("/change-password", ResidentController.changePassword);
 
 residentRouter.get("/clearNotification", async (req, res) => {
   const resi = await Resident.updateOne(

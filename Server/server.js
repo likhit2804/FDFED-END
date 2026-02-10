@@ -1,5 +1,6 @@
 import express from "express";
 import path from "path";
+import fs from "fs";
 import { fileURLToPath } from "url";
 import session from "express-session";
 import mongoose from "mongoose";
@@ -11,14 +12,13 @@ import multer from "multer";
 import helmet from "helmet";
 import compression from "compression";
 import rateLimit from "express-rate-limit";
+import morgan from "morgan";
 
-// SOCKET.IO NEW IMPORTS
 import http from "http";
 import { Server } from "socket.io";
 import { setIO } from "./utils/socket.js";
 
-// Logger
-import logger from "./utils/logger.js";
+
 
 import auth from "./controllers/auth.js";
 import {
@@ -49,7 +49,7 @@ import {
   sendTemporaryPassword,
 } from "./utils/otp.js";
 
-import bcrypt from "bcryptjs";
+import bcrypt from "bcrypt";
 
 import AdminRouter from "./routes/adminRouter.js";
 import residentRouter from "./routes/residentRouter.js";
@@ -66,7 +66,6 @@ import Community from "./models/communities.js";
 
 dotenv.config();
 
-// --- Environment Variable Validation ---
 const requiredEnvVars = [
   'JWT_SECRET',
   'MONGO_URI1',
@@ -76,28 +75,27 @@ const requiredEnvVars = [
 
 for (const envVar of requiredEnvVars) {
   if (!process.env[envVar]) {
-    logger.error(`Missing required environment variable: ${envVar}`);
+    console.error(`Missing required environment variable: ${envVar}`);
     throw new Error(`Missing required environment variable: ${envVar}`);
   }
 }
 
-// Validate JWT_SECRET strength
+
 if (process.env.JWT_SECRET.length < 32) {
-  logger.warn('JWT_SECRET should be at least 32 characters long for security');
+  console.warn('JWT_SECRET should be at least 32 characters long for security');
 }
 
-logger.info('Environment variables validated successfully');
+console.log('Environment variables validated successfully');
 
-// --- DB Connection ---
+
 mongoose
   .connect(process.env.MONGO_URI1)
   .then(() => {
-    logger.info('✅ Database connected');
-    // Initialize default subscription plans
+    console.log('✅ Database connected');
     initializeDefaultPlans();
   })
   .catch((err) => {
-    logger.error('❌ Database connection failed:', err);
+    console.error('❌ Database connection failed:', err);
     process.exit(1);
   });
 
@@ -114,7 +112,7 @@ export const io = new Server(server, {
   },
 });
 
-// expose io to other modules (via utils/socket.js)
+
 setIO(io);
 
 // helper: extract JWT token from socket handshake (auth, cookies, or query)
@@ -216,7 +214,19 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false
 }));
 
-// Compression for response optimization
+// Create a write stream for access logs (append mode)
+const accessLogStream = fs.createWriteStream(
+  path.join(path.dirname(fileURLToPath(import.meta.url)), 'logs', 'access.log'),
+  { flags: 'a' }
+);
+
+// Morgan: Log to console (dev format - colored, concise)
+app.use(morgan('dev'));
+
+// Morgan: Log to file (combined format - detailed, Apache-style)
+app.use(morgan('combined', { stream: accessLogStream }));
+
+
 app.use(compression());
 
 app.use(
@@ -274,7 +284,7 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
   skipSuccessfulRequests: false,
   handler: (req, res) => {
-    logger.warn(`Rate limit exceeded for IP: ${req.ip}`, {
+    console.warn(`Rate limit exceeded for IP: ${req.ip}`, {
       path: req.path,
       email: req.body?.email
     });
@@ -419,7 +429,7 @@ app.post("/logout", (req, res) => {
     });
     return res.status(200).json({ success: true, message: "Logged out" });
   } catch (err) {
-    logger.error("Logout error:", err);
+    console.error("Logout error:", err);
     return res.status(500).json({ success: false, message: "Logout failed" });
   }
 });
@@ -432,7 +442,7 @@ app.post("/AdminLogin", authLimiter, async (req, res) => {
 
     const result = await AuthenticateA(email, password, res);
     if (!result) {
-      logger.logAuth('admin_login_failed', email, false, { ip: req.ip });
+      console.log('Admin login failed for', email, { ip: req.ip });
       return res.status(401).json({
         success: false,
         message: "Invalid email or password",
@@ -452,7 +462,7 @@ app.post("/AdminLogin", authLimiter, async (req, res) => {
       sameSite: "lax",
     });
 
-    logger.logAuth('admin_login_success', email, true, { ip: req.ip });
+    console.log('Admin login success for', email, { ip: req.ip });
 
     return res.json({
       success: true,
@@ -461,7 +471,7 @@ app.post("/AdminLogin", authLimiter, async (req, res) => {
       redirect: "/admin/dashboard",
     });
   } catch (error) {
-    logger.error("Admin login error:", error);
+    console.error("Admin login error:", error);
     return res.status(500).json({
       success: false,
       message: "Server error",
@@ -502,18 +512,21 @@ app.post("/login", authLimiter, async (req, res) => {
   try {
     const { email, password, userType } = req.body;
 
+
     let verified;
     if (userType === "Resident") verified = await VerifyR(email, password);
     else if (userType === "Security") verified = await VerifyS(email, password);
     else if (userType === "Worker") verified = await VerifyW(email, password);
-    else if (userType === "communityManager")
+    else if (userType === "communityManager") {
+      console.log(email, password, userType);
       verified = await VerifyC(email, password);
+    }
     else if (userType === "Admin")
       verified = await VerifyA(email, password);
     else return res.status(400).json({ message: "Invalid user type" });
 
     if (!verified) {
-      logger.logAuth(`${userType}_login_failed`, email, false, { ip: req.ip });
+      console.log(`${userType} login failed for ${email}`, { ip: req.ip });
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
@@ -637,7 +650,7 @@ const forgotPasswordLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   handler: (req, res) => {
-    logger.warn(`Forgot password rate limit exceeded for IP: ${req.ip}`, {
+    console.warn(`Forgot password rate limit exceeded for IP: ${req.ip}`, {
       email: req.body?.email
     });
     res.status(429).json({
@@ -691,7 +704,7 @@ app.post("/forgot-password", forgotPasswordLimiter, async (req, res) => {
     // Security: Don't reveal if email exists or not
     // Always return success to prevent user enumeration
     if (!user) {
-      logger.warn(`Forgot password attempt for non-existent email: ${email}, userType: ${userType}`);
+      console.warn(`Forgot password attempt for non-existent email: ${email}, userType: ${userType}`);
       // Return success even if user doesn't exist (security best practice)
       return res.json({
         success: true,
@@ -701,16 +714,19 @@ app.post("/forgot-password", forgotPasswordLimiter, async (req, res) => {
 
     // Generate random secure password (12 characters)
     const newPassword = Math.random().toString(36).slice(-10) + Math.random().toString(36).slice(-2).toUpperCase();
+    console.log('🔑 Generated new password:', newPassword); // DEBUG
     const hashedPassword = await bcrypt.hash(newPassword, 12);
+    console.log('🔒 Hashed password:', hashedPassword); // DEBUG
 
     // Update user's password
     user.password = hashedPassword;
     await user.save();
+    console.log('✅ Password saved to database for user:', email); // DEBUG
 
     // Send email with new password
     await sendTemporaryPassword(email, newPassword);
 
-    logger.info(`Password reset successful for email: ${email}, userType: ${userType}`);
+    console.log(`Password reset successful for email: ${email}, userType: ${userType}`);
 
     return res.json({
       success: true,
@@ -719,7 +735,7 @@ app.post("/forgot-password", forgotPasswordLimiter, async (req, res) => {
 
   } catch (err) {
     console.error("Forgot password error:", err);
-    logger.error("Forgot password error:", err);
+
     return res.status(500).json({
       success: false,
       message: "Server error. Please try again later."

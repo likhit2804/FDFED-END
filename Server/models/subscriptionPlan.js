@@ -47,7 +47,7 @@ const subscriptionPlanSchema = new mongoose.Schema(
 );
 
 // Index for performance
-subscriptionPlanSchema.index({ planKey: 1 });
+// Note: planKey already has an index from unique: true
 subscriptionPlanSchema.index({ isActive: 1 });
 subscriptionPlanSchema.index({ displayOrder: 1 });
 

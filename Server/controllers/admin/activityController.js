@@ -1,4 +1,4 @@
-import logger from '../../utils/logger.js';
+
 
 /**
  * GET ADMIN ACTIVITY LOGS
@@ -25,7 +25,7 @@ export const getAdminActivity = async (req, res) => {
       data: actions
     });
   } catch (err) {
-    logger.error('Get admin activity error:', err);
+    console.error('Get admin activity error:', err);
     res.status(500).json({ success: false, message: 'Failed to get admin activity' });
   }
 };
@@ -47,7 +47,7 @@ export const getFailedLogins = async (req, res) => {
       count: failedLogins.length
     });
   } catch (err) {
-    logger.error('Get failed logins error:', err);
+    console.error('Get failed logins error:', err);
     res.status(500).json({ success: false, message: 'Failed to get failed logins' });
   }
 };

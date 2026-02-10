@@ -25,7 +25,7 @@ import { createCommunitySubscription } from "../crud/index.js";
 
 import { sendPassword } from "../controllers/OTP.js";
 import {
-  checkAuth, checkSubscription, sendError, sendSuccess,
+  checkSubscription, sendError, sendSuccess,
   getCommonSpaces, getCommonSpaceBookings, getBookingDetails, rejectBooking,
   createSpace, updateSpace, deleteSpace,
   getUserManagement, createResident, getResident, deleteResident,
@@ -75,21 +75,21 @@ managerRouter.get("/commonSpace/details/:id", getBookingDetails);
 managerRouter.post("/commonSpace/reject/:id", rejectBooking);
 
 
-managerRouter.post("/spaces", checkAuth, createSpace);
+managerRouter.post("/spaces", createSpace);
 
 
-managerRouter.put("/spaces/:id", checkAuth, updateSpace);
+managerRouter.put("/spaces/:id", updateSpace);
 
 
-managerRouter.delete("/spaces/:id", checkAuth, deleteSpace);
+managerRouter.delete("/spaces/:id", deleteSpace);
 
 
-managerRouter.post("/api/community/booking-rules", checkAuth, updateBookingRules);
+managerRouter.post("/api/community/booking-rules", updateBookingRules);
 
 
 
 
-managerRouter.get("/api/community/spaces", checkAuth, getSpaces);
+managerRouter.get("/api/community/spaces", getSpaces);
 
 // Apply checkSubscription middleware to all routes except excluded ones
 managerRouter.use(checkSubscription);

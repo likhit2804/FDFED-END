@@ -68,15 +68,7 @@ export const validateFields = (fields, res) => {
     return true;
 };
 
-export const checkAuth = (req, res, next) => {
-    if (!req.user || !req.user.id) {
-        return res.status(401).json({
-            success: false,
-            message: "Unauthorized: No user authenticated",
-        });
-    }
-    next();
-};
+
 
 export const checkSubscription = async (req, res, next) => {
     // Heuristic to detect API/XHR requests that expect JSON

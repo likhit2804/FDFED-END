@@ -10,6 +10,8 @@ async function authenticateUser(model, email, password, res) {
     const user = await model.findOne({ email });
     if (!user) return null;
 
+    console.log(password, user.password);
+
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return null;
 
@@ -52,6 +54,9 @@ async function authenticateUser(model, email, password, res) {
 async function verifyCredentials(model, email, password) {
     const user = await model.findOne({ email });
     if (!user) return null;
+
+    const newOne = await bcrypt.hash(password, 10);
+    console.log(newOne,user.password);
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return null;
