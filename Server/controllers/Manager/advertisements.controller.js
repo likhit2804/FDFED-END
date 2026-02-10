@@ -15,6 +15,8 @@ export const getAdvertisements = async (req, res) => {
                 endDate: ad.endDate.toISOString().split("T")[0],
                 link: ad.link,
                 imagePath: ad.imagePath,
+                adType: ad.adType,
+                targetAudience: ad.targetAudience,
                 status: ad.status,
                 createdAt: ad.createdAt,
                 updatedAt: ad.updatedAt,
@@ -54,7 +56,9 @@ export const createAdvertisement = async (req, res) => {
             startDate: parsedStartDate,
             endDate: parsedEndDate,
             link: link || null,
-            imagePath: req.file.path,
+            imagePath: req.file.path.replace(/\\/g, '/'), // Normalize Windows backslashes
+            adType: req.body.adType,
+            targetAudience: req.body.targetAudience,
             community: req.user.community,
             status: "Active",
             createdAt: new Date(),
@@ -68,6 +72,8 @@ export const createAdvertisement = async (req, res) => {
             endDate: newAd.endDate.toISOString().split("T")[0],
             link: newAd.link,
             imagePath: newAd.imagePath,
+            adType: newAd.adType,
+            targetAudience: newAd.targetAudience,
             status: newAd.status,
             createdAt: newAd.createdAt,
             updatedAt: newAd.updatedAt,
@@ -122,7 +128,15 @@ export const updateAdvertisement = async (req, res) => {
         }
 
         if (req.file && req.file.path) {
-            ad.imagePath = req.file.path;
+            ad.imagePath = req.file.path.replace(/\\/g, '/'); // Normalize Windows backslashes
+        }
+
+        if (req.body.adType) {
+            ad.adType = req.body.adType;
+        }
+
+        if (req.body.targetAudience) {
+            ad.targetAudience = req.body.targetAudience;
         }
 
         ad.updatedAt = new Date();
@@ -136,6 +150,8 @@ export const updateAdvertisement = async (req, res) => {
             endDate: ad.endDate.toISOString().split("T")[0],
             link: ad.link,
             imagePath: ad.imagePath,
+            adType: ad.adType,
+            targetAudience: ad.targetAudience,
             status: ad.status,
             createdAt: ad.createdAt,
             updatedAt: ad.updatedAt,

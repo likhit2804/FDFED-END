@@ -101,14 +101,16 @@ const AdvertisementPopup = ({
 
     useEffect(() => {
         if (isEditing && ad) {
-            // Pre-fill form values with proper formatting
-            setValue("title", ad.title || "");
-            setValue("startDate", ad.startDate || "");
-            setValue("endDate", ad.endDate || "");
-            setValue("adType", ad.adType || "");
-            setValue("targetAudience", ad.targetAudience || "");
-            setValue("link", ad.link || "");
-            setValue("status", ad.status || "");
+            // Use reset() with default values to properly populate all fields including dropdowns
+            reset({
+                title: ad.title || "",
+                startDate: ad.startDate || "",
+                endDate: ad.endDate || "",
+                adType: ad.adType || "",
+                targetAudience: ad.targetAudience || "",
+                link: ad.link || "",
+                status: ad.status || ""
+            });
 
             setImagePreview(getAdImageUrl(ad.imagePath || ad.image || ""));
         } else {

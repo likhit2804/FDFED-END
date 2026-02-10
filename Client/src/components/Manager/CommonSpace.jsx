@@ -62,12 +62,15 @@ export const CommonSpace = () => {
 
   const handleEditSpace = (space) => {
     setIsEditing(true);
-    setValue('spaceType', space.type);
-    setValue('spaceName', space.name);
-    setValue('bookable', String(space.bookable));
-    setValue('bookingRent', space.rent || '');
-    setValue('bookingRules', space.bookingRules || '');
-    setValue('id', space._id);
+    reset({
+      spaceType: space.type,
+      spaceName: space.name,
+      bookable: String(space.bookable),
+      bookingRent: space.rent || '',
+      bookingRules: space.bookingRules || '',
+      Type: space.Type || '',
+      id: space._id
+    });
     setIsSpaceFormOpen(true);
   };
 
@@ -263,7 +266,7 @@ export const CommonSpace = () => {
         <div className="stat-card border-0">
           <Building2 size={24} className="text-info" />
           <h3>Total Amenities</h3>
-          <span className="stat-number text-info">{Bookings.filter((c) => c.status === 'Approved').length}</span>
+          <span className="stat-number text-info">{avalaibleSpaces.length}</span>
         </div>
       </motion.div>
 

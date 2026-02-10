@@ -20,6 +20,13 @@ const advertisementSchema = new mongoose.Schema(
         return formatted;
       },
     },
+    adType: {
+      type: String,
+      enum: ["Sponsored", "Announcement"],
+    },
+    targetAudience: {
+      type: String,
+    },
 
     community: {
       type: mongoose.Schema.Types.ObjectId,

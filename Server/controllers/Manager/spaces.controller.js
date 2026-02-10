@@ -120,9 +120,8 @@ export const createSpace = async (req, res) => {
     try {
         const { spaceType, spaceName, bookingRent, Type } = req.body;
 
-        const validation = validateFields(req.body, ["spaceType", "spaceName"]);
-        if (validation.error) {
-            return sendError(res, 400, validation.error);
+        if (!validateFields({ spaceType, spaceName }, res)) {
+            return;
         }
 
         const existingSpace = await Amenity.find({
@@ -165,7 +164,7 @@ export const updateSpace = async (req, res) => {
             return sendError(res, 404, "Space not found");
         }
 
-        const { spaceType, spaceName, bookingRules, bookable, bookingRent } = req.body;
+        const { spaceType, spaceName, bookingRules, bookable, bookingRent, Type } = req.body;
 
         if (
             (spaceType !== undefined && !spaceType.trim()) ||
@@ -179,7 +178,8 @@ export const updateSpace = async (req, res) => {
                 spaceName,
                 community: req.user.community,
             });
-            if (duplicateSpace[0]) {
+            // Ensure we don't block update if the name is the same as current space
+            if (duplicateSpace.length > 0 && duplicateSpace[0]._id.toString() !== spaceId) {
                 return sendError(res, 400, "A space with this name already exists");
             }
         }
@@ -189,6 +189,7 @@ export const updateSpace = async (req, res) => {
         space.bookingRules = bookingRules;
         space.bookable = bookable;
         space.rent = bookingRent;
+        if (Type) space.Type = Type;
         space.updatedAt = new Date();
 
         await space.save();

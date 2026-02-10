@@ -211,7 +211,8 @@ const __dirname = path.dirname(__filename);
 // Helmet for security headers
 app.use(helmet({
   contentSecurityPolicy: false, // Disable for now to avoid breaking existing app
-  crossOriginEmbedderPolicy: false
+  crossOriginEmbedderPolicy: false,
+  crossOriginResourcePolicy: false
 }));
 
 // Create a write stream for access logs (append mode)
@@ -248,7 +249,30 @@ app.use(
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookieParser());
-app.use("/uploads", express.static("uploads"));
+
+
+
+
+// Serve uploaded files (advertisements, etc.) as static files with CORS headers
+app.use('/uploads', (req, res, next) => {
+  // Set CORS headers for all uploads requests (including 304 cached responses)
+  res.setHeader('Access-Control-Allow-Origin', 'http://localhost:5173');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  // Disable caching for development to avoid CORS issues with cached responses
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+
+  next();
+}, express.static(path.join(__dirname, 'uploads')));
 app.use(express.static(path.join(__dirname, "Public")));
 
 app.use((req, res, next) => {
