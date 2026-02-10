@@ -127,7 +127,6 @@ export const changePassword = async (req, res) => {
         manager.password = hashedPassword;
 
         await manager.save();
-
         return sendSuccess(res, "Password changed successfully");
     } catch (error) {
         console.error("Error changing password:", error);

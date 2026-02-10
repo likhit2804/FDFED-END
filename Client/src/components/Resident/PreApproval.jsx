@@ -165,7 +165,7 @@ export function PreApproval() {
                       <i className="bi bi-person-circle"></i>
                     </div>
                     <div>
-                      <h5 className="visitor-name">{v.ID}</h5>
+                      <h5 className="visitor-name">{v.name}</h5>
                       <p className="visitor-phone">
                         <i className="bi bi-telephone"></i> {v.contactNumber}
                       </p>
@@ -178,13 +178,13 @@ export function PreApproval() {
                 </div>
 
                 <div className="request-card-body">
-                  <div className="request-detail">
+                  {/* <div className="request-detail">
                     <i className="bi bi-person"></i>
                     <div>
                       <span className="detail-label">Visitor Name: </span>
                       <span className="detail-value">{v.name}</span>
                     </div>
-                  </div>
+                  </div> */}
 
                   <div className="request-detail">
                     <i className="bi bi-calendar"></i>
@@ -216,7 +216,7 @@ export function PreApproval() {
                   <div className="request-detail">
                     <i className="bi bi-card-text"></i>
                     <div>
-                      <span className="detail-label">Purpose</span>
+                      <span className="detail-label">Purpose: </span>
                       <span className="detail-value">{v.purpose}</span>
                     </div>
                   </div>

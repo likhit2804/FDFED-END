@@ -4,6 +4,7 @@ import QRCode from "qrcode";
 
 import Resident from "../../models/resident.js";
 import Visitor from "../../models/visitors.js";
+import Ad from "../../models/Ad.js"
 import { OTP } from "../OTP.js";
 import { generateCustomID, formatDate } from "../../utils/residentHelpers.js";
 
