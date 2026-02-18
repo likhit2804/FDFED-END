@@ -49,3 +49,36 @@ export const adminResendOtp = async (tempToken) => {
   }
 };
 
+export const getSystemSettings = async () => {
+  try {
+    const response = await fetch(`${API_BASE}/admin/api/settings`, {
+      method: "GET",
+      credentials: "include",
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("adminToken") || ""}`,
+      },
+    });
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching system settings:", error);
+    return { success: false, message: "Network error" };
+  }
+};
+
+export const updateSystemSettings = async (settings) => {
+  try {
+    const response = await fetch(`${API_BASE}/admin/api/settings/update`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem("adminToken") || ""}`,
+      },
+      credentials: "include",
+      body: JSON.stringify(settings),
+    });
+    return await response.json();
+  } catch (error) {
+    console.error("Error updating system settings:", error);
+    return { success: false, message: "Network error" };
+  }
+};

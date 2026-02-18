@@ -59,6 +59,7 @@ import { initializeDefaultPlans } from "./controllers/subscriptionPlanController
 
 import Resident from "./models/resident.js";
 import Community from "./models/communities.js";
+import SystemSettings from "./models/systemSettings.js";
 
 dotenv.config();
 
@@ -486,6 +487,36 @@ app.post("/login", authLimiter, async (req, res) => {
     if (!verified) {
       console.log(`${userType} login failed for ${email}`, { ip: req.ip });
       return res.status(401).json({ message: "Invalid email or password" });
+    }
+
+    // Check if 2FA should be skipped for non-admins
+    const settings = await SystemSettings.findOne({ key: "global_settings" });
+    const skip2FA = settings?.skip2FA && userType !== "Admin";
+
+    if (skip2FA) {
+      // Issue final token immediately
+      const finalToken = jwt.sign(
+        {
+          id: verified.userPayload.id,
+          email: verified.userPayload.email,
+          userType: verified.userPayload.userType,
+          community: verified.userPayload.community ?? null,
+        },
+        process.env.JWT_SECRET,
+        { expiresIn: "7d" }
+      );
+
+      res.cookie("token", finalToken, {
+        httpOnly: true,
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+        sameSite: "lax",
+      });
+
+      return res.json({
+        requiresOtp: false,
+        token: finalToken,
+        user: { ...verified.userPayload, subscriptionStatus: "active" }, // Simplified
+      });
     }
 
     await sendLoginOtp(email);

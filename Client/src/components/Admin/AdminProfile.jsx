@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import Header from "./Header";
+import { getSystemSettings, updateSystemSettings } from "../../Services/adminService";
 
 export default function AdminProfile() {
   const [formData, setFormData] = useState({
@@ -24,6 +25,9 @@ export default function AdminProfile() {
   const [loading, setLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
+
+  const [systemSettings, setSystemSettings] = useState({ skip2FA: false });
+  const [settingsLoading, setSettingsLoading] = useState(false);
 
   const API_BASE_URL =
     process.env.NODE_ENV === "production"
@@ -63,6 +67,42 @@ export default function AdminProfile() {
 
     fetchProfile();
   }, []);
+
+  // ===== Fetch System Settings =====
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        setSettingsLoading(true);
+        const res = await getSystemSettings();
+        if (res.success) {
+          setSystemSettings(res.settings);
+        }
+      } catch (err) {
+        console.error("Error fetching settings:", err);
+      } finally {
+        setSettingsLoading(false);
+      }
+    };
+    fetchSettings();
+  }, []);
+
+  const handleToggle2FA = async () => {
+    try {
+      const newStatus = !systemSettings.skip2FA;
+      setSettingsLoading(true);
+      const res = await updateSystemSettings({ skip2FA: newStatus });
+      if (res.success) {
+        setSystemSettings(res.settings);
+      } else {
+        alert("Failed to update settings");
+      }
+    } catch (err) {
+      console.error("Error toggling 2FA:", err);
+      alert("An error occurred");
+    } finally {
+      setSettingsLoading(false);
+    }
+  };
 
   // ===== Input Handlers =====
   const handleProfileChange = (e) =>
@@ -331,9 +371,8 @@ export default function AdminProfile() {
                   </label>
                   <input
                     type="password"
-                    className={`form-control rounded-3 ${
-                      errors.confirm ? "is-invalid" : ""
-                    }`}
+                    className={`form-control rounded-3 ${errors.confirm ? "is-invalid" : ""
+                      }`}
                     name="confirm"
                     placeholder="Confirm new password"
                     value={passwordData.confirm}
@@ -360,6 +399,40 @@ export default function AdminProfile() {
                   )}
                 </button>
               </form>
+            </div>
+          </div>
+        </div>
+
+        {/* ===== System Settings Row ===== */}
+        <div className="row g-4 mt-2">
+          <div className="col-12">
+            <div className="card border-0 shadow-sm rounded-4 p-4">
+              <h5 className="fw-bold mb-4">
+                <i className="bi bi-gear-fill me-2 text-danger"></i>
+                System Settings
+              </h5>
+
+              <div className="d-flex justify-content-between align-items-center p-3 bg-light rounded-3">
+                <div>
+                  <h6 className="fw-bold mb-1">Skip 2FA (OTP) for Non-Admin Users</h6>
+                  <p className="text-muted small mb-0">
+                    When enabled, Residents, Managers, and Staff will skip the OTP verification step during login.
+                    <br />
+                    <span className="text-danger fw-bold">Note: OTP remains mandatory for Admins.</span>
+                  </p>
+                </div>
+                <div className="form-check form-switch fs-4">
+                  <input
+                    className="form-check-input"
+                    type="checkbox"
+                    role="switch"
+                    checked={systemSettings.skip2FA}
+                    onChange={handleToggle2FA}
+                    disabled={settingsLoading}
+                    style={{ cursor: "pointer" }}
+                  />
+                </div>
+              </div>
             </div>
           </div>
         </div>

@@ -39,6 +39,7 @@ import {
   updatePlan,
   deletePlan,
 } from '../controllers/subscriptionPlanController.js';
+import { getSettings, updateSettings } from "../controllers/admin/settingsController.js";
 
 const AdminRouter = express.Router();
 
@@ -95,5 +96,9 @@ AdminRouter.get('/api/admin/security/failed-logins', requirePermission('read:ana
 AdminRouter.get('/api/profile', getProfile);
 AdminRouter.post('/api/profile/update', upload.single('image'), updateProfile);
 AdminRouter.post('/api/profile/change-password', validatePasswordChange, changePassword);
+
+// System Settings
+AdminRouter.get('/api/settings', getSettings);
+AdminRouter.post('/api/settings/update', updateSettings);
 
 export default AdminRouter;
