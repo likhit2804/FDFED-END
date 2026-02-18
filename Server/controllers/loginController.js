@@ -79,25 +79,7 @@ async function verifyCredentials(model, email, password) {
 
     return { user, userPayload };
 }
-export async function AuthenticateR(email, password, res) {
-    return authenticateUser(Resident, email, password, res);
-}
-
-export async function AuthenticateS(email, password, res) {
-    return authenticateUser(Security, email, password, res);
-}
-
-export async function AuthenticateW(email, password, res) {
-    return authenticateUser(Worker, email, password, res);
-}
-
-export async function AuthenticateA(email, password, res) {
-    return authenticateUser(Admin, email, password, res);
-}
-
-export async function AuthenticateC(email, password, res) {
-    return authenticateUser(CommunityManager, email, password, res);
-}
+// Authenticate functions removed (no longer used)
 
 // 2FA: per-role verify-only functions
 export async function VerifyR(email, password) {
