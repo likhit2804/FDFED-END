@@ -2,7 +2,6 @@ import React, { useEffect } from "react";
 import {
   LayoutGrid,
   Users,
-  UserCog,
   FileText,
   CreditCard,
   Tag,
@@ -32,7 +31,6 @@ export default function SidebarAdmin() {
   const navItems = [
     { icon: LayoutGrid, label: "Overview", path: "/admin/dashboard" },
     { icon: Users, label: "All Communities", path: "/admin/communities" },
-    { icon: UserCog, label: "Managers", path: "/admin/managers" },
     { icon: FileText, label: "Applications", path: "/admin/applications" },
     { icon: CreditCard, label: "Billing", path: "/admin/payments" },
     { icon: Tag, label: "Subscription Plans", path: "/admin/subscription-plans" },
@@ -43,7 +41,7 @@ export default function SidebarAdmin() {
     { icon: LogOut, label: "Sign Out", path: "__logout__" },
   ];
 
-  
+
   useEffect(() => {
     const currentPath = window.location.pathname;
     setActiveTab(currentPath);

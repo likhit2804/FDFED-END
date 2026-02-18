@@ -15,7 +15,6 @@ export default function AdminSubscriptionPlans() {
     maxResidents: "",
     features: "",
     isActive: true,
-    displayOrder: 0,
   });
 
   const API_BASE_URL =
@@ -41,7 +40,8 @@ export default function AdminSubscriptionPlans() {
 
       const json = await res.json();
       if (json.success) {
-        setPlans(json.data);
+        const sorted = [...json.data].sort((a, b) => a.price - b.price);
+        setPlans(sorted);
       } else {
         toast.error("Failed to fetch plans");
       }
@@ -77,7 +77,6 @@ export default function AdminSubscriptionPlans() {
         maxResidents: formData.maxResidents ? Number(formData.maxResidents) : null,
         features: featuresArray,
         isActive: formData.isActive,
-        displayOrder: Number(formData.displayOrder),
       };
 
       const url = editingPlan
@@ -118,7 +117,6 @@ export default function AdminSubscriptionPlans() {
       maxResidents: plan.maxResidents ? plan.maxResidents.toString() : "",
       features: plan.features.join("\n"),
       isActive: plan.isActive,
-      displayOrder: plan.displayOrder,
     });
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -159,7 +157,6 @@ export default function AdminSubscriptionPlans() {
       maxResidents: "",
       features: "",
       isActive: true,
-      displayOrder: 0,
     });
     setEditingPlan(null);
     setShowForm(false);
@@ -304,7 +301,7 @@ export default function AdminSubscriptionPlans() {
     },
     plansGrid: {
       display: "grid",
-      gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))",
+      gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
       gap: "24px",
     },
     planCard: {
@@ -519,14 +516,17 @@ export default function AdminSubscriptionPlans() {
   }
 
   return (
-    <div>
+    <div style={{ fontFamily: 'Poppins, sans-serif' }}>
       {/* Header */}
-      <div style={styles.header}>
+      <div
+        className="sticky-top border-bottom bg-white rounded-3 shadow-sm px-4 py-3 mb-4 d-flex justify-content-between align-items-center"
+        style={{ zIndex: 100 }}
+      >
         <div>
-          <h2 style={{ fontSize: "28px", fontWeight: 700, color: "#0f172a", margin: 0 }}>
+          <h2 style={{ fontSize: "22px", fontWeight: 700, color: "#0f172a", margin: 0 }}>
             Subscription Plans
           </h2>
-          <span style={{ color: "#64748b", fontSize: "14px" }}>
+          <span style={{ color: "#64748b", fontSize: "13px" }}>
             Manage subscription plans for communities
           </span>
         </div>
@@ -566,6 +566,7 @@ export default function AdminSubscriptionPlans() {
           </button>
         </div>
       </div>
+
 
       {/* Form */}
       {showForm && (
@@ -655,20 +656,6 @@ export default function AdminSubscriptionPlans() {
                 />
               </div>
 
-              <div style={styles.inputGroup}>
-                <label style={styles.label}>Display Order</label>
-                <input
-                  type="number"
-                  name="displayOrder"
-                  value={formData.displayOrder}
-                  onChange={handleInputChange}
-                  style={styles.input}
-                  placeholder="0"
-                  min="0"
-                  onFocus={(e) => (e.target.style.borderColor = "#3b82f6")}
-                  onBlur={(e) => (e.target.style.borderColor = "#e2e8f0")}
-                />
-              </div>
             </div>
 
             <div style={styles.inputGroup}>
@@ -797,10 +784,6 @@ export default function AdminSubscriptionPlans() {
                 <div style={styles.infoRow}>
                   <span style={styles.infoLabel}>Max Residents:</span>
                   <span style={styles.infoValue}>{plan.maxResidents || "Unlimited"}</span>
-                </div>
-                <div style={styles.infoRow}>
-                  <span style={styles.infoLabel}>Display Order:</span>
-                  <span style={styles.infoValue}>{plan.displayOrder}</span>
                 </div>
               </div>
 

@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { Trash2 } from "lucide-react";
+import { Trash2, Eye, UserCog } from "lucide-react";
 import Header from "./Header";
 import Tabs from "./Tabs";
 import SearchBar from "./SearchBar";
 import Dropdown from "./Dropdown";
 import AdminTable from "./AdminTables";
 import DeleteCommunityModal from "./DeleteCommunityModal";
+import CommunityDetailModal from "./CommunityDetailModal";
+import ManagerDetailModal from "./ManagerDetailModal";
 import adminApiClient from "../../services/adminApiClient";
 import { useTableFilter } from "../../hooks/useAdminHooks";
 import { LoadingOverlay } from "../common/Loader";
@@ -16,16 +18,27 @@ export default function Communities() {
   const [location, setLocation] = useState("All Locations");
   const [locations, setLocations] = useState(["All Locations"]);
   const [data, setData] = useState([]);
+  const [rawCommunities, setRawCommunities] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  
+
   // Delete modal state
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [communityToDelete, setCommunityToDelete] = useState(null);
   const [deletionCounts, setDeletionCounts] = useState({});
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const tabs = ["All", "Active", "Pending"];
+  // Community detail modal state
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [selectedCommunityId, setSelectedCommunityId] = useState(null);
+  const [selectedCommunityName, setSelectedCommunityName] = useState("");
+
+  // Manager detail modal state
+  const [managerModalOpen, setManagerModalOpen] = useState(false);
+  const [selectedManager, setSelectedManager] = useState(null);
+  const [selectedManagerCommunity, setSelectedManagerCommunity] = useState("");
+
+  const tabs = ["All", "Active", "Pending", "Expired"];
 
   const columns = [
     { header: "Name", accessor: "name" },
@@ -42,12 +55,13 @@ export default function Communities() {
       try {
         setLoading(true);
         setError("");
-        console.log('Fetching communities...');
-        
+
         const json = await adminApiClient.getCommunities();
-        console.log('Communities response:', json);
 
         if (json.success && json.data?.allCommunities) {
+          // Store raw data for manager lookup
+          setRawCommunities(json.data.allCommunities);
+
           const formatted = json.data.allCommunities.map((c) => ({
             id: c._id,
             name: c.name,
@@ -58,7 +72,6 @@ export default function Communities() {
             manager: c.communityManager ? c.communityManager.name : "Unassigned",
           }));
 
-          console.log('Formatted communities:', formatted);
           setData(formatted);
           setLocations([
             "All Locations",
@@ -113,16 +126,16 @@ export default function Communities() {
     try {
       setIsDeleting(true);
       const result = await adminApiClient.deleteCommunity(communityToDelete.id);
-      
+
       if (result.success) {
         // Remove from local state
         setData(prev => prev.filter(c => c.id !== communityToDelete.id));
-        
+
         // Show success message
         alert(`Community deleted successfully!\n\nDeleted:\n${Object.entries(result.deleted)
           .map(([key, count]) => `${key}: ${count}`)
           .join('\n')}`);
-        
+
         // Close modal
         setDeleteModalOpen(false);
         setCommunityToDelete(null);
@@ -136,20 +149,91 @@ export default function Communities() {
     }
   };
 
+  // Handle view community details
+  const handleViewDetails = (community) => {
+    setSelectedCommunityId(community.id);
+    setSelectedCommunityName(community.name);
+    setDetailModalOpen(true);
+  };
+
+  // Handle view manager details
+  const handleViewManager = (community) => {
+    // Find the raw community to get manager details
+    const raw = rawCommunities.find(c => c._id === community.id);
+    const managerData = raw?.communityManager || null;
+
+    setSelectedManager(managerData || community.manager);
+    setSelectedManagerCommunity(community.name);
+    setManagerModalOpen(true);
+  };
+
   const actions = [
     {
       component: ({ row }) => (
         <button
-          onClick={() => handleDeleteClick(row)}
-          className="btn btn-danger btn-sm d-flex align-items-center gap-2"
+          onClick={() => handleViewDetails(row)}
+          title="View Details"
           style={{
-            padding: '6px 12px',
-            fontSize: '13px',
+            padding: '6px 8px',
+            background: '#3b82f6',
+            color: 'white',
+            border: 'none',
+            borderRadius: '6px',
+            cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '4px',
+            fontSize: '12px',
+            fontWeight: '500',
+          }}
+        >
+          <Eye size={14} />
+        </button>
+      ),
+    },
+    {
+      component: ({ row }) => (
+        <button
+          onClick={() => handleViewManager(row)}
+          title="View Manager"
+          style={{
+            padding: '6px 8px',
+            background: '#0f172a',
+            color: 'white',
+            border: 'none',
+            borderRadius: '6px',
+            cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '4px',
+            fontSize: '12px',
+            fontWeight: '500',
+          }}
+        >
+          <UserCog size={14} />
+        </button>
+      ),
+    },
+    {
+      component: ({ row }) => (
+        <button
+          onClick={() => handleDeleteClick(row)}
+          title="Delete Community"
+          style={{
+            padding: '6px 8px',
+            background: '#ef4444',
+            color: 'white',
+            border: 'none',
+            borderRadius: '6px',
+            cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '4px',
+            fontSize: '12px',
             fontWeight: '500',
           }}
         >
           <Trash2 size={14} />
-          Delete
         </button>
       ),
     },
@@ -226,6 +310,30 @@ export default function Communities() {
           isDeleting={isDeleting}
         />
       )}
+
+      {/* Community Detail Modal */}
+      <CommunityDetailModal
+        isOpen={detailModalOpen}
+        onClose={() => {
+          setDetailModalOpen(false);
+          setSelectedCommunityId(null);
+          setSelectedCommunityName("");
+        }}
+        communityId={selectedCommunityId}
+        communityName={selectedCommunityName}
+      />
+
+      {/* Manager Detail Modal */}
+      <ManagerDetailModal
+        isOpen={managerModalOpen}
+        onClose={() => {
+          setManagerModalOpen(false);
+          setSelectedManager(null);
+          setSelectedManagerCommunity("");
+        }}
+        manager={selectedManager}
+        communityName={selectedManagerCommunity}
+      />
     </>
   );
 }

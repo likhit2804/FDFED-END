@@ -40,6 +40,94 @@ export const getCommunityById = async (req, res) => {
   }
 };
 
+export const getCommunityDetail = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const community = await getCommunityByIdCrud(id, null, {});
+    if (!community) {
+      return res.status(404).json({ success: false, message: 'Community not found' });
+    }
+
+    // Import models
+    const Resident = (await import('../../models/resident.js')).default;
+    const Worker = (await import('../../models/workers.js')).default;
+    const Security = (await import('../../models/security.js')).default;
+    const CommunityManager = (await import('../../models/cManager.js')).default;
+
+    // Fetch all related people
+    const [residents, workers, securities, manager] = await Promise.all([
+      Resident.find({ community: id }).select('residentFirstname residentLastname email contact uCode image').lean(),
+      Worker.find({ community: id }).select('name email contact jobRole isActive image').lean(),
+      Security.find({ community: id }).select('name email contact Shift image').lean(),
+      community.communityManager
+        ? CommunityManager.findById(community.communityManager).select('name email contact image').lean()
+        : Promise.resolve(null),
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        community: {
+          _id: community._id,
+          name: community.name,
+          location: community.location,
+          description: community.description,
+          status: community.status,
+          totalMembers: community.totalMembers,
+          subscriptionStatus: community.subscriptionStatus,
+          subscriptionPlan: community.subscriptionPlan || null,
+          planStartDate: community.planStartDate || null,
+          planEndDate: community.planEndDate || null,
+          communityCode: community.communityCode || null,
+          hasStructure: community.hasStructure || false,
+          blocksCount: community.blocks?.length || 0,
+          totalFlats: community.blocks?.reduce((sum, b) => sum + (b.flats?.length || 0), 0) || 0,
+          profile: {
+            logo: community.profile?.logo?.path || null,
+            photos: (community.profile?.photos || []).map(p => p.path),
+          },
+          createdAt: community.createdAt,
+          updatedAt: community.updatedAt,
+        },
+        manager,
+        residents: residents.map(r => ({
+          _id: r._id,
+          name: `${r.residentFirstname} ${r.residentLastname}`,
+          email: r.email,
+          contact: r.contact || 'N/A',
+          flat: r.uCode || 'N/A',
+          image: r.image,
+        })),
+        workers: workers.map(w => ({
+          _id: w._id,
+          name: w.name,
+          email: w.email,
+          contact: w.contact || 'N/A',
+          jobRole: Array.isArray(w.jobRole) ? w.jobRole.join(', ') : w.jobRole,
+          isActive: w.isActive,
+          image: w.image,
+        })),
+        securities: securities.map(s => ({
+          _id: s._id,
+          name: s.name,
+          email: s.email,
+          contact: s.contact || 'N/A',
+          shift: s.Shift || 'N/A',
+          image: s.image,
+        })),
+        counts: {
+          residents: residents.length,
+          workers: workers.length,
+          securities: securities.length,
+        },
+      },
+    });
+  } catch (err) {
+    console.error('Get community detail error:', err);
+    res.status(500).json({ success: false, message: 'Failed to get community detail' });
+  }
+};
+
 export const createCommunity = async (req, res) => {
   try {
     const communityData = req.body;
@@ -88,20 +176,43 @@ export const updateCommunity = async (req, res) => {
 export const getDeletePreview = async (req, res) => {
   try {
     const { id } = req.params;
-    const community = await getCommunityByIdCrud(id);
+    const community = await getCommunityByIdCrud(id, null, {});
     if (!community) {
       return res.status(404).json({ success: false, message: 'Community not found' });
     }
 
-    const [residents, issues, workers, securities, amenities, commonSpaces, payments, subscriptions] = await Promise.all([
-      countResidents({ community: id }),
-      listInterestForms({}, null, {}).then(forms => forms.length),
-      listCommunityManagers({ assignedCommunity: id }, null, {}).then(managers => managers.length),
-      aggregateCommunities([{ $match: { _id: community._id } }]).then(() => 0),
-      aggregateCommunities([{ $match: { _id: community._id } }]).then(() => 0),
-      aggregateCommunities([{ $match: { _id: community._id } }]).then(() => 0),
-      aggregateCommunities([{ $match: { _id: community._id } }]).then(() => 0),
-      listCommunitySubscriptions({ communityId: id }, null, {}).then(subs => subs.length),
+    // Import models for accurate counting
+    const Resident = (await import('../../models/resident.js')).default;
+    const Issue = (await import('../../models/issues.js')).default;
+    const Worker = (await import('../../models/workers.js')).default;
+    const Security = (await import('../../models/security.js')).default;
+    const CommunityManager = (await import('../../models/cManager.js')).default;
+    const Amenity = (await import('../../models/Amenities.js')).default;
+    const CommonSpace = (await import('../../models/commonSpaces.js')).default;
+    const Payment = (await import('../../models/payment.js')).default;
+    const CommunitySubscription = (await import('../../models/communitySubscription.js')).default;
+
+    // Execute all counts in parallel
+    const [
+      residents,
+      issues,
+      workers,
+      securities,
+      managers,
+      amenities,
+      commonSpaces,
+      payments,
+      subscriptions
+    ] = await Promise.all([
+      Resident.countDocuments({ community: id }),
+      Issue.countDocuments({ community: id }),
+      Worker.countDocuments({ community: id }),
+      Security.countDocuments({ community: id }),
+      CommunityManager.countDocuments({ assignedCommunity: id }),
+      Amenity.countDocuments({ community: id }),
+      CommonSpace.countDocuments({ community: id }),
+      Payment.countDocuments({ community: id }),
+      CommunitySubscription.countDocuments({ community: id })
     ]);
 
     res.json({
@@ -112,7 +223,7 @@ export const getDeletePreview = async (req, res) => {
         issues,
         workers,
         securities,
-        managers: await listCommunityManagers({ assignedCommunity: id }, null, {}).then(m => m.length),
+        managers,
         amenities,
         commonSpaces,
         payments,
