@@ -83,11 +83,11 @@ export default function AdminTable({ columns, data, actions }) {
                     borderBottom: "1px solid #e5e7eb",
                   }}
                 >
-                  {actions.map((Action, index) => (
-                    <span key={index} style={{ marginRight: "10px" }}>
-                      <Action.component row={row} />
-                    </span>
-                  ))}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    {actions.map((Action, index) => (
+                      <Action.component key={index} row={row} />
+                    ))}
+                  </div>
                 </td>
               )}
             </tr>

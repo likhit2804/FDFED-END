@@ -8,7 +8,7 @@ import cors from "cors";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
-import multer from "multer";
+
 import helmet from "helmet";
 import compression from "compression";
 import rateLimit from "express-rate-limit";
@@ -30,11 +30,6 @@ import {
 } from "./controllers/authorization.js";
 
 import {
-  AuthenticateC,
-  AuthenticateR,
-  AuthenticateS,
-  AuthenticateW,
-  AuthenticateA,
   VerifyA,
   VerifyC,
   VerifyR,
@@ -57,12 +52,14 @@ import securityRouter from "./routes/securityRouter.js";
 import workerRouter from "./routes/workerRouter.js";
 import managerRouter from "./routes/managerRouter.js";
 import interestRouter from "./routes/InterestRouter.js";
-import Ad from "./models/Ad.js";
+
+
 import { interestUploadRouter } from "./controllers/interestForm.js";
 import { initializeDefaultPlans } from "./controllers/subscriptionPlanController.js";
 
 import Resident from "./models/resident.js";
 import Community from "./models/communities.js";
+import SystemSettings from "./models/systemSettings.js";
 
 dotenv.config();
 
@@ -298,11 +295,11 @@ app.use("/interest", interestUploadRouter);
 // ---------------- RATE LIMITERS FOR AUTH ENDPOINTS ----------------
 
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
+  windowMs: 5 * 60 * 1000, // 5 minutes
   max: 5, // 5 attempts per window
   message: {
     success: false,
-    message: 'Too many login attempts, please try again after 15 minutes'
+    message: 'Too many login attempts, please try again after 5 minutes'
   },
   standardHeaders: true,
   legacyHeaders: false,
@@ -314,7 +311,7 @@ const authLimiter = rateLimit({
     });
     res.status(429).json({
       success: false,
-      message: 'Too many login attempts, please try again after 15 minutes'
+      message: 'Too many login attempts, please try again after 5 minutes'
     });
   }
 });
@@ -458,14 +455,12 @@ app.post("/logout", (req, res) => {
   }
 });
 
-// ---------------- ADMIN LOGIN ----------------
-
+// ---------------- ADMIN LOGIN (2FA) ----------------
 app.post("/AdminLogin", authLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
-
-    const result = await AuthenticateA(email, password, res);
-    if (!result) {
+    const verified = await VerifyA(email, password);
+    if (!verified) {
       console.log('Admin login failed for', email, { ip: req.ip });
       return res.status(401).json({
         success: false,
@@ -473,27 +468,17 @@ app.post("/AdminLogin", authLimiter, async (req, res) => {
       });
     }
 
-    // Update last login time
-    const Admin = (await import('./models/admin.js')).default;
-    await Admin.findByIdAndUpdate(result.user.id, {
-      lastLogin: new Date(),
-      $inc: { failedLoginAttempts: -999 } // Reset failed attempts on successful login
-    });
+    // Send OTP for 2FA
+    await sendLoginOtp(email);
 
-    res.cookie("token", result.token, {
-      httpOnly: true,
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-      sameSite: "lax",
-    });
+    // Create a temp token for OTP verification
+    const tempToken = jwt.sign(
+      { ...verified.userPayload, purpose: "2fa" },
+      process.env.JWT_SECRET,
+      { expiresIn: "1d" }
+    );
 
-    console.log('Admin login success for', email, { ip: req.ip });
-
-    return res.json({
-      success: true,
-      user: result.user,
-      token: result.token,
-      redirect: "/admin/dashboard",
-    });
+    return res.json({ requiresOtp: true, user: verified.userPayload, tempToken });
   } catch (error) {
     console.error("Admin login error:", error);
     return res.status(500).json({
@@ -503,32 +488,6 @@ app.post("/AdminLogin", authLimiter, async (req, res) => {
   }
 });
 
-// ---------------- ADS FETCH ----------------
-
-app.get("/ads", auth, async (req, res) => {
-  try {
-    const communityId = req.user?.community;
-    if (!communityId)
-      return res
-        .status(400)
-        .json({ success: false, message: "Community not found" });
-
-    const ads = await Ad.find({
-      community: communityId,
-      status: "Active",
-    })
-      .select("_id title imagePath link status startDate endDate")
-      .sort({ createdAt: -1 })
-      .lean();
-
-    return res.json({ success: true, ads });
-  } catch (err) {
-    console.error("Error fetching ads:", err);
-    return res
-      .status(500)
-      .json({ success: false, message: "Failed to fetch ads" });
-  }
-});
 
 // ---------------- USER LOGIN (2FA) ----------------
 
@@ -552,6 +511,36 @@ app.post("/login", authLimiter, async (req, res) => {
     if (!verified) {
       console.log(`${userType} login failed for ${email}`, { ip: req.ip });
       return res.status(401).json({ message: "Invalid email or password" });
+    }
+
+    // Check if 2FA should be skipped for non-admins
+    const settings = await SystemSettings.findOne({ key: "global_settings" });
+    const skip2FA = settings?.skip2FA && userType !== "Admin";
+
+    if (skip2FA) {
+      // Issue final token immediately
+      const finalToken = jwt.sign(
+        {
+          id: verified.userPayload.id,
+          email: verified.userPayload.email,
+          userType: verified.userPayload.userType,
+          community: verified.userPayload.community ?? null,
+        },
+        process.env.JWT_SECRET,
+        { expiresIn: "7d" }
+      );
+
+      res.cookie("token", finalToken, {
+        httpOnly: true,
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+        sameSite: "lax",
+      });
+
+      return res.json({
+        requiresOtp: false,
+        token: finalToken,
+        user: { ...verified.userPayload, subscriptionStatus: "active" }, // Simplified
+      });
     }
 
     await sendLoginOtp(email);
@@ -797,41 +786,6 @@ app.get("/api/auth/getUser", auth, async (req, res) => {
   }
 });
 
-// ---------------- AD STATUS AUTO UPDATE ----------------
-
-async function changeAdStatuses() {
-  try {
-    const ads = await Ad.find({});
-    const now = new Date();
-
-    for (let ad of ads) {
-      let newStatus = ad.status;
-
-      if (ad.startDate <= now && now <= ad.endDate) {
-        newStatus = "Active";
-      } else if (now < ad.startDate) {
-        newStatus = "Pending";
-      } else if (now > ad.endDate) {
-        newStatus = "Expired";
-      }
-
-      if (ad.status !== newStatus) {
-        ad.status = newStatus;
-        await ad.save();
-
-        // 🔥 REAL-TIME UPDATE
-        io.emit("ads:update", {
-          id: ad._id,
-          status: newStatus,
-        });
-      }
-    }
-  } catch (err) {
-    console.error("Error changing ad statuses:", err);
-  }
-}
-
-setInterval(changeAdStatuses, 60 * 60 * 1000); // Every hour
 
 // ---------------- START SERVER WITH SOCKET.IO ----------------
 

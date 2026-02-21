@@ -73,7 +73,7 @@ class AdminApiClient {
       // Handle non-OK responses
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        
+
         // Check if we should retry
         if (this.isRetryableError(response.status) && retries < this.maxRetries) {
           const delay = this.retryDelay * Math.pow(2, retries); // Exponential backoff
@@ -152,6 +152,10 @@ class AdminApiClient {
   // Communities API
   async getCommunities() {
     return this.get("/communities/overview");
+  }
+
+  async getCommunityDetail(communityId) {
+    return this.get(`/communities/${communityId}/detail`);
   }
 
   async getDeletePreview(communityId) {

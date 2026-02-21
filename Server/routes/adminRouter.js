@@ -28,6 +28,7 @@ import {
   getCommunityStats,
   bulkUpdateStatus,
   restoreCommunity,
+  getCommunityDetail,
   getAdminActivity,
   getFailedLogins,
 } from '../controllers/adminController.js';
@@ -38,6 +39,7 @@ import {
   updatePlan,
   deletePlan,
 } from '../controllers/subscriptionPlanController.js';
+import { getSettings, updateSettings } from "../controllers/admin/settingsController.js";
 
 const AdminRouter = express.Router();
 
@@ -60,11 +62,12 @@ AdminRouter.get('/api/communities/overview', getCommunitiesOverview);
 // Communities CRUD with RBAC
 AdminRouter.get('/api/communities', requirePermission('read:communities'), getAllCommunities);
 AdminRouter.get('/api/communities/stats', requirePermission('read:communities'), getCommunityStats);
-AdminRouter.get('/api/communities/:id/delete-preview', requirePermission('delete:critical'), getDeletePreview);
+AdminRouter.get('/api/communities/:id/detail', requirePermission('read:communities'), getCommunityDetail);
+AdminRouter.get('/api/communities/:id/delete-preview', requirePermission('write:communities'), getDeletePreview);
 AdminRouter.get('/api/communities/:id', requirePermission('read:communities'), getCommunityById);
 AdminRouter.post('/api/communities', requirePermission('write:communities'), createCommunity);
 AdminRouter.put('/api/communities/:id', requirePermission('write:communities'), updateCommunity);
-AdminRouter.delete('/api/communities/:id', requirePermission('delete:critical'), deleteCommunity);
+AdminRouter.delete('/api/communities/:id', requirePermission('write:communities'), deleteCommunity);
 
 // Community restore
 AdminRouter.post('/api/communities/:backupId/restore', requirePermission('delete:critical'), restoreCommunity);
@@ -93,5 +96,9 @@ AdminRouter.get('/api/admin/security/failed-logins', requirePermission('read:ana
 AdminRouter.get('/api/profile', getProfile);
 AdminRouter.post('/api/profile/update', upload.single('image'), updateProfile);
 AdminRouter.post('/api/profile/change-password', validatePasswordChange, changePassword);
+
+// System Settings
+AdminRouter.get('/api/settings', getSettings);
+AdminRouter.post('/api/settings/update', updateSettings);
 
 export default AdminRouter;
