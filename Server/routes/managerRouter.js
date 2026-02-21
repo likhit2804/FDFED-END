@@ -36,7 +36,8 @@ import {
   getAdvertisements, createAdvertisement, updateAdvertisement, deleteAdvertisement,
   getPaymentsData, getSubscriptionPlans, changePlan,
   getCommunityDetails, processSubscriptionPayment, getSubscriptionHistory, getSubscriptionStatus,
-  getDashboardData
+  getDashboardData,
+  getRegistrationCodes, regenerateRegistrationCodes
 } from "../controllers/Manager/index.js";
 
 function generateCustomID(userEmail, facility, countOrRandom = null) {
@@ -478,6 +479,9 @@ managerRouter.post("/community/rotate-code", rotateCommunityCode);
 
 managerRouter.get("/get-structure", getCommunityStructure);
 managerRouter.post("/setup-structure", setupCommunityStructure);
+
+managerRouter.get("/registration-codes", getRegistrationCodes);
+managerRouter.post("/registration-codes/regenerate", regenerateRegistrationCodes);
 
 export default managerRouter;
 

@@ -62,7 +62,8 @@ const CommunitySchema = new mongoose.Schema(
             flatNumber: { type: String, required: true }, // e.g., "A-101"
             floor: { type: Number, required: true },      // e.g., 1
             status: { type: String, enum: ["Vacant", "Occupied", "Owner"], default: "Vacant" },
-            residentId: { type: mongoose.Schema.Types.ObjectId, ref: "Resident" }
+            residentId: { type: mongoose.Schema.Types.ObjectId, ref: "Resident" },
+            registrationCode: { type: String, unique: true, sparse: true } // unique per-flat code for resident self-registration
           }
         ]
       }

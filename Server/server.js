@@ -327,115 +327,115 @@ const otpLimiter = rateLimit({
   legacyHeaders: false
 });
 
-// ---------------- PUBLIC RESIDENT REGISTRATION APIS ----------------
+// ---------------- PUBLIC RESIDENT REGISTRATION (CODE-BASED) ----------------
 
-app.post("/resident-register/request-otp", otpLimiter, async (req, res) => {
+// POST /resident-register/validate-code
+// Resident enters their physical registration code → returns flat + community info
+app.post("/resident-register/validate-code", async (req, res) => {
   try {
-    const { email } = req.body || {};
-    if (!email)
-      return res
-        .status(400)
-        .json({ success: false, message: "Email is required" });
+    const { code: rawCode } = req.body;
+    if (!rawCode)
+      return res.status(400).json({ success: false, message: "Registration code is required" });
 
-    const existing = await Resident.findOne({ email });
-    if (existing && existing.password) {
-      return res
-        .status(409)
-        .json({ success: false, message: "Account already exists" });
+    const code = rawCode.trim().toLowerCase();
+
+    // Find the community + flat that owns this code (case-insensitive)
+    const community = await Community.findOne({
+      "blocks.flats.registrationCode": { $regex: new RegExp(`^${code}$`, 'i') }
+    }).select("name blocks");
+
+    if (!community)
+      return res.status(404).json({ success: false, message: "Invalid or already-used registration code" });
+
+    let foundFlat = null;
+    let foundBlock = null;
+    for (const block of community.blocks) {
+      const flat = block.flats.find(f => f.registrationCode && f.registrationCode.toLowerCase() === code);
+      if (flat) { foundFlat = flat; foundBlock = block; break; }
     }
 
-    await sendLoginOtp(email);
-    return res.json({ success: true, message: "OTP sent to email" });
+    if (!foundFlat || foundFlat.status !== "Vacant")
+      return res.status(400).json({ success: false, message: "This code is no longer valid (flat already occupied)" });
+
+    return res.json({
+      success: true,
+      data: {
+        communityId: community._id,
+        communityName: community.name,
+        block: foundBlock.name,
+        flatNumber: foundFlat.flatNumber,
+        floor: foundFlat.floor,
+        registrationCode: code
+      }
+    });
   } catch (err) {
-    console.error("[REQ-OTP] Error:", err);
-    return res
-      .status(500)
-      .json({ success: false, message: "Server error", error: err.message });
-  }
-});
-
-app.post("/resident-register/verify-otp", async (req, res) => {
-  try {
-    const { email, otp } = req.body;
-    if (!email || !otp)
-      return res
-        .status(400)
-        .json({ success: false, message: "Email and OTP required" });
-
-    const isValid = await verifyOtp(email, otp);
-    if (!isValid)
-      return res
-        .status(401)
-        .json({ success: false, message: "Invalid or expired OTP" });
-
-    return res.json({ success: true, message: "OTP verified" });
-  } catch (err) {
-    console.error("[VERIFY-OTP] Error:", err);
+    console.error("[VALIDATE-CODE] Error:", err);
     return res.status(500).json({ success: false, message: "Server error" });
   }
 });
 
+// POST /resident-register/complete
+// Accepts code + personal details → creates resident, links to flat, marks Occupied
 app.post("/resident-register/complete", async (req, res) => {
   try {
-    const {
-      residentFirstname,
-      residentLastname,
-      uCode,
-      contact,
-      email,
-      communityCode,
-    } = req.body;
+    const { residentFirstname, residentLastname, contact, email, registrationCode: rawCode } = req.body;
 
-    if (
-      !residentFirstname ||
-      !residentLastname ||
-      !uCode ||
-      !email ||
-      !communityCode
-    ) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Missing required fields" });
-    }
+    if (!residentFirstname || !residentLastname || !email || !rawCode)
+      return res.status(400).json({ success: false, message: "Missing required fields" });
 
-    const community = await Community.findOne({ communityCode });
+    const registrationCode = rawCode.trim().toLowerCase();
+
+    // Re-validate the code (case-insensitive)
+    const community = await Community.findOne({
+      "blocks.flats.registrationCode": { $regex: new RegExp(`^${registrationCode}$`, 'i') }
+    });
     if (!community)
-      return res
-        .status(404)
-        .json({ success: false, message: "Invalid community code" });
+      return res.status(404).json({ success: false, message: "Invalid or already-used registration code" });
 
-    let resident = await Resident.findOne({ email });
-    if (!resident) {
-      resident = new Resident({
-        residentFirstname,
-        residentLastname,
-        uCode,
-        contact,
-        email,
-        community: community._id,
-      });
-    } else {
-      resident.residentFirstname = residentFirstname;
-      resident.residentLastname = residentLastname;
-      resident.uCode = uCode;
-      resident.contact = contact;
-      resident.community = community._id;
+    let foundFlat = null;
+    let foundBlock = null;
+    for (const block of community.blocks) {
+      const flat = block.flats.find(f => f.registrationCode && f.registrationCode.toLowerCase() === registrationCode);
+      if (flat) { foundFlat = flat; foundBlock = block; break; }
     }
+    if (!foundFlat || foundFlat.status !== "Vacant")
+      return res.status(400).json({ success: false, message: "Code is no longer valid" });
 
+    // Check email uniqueness
+    const existing = await Resident.findOne({ email });
+    if (existing && existing.password)
+      return res.status(409).json({ success: false, message: "An account with this email already exists" });
+
+    // Create resident
     const tempPassword = Math.random().toString(36).slice(-10);
     const hashed = await bcrypt.hash(tempPassword, 12);
-    resident.password = hashed;
 
+    const resident = new Resident({
+      residentFirstname,
+      residentLastname,
+      uCode: foundFlat.flatNumber,
+      contact: contact || "",
+      email,
+      community: community._id,
+      password: hashed,
+    });
     await resident.save();
+
+    // Link flat to resident, mark Occupied, clear the code
+    foundFlat.residentId = resident._id;
+    foundFlat.status = "Occupied";
+    foundFlat.registrationCode = undefined;
+    await community.save();
+
     await sendTemporaryPassword(email, tempPassword);
 
     return res.json({
       success: true,
-      message: "Resident registered. Temporary password emailed.",
+      message: "Registration complete! Temporary password sent to your email.",
       residentId: resident._id,
     });
   } catch (err) {
-    console.error("Complete registration error:", err);
+    console.error("[COMPLETE-REGISTER] Error:", err);
     return res.status(500).json({ success: false, message: "Server error" });
   }
 });

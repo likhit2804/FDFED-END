@@ -1,6 +1,9 @@
 import Community from "../../models/communities.js";
 import CommunityManager from "../../models/cManager.js";
+import crypto from "crypto";
 import { sendError, sendSuccess } from "./helpers.js";
+
+const generateRegCode = () => `UE-${crypto.randomBytes(4).toString('hex')}`;
 
 export const updateBookingRules = async (req, res) => {
     try {
@@ -144,7 +147,8 @@ export const setupCommunityStructure = async (req, res) => {
                     flats.push({
                         flatNumber,
                         floor,
-                        status: "Vacant"
+                        status: "Vacant",
+                        registrationCode: generateRegCode()
                     });
                 }
             }
@@ -163,8 +167,8 @@ export const setupCommunityStructure = async (req, res) => {
         await community.save();
         console.log('✅ Community saved successfully');
 
-        const successMessage = isUpdate 
-            ? "Community structure updated successfully!" 
+        const successMessage = isUpdate
+            ? "Community structure updated successfully!"
             : "Community structure setup successfully!";
 
         console.log('📤 Sending success response:', successMessage);
@@ -176,5 +180,83 @@ export const setupCommunityStructure = async (req, res) => {
     } catch (err) {
         console.error("Setup structure error:", err);
         return sendError(res, 500, "Server error during setup", err);
+    }
+};
+
+// ---- Get Registration Codes (manager view / print) ----
+export const getRegistrationCodes = async (req, res) => {
+    try {
+        const managerId = req.user.id;
+        const manager = await CommunityManager.findById(managerId);
+        if (!manager || !manager.assignedCommunity)
+            return sendError(res, 404, "Community not found");
+
+        const community = await Community.findById(manager.assignedCommunity)
+            .select('blocks name');
+        if (!community) return sendError(res, 404, "Community not found");
+
+        const rows = [];
+        for (const block of community.blocks || []) {
+            for (const flat of block.flats || []) {
+                rows.push({
+                    block: block.name,
+                    flatNumber: flat.flatNumber,
+                    floor: flat.floor,
+                    status: flat.status,
+                    registrationCode: flat.registrationCode || null,
+                    hasResident: !!flat.residentId
+                });
+            }
+        }
+
+        return sendSuccess(res, "Registration codes fetched", {
+            communityName: community.name,
+            flats: rows
+        });
+    } catch (err) {
+        console.error("getRegistrationCodes error:", err);
+        return sendError(res, 500, "Server error", err);
+    }
+};
+
+// ---- Regenerate Registration Codes ----
+export const regenerateRegistrationCodes = async (req, res) => {
+    try {
+        const { flatNumber, flatNumbers } = req.body;
+        const managerId = req.user.id;
+        const manager = await CommunityManager.findById(managerId);
+        if (!manager || !manager.assignedCommunity)
+            return sendError(res, 404, "Community not found");
+
+        const community = await Community.findById(manager.assignedCommunity);
+        if (!community) return sendError(res, 404, "Community not found");
+
+        let regenerated = 0;
+        let newCode = null;
+
+        // Use flatNumbers array if provided, or single flatNumber, or fallback to all vacant
+        const targetArray = Array.isArray(flatNumbers) ? flatNumbers : (flatNumber ? [flatNumber] : null);
+
+        for (const block of community.blocks) {
+            for (const flat of block.flats) {
+                if (targetArray) {
+                    if (targetArray.includes(flat.flatNumber)) {
+                        const code = generateRegCode();
+                        flat.registrationCode = code;
+                        regenerated++;
+                        if (flat.flatNumber === flatNumber) newCode = code;
+                    }
+                } else if (flat.status === "Vacant") {
+                    flat.registrationCode = generateRegCode();
+                    regenerated++;
+                }
+            }
+        }
+
+        await community.save();
+        return sendSuccess(res, `Regenerated ${regenerated} code(s)`, { regenerated, newCode });
+    } catch (err) {
+        console.error("regenerateRegistrationCodes error:", err);
+        return sendError(res, 500, "Server error", err);
     }
 };
