@@ -1,10 +1,10 @@
 // src/routes/adminRoutes.js
-import AdminDashboard from "../components/Admin/AdminDashboard";
-import AdminCommunities from "../components/Admin/AdminCommunities";
-import AdminPayments from "../components/Admin/AdminPayments";
-import AdminApplications from "../components/Admin/AdminApplications";
-import AdminProfile from "../components/Admin/AdminProfile";
-import AdminSubscriptionPlans from "../components/Admin/AdminSubscriptionPlans";
+import AdminDashboard from "../features/admin/components/AdminDashboard";
+import AdminCommunities from "../features/admin/components/AdminCommunities";
+import AdminPayments from "../features/admin/components/AdminPayments";
+import AdminApplications from "../features/admin/components/AdminApplications";
+import AdminProfile from "../features/admin/components/AdminProfile";
+import AdminSubscriptionPlans from "../features/admin/components/AdminSubscriptionPlans";
 
 export const adminRoutes = [
   { path: "dashboard", element: <AdminDashboard /> },

@@ -1,0 +1,493 @@
+﻿/* Global layout */
+.contentCon {
+  padding: 20px;
+  background: #f8f9ff;
+  font-family: "Inter", sans-serif;
+}
+
+/* ------------------------------
+      SECTION TITLE
+------------------------------- */
+.section-title {
+  font-size: 1.5rem;
+  font-weight: 500;
+  padding-bottom: 6px;
+  margin-bottom: 16px;
+  position: relative;
+}
+
+.section-title::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -2px;
+  width: 110px;
+  height: 3px;
+  background: linear-gradient(90deg, var(--primary), var(--secondary));
+  border-radius: 3px;
+}
+
+/* ------------------------------
+       STATS CARDS
+------------------------------- */
+.stats-grid {
+  display: flex;
+  gap: 18px;
+  margin-bottom: 25px;
+}
+
+.stat-card {
+  flex: 1;
+  background: #fff;
+  border-radius: 12px;
+  padding: 25px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  border-top: 5px solid #eee;
+  text-align: center;
+}
+
+.card-label {
+  color: #6d6d6d;
+  font-size: 1.1rem;
+  margin-bottom: 4px;
+}
+
+.card-value {
+  font-size: 2.5rem;
+  font-weight: 700;
+}
+
+/* ------------------------------
+        VISITOR REQUESTS
+------------------------------- */
+.section-header {
+  background: #e8f2ff;
+  color: #0d6efd;
+  font-size: 15px;
+  padding: 12px;
+  border-radius: 10px;
+  font-weight: 600;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.requests-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 320px));
+  gap: 20px;
+  justify-content: start;
+}
+
+/* ------------------------------
+       REQUEST CARD
+------------------------------- */
+.request-card {
+  width: 320px;
+  background: #fffaf0;
+  border-radius: 12px;
+  border: 1px solid #ffe9b3;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  overflow: hidden;
+}
+
+.request-card-header {
+  padding: 10px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255,243,221,0.5);
+}
+
+/* Avatar + Info */
+.visitor-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.visitor-avatar {
+  width: 34px;
+  height: 34px;
+  background: #e8f2ff;
+  color: #0d6efd;
+  font-size: 18px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.visitor-name {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.visitor-phone {
+  margin: 0;
+  font-size: 12px;
+  color: #555;
+}
+
+/* Status Badge */
+.status-badge {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.status-Pending {
+  background: #fff4cc;
+  color: #c99700;
+}
+
+.status-Approved {
+  background: #d4ffe2;
+  color: #0a8f3f;
+}
+
+.status-Rejected {
+  background: #ffd8d8;
+  color: #bb1b1b;
+}
+
+/* ------------------------------
+            DETAILS
+------------------------------- */
+.request-card-body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding: 14px;
+  gap: 10px;
+  border-top: 1px solid #f0e6ce;
+}
+
+.request-detail {
+  display: flex;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.detail-label {
+  font-weight: 500;
+  color: #6d6d6d;
+}
+
+.detail-value {
+  font-weight: 600;
+  font-size: 12px;
+}
+
+/* ------------------------------
+            FOOTER
+------------------------------- */
+.request-card-footer {
+  padding: 10px 14px;
+  border-top: 1px solid #f0e6ce;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.cancel-btn,
+.view-qr-btn {
+  font-size: 12px;
+  padding: 6px 12px;
+  border-radius: 8px;
+}
+
+/* ------------------------------
+            POPUP
+------------------------------- */
+.popup {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  backdrop-filter: blur(2px);
+}
+
+.popup-content {
+  width: 360px;
+  background: white;
+  padding: 22px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+@keyframes popupFade {
+  from {
+    opacity: 0;
+    transform: translateY(-15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.close-btn {
+  position: absolute;
+  right: 18px;
+  top: 15px;
+  font-size: 20px;
+  cursor: pointer;
+  color: #666;
+  transition: 0.2s ease;
+}
+
+.close-btn:hover {
+  color: #000;
+}
+
+.form-title {
+  margin-bottom: 18px;
+  text-align: center;
+  font-weight: 500;
+}
+
+.form-group {
+  margin-bottom: 14px;
+}
+
+input, select {
+  font-size: 14px !important;
+}
+
+.form-button {
+  padding: 10px;
+  border-radius: 8px;
+  background: #0d6efd;
+  color: white;
+  border: none;
+  font-size: 14px;
+  width: 100%;
+}
+
+/* QR */
+.qr-code-container img {
+  width: 220px !important;
+  height: 220px !important;
+  object-fit: contain;
+  margin: 10px auto 20px auto;
+  display: block;
+  border-radius: 8px;
+}
+
+.popup-content .btn-primary {
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-weight: 500;
+  display: block;
+  align-items: center;
+  gap: 6px;
+  margin: 0 auto;
+}
+.pre-container {
+  padding: 40px;
+  width: 100%;
+}
+
+.page-title {
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+
+.tab-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 25px;
+}
+
+.tab-btn {
+  padding: 12px 25px;
+  border: none;
+  background: #eef0f5;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 600;
+  color: #666;
+  transition: 0.2s;
+}
+
+.tab-btn.active {
+  background: #007bff;
+  color: white;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+}
+
+.pre-list {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr); /* 3 cards per row */
+  gap: 25px;
+}
+
+
+.loading,
+.empty {
+  padding: 30px 0;
+  font-size: 18px;
+  color: #777;
+}
+
+.pre-card {
+  max-width: 380px;     /* â†“ Reduced from 480px */
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  margin-bottom: 25px;
+  overflow: hidden;
+}
+
+.card-header {
+  padding: 14px;        /* â†“ smaller */
+  font-weight: 600;
+  display: flex;
+  justify-content: space-between;
+  font-size: 15px;      /* â†“ slightly smaller */
+}
+
+.card-header.pending {
+  background: #ffe1d6;
+}
+
+.card-header.approved {
+  background: #d8ffd6;
+}
+
+.card-header.rejected {
+  background: #ffd6d6;
+}
+
+.visitor-name i {
+  margin-right: 6px;
+}
+
+.status-badge {
+  padding: 5px 12px;
+  border-radius: 20px;
+  background: #fff;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.card-body {
+  padding: 16px;        /* â†“ smaller */
+}
+.card-body .row {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+}
+
+.card-body label {
+  font-weight: 600;
+  color: #555;
+}
+
+.card-footer {
+  padding: 15px;
+  display: flex;
+  justify-content: space-between;
+  background: #f8f9fb;
+}
+
+.row-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.label {
+  width: 140px;   /* FIX: keeps labels aligned */
+  font-weight: 600;
+  color: #555;
+}
+
+.value {
+  color: #333;
+  flex: 1;        /* FIX: value stays on same line */
+  word-break: break-word;
+}
+
+
+.btn-approve,
+.btn-reject {
+  border: none;
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-approve {
+  background: #28a745;
+  color: white;
+}
+
+.btn-reject {
+  background: #dc3545;
+  color: white;
+}
+
+.pre-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.scan-btn {
+  background: #0d6efd;
+  color: white;
+  border: none;
+  padding: 10px 18px;
+  font-size: 15px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.scan-btn:hover {
+  background: #0b5ed7;
+}
+
+
+.qr-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0,0,0,0.65);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9990;
+}
+
+.qr-box {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  width: 380px;
+  position: relative;
+}
+
+.qr-close {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  background: none;
+  border: none;
+  font-size: 22px;
+  cursor: pointer;
+}

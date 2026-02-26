@@ -3,7 +3,7 @@ import "bootstrap-icons/font/bootstrap-icons.css";
 
 import { io } from "socket.io-client";
 
-import ErrorBoundary from "./components/ErrorBoundary";
+import ErrorBoundary from "./features/common/components/ErrorBoundary";
 
 import { Layout } from "../src/Layout";
 import {
@@ -12,57 +12,35 @@ import {
   Route,
   RouterProvider,
 } from "react-router-dom";
-import { SignIn } from "./components/SignIn";
-import { SignUp } from "./components/SignUp";
-import { InterestForm } from "./components/InterestForm";
-import { Landingpage } from "./components/LandingPage";
+import { SignIn } from "./features/auth/SignIn";
+import { SignUp } from "./features/auth/SignUp";
+import { InterestForm } from "./features/common/components/InterestForm";
+import { Landingpage } from "./features/common/components/LandingPage";
 
-import { ManagerDashboard } from './components/Manager/Dashboard';
-import { CommonSpace } from './components/Manager/CommonSpace';
-import { ManagerProfile } from './components/Manager/Profile';
-import { IssueResolving } from './components/Manager/IssueResolving';
-import { Advertisement } from './components/Manager/Advertisement';
-import { Payments } from './components/Manager/Payments';
-import UserManagement from './components/Manager/UserManagement.jsx';
-import Subscription from './components/Manager/Subscription.jsx';
-import ManagerSetup from './components/Manager/ManagerSetup.jsx';
-
-import { CommonSpaceBooking } from './components/Resident/CommonSpace';
-import { IssueRaising } from './components/Resident/IssueRaising';
-import { ResidentDashboard } from './components/Resident/Dashboard';
-import { PreApproval } from './components/Resident/PreApproval';
-import { ResidentProfile } from './components/Resident/Profile';
-import { ResidentPayments } from './components/Resident/ResidentPayments.jsx';
-import { ResidentRegister } from './components/Resident/ResidentRegister.jsx';
-
-import { WorkerDashboard } from "./components/Worker/Dashboard";
-import { Tasks } from "./components/Worker/Tasks";
-import { History } from "./components/Worker/History";
-import { WorkerProfile } from "./components/Worker/Profile";
-
-import { SecurityDashboard } from "./components/security/Dashboard.jsx"
-import { VisitorManagement } from "./components/security/visitorManagement.jsx";
-import { SecurityPreApproval } from "./components/security/preapproval.jsx";
-import { SecurityProfile } from "./components/security/profile.jsx";
-import SubscriptionExpired from "./components/SubscriptionExpired.jsx";
+import { managerRoutes } from "./routes/managerRoutes";
+import { residentRoutes } from "./routes/residentRoutes";
+import { workerRoutes } from "./routes/workerRoutes";
+import { securityRoutes } from "./routes/securityRoutes";
+import { ResidentRegister } from './features/resident/components/ResidentRegister.jsx';
+import SubscriptionExpired from "./features/common/components/SubscriptionExpired.jsx";
 
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { ProtectedRoute } from "./components/ProtectedRout.jsx";
+import { ProtectedRoute } from "./features/common/components/ProtectedRout.jsx";
 
-import AdminLogin from './components/AdminLogin';
+import AdminLogin from './features/admin/components/AdminLogin';
 
-import AdminLayout from './components/Admin/AdminLayout';
+import AdminLayout from './features/admin/components/AdminLayout';
 import { adminRoutes } from "./routes/adminRoutes";
 
-import { AdminAuthProvider } from "./context/AdminAuthContext";
-import ProtectedAdminRoute from "./components/Admin/ProtectedAdminRoute";
+import { AdminAuthProvider } from "./features/admin/context/AdminAuthContext";
+import ProtectedAdminRoute from "./features/admin/components/ProtectedAdminRoute";
 
 import React, { useEffect } from "react";
 import { useDispatch } from "react-redux";
-import { setUser } from "./Slices/authSlice";
+import { setUser } from "./features/auth/authSlice";
 
-import OnboardingPayment from "./components/Onboarding/OnboardingPayment";
+import OnboardingPayment from "./features/common/components/Onboarding/OnboardingPayment";
 
 function App() {
   const dispatch = useDispatch();
@@ -119,44 +97,33 @@ function App() {
 
         <Route element={<ProtectedRoute allowedUserType="CommunityManager" />}>
           <Route path="/manager" element={<Layout userType="manager" />}>
-            <Route path="subscription" element={<Subscription />} />
-            <Route path="setup" element={<ManagerSetup />} />
-            <Route path="dashboard" element={<ManagerDashboard />} />
-            <Route path="issueResolving" element={<IssueResolving />} />
-            <Route path="commonSpace" element={<CommonSpace />} />
-            <Route path="advertisement" element={<Advertisement />} />
-            <Route path="payments" element={<Payments />} />
-            <Route path="profile" element={<ManagerProfile />} />
-            <Route path="userManagement" element={<UserManagement />} />
+            {managerRoutes.map(({ path, element }) => (
+              <Route key={path} path={path} element={element} />
+            ))}
           </Route>
         </Route>
 
         <Route element={<ProtectedRoute allowedUserType="Resident" />}>
           <Route path="/resident" element={<Layout userType="Resident" />}>
-            <Route path="dashboard" element={<ResidentDashboard />} />
-            <Route path="preApproval" element={<PreApproval />} />
-            <Route path="commonSpace" element={<CommonSpaceBooking />} />
-            <Route path="issueRaising" element={<IssueRaising />} />
-            <Route path="payments" element={<ResidentPayments />} />
-            <Route path="profile" element={<ResidentProfile />} />
+            {residentRoutes.map(({ path, element }) => (
+              <Route key={path} path={path} element={element} />
+            ))}
           </Route>
         </Route>
 
         <Route element={<ProtectedRoute allowedUserType="Worker" />}>
           <Route path="/worker" element={<Layout userType="Worker" />}>
-            <Route path="dashboard" element={<WorkerDashboard />} />
-            <Route path="tasks" element={<Tasks />} />
-            <Route path="history" element={<History />} />
-            <Route path="profile" element={<WorkerProfile />} />
+            {workerRoutes.map(({ path, element }) => (
+              <Route key={path} path={path} element={element} />
+            ))}
           </Route>
         </Route>
 
         <Route element={<ProtectedRoute allowedUserType="Security" />}>
           <Route path="/security" element={<Layout userType="security" />}>
-            <Route path="dashboard" element={<SecurityDashboard />} />
-            <Route path="visitorManagement" element={<VisitorManagement />} />
-            <Route path="preapproval" element={<SecurityPreApproval />} />
-            <Route path="profile" element={<SecurityProfile />} />
+            {securityRoutes.map(({ path, element }) => (
+              <Route key={path} path={path} element={element} />
+            ))}
           </Route>
         </Route>
       </>
