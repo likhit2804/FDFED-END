@@ -174,14 +174,12 @@ const AdvertisementPopup = ({
                 throw new Error("Unauthorized access. Please log in again.");
             }
 
-            if (!response.ok) {
-                const text = await response.text();
+            if (!response.success) {
                 throw new Error(`Failed to ${isEditing ? "update" : "create"
-                    } advertisement: ${response.status
-                    } ${text}`);
+                    } advertisement: ${response.message || 'Unknown error'}`);
             }
 
-            const json = await response.json();
+            const json = response;
 
             if (!json.success || !json.ad) {
                 throw new Error(json.message || `Failed to ${isEditing ? "update" : "create"
@@ -711,10 +709,9 @@ export const Advertisement = () => {
 
         try {
             const response = await managerService.deleteAd(adId);
-            if (!response.ok) {
-                const text = await response.text();
-                console.log("Failed to delete ad:", response.status, text);
-                throw new Error("Failed to delete ad.");
+            if (!response.success) {
+                console.log("Failed to delete ad:", response.message);
+                throw new Error(response.message || "Failed to delete ad.");
             }
 
         } catch (err) {
@@ -738,18 +735,11 @@ export const Advertisement = () => {
                     return;
                 }
 
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    throw new Error(`Failed to fetch ads: ${response.status
-                        } ${errorText}`);
+                if (response.success === false) {
+                    throw new Error(`Failed to fetch ads: ${response.message || 'Unknown error'}`);
                 }
 
-                const contentType = response.headers.get("content-type");
-                if (!contentType || !contentType.includes("application/json")) {
-                    throw new Error("Invalid response format. Expected JSON.");
-                }
-
-                const data = await response.json();
+                const data = response;
                 console.log(data);
 
 
