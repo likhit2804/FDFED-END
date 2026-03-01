@@ -1,11 +1,11 @@
-import express from 'express';
+﻿import express from 'express';
 import {
   submitInterestForm,
   showInterestForm,
   uploadPhoto,
   getOnboardingDetails,
   completeOnboardingPayment
-} from '../controllers/interestForm.js';
+} from "../pipelines/registration/interest/controller.js";
 import multer from 'multer';
 
 const interestRouter = express.Router();

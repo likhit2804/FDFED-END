@@ -1,6 +1,6 @@
 import express from "express";
-import auth from "../controllers/auth.js";
-import { authorizeRoles } from "../controllers/authorization.js";
+import auth from "../core/modules/security/auth/auth.js";
+import { authorizeRoles } from "../core/modules/security/auth/authorization.js";
 
 // Import CRUD helpers for all models from the central index
 import {
@@ -101,7 +101,7 @@ import {
   getWorkerById,
   updateWorkerById,
   deleteWorkerById,
-} from "../crud/index.js";
+} from "../core/modules/admin/crud/index.js";
 
 const router = express.Router();
 
@@ -306,3 +306,6 @@ bindCrudRoutes("/workers", {
 });
 
 export default router;
+
+
+

@@ -6,24 +6,24 @@ import multer from "multer";
 import mongoose from "mongoose";
 
 import fs from "fs";
-import Issue from "../models/issues.js";
-import Worker from "../models/workers.js";
-import Resident from "../models/resident.js";
-import Security from "../models/security.js";
-import Community from "../models/communities.js";
-import CommonSpaces from "../models/commonSpaces.js";
-import PaymentController from "../controllers/payments.js";
-import CommunityManager from "../models/cManager.js";
-import Ad from "../models/Ad.js";
-import Payment from "../models/payment.js";
-import Amenity from "../models/Amenities.js";
-import visitor from "../models/visitors.js";
+import Issue from "../core/models/issues.js";
+import Worker from "../core/models/workers.js";
+import Resident from "../core/models/resident.js";
+import Security from "../core/models/security.js";
+import Community from "../core/models/communities.js";
+import CommonSpaces from "../core/models/commonSpaces.js";
+import PaymentController from "../core/modules/security/auth/loginController.js";
+import CommunityManager from "../core/models/cManager.js";
+import Ad from "../core/models/Ad.js";
+import Payment from "../core/models/payment.js";
+import Amenity from "../core/models/Amenities.js";
+import visitor from "../core/models/visitors.js";
 
-import cloudinary from "../configs/cloudinary.js";
+import cloudinary from "../core/configs/cloudinary.js";
 
-import { createCommunitySubscription } from "../crud/index.js";
+import { createCommunitySubscription } from "../core/modules/admin/crud/index.js";
 
-import { sendPassword } from "../controllers/OTP.js";
+import { sendPassword } from "../core/modules/security/otp/OTP.js";
 import {
   checkSubscription, sendError, sendSuccess,
   getCommonSpaces, getCommonSpaceBookings, getBookingDetails, rejectBooking,
@@ -31,14 +31,18 @@ import {
   getUserManagement, createResident, getResident, deleteResident,
   createSecurity, getSecurity, deleteSecurity,
   createWorker, getWorker, deleteWorker, getWorkers,
-  getManagerProfile, getProfileWithCommunity, updateManagerProfile, changePassword,
   updateBookingRules, getSpaces, rotateCommunityCode, setupCommunityStructure, getCommunityStructure,
   getAdvertisements, createAdvertisement, updateAdvertisement, deleteAdvertisement,
   getPaymentsData, getSubscriptionPlans, changePlan,
   getCommunityDetails, processSubscriptionPayment, getSubscriptionHistory, getSubscriptionStatus,
-  getDashboardData,
   getRegistrationCodes, regenerateRegistrationCodes
-} from "../controllers/Manager/index.js";
+} from "../core/modules/worker/controllers/manager_index.js";
+import { getDashboardData } from "../pipelines/dashboard/manager/controller.js";
+import {
+  getProfileWithCommunity,
+  updateManagerProfile,
+  changePassword,
+} from "../pipelines/profile/manager/controller.js";
 
 function generateCustomID(userEmail, facility, countOrRandom = null) {
   const id = userEmail.toUpperCase().slice(0, 2);
@@ -416,7 +420,7 @@ managerRouter.get("/issueResolving", async (req, res) => {
   }
 });
 
-import { assignIssue, getManagerIssues, reassignIssue, closeIssueByManager, getIssueById, getRejectedPendingIssues, getIssueResolvingApiIssues, getIssueResolvingData } from "../controllers/issueController.js";
+import { assignIssue, getManagerIssues, reassignIssue, closeIssueByManager, getIssueById, getRejectedPendingIssues, getIssueResolvingApiIssues, getIssueResolvingData } from "../pipelines/issue/shared/issueController.js";
 managerRouter.get("/issue/myIssues", getManagerIssues);
 managerRouter.post("/issue/assign/:id", assignIssue);
 managerRouter.post("/issue/reassign/:id", reassignIssue);
@@ -484,4 +488,7 @@ managerRouter.get("/registration-codes", getRegistrationCodes);
 managerRouter.post("/registration-codes/regenerate", regenerateRegistrationCodes);
 
 export default managerRouter;
+
+
+
 

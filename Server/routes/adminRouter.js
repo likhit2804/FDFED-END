@@ -1,23 +1,19 @@
 import express from "express";
 import path from 'path';
 import multer from 'multer';
-import { requirePermission } from '../middleware/rbac.js';
-import { validateCommunity, validateObjectId, validatePasswordChange } from '../middleware/validation.js';
+import { requirePermission } from "../core/middleware/rbac.js";
+import { validateCommunity, validateObjectId, validatePasswordChange } from "../core/middleware/validation.js";
 import {
   getAllApplications,
   getAllApplicationsJSON,
   approveApplication,
   rejectApplication,
   resendPaymentLink
-} from '../controllers/interestForm.js';
+} from "../pipelines/registration/interest/controller.js";
 import {
-  getDashboard,
   getCommunitiesOverview,
   getCommunityManagers,
   getPayments,
-  getProfile,
-  updateProfile,
-  changePassword,
   getAllCommunities,
   getCommunityById,
   createCommunity,
@@ -31,15 +27,21 @@ import {
   getCommunityDetail,
   getAdminActivity,
   getFailedLogins,
-} from '../controllers/adminController.js';
+} from "../core/modules/admin/controllers/adminController.js";
+import { getAdminDashboard } from "../pipelines/dashboard/admin/controller.js";
+import {
+  getProfile,
+  updateProfile,
+  changePassword,
+} from "../pipelines/profile/admin/controller.js";
 import {
   getAllPlans,
   getPlanById,
   createPlan,
   updatePlan,
   deletePlan,
-} from '../controllers/subscriptionPlanController.js';
-import { getSettings, updateSettings } from "../controllers/admin/settingsController.js";
+} from "../core/modules/admin/controllers/subscriptionPlanController.js";
+import { getSettings, updateSettings } from "../core/modules/admin/controllers/admin/settingsController.js";
 
 const AdminRouter = express.Router();
 
@@ -57,7 +59,7 @@ AdminRouter.post('/interests/:id/reject', rejectApplication);
 AdminRouter.post('/interests/:id/resend-link', resendPaymentLink);
 
 // Admin dashboard & overview routes (delegated to controller)
-AdminRouter.get('/api/dashboard', getDashboard);
+AdminRouter.get('/api/dashboard', getAdminDashboard);
 AdminRouter.get('/api/communities/overview', getCommunitiesOverview);
 // Communities CRUD with RBAC
 AdminRouter.get('/api/communities', requirePermission('read:communities'), getAllCommunities);
@@ -102,3 +104,5 @@ AdminRouter.get('/api/settings', getSettings);
 AdminRouter.post('/api/settings/update', updateSettings);
 
 export default AdminRouter;
+
+

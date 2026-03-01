@@ -1,4 +1,4 @@
-
+﻿
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -7,19 +7,19 @@ import bcrypt from 'bcrypt';
 import { faker } from '@faker-js/faker';
 
 // Import Models
-import Community from '../models/communities.js';
-import CommunityManager from '../models/cManager.js';
-import Resident from '../models/resident.js';
-import Payment from '../models/payment.js';
-import Worker from '../models/workers.js';
-import Security from '../models/security.js';
-import Visitor from '../models/visitors.js';
-import CommonSpaces from '../models/commonSpaces.js'; // Amenities
-import Amenity from '../models/Amenities.js'; // Real Amenities model
-import Issue from '../models/issues.js';
-import Interest from '../models/interestForm.js';
-import Notifications from '../models/Notifications.js';
-import CommunitySubscription from '../models/communitySubscription.js';
+import Community from "../core/models/communities.js";
+import CommunityManager from "../core/models/cManager.js";
+import Resident from "../core/models/resident.js";
+import Payment from "../core/models/payment.js";
+import Worker from "../core/models/workers.js";
+import Security from "../core/models/security.js";
+import Visitor from "../core/models/visitors.js";
+import CommonSpaces from "../core/models/commonSpaces.js"; // Amenities
+import Amenity from "../core/models/Amenities.js"; // Real Amenities model
+import Issue from "../core/models/issues.js";
+import Interest from "../core/models/interestForm.js";
+import Notifications from "../core/models/Notifications.js";
+import CommunitySubscription from "../core/models/communitySubscription.js";
 
 import {
     generateCommunity,
@@ -50,19 +50,19 @@ let HASHED_PASSWORD;
 const connectDB = async () => {
     try {
         await mongoose.connect(MONGO_URI);
-        console.log('✅ Connected to MongoDB');
+        console.log('âœ… Connected to MongoDB');
     } catch (err) {
-        console.error('❌ MongoDB Connection Error:', err);
+        console.error('âŒ MongoDB Connection Error:', err);
         process.exit(1);
     }
 };
 
 const clearDB = async () => {
-    console.log('🧹 Clearing existing data... SKIPPED (Uncomment to enable)');
+    console.log('ðŸ§¹ Clearing existing data... SKIPPED (Uncomment to enable)');
 };
 
 const seedCommunities = async (count = 3) => {
-    console.log(`🌱 Seeding ${count} communities with subscription history...`);
+    console.log(`ðŸŒ± Seeding ${count} communities with subscription history...`);
     const communities = [];
     const now = new Date();
 
@@ -134,7 +134,7 @@ const seedCommunities = async (count = 3) => {
 };
 
 const seedWorkersAndSecurity = async (communities) => {
-    console.log('👷 Seeding Workers and Security...');
+    console.log('ðŸ‘· Seeding Workers and Security...');
     const staff = [];
 
     for (const { community } of communities) {
@@ -157,7 +157,7 @@ const seedWorkersAndSecurity = async (communities) => {
 };
 
 const seedAmenities = async (communities) => {
-    console.log('🏊 Seeding Amenities...');
+    console.log('ðŸŠ Seeding Amenities...');
     for (const { community } of communities) {
         for (let a = 0; a < 2; a++) {
             const amenityData = generateAmenity(community._id);
@@ -167,7 +167,7 @@ const seedAmenities = async (communities) => {
 };
 
 const seedResidentsAndRelated = async (communities, staff) => {
-    console.log('👥 Seeding Residents, Payments, Issues, Visitors with scattered dates...');
+    console.log('ðŸ‘¥ Seeding Residents, Payments, Issues, Visitors with scattered dates...');
     const now = new Date();
 
     for (const { community, manager } of communities) {
@@ -254,8 +254,10 @@ const run = async () => {
     await seedAmenities(communities);
     await seedResidentsAndRelated(communities, staff);
 
-    console.log('\n✨ Seeding Complete with Full Dynamic Ranges! ✨');
+    console.log('\nâœ¨ Seeding Complete with Full Dynamic Ranges! âœ¨');
     process.exit(0);
 };
 
 run();
+
+

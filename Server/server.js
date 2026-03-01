@@ -16,18 +16,18 @@ import morgan from "morgan";
 
 import http from "http";
 import { Server } from "socket.io";
-import { setIO } from "./utils/socket.js";
+import { setIO } from "./core/utils/socket.js";
 
 
 
-import auth from "./controllers/auth.js";
+import auth from "./core/modules/security/auth/auth.js";
 import {
   authorizeR,
   authorizeS,
   authorizeW,
   authorizeC,
   authorizeA,
-} from "./controllers/authorization.js";
+} from "./core/modules/security/auth/authorization.js";
 
 import {
   VerifyA,
@@ -35,14 +35,14 @@ import {
   VerifyR,
   VerifyS,
   VerifyW,
-} from "./controllers/loginController.js";
+} from "./core/modules/security/auth/loginController.js";
 
 import {
   sendLoginOtp,
   verifyOtp,
   resendOtp,
   sendTemporaryPassword,
-} from "./utils/otp.js";
+} from "./core/modules/security/otp/OTP.js";
 
 import bcrypt from "bcrypt";
 
@@ -54,12 +54,12 @@ import managerRouter from "./routes/managerRouter.js";
 import interestRouter from "./routes/InterestRouter.js";
 
 
-import { interestUploadRouter } from "./controllers/interestForm.js";
-import { initializeDefaultPlans } from "./controllers/subscriptionPlanController.js";
+import { interestUploadRouter } from "./pipelines/registration/interest/controller.js";
+import { initializeDefaultPlans } from "./core/modules/admin/controllers/subscriptionPlanController.js";
 
-import Resident from "./models/resident.js";
-import Community from "./models/communities.js";
-import SystemSettings from "./models/systemSettings.js";
+import Resident from "./core/models/resident.js";
+import Community from "./core/models/communities.js";
+import SystemSettings from "./core/models/systemSettings.js";
 
 dotenv.config();
 
@@ -250,7 +250,7 @@ app.use(cookieParser());
 
 
 
-// Serve uploaded files (advertisements, etc.) as static files with CORS headers
+// Serve uploaded files (advertisements, etc/) as static files with CORS headers
 app.use('/uploads', (req, res, next) => {
   // Set CORS headers for all uploads requests (including 304 cached responses)
   res.setHeader('Access-Control-Allow-Origin', 'http://localhost:5173');
@@ -431,7 +431,7 @@ app.post("/resident-register/complete", async (req, res) => {
 
     return res.json({
       success: true,
-      message: "Registration complete! Temporary password sent to your email.",
+      message: "Registration complete! Temporary password sent to your email/",
       residentId: resident._id,
     });
   } catch (err) {
@@ -697,13 +697,13 @@ app.post("/forgot-password", forgotPasswordLimiter, async (req, res) => {
     // Import appropriate model based on user type
     let UserModel;
     if (userType === 'Resident') {
-      UserModel = (await import('./models/resident.js')).default;
+      UserModel = (await import('./core/models/resident.js')).default;
     } else if (userType === 'Security') {
-      UserModel = (await import('./models/security.js')).default;
+      UserModel = (await import('./core/models/security.js')).default;
     } else if (userType === 'Worker') {
-      UserModel = (await import('./models/workers.js')).default;
+      UserModel = (await import('./core/models/workers.js')).default;
     } else if (userType === 'communityManager' || userType === 'CommunityManager') {
-      UserModel = (await import('./models/cManager.js')).default;
+      UserModel = (await import('./core/models/cManager.js')).default;
     } else {
       return res.status(400).json({
         success: false,
@@ -727,9 +727,7 @@ app.post("/forgot-password", forgotPasswordLimiter, async (req, res) => {
 
     // Generate random secure password (12 characters)
     const newPassword = Math.random().toString(36).slice(-10) + Math.random().toString(36).slice(-2).toUpperCase();
-    console.log('🔑 Generated new password:', newPassword); // DEBUG
     const hashedPassword = await bcrypt.hash(newPassword, 12);
-    console.log('🔒 Hashed password:', hashedPassword); // DEBUG
 
     // Update user's password
     user.password = hashedPassword;
@@ -787,8 +785,11 @@ app.get("/api/auth/getUser", auth, async (req, res) => {
 });
 
 
-// ---------------- START SERVER WITH SOCKET.IO ----------------
+// ---------------- START SERVER WITH SOCKET/IO ----------------
 
 server.listen(PORT, () => {
   console.log(`🚀 Server running at http://localhost:${PORT}`);
 });
+
+
+

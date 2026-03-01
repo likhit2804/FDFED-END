@@ -1,5 +1,15 @@
 const API_BASE_URL = /* import.meta.env.VITE_API_URL || */ "http://localhost:3000";
 
+const parseResponse = async (response) => {
+    let json = {};
+    try {
+        json = await response.json();
+    } catch (_) {
+        json = {};
+    }
+    return { status: response.status, ok: response.ok, ...json };
+};
+
 const managerService = {
     // --------- DASHBOARD ---------
     getDashboardData: async () => {
@@ -18,7 +28,7 @@ const managerService = {
             headers: { "Content-Type": "application/json" },
             credentials: "include",
         });
-        return response.json();
+        return parseResponse(response);
     },
 
     updateProfile: async (formData) => {
@@ -27,7 +37,7 @@ const managerService = {
             credentials: "include",
             body: formData, // FormData
         });
-        return response.json();
+        return parseResponse(response);
     },
 
     changePassword: async (passwords) => {
@@ -37,7 +47,7 @@ const managerService = {
             credentials: "include",
             body: JSON.stringify(passwords),
         });
-        return response.json();
+        return parseResponse(response);
     },
 
     // --------- SUBSCRIPTIONS ---------
@@ -47,7 +57,7 @@ const managerService = {
             headers: { "Content-Type": "application/json" },
             credentials: "include",
         });
-        return response.json();
+        return parseResponse(response);
     },
 
     getSubscriptionPlans: async () => {
@@ -56,7 +66,7 @@ const managerService = {
             headers: { "Content-Type": "application/json" },
             credentials: "include",
         });
-        return response.json();
+        return parseResponse(response);
     },
 
     updateSubscriptionPlan: async (payload) => {
@@ -66,7 +76,7 @@ const managerService = {
             credentials: "include",
             body: JSON.stringify(payload),
         });
-        return response.json();
+        return parseResponse(response);
     },
 
     // --------- COMMUNITY ---------
@@ -75,7 +85,7 @@ const managerService = {
             method: "POST",
             credentials: "include",
         });
-        return response.json();
+        return parseResponse(response);
     },
 
     // --------- USER MANAGEMENT ---------
@@ -100,7 +110,7 @@ const managerService = {
             credentials: "include",
             body: JSON.stringify(payload),
         });
-        return response.json();
+        return parseResponse(response);
     },
 
     deleteUser: async (endpoint, id) => {
@@ -108,7 +118,7 @@ const managerService = {
             method: "DELETE",
             credentials: "include",
         });
-        return response.json();
+        return parseResponse(response);
     },
 
     // --------- REGISTRATION CODES ---------
@@ -116,7 +126,7 @@ const managerService = {
         const response = await fetch(`${API_BASE_URL}/manager/registration-codes`, {
             credentials: "include",
         });
-        return response.json();
+        return parseResponse(response);
     },
 
     regenerateRegistrationCodes: async (body) => {
@@ -126,7 +136,7 @@ const managerService = {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(body),
         });
-        return response.json();
+        return parseResponse(response);
     },
 
     // --------- PAYMENTS ---------
@@ -136,7 +146,7 @@ const managerService = {
             headers: { "Content-Type": "application/json" },
             credentials: "include",
         });
-        return response.json();
+        return parseResponse(response);
     },
 
     // --------- ADVERTISEMENTS ---------
@@ -146,7 +156,7 @@ const managerService = {
             credentials: "include",
             headers: { "Content-Type": "application/json" },
         });
-        return response;
+        return parseResponse(response);
     },
 
     createAd: async (formData) => {
@@ -155,7 +165,7 @@ const managerService = {
             credentials: "include",
             body: formData,
         });
-        return response;
+        return parseResponse(response);
     },
 
     updateAd: async (id, formData) => {
@@ -164,7 +174,7 @@ const managerService = {
             credentials: "include",
             body: formData,
         });
-        return response;
+        return parseResponse(response);
     },
 
     deleteAd: async (id) => {
@@ -172,7 +182,7 @@ const managerService = {
             method: "DELETE",
             credentials: "include",
         });
-        return response;
+        return parseResponse(response);
     },
 };
 

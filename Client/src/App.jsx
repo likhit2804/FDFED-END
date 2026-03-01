@@ -26,7 +26,7 @@ import SubscriptionExpired from "./features/common/components/SubscriptionExpire
 
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { ProtectedRoute } from "./features/common/components/ProtectedRout.jsx";
+import { ProtectedRoute } from "./features/common/components/ProtectedRoute.jsx";
 
 import AdminLogin from './features/admin/components/AdminLogin';
 

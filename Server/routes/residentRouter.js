@@ -6,41 +6,37 @@ import mongoose from "mongoose";
 import QRCode from "qrcode";
 import jwt from "jsonwebtoken";
 
-import Issue from "../models/issues.js";
-import Notifications from "../models/Notifications.js";
-import Resident from "../models/resident.js";
-import CommonSpaces from "../models/commonSpaces.js";
-import Payment from "../models/payment.js";
-import Visitor from "../models/visitors.js";
-import Community from "../models/communities.js";
-import { getIO } from "../utils/socket.js";
-import Ad from "../models/Ad.js";
-import PaymentController from "../controllers/payments.js";
-// import { OTP } from "../controllers/OTP.js";
-// import { verify } from "../controllers/OTP.js";
+import Issue from "../core/models/issues.js";
+import Notifications from "../core/models/Notifications.js";
+import Resident from "../core/models/resident.js";
+import CommonSpaces from "../core/models/commonSpaces.js";
+import Payment from "../core/models/payment.js";
+import Visitor from "../core/models/visitors.js";
+import Community from "../core/models/communities.js";
+import { getIO } from "../core/utils/socket.js";
+import Ad from "../core/models/Ad.js";
+import PaymentController from "../core/modules/security/auth/loginController.js";
+// import { OTP } from "../core/modules/security/otp/OTP.js";
+// import { verify } from "../core/modules/security/otp/OTP.js";
+import { getPaymentData } from "../core/modules/worker/controllers/manager_dashboard.controller.js";
+import { getResidentDashboardData } from "../pipelines/dashboard/resident/controller.js";
 import {
-  getCommonSpace,
-  getIssueData,
-  getPaymentData,
-} from "../controllers/Resident.js";
+  getResidentProfile,
+  updateProfile as updateResidentProfile,
+  changePassword as changeResidentPassword,
+} from "../pipelines/profile/resident/controller.js";
 
-import * as ResidentController from "../controllers/Resident/index.js";
+import * as ResidentController from "../pipelines/registration/resident/controller.js";
 // The imports are Profile : updateProfile, changePassword, getResidentProfile
 // Preapproval : createPreApproval, cancelPreApproval, getPreApprovals, getQRcode
 // Registration : requestOtp,verifyOtp,completeRegistration
 
 
-import {
-  getTimeAgo,
-  getPaymentRemainders,
-  setPenalties,
-} from "../utils/residentHelpers.js";
-
 import multer from "multer";
-import cloudinary from "../configs/cloudinary.js";
+import cloudinary from "../core/configs/cloudinary.js";
 import cron from "node-cron";
-import checkSubscriptionStatus from "../middleware/subcriptionStatus.js";
-import Amenity from "../models/Amenities.js";
+import checkSubscriptionStatus from "../core/middleware/subscriptionStatus.js";
+import Amenity from "../core/models/Amenities.js";
 
 residentRouter.use(checkSubscriptionStatus);
 // Resident Self-Registration (OTP + Community Code)
@@ -559,108 +555,7 @@ residentRouter.get("/api/bookings", async (req, res) => {
 
 
 
-residentRouter.get("/api/dashboard", async (req, res) => {
-  try {
-    const recents = [];
-
-    // Fetch base data
-    const ads = await Ad.find({
-      community: req.user.community,
-      startDate: { $lte: new Date() },
-      endDate: { $gte: new Date() },
-    });
-
-    const issues = await Issue.find({ resident: req.user.id });
-    const commonSpaces = await CommonSpaces.find({ bookedBy: req.user.id });
-    const payments = await Payment.find({ sender: req.user.id });
-    const preApp = await Visitor.find({ approvedBy: req.user.id });
-
-    const resident = await Resident.findById(req.user.id);
-
-    // Build recents list
-    recents.push(
-      ...issues.map((issue) => ({
-        type: "Issue",
-        title: issue.issueID,
-        date: issue.createdAt,
-      })),
-      ...preApp.map((i) => ({
-        type: "PreApproval",
-        title: i._id,
-        date: i.createdAt,
-      })),
-      ...commonSpaces.map((space) => ({
-        type: "CommonSpace",
-        title: space.name,
-        date: space.createdAt,
-      })),
-      ...payments.map((payment) => ({
-        type: "Payment",
-        title: payment.title,
-        date: payment.paymentDate,
-      }))
-    );
-
-    // Sort by newest
-    recents.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-    // Handle pending/overdue payments
-    const pendingPayments = await Payment.find({
-      sender: req.user.id,
-      status: { $in: ["Pending", "Overdue"] },
-    });
-
-    for (const p of pendingPayments) {
-      if (new Date(p.paymentDeadline) < new Date()) {
-        p.status = "Overdue";
-        await p.save();
-      }
-    }
-
-    // Penalties
-    const overdues = pendingPayments.filter((p) => p.status === "Overdue");
-    setPenalties(overdues);
-
-    // Apply payment reminders
-    getPaymentRemainders(pendingPayments, resident.notifications);
-
-    // Add timeAgo to notifications
-    resident.notifications.forEach((n) => {
-      n.timeAgo = getTimeAgo(n.createdAt);
-    });
-
-    // Sort newest first
-    resident.notifications.sort(
-      (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-    );
-
-    // Keep only last 24 hours notifications
-    const now = new Date();
-    const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-
-    const trimmedNotifications = resident.notifications.filter((n) => {
-      return new Date(n.createdAt) >= oneDayAgo;
-    });
-
-    // Save final trimmed notifications
-    resident.notifications = trimmedNotifications;
-    await resident.save();
-
-    return res.json({
-      success: true,
-      ads,
-      recents,
-      notifications: trimmedNotifications,
-      pendingPayments,
-    });
-  } catch (err) {
-    console.error("Dashboard JSON API Error:", err);
-    return res.status(500).json({
-      success: false,
-      message: "Server error",
-    });
-  }
-});
+residentRouter.get("/api/dashboard", getResidentDashboardData);
 
 residentRouter.get("/", (req, res) => {
   res.redirect("dashboard");
@@ -674,8 +569,8 @@ import {
   getResidentIssues,
   getIssueDataById,
   submitFeedback,
-} from "../controllers/issueController.js";
-import CommunityManager from "../models/cManager.js";
+} from "../pipelines/issue/shared/issueController.js";
+import CommunityManager from "../core/models/cManager.js";
 
 residentRouter.post("/issue/confirmIssue/:id", confirmIssue);
 residentRouter.post("/issue/rejectIssueResolution/:id", rejectIssueResolution);
@@ -746,9 +641,9 @@ residentRouter.get("/preapproval/qr/:id", ResidentController.getQRcode);
 
 
 // Profile Routes
-residentRouter.get("/profile", ResidentController.getResidentProfile);
-residentRouter.post("/profile", upload.single("image"), ResidentController.updateProfile);
-residentRouter.post("/change-password", ResidentController.changePassword);
+residentRouter.get("/profile", getResidentProfile);
+residentRouter.post("/profile", upload.single("image"), updateResidentProfile);
+residentRouter.post("/change-password", changeResidentPassword);
 
 residentRouter.get("/clearNotification", async (req, res) => {
   const resi = await Resident.updateOne(
@@ -762,3 +657,6 @@ residentRouter.get("/clearNotification", async (req, res) => {
 });
 
 export default residentRouter;
+
+
+

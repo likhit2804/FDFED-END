@@ -1,0 +1,13 @@
+import express from 'express';
+import residentRoutes from './resident/routes.js';
+import managerRoutes from './manager/routes.js';
+import workerRoutes from './worker/routes.js';
+const residentRouter = express.Router();
+residentRouter.use('/issues', residentRoutes);
+const managerRouter = express.Router();
+managerRouter.use('/issues', managerRoutes);
+const workerRouter = express.Router();
+workerRouter.use('/tasks', workerRoutes);
+export { residentRouter as issueResidentRouter };
+export { managerRouter as issueManagerRouter };
+export { workerRouter as issueWorkerRouter };

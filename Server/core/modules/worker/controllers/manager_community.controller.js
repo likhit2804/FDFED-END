@@ -1,0 +1,333 @@
+import Community from "../../../models/communities.js";
+import CommunityManager from "../../../models/cManager.js";
+import crypto from "crypto";
+import { sendError, sendSuccess } from "./manager_helpers.js";
+
+const generateRegCode = () => `UE-${crypto.randomBytes(4).toString("hex")}`;
+const isOccupiedFlat = (flat) =>
+    !!flat && (flat.status === "Occupied" || flat.status === "Owner" || !!flat.residentId);
+
+export const updateBookingRules = async (req, res) => {
+    try {
+        if (req.body.rules === undefined) {
+            return sendError(res, 400, "Booking rules are required");
+        }
+
+        const community = await Community.findById(req.user.community);
+        if (!community) {
+            return sendError(res, 404, "Community not found");
+        }
+
+        const sanitizedRules = req.body.rules ? req.body.rules.trim() : "";
+        community.bookingRules = sanitizedRules;
+        community.updatedAt = new Date();
+
+        await community.save();
+
+        return sendSuccess(res, "Booking rules updated successfully", { rules: sanitizedRules });
+    } catch (error) {
+        console.error("Error updating booking rules:", error);
+        return sendError(res, 500, "Internal server error", error);
+    }
+};
+
+export const getSpaces = async (req, res) => {
+    try {
+        const community = await Community.findById(req.user.community);
+        if (!community) {
+            return sendError(res, 404, "Community not found");
+        }
+
+        return sendSuccess(res, "Spaces fetched successfully", {
+            spaces: community.commonSpaces,
+            totalSpaces: community.commonSpaces.length,
+        });
+    } catch (error) {
+        console.error("Error fetching spaces:", error);
+        return sendError(res, 500, "Internal server error", error);
+    }
+};
+
+export const rotateCommunityCode = async (req, res) => {
+    try {
+        const managerId = req.user.id;
+        const manager = await CommunityManager.findById(managerId);
+
+        if (!manager || !manager.assignedCommunity) {
+            return sendError(res, 404, "Community manager not found");
+        }
+
+        const community = await Community.findById(manager.assignedCommunity);
+        if (!community) {
+            return sendError(res, 404, "Community not found");
+        }
+
+        const newCode = await community.forceRotateCode();
+
+        return sendSuccess(res, "Community code rotated successfully", {
+            communityCode: newCode,
+            rotatedAt: community.communityCodeLastRotatedAt,
+        });
+    } catch (err) {
+        console.error("Rotate community code error:", err);
+        return sendError(res, 500, "Failed to rotate community code", err);
+    }
+};
+
+export const getCommunityStructure = async (req, res) => {
+    try {
+        const managerId = req.user.id;
+        const manager = await CommunityManager.findById(managerId);
+
+        if (!manager || !manager.assignedCommunity) {
+            return sendError(res, 404, "Community manager not found");
+        }
+
+        const community = await Community.findById(manager.assignedCommunity).select("blocks hasStructure name");
+        if (!community) {
+            return sendError(res, 404, "Community not found");
+        }
+
+        // Transform blocks to frontend format (just the config, not the flats)
+        const blocksConfig = (community.blocks || []).map((block) => ({
+            name: block.name,
+            totalFloors: block.totalFloors,
+            flatsPerFloor: block.flatsPerFloor,
+        }));
+
+        return sendSuccess(res, "Community structure fetched successfully", {
+            hasStructure: community.hasStructure,
+            blocks: blocksConfig,
+            totalBlocks: blocksConfig.length,
+        });
+    } catch (err) {
+        console.error("Get community structure error:", err);
+        return sendError(res, 500, "Failed to fetch community structure", err);
+    }
+};
+
+export const setupCommunityStructure = async (req, res) => {
+    try {
+        const { blocks } = req.body;
+
+        if (!blocks || !Array.isArray(blocks) || blocks.length === 0) {
+            return sendError(res, 400, "Invalid blocks configuration");
+        }
+
+        const managerId = req.user.id;
+        const manager = await CommunityManager.findById(managerId);
+
+        if (!manager || !manager.assignedCommunity) {
+            return sendError(res, 404, "Community not found");
+        }
+
+        const community = await Community.findById(manager.assignedCommunity);
+        if (!community) {
+            return sendError(res, 404, "Community not found");
+        }
+
+        const isUpdate = community.blocks && community.blocks.length > 0;
+
+        // Build a quick lookup so existing flats can be preserved by flatNumber.
+        const existingFlatsByNumber = new Map();
+        for (const existingBlock of community.blocks || []) {
+            for (const existingFlat of existingBlock.flats || []) {
+                existingFlatsByNumber.set(existingFlat.flatNumber, existingFlat);
+            }
+        }
+
+        const generatedBlocks = [];
+        const generatedFlatNumbers = new Set();
+
+        let preservedOccupiedFlats = 0;
+        let preservedVacantFlats = 0;
+        let newFlats = 0;
+
+        for (const block of blocks) {
+            const rawName = String(block?.name || "").trim();
+            const totalFloors = Number(block?.totalFloors);
+            const flatsPerFloor = Number(block?.flatsPerFloor);
+
+            if (
+                !rawName ||
+                !Number.isInteger(totalFloors) ||
+                totalFloors < 1 ||
+                !Number.isInteger(flatsPerFloor) ||
+                flatsPerFloor < 1
+            ) {
+                return sendError(res, 400, "Each block requires valid name, totalFloors, and flatsPerFloor");
+            }
+
+            const flats = [];
+
+            for (let floor = 1; floor <= totalFloors; floor++) {
+                for (let flat = 1; flat <= flatsPerFloor; flat++) {
+                    const flatNumber = `${rawName}-${floor * 100 + flat}`;
+
+                    if (generatedFlatNumbers.has(flatNumber)) {
+                        return sendError(
+                            res,
+                            400,
+                            `Duplicate flat number "${flatNumber}" generated. Ensure block names are unique.`
+                        );
+                    }
+                    generatedFlatNumbers.add(flatNumber);
+
+                    const existingFlat = existingFlatsByNumber.get(flatNumber);
+                    if (!existingFlat) {
+                        flats.push({
+                            flatNumber,
+                            floor,
+                            status: "Vacant",
+                            registrationCode: generateRegCode(),
+                        });
+                        newFlats++;
+                        continue;
+                    }
+
+                    if (isOccupiedFlat(existingFlat)) {
+                        flats.push({
+                            flatNumber,
+                            floor,
+                            status: existingFlat.status === "Owner" ? "Owner" : "Occupied",
+                            residentId: existingFlat.residentId,
+                            registrationCode: undefined,
+                        });
+                        preservedOccupiedFlats++;
+                    } else {
+                        flats.push({
+                            flatNumber,
+                            floor,
+                            status: "Vacant",
+                            registrationCode: existingFlat.registrationCode || generateRegCode(),
+                        });
+                        preservedVacantFlats++;
+                    }
+                }
+            }
+
+            generatedBlocks.push({
+                name: rawName,
+                totalFloors,
+                flatsPerFloor,
+                flats,
+            });
+        }
+
+        // Prevent structure updates that would remove currently occupied flats.
+        const removedOccupiedFlats = [];
+        for (const [flatNumber, existingFlat] of existingFlatsByNumber.entries()) {
+            if (isOccupiedFlat(existingFlat) && !generatedFlatNumbers.has(flatNumber)) {
+                removedOccupiedFlats.push(flatNumber);
+            }
+        }
+
+        if (removedOccupiedFlats.length > 0) {
+            return sendError(
+                res,
+                400,
+                `Cannot update structure because occupied flats would be removed: ${removedOccupiedFlats.join(", ")}`
+            );
+        }
+
+        community.blocks = generatedBlocks;
+        community.hasStructure = true;
+        await community.save();
+
+        const successMessage = isUpdate
+            ? "Community structure updated successfully!"
+            : "Community structure setup successfully!";
+
+        return sendSuccess(res, successMessage, {
+            totalBlocks: generatedBlocks.length,
+            preservedOccupiedFlats,
+            preservedVacantFlats,
+            newFlats,
+            redirect: "/manager/dashboard",
+        });
+    } catch (err) {
+        console.error("Setup structure error:", err);
+        return sendError(res, 500, "Server error during setup", err);
+    }
+};
+
+// ---- Get Registration Codes (manager view / print) ----
+export const getRegistrationCodes = async (req, res) => {
+    try {
+        const managerId = req.user.id;
+        const manager = await CommunityManager.findById(managerId);
+        if (!manager || !manager.assignedCommunity)
+            return sendError(res, 404, "Community not found");
+
+        const community = await Community.findById(manager.assignedCommunity).select("blocks name");
+        if (!community) return sendError(res, 404, "Community not found");
+
+        const rows = [];
+        for (const block of community.blocks || []) {
+            for (const flat of block.flats || []) {
+                rows.push({
+                    block: block.name,
+                    flatNumber: flat.flatNumber,
+                    floor: flat.floor,
+                    status: flat.status,
+                    registrationCode: flat.registrationCode || null,
+                    hasResident: !!flat.residentId,
+                });
+            }
+        }
+
+        return sendSuccess(res, "Registration codes fetched", {
+            communityName: community.name,
+            flats: rows,
+        });
+    } catch (err) {
+        console.error("getRegistrationCodes error:", err);
+        return sendError(res, 500, "Server error", err);
+    }
+};
+
+// ---- Regenerate Registration Codes ----
+export const regenerateRegistrationCodes = async (req, res) => {
+    try {
+        const { flatNumber, flatNumbers } = req.body;
+        const managerId = req.user.id;
+        const manager = await CommunityManager.findById(managerId);
+        if (!manager || !manager.assignedCommunity)
+            return sendError(res, 404, "Community not found");
+
+        const community = await Community.findById(manager.assignedCommunity);
+        if (!community) return sendError(res, 404, "Community not found");
+
+        let regenerated = 0;
+        let newCode = null;
+
+        // Use flatNumbers array if provided, or single flatNumber, or fallback to all vacant
+        const targetArray = Array.isArray(flatNumbers) ? flatNumbers : (flatNumber ? [flatNumber] : null);
+
+        for (const block of community.blocks) {
+            for (const flat of block.flats) {
+                if (targetArray) {
+                    if (targetArray.includes(flat.flatNumber)) {
+                        if (isOccupiedFlat(flat)) {
+                            continue;
+                        }
+                        const code = generateRegCode();
+                        flat.registrationCode = code;
+                        regenerated++;
+                        if (flat.flatNumber === flatNumber) newCode = code;
+                    }
+                } else if (flat.status === "Vacant") {
+                    flat.registrationCode = generateRegCode();
+                    regenerated++;
+                }
+            }
+        }
+
+        await community.save();
+        return sendSuccess(res, `Regenerated ${regenerated} code(s)`, { regenerated, newCode });
+    } catch (err) {
+        console.error("regenerateRegistrationCodes error:", err);
+        return sendError(res, 500, "Server error", err);
+    }
+};
+

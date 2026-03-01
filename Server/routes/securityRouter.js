@@ -1,22 +1,27 @@
 import express from "express";
 const securityRouter = express.Router();
 
-import Security from "../models/security.js";
-import VisitorPreApproval from "../models/preapproval.js";
-import Ad from "../models/Ad.js";
+import Security from "../core/models/security.js";
+import VisitorPreApproval from "../core/models/preapproval.js";
+import Ad from "../core/models/Ad.js";
 
-import visitor from "../models/visitors.js";
+import visitor from "../core/models/visitors.js";
 
 import mongoose from "mongoose";
 
 import multer from "multer";
-import cloudinary from "../configs/cloudinary.js";
+import cloudinary from "../core/configs/cloudinary.js";
 import bcrypt from "bcrypt";
 
-import { getDashboardInfo } from "../controllers/Security.js";
-import Visitor from "../models/visitors.js";
-import checkSubscriptionStatus from "../middleware/subcriptionStatus.js";
-import * as SecurityController from "../controllers/Security/index.js"
+import { getDashboardInfo } from "../pipelines/dashboard/security/controller.js";
+import {
+  getProfile as getSecurityProfile,
+  updateProfile as updateSecurityProfile,
+  changePassword as changeSecurityPassword,
+} from "../pipelines/profile/security/controller.js";
+import Visitor from "../core/models/visitors.js";
+import checkSubscriptionStatus from "../core/middleware/subscriptionStatus.js";
+import * as SecurityController from "../pipelines/visitor/security/controller.js"
 
 // Multer memory storage for security profile images (Cloudinary in handler)
 const upload = multer({ storage: multer.memoryStorage() });
@@ -91,9 +96,11 @@ securityRouter.get("/visitorManagement/api/visitors", SecurityController.getVisi
 securityRouter.get("/visitorManagement/:action/:id", SecurityController.updateVisitorStatus);
 
 // Profile routes
-securityRouter.get("/profile", SecurityController.getProfile);
-securityRouter.post("/profile", upload.single("image"), SecurityController.updateProfile);
-securityRouter.post("/change-password", SecurityController.changePassword);
+securityRouter.get("/profile", getSecurityProfile);
+securityRouter.post("/profile", upload.single("image"), updateSecurityProfile);
+securityRouter.post("/change-password", changeSecurityPassword);
 
 
 export default securityRouter;
+
+

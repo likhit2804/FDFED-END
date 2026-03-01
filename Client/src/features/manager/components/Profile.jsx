@@ -65,7 +65,6 @@ export const ManagerProfile = () => {
 
         // Manager profile
         managerService.getProfile()
-            .then(res => res.json())
             .then(data => {
                 if (data.success) {
                     setFormData({
@@ -79,7 +78,7 @@ export const ManagerProfile = () => {
                         communityName: data.community?.name || "",
                         workEmail: data.manager.email || ""
                     });
-                    setCommunityCode(data.community.communityCode);
+                    setCommunityCode(data.community?.communityCode || "");
                 } else {
                     setError(data.message || "Failed to load profile");
                 }
@@ -92,7 +91,6 @@ export const ManagerProfile = () => {
 
         // Subscription status
         managerService.getSubscriptionStatus()
-            .then(r => r.json())
             .then(sub => {
                 if (sub.success && sub.community) {
                     setSubscriptionInfo(sub.community);
