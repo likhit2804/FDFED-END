@@ -26,6 +26,7 @@ import { Payments } from './components/Manager/Payments';
 import UserManagement from './components/Manager/UserManagement.jsx';
 import Subscription from './components/Manager/Subscription.jsx';
 import ManagerSetup from './components/Manager/ManagerSetup.jsx';
+import ManagerLeaveList from './components/ManagerLeaveList';
 
 import { CommonSpaceBooking } from './components/Resident/CommonSpace';
 import { IssueRaising } from './components/Resident/IssueRaising';
@@ -128,6 +129,7 @@ function App() {
             <Route path="payments" element={<Payments />} />
             <Route path="profile" element={<ManagerProfile />} />
             <Route path="userManagement" element={<UserManagement />} />
+            <Route path="leaves" element={<ManagerLeaveList />} />
           </Route>
         </Route>
 

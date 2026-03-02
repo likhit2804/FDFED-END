@@ -5,6 +5,7 @@ import IssueSlice from './Slices/IssueSlice.js';
 import ManagerIssuesSlice from './Slices/ManagerIssuesSlice.js';
 import WorkerTasksSlice from './Slices/WorkerTasksSlice.js';
 import worker from './Slices/workerSlice.js';
+import leave from './Slices/leaveSlice.js';
 
 
 export const store = configureStore({
@@ -15,5 +16,7 @@ export const store = configureStore({
     managerIssues: ManagerIssuesSlice,
     WorkerTasks: WorkerTasksSlice,
     worker
+    ,
+    leave
   },
 });

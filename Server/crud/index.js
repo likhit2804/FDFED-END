@@ -18,3 +18,4 @@ export * from './residentCrudService.js';
 export * from './securityCrudService.js';
 export * from './visitorsCrudService.js';
 export * from './workersCrudService.js';
+export * from './leaveCrudService.js';

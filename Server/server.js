@@ -52,6 +52,7 @@ import securityRouter from "./routes/securityRouter.js";
 import workerRouter from "./routes/workerRouter.js";
 import managerRouter from "./routes/managerRouter.js";
 import interestRouter from "./routes/InterestRouter.js";
+import leaveRouter from "./routes/leaveRouter.js";
 
 
 import { interestUploadRouter } from "./controllers/interestForm.js";
@@ -288,6 +289,7 @@ app.use("/resident", auth, authorizeR, residentRouter);
 app.use("/security", auth, authorizeS, securityRouter);
 app.use("/worker", auth, authorizeW, workerRouter);
 app.use("/manager", auth, authorizeC, managerRouter);
+app.use("/leaves", leaveRouter);
 
 app.use("/interest", interestRouter);
 app.use("/interest", interestUploadRouter);

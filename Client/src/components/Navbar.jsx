@@ -60,6 +60,7 @@ export const Navbar = ({ userType }) => {
                       <li className="px-2"><NavLink className={({isActive})=>(isActive ? "Nactive" : "")} to="/manager/payments">Payments</NavLink></li>
                       <li className="px-2"><NavLink className={({isActive})=>(isActive ? "Nactive" : "")} to="/manager/advertisement">Advertisement</NavLink></li>
                       <li className="px-2"><NavLink className={({isActive})=>(isActive ? "Nactive" : "")} to="/manager/profile" >Profile</NavLink></li>
+                      <li className="px-2"><NavLink className={({isActive})=>(isActive ? "Nactive" : "")} to="/manager/leaves" >Leaves</NavLink></li>
                     </>
                   ) :userType === 'security' ? (
                     <>

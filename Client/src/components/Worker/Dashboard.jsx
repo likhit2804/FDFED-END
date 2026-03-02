@@ -9,11 +9,13 @@ import {CircularProgressbar, buildStyles} from 'react-circular-progressbar';
 import 'react-circular-progressbar/dist/styles.css';
 import {motion} from 'framer-motion';
 import {setDashboardData, setIssues} from '../../Slices/workerSlice';
-import {use, useEffect} from 'react';
+import {use, useEffect, useState} from 'react';
 import {useSelector, useDispatch} from 'react-redux';
+import LeaveApplyForm from '../LeaveApplyForm';
 
 export const WorkerDashboard = () => {
     const dispatch = useDispatch();
+    const [showLeaveModal, setShowLeaveModal] = useState(false);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -67,7 +69,26 @@ export const WorkerDashboard = () => {
 
     // ---------- UI ----------
     return (
-        <div className="container-fluid px-4 py-3 worker-dashboard">
+        <>
+        <LeaveApplyForm isOpen={showLeaveModal} onClose={() => setShowLeaveModal(false)} />
+        <div className="container-fluid px-4 py-4 worker-dashboard">
+            {/* HEADER SECTION */}
+            <div className="row mb-4">
+                <div className="col-12">
+                    <div className="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <h2 className="fw-bold mb-1" style={{color: '#1a3a52'}}>Dashboard</h2>
+                            <p className="text-muted small mb-0">Welcome back! Here's your work summary.</p>
+                        </div>
+                        <button className="btn btn-success btn-lg px-4" onClick={() => setShowLeaveModal(true)} style={{borderRadius: '8px'}}>
+                            <i className="bi bi-calendar-check me-2"></i> Apply for Leave
+                        </button>
+                    </div>
+                    <hr style={{marginTop: '1rem', marginBottom: '1rem', opacity: 0.2}} />
+                </div>
+            </div>
+            
+            {/* MAIN CONTENT */}
             <div className="row g-4">
                 <div className="col-lg-8 d-flex flex-column">
                     <motion.div className="stats-grid"
@@ -276,5 +297,6 @@ export const WorkerDashboard = () => {
                 </div>
             </div>
         </div>
+        </>
     );
 };
