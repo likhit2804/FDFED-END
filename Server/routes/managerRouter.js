@@ -12,7 +12,7 @@ import Resident from "../models/resident.js";
 import Security from "../models/security.js";
 import Community from "../models/communities.js";
 import CommonSpaces from "../models/commonSpaces.js";
-import PaymentController from "../controllers/payments.js";
+import PaymentController from "../controllers/shared/payments.js";
 import CommunityManager from "../models/cManager.js";
 import Ad from "../models/Ad.js";
 import Payment from "../models/payment.js";
@@ -23,22 +23,21 @@ import cloudinary from "../configs/cloudinary.js";
 
 import { createCommunitySubscription } from "../crud/index.js";
 
-import { sendPassword } from "../controllers/OTP.js";
+import { sendPassword } from "../controllers/shared/OTP.js";
 import {
   checkSubscription, sendError, sendSuccess,
-  getCommonSpaces, getCommonSpaceBookings, getBookingDetails, rejectBooking,
-  createSpace, updateSpace, deleteSpace,
   getUserManagement, createResident, getResident, deleteResident,
   createSecurity, getSecurity, deleteSecurity,
   createWorker, getWorker, deleteWorker, getWorkers,
   getManagerProfile, getProfileWithCommunity, updateManagerProfile, changePassword,
-  updateBookingRules, getSpaces, rotateCommunityCode, setupCommunityStructure, getCommunityStructure,
+  rotateCommunityCode, setupCommunityStructure, getCommunityStructure,
   getAdvertisements, createAdvertisement, updateAdvertisement, deleteAdvertisement,
   getPaymentsData, getSubscriptionPlans, changePlan,
   getCommunityDetails, processSubscriptionPayment, getSubscriptionHistory, getSubscriptionStatus,
   getDashboardData,
   getRegistrationCodes, regenerateRegistrationCodes
 } from "../controllers/Manager/index.js";
+import csbManagerRouter from "../pipelines/CSB/router/manager.js";
 
 function generateCustomID(userEmail, facility, countOrRandom = null) {
   const id = userEmail.toUpperCase().slice(0, 2);
@@ -64,33 +63,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 
-managerRouter.get("/commonSpace", getCommonSpaces);
-
-
-managerRouter.get("/commonSpace/api/bookings", getCommonSpaceBookings);
-
-
-managerRouter.get("/commonSpace/details/:id", getBookingDetails);
-
-
-managerRouter.post("/commonSpace/reject/:id", rejectBooking);
-
-
-managerRouter.post("/spaces", createSpace);
-
-
-managerRouter.put("/spaces/:id", updateSpace);
-
-
-managerRouter.delete("/spaces/:id", deleteSpace);
-
-
-managerRouter.post("/api/community/booking-rules", updateBookingRules);
-
-
-
-
-managerRouter.get("/api/community/spaces", getSpaces);
+managerRouter.use("/", csbManagerRouter);
 
 // Apply checkSubscription middleware to all routes except excluded ones
 managerRouter.use(checkSubscription);
@@ -403,31 +376,8 @@ managerRouter.get("/api/dashboard", getDashboardData);
 
 
 /*---------------------------------------------------------------------------------------------------- */
-managerRouter.get("/issueResolving", async (req, res) => {
-  try {
-    const data = await getIssueResolvingData(req);
-    res.render("communityManager/issueResolving", {
-      path: "ir",
-      ...data,
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(500).send("Server error");
-  }
-});
-
-import { assignIssue, getManagerIssues, reassignIssue, closeIssueByManager, getIssueById, getRejectedPendingIssues, getIssueResolvingApiIssues, getIssueResolvingData } from "../controllers/issueController.js";
-managerRouter.get("/issue/myIssues", getManagerIssues);
-managerRouter.post("/issue/assign/:id", assignIssue);
-managerRouter.post("/issue/reassign/:id", reassignIssue);
-managerRouter.post("/issue/close/:id", closeIssueByManager);
-managerRouter.get("/issue/:id", getIssueById);
-
-// API endpoint to fetch issues data for auto-refresh
-managerRouter.get("/issueResolving/api/issues", getIssueResolvingApiIssues);
-// NEW: Route for handling rejected auto-assigned issues (resident rejects → goes to manager)
-managerRouter.get("/issue/rejected/pending", getRejectedPendingIssues);
-
+import issueManagerRouter from "../pipelines/issue/router/manager.js";
+managerRouter.use("/", issueManagerRouter);
 
 managerRouter.get("/workers", getWorkers);
 

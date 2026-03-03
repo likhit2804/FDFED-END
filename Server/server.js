@@ -20,14 +20,14 @@ import { setIO } from "./utils/socket.js";
 
 
 
-import auth from "./controllers/auth.js";
+import auth from "./controllers/shared/auth.js";
 import {
   authorizeR,
   authorizeS,
   authorizeW,
   authorizeC,
   authorizeA,
-} from "./controllers/authorization.js";
+} from "./controllers/shared/authorization.js";
 
 import {
   VerifyA,
@@ -35,7 +35,7 @@ import {
   VerifyR,
   VerifyS,
   VerifyW,
-} from "./controllers/loginController.js";
+} from "./controllers/shared/loginController.js";
 
 import {
   sendLoginOtp,
@@ -55,7 +55,7 @@ import interestRouter from "./routes/InterestRouter.js";
 import leaveRouter from "./routes/leaveRouter.js";
 
 
-import { interestUploadRouter } from "./controllers/interestForm.js";
+import { interestUploadRouter } from "./controllers/admin/interestForm.js";
 import { initializeDefaultPlans } from "./controllers/subscriptionPlanController.js";
 
 import Resident from "./models/resident.js";

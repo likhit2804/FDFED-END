@@ -13,7 +13,7 @@ import multer from "multer";
 import cloudinary from "../configs/cloudinary.js";
 import bcrypt from "bcrypt";
 
-import { getDashboardInfo } from "../controllers/Security.js";
+import { getDashboardInfo } from "../controllers/Security/dashboard.controller.js";
 import Visitor from "../models/visitors.js";
 import checkSubscriptionStatus from "../middleware/subcriptionStatus.js";
 import * as SecurityController from "../controllers/Security/index.js"
@@ -80,15 +80,15 @@ securityRouter.get("/dashboard", (req, res) => {
 securityRouter.get("/dashboard/api", getDashboardInfo);
 
 //Preapproval routes
-securityRouter.get("/preApproval", SecurityController.getPreApprovals);
-securityRouter.post("/preApproval/action", SecurityController.updatePreApprovalStatus);
-securityRouter.post("/verify-qr", SecurityController.verifyQr);
+import preapprovalSecurityRouter from "../pipelines/Preapproval/router/security.js";
+securityRouter.use("/", preapprovalSecurityRouter);
 
 
-// Visitor mamagement routes
-securityRouter.get("/visitorManagement", SecurityController.getVisitorManagementPage);
-securityRouter.get("/visitorManagement/api/visitors", SecurityController.getVisitorsApi);
-securityRouter.get("/visitorManagement/:action/:id", SecurityController.updateVisitorStatus);
+
+// Visitor management routes
+import visitorManagementSecurityRouter from "../pipelines/VistorManagement/router/manager.js";
+securityRouter.use("/", visitorManagementSecurityRouter);
+
 
 // Profile routes
 securityRouter.get("/profile", SecurityController.getProfile);

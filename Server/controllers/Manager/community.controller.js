@@ -5,46 +5,6 @@ import { sendError, sendSuccess } from "./helpers.js";
 
 const generateRegCode = () => `UE-${crypto.randomBytes(4).toString('hex')}`;
 
-export const updateBookingRules = async (req, res) => {
-    try {
-        if (req.body.rules === undefined) {
-            return sendError(res, 400, "Booking rules are required");
-        }
-
-        const community = await Community.findById(req.user.community);
-        if (!community) {
-            return sendError(res, 404, "Community not found");
-        }
-
-        const sanitizedRules = req.body.rules ? req.body.rules.trim() : "";
-        community.bookingRules = sanitizedRules;
-        community.updatedAt = new Date();
-
-        await community.save();
-
-        return sendSuccess(res, "Booking rules updated successfully", { rules: sanitizedRules });
-    } catch (error) {
-        console.error("Error updating booking rules:", error);
-        return sendError(res, 500, "Internal server error", error);
-    }
-};
-
-export const getSpaces = async (req, res) => {
-    try {
-        const community = await Community.findById(req.user.community);
-        if (!community) {
-            return sendError(res, 404, "Community not found");
-        }
-
-        return sendSuccess(res, "Spaces fetched successfully", {
-            spaces: community.commonSpaces,
-            totalSpaces: community.commonSpaces.length,
-        });
-    } catch (error) {
-        console.error("Error fetching spaces:", error);
-        return sendError(res, 500, "Internal server error", error);
-    }
-};
 
 export const rotateCommunityCode = async (req, res) => {
     try {

@@ -1,4 +1,4 @@
-export * from './spaces.controller.js';
+
 export * from './userManagement.controller.js';
 export * from './profile.controller.js';
 export * from './community.controller.js';

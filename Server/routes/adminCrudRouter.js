@@ -1,6 +1,6 @@
 import express from "express";
-import auth from "../controllers/auth.js";
-import { authorizeRoles } from "../controllers/authorization.js";
+import auth from "../controllers/shared/auth.js";
+import { authorizeRoles } from "../controllers/shared/authorization.js";
 
 // Import CRUD helpers for all models from the central index
 import {

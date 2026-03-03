@@ -15,14 +15,14 @@ import Visitor from "../models/visitors.js";
 import Community from "../models/communities.js";
 import { getIO } from "../utils/socket.js";
 import Ad from "../models/Ad.js";
-import PaymentController from "../controllers/payments.js";
-// import { OTP } from "../controllers/OTP.js";
-// import { verify } from "../controllers/OTP.js";
+import PaymentController from "../controllers/shared/payments.js";
+// import { OTP } from "../controllers/shared/OTP.js";
+// import { verify } from "../controllers/shared/OTP.js";
 import {
   getCommonSpace,
   getIssueData,
   getPaymentData,
-} from "../controllers/Resident.js";
+} from "../controllers/Resident/legacy.controller.js";
 
 import * as ResidentController from "../controllers/Resident/index.js";
 // The imports are Profile : updateProfile, changePassword, getResidentProfile
@@ -210,352 +210,9 @@ residentRouter.get("/ad", async (req, res) => {
   }
 });
 
-residentRouter.get("/commonSpace", async (req, res) => {
-  try {
-    const bookings = await CommonSpaces.find({
-      bookedBy: req.user.id, // Fixed: use req.user.id instead of hardcoded
-    })
-      .populate("payment")
-      .sort({ createdAt: -1 });
-    const spaces = await Amenity.find({
-      community: req.user.community, // Fixed: use req.user.community instead of hardcoded
-    });
+import csbResidentRouter from "../pipelines/CSB/router/resident.js";
+residentRouter.use("/", csbResidentRouter);
 
-    return res.json({
-      success: true,
-      bookings: bookings,
-      spaces: spaces,
-    });
-  } catch (err) {
-    console.log(err);
-    return res
-      .status(500)
-      .json({ success: false, message: "Internal server error" });
-  }
-});
-
-residentRouter.post("/commonSpace/:id", async (req, res) => {
-  try {
-    const bookingId = req.params.id;
-
-    const commonspace = await CommonSpaces.findById(bookingId).populate(
-      "payment"
-    );
-    if (!commonspace) {
-      return res.status(404).json({ error: "Booking not found" });
-    }
-
-    if (commonspace.bookedBy.toString() !== req.user.id) {
-      return res.status(403).json({ error: "Unauthorized access" });
-    }
-
-    console.log("Commonspace Data:", commonspace);
-    res.status(200).json({ commonspace: commonspace });
-  } catch (error) {
-    console.error("Error fetching booking details:", error);
-    res.status(500).json({ error: "Server error" });
-  }
-});
-
-residentRouter.post("/commonSpace", async (req, res) => {
-  try {
-    const uid = req.user.id; // Fixed: use req.user.id instead of hardcoded
-    console.log(req.body);
-
-    const {
-      facility,
-      fid,
-      purpose,
-      Date: dateString,
-      from,
-      to,
-      Type,
-    } = req.body.newBooking;
-    const { bill, amount, paymentMethod } = req.body.data;
-
-    const Space = await Amenity.findById(fid);
-
-    if (!facility || !dateString) {
-      return res.json({
-        success: false,
-        message: "Facility, date, and time are required fields.",
-      });
-    }
-
-    // Use the new variable name here
-    const bookingDate = new Date(dateString);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    if (bookingDate < today) {
-      return res.json({
-        success: false,
-        message: "Cannot book for past dates.",
-      });
-    }
-
-    const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
-    if ((!timeRegex.test(from) || !timeRegex.test(to)) && Type === "Slot") {
-      console.log("invalid time format");
-
-      return res.json({ success: false, message: "Invalid time format." });
-    }
-
-    const [fromHour, fromMin] = from.split(":").map(Number);
-    const [toHour, toMin] = to.split(":").map(Number);
-    const fromMinutes = fromHour * 60 + fromMin;
-    const toMinutes = toHour * 60 + toMin;
-
-    if (toMinutes && fromMinutes && toMinutes <= fromMinutes) {
-      return res.json({
-        success: false,
-        message: "End time must be after start time.",
-      });
-    }
-
-    const b = await CommonSpaces.create({
-      name: facility,
-      description: purpose || "No purpose specified",
-      Date: new Date(dateString),
-      from,
-      to,
-      Type,
-      amount,
-      status: Type === "Slot" ? "Booked" : "Active",
-      availability: null,
-      bookedBy: uid,
-      community: new mongoose.Types.ObjectId(req.user.community), // Fixed: use req.user.community
-    });
-
-    let uniqueId = generateCustomID(b._id.toString(), "CS", null);
-    b.ID = uniqueId;
-    await b.save();
-
-    if (Type === "Slot") {
-      const bookingDateStr = new Date(dateString).toISOString().split("T")[0];
-      const requestTimeSlots = req.body.newBooking.timeSlots;
-
-      if (requestTimeSlots.length === 0) {
-        return res.json({
-          success: false,
-          message: "Selected time range is invalid.",
-        });
-      }
-
-      let existingBooking = Space.bookedSlots.find(
-        (b) => new Date(b.date).toISOString().split("T")[0] === bookingDateStr
-      );
-
-      if (existingBooking) {
-        const newSlots = requestTimeSlots.filter(
-          (slot) => !existingBooking.slots.includes(slot)
-        );
-        existingBooking.slots.push(...newSlots);
-      } else {
-        // Use the new variable name here
-        Space.bookedSlots.push({
-          date: new Date(dateString),
-          slots: requestTimeSlots,
-        });
-      }
-
-      await Space.save();
-    }
-
-    uniqueId = generateCustomID(b._id.toString(), "PY", null);
-
-    const payment = await Payment.create({
-      title: b._id,
-      sender: b.bookedBy._id,
-      receiver: new mongoose.Types.ObjectId(req.user.community), // Fixed: use req.user.community
-      amount: amount,
-      paymentDate: new Date(),
-      paymentMethod: paymentMethod,
-      status: "Completed",
-      remarks: null,
-      ID: uniqueId,
-      belongTo: "CommonSpaces",
-      community: new mongoose.Types.ObjectId(req.user.community), // Fixed: use req.user.community
-      belongToId: b._id,
-    });
-
-    b.paymentstatus = "Paid";
-    b.payment = payment._id;
-    await b.save();
-
-    const user = await Resident.findById(uid);
-    if (user) {
-      user.bookedCommonSpaces.push(b._id);
-      await user.save();
-    }
-
-    await b.populate("payment");
-
-    // Emit booking notification to community managers of this community
-    try {
-      const io = getIO();
-
-      const user = await CommunityManager.find({ assignedCommunity: req.user.community }).populate("notifications");
-
-      console.log("community manager : ", user);
-
-      let isN = [];
-
-      if (user[0].notifications.length > 0) {
-        isN = user?.notifications?.filter(
-          (n) => n.title !== "New Common Space Bookings"
-        );
-      }
-
-      const payload = new Notifications({
-        type: "CommonSpaceBooking",
-        title: "New Common Space Bookings",
-        message: "There are new common space bookings",
-        referenceId: b._id,
-        referenceType: "CommonSpaces",
-      });
-
-      await payload.save();
-
-      user[0].notifications = [...isN, payload];
-
-      await user[0].save();
-
-
-      if (io) {
-        const communityId = req.user.community;
-        const room = `community_${communityId}`;
-        io.to(room).emit("booking:new", payload);
-        console.log(`✅ Booking emission sent successfully`);
-      } else {
-        console.error("❌ Socket.IO instance not available");
-      }
-    } catch (emitErr) {
-      console.error("❌ Failed to emit booking:new:", emitErr);
-    }
-
-    return res.json({
-      success: true,
-      message: "Booking request submitted successfully!",
-      space: b,
-    });
-  } catch (error) {
-    console.error("Error creating booking:", error);
-    res.json({
-      success: false,
-      message: "Something went wrong. Please try again.",
-    });
-  }
-});
-
-residentRouter.put("/booking/cancel/:id", async (req, res) => {
-  try {
-    const bookingId = req.params.id;
-    const residentId = req.user.id; // Fixed: use req.user.id instead of hardcoded
-
-    const booking = await CommonSpaces.findOne({
-      _id: bookingId,
-      bookedBy: residentId,
-    });
-
-    if (!booking) {
-      return res
-        .status(404)
-        .json({ error: "Booking not found or unauthorized cancellation." });
-    }
-
-    const bookingDate = new Date(booking.Date);
-    const now = new Date();
-
-    if (bookingDate < now) {
-      return res
-        .status(400)
-        .json({ error: "Cannot cancel past or ongoing bookings." });
-    }
-
-    const diffHours = Math.abs((bookingDate - now) / (1000 * 60 * 60));
-    const amount = Number(booking?.amount || 0);
-    console.log("booking : ", booking);
-
-    if (isNaN(amount)) {
-      return res.status(400).json({ error: "Invalid booking amount." });
-    }
-
-    console.log(diffHours);
-
-    let refundAmount = booking?.amount;
-    if (diffHours >= 48) {
-      refundAmount = amount;
-      console.log("greater than 48", refundAmount);
-    } else if (diffHours >= 24) {
-      refundAmount = amount * 0.75;
-      console.log("greater than 24", refundAmount);
-    } else if (diffHours >= 4) {
-      refundAmount = amount * 0.25;
-      console.log("greater than 4", refundAmount);
-    } else {
-      console.log("greater than 0");
-      refundAmount = 0;
-    }
-
-    const refundId = generateCustomID(String(booking._id), "RF", null);
-    console.log("After block : ", refundAmount);
-
-    await CommonSpaces.findByIdAndUpdate(bookingId, {
-      refundId,
-      status: "Cancelled",
-      cancelledBy: residentId,
-      cancelledAt: new Date(),
-      cancellationReason: "Cancelled by resident",
-      refundAmount: Math.round(refundAmount),
-    });
-
-    await Resident.findByIdAndUpdate(residentId, {
-      $pull: { bookedCommonSpaces: bookingId },
-    });
-
-    return res.json({
-      success: true,
-      message: "Booking cancelled successfully",
-      refundAmount: Math.round(refundAmount),
-      refundId,
-    });
-  } catch (error) {
-    console.error("Error cancelling booking:", error);
-    return res.status(500).json({ error: "Internal Server Error" });
-  }
-});
-
-residentRouter.get("/api/facilities", async (req, res) => {
-  try {
-    const community = await Community.findById(req.user.community).select(
-      "commonSpaces"
-    ); // Fixed: use req.user.community
-    const facilities = community.commonSpaces || [];
-
-    console.log("Raw facilities from database:", facilities);
-
-    res.json({
-      success: true,
-      facilities: facilities,
-    });
-  } catch (error) {
-    console.error("Error fetching facilities:", error);
-    res.status(500).json({
-      success: false,
-      error: "Failed to fetch facilities data",
-    });
-  }
-});
-
-residentRouter.get("/api/bookings", async (req, res) => {
-  try {
-    const bookings = await CommonSpaces.find({ bookedBy: req.user.id });
-    return res.json({ success: true, bookings });
-  } catch (err) {
-    console.log(err);
-  }
-});
 
 
 
@@ -666,24 +323,8 @@ residentRouter.get("/", (req, res) => {
   res.redirect("dashboard");
 });
 /*---------------------------------------------------------------------------------------------------- */
-import {
-  confirmIssue,
-  rejectIssueResolution,
-  raiseIssue,
-  deleteIssue,
-  getResidentIssues,
-  getIssueDataById,
-  submitFeedback,
-} from "../controllers/issueController.js";
-import CommunityManager from "../models/cManager.js";
-
-residentRouter.post("/issue/confirmIssue/:id", confirmIssue);
-residentRouter.post("/issue/rejectIssueResolution/:id", rejectIssueResolution);
-residentRouter.post("/issue/raise", raiseIssue);
-residentRouter.delete("/issue/delete/:issueID", deleteIssue);
-residentRouter.get("/issue/data", getResidentIssues);
-residentRouter.get("/issue/data/:id", getIssueDataById);
-residentRouter.post("/issue/submitFeedback", submitFeedback);
+import issueResidentRouter from "../pipelines/issue/router/resident.js";
+residentRouter.use("/", issueResidentRouter);
 /*---------------------------------------------------------------------------------------------------- */
 // Payment routes - corrected version
 residentRouter.get("/payments", getPaymentData);
@@ -739,10 +380,8 @@ residentRouter.get("/payment/:paymentId", async (req, res) => {
 });
 
 //Preapproval routes
-residentRouter.get("/preApprovals", ResidentController.getPreApprovals);
-residentRouter.post("/preapproval", ResidentController.createPreApproval);
-residentRouter.delete("/preapproval/cancel/:id", ResidentController.cancelPreApproval);
-residentRouter.get("/preapproval/qr/:id", ResidentController.getQRcode);
+import preapprovalResidentRouter from "../pipelines/Preapproval/router/manager.js";
+residentRouter.use("/", preapprovalResidentRouter);
 
 
 // Profile Routes
