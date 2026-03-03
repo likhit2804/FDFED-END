@@ -1,4 +1,4 @@
-// middleware/subscriptionCheck.js
+﻿// middleware/subscriptionCheck.js
 import Community from '../models/communities.js';
 
 const checkSubscriptionStatus = async (req, res, next) => {

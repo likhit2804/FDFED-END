@@ -1,4 +1,4 @@
-import express from "express";
+﻿import express from "express";
 import {
     getResidentPayments,
     createResidentPayment,
@@ -28,8 +28,7 @@ paymentResidentRouter.get("/payment/:paymentId", getSinglePayment);
 import Community from "../../../models/communities.js";
 paymentResidentRouter.get("/payment/community", async (req, res) => {
     try {
-        const community = await Community.findById(req.user.community);
-        if (!community) return res.status(404).json({ message: "Community not found" });
+        const community = req.community;
         return res.status(200).json(community);
     } catch (err) {
         console.error("Community fetch error:", err);

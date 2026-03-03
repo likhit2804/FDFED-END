@@ -7,24 +7,15 @@ import { createCommunitySubscription } from "../../../crud/index.js";
 
 export const getCommunityDetails = async (req, res) => {
     try {
-        const managerId = req.user.id;
-        const manager = await CommunityManager.findById(managerId);
-
-        if (!manager) {
-            return sendError(res, 404, "Community manager not found");
-        }
-
-        const community = await Community.findById(
-            manager.assignedCommunity
-        ).select(
-            "name subscriptionPlan subscriptionStatus planStartDate planEndDate subscriptionHistory"
-        );
-
-        if (!community) {
-            return sendError(res, 404, "Community not found");
-        }
-
-        res.json(community);
+        const community = req.community;
+        res.json({
+            name: community.name,
+            subscriptionPlan: community.subscriptionPlan,
+            subscriptionStatus: community.subscriptionStatus,
+            planStartDate: community.planStartDate,
+            planEndDate: community.planEndDate,
+            subscriptionHistory: community.subscriptionHistory
+        });
     } catch (error) {
         console.error("Error fetching community details:", error);
         return sendError(res, 500, "Failed to fetch community details", error);
@@ -50,16 +41,7 @@ export const processSubscriptionPayment = async (req, res) => {
         }
 
         const managerId = req.user.id;
-        const manager = await CommunityManager.findById(managerId);
-
-        if (!manager) {
-            return sendError(res, 404, "Community manager not found");
-        }
-
-        const community = await Community.findById(communityId);
-        if (!community) {
-            return sendError(res, 404, "Community not found");
-        }
+        const community = req.community;
 
         // Fetch plan details from database
         const planDoc = await SubscriptionPlan.findOne({ 
@@ -172,20 +154,7 @@ export const processSubscriptionPayment = async (req, res) => {
 
 export const getSubscriptionHistory = async (req, res) => {
     try {
-        const managerId = req.user.id;
-        const manager = await CommunityManager.findById(managerId);
-
-        if (!manager) {
-            return sendError(res, 404, "Community manager not found");
-        }
-
-        const community = await Community.findById(
-            manager.assignedCommunity
-        ).select("subscriptionHistory");
-
-        if (!community) {
-            return sendError(res, 404, "Community not found");
-        }
+        const community = req.community;
 
         const sortedHistory = community.subscriptionHistory
             ? community.subscriptionHistory.sort(
@@ -206,22 +175,7 @@ export const getSubscriptionHistory = async (req, res) => {
 
 export const getSubscriptionStatus = async (req, res) => {
     try {
-        const managerId = req.user.id;
-        const manager = await CommunityManager.findById(managerId);
-
-        if (!manager) {
-            return sendError(res, 404, "Community manager not found");
-        }
-
-        const community = await Community.findById(
-            manager.assignedCommunity
-        ).select(
-            "_id name subscriptionPlan subscriptionStatus planStartDate planEndDate totalMembers"
-        );
-
-        if (!community) {
-            return sendError(res, 404, "Community not found");
-        }
+        const community = req.community;
 
         // Check if subscription is expired
         const now = new Date();
@@ -285,22 +239,7 @@ export const getSubscriptionStatus = async (req, res) => {
 
 export const getPaymentsData = async (req, res) => {
     try {
-        const managerId = req.user && req.user.id;
-        const manager = await CommunityManager.findById(managerId);
-
-        if (!manager) {
-            return sendError(res, 404, "Community manager not found");
-        }
-
-        const community = await Community.findById(manager.assignedCommunity)
-            .select(
-                "name subscriptionPlan subscriptionStatus planStartDate planEndDate subscriptionHistory"
-            )
-            .lean();
-
-        if (!community) {
-            return sendError(res, 404, "Community not found");
-        }
+        const community = req.community;
 
         const payments = await Payment.find({ community: community._id })
             .populate("community")
@@ -408,16 +347,7 @@ export const changePlan = async (req, res) => {
         }
 
         const managerId = req.user.id;
-        const manager = await CommunityManager.findById(managerId);
-
-        if (!manager) {
-            return sendError(res, 404, "Community manager not found");
-        }
-
-        const community = await Community.findById(manager.assignedCommunity);
-        if (!community) {
-            return sendError(res, 404, "Community not found");
-        }
+        const community = req.community;
 
         // Fetch plan details from database
         const newPlanDoc = await SubscriptionPlan.findOne({

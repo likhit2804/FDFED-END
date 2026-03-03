@@ -9,16 +9,7 @@ const generateRegCode = () => `UE-${crypto.randomBytes(4).toString('hex')}`;
 export const rotateCommunityCode = async (req, res) => {
     try {
         const managerId = req.user.id;
-        const manager = await CommunityManager.findById(managerId);
-
-        if (!manager || !manager.assignedCommunity) {
-            return sendError(res, 404, "Community manager not found");
-        }
-
-        const community = await Community.findById(manager.assignedCommunity);
-        if (!community) {
-            return sendError(res, 404, "Community not found");
-        }
+        const community = req.community;
 
         const newCode = await community.forceRotateCode();
 
@@ -34,17 +25,7 @@ export const rotateCommunityCode = async (req, res) => {
 
 export const getCommunityStructure = async (req, res) => {
     try {
-        const managerId = req.user.id;
-        const manager = await CommunityManager.findById(managerId);
-
-        if (!manager || !manager.assignedCommunity) {
-            return sendError(res, 404, "Community manager not found");
-        }
-
-        const community = await Community.findById(manager.assignedCommunity).select('blocks hasStructure name');
-        if (!community) {
-            return sendError(res, 404, "Community not found");
-        }
+        const community = req.community;
 
         // Transform blocks to frontend format (just the config, not the flats)
         const blocksConfig = (community.blocks || []).map(block => ({
@@ -146,14 +127,7 @@ export const setupCommunityStructure = async (req, res) => {
 // ---- Get Registration Codes (manager view / print) ----
 export const getRegistrationCodes = async (req, res) => {
     try {
-        const managerId = req.user.id;
-        const manager = await CommunityManager.findById(managerId);
-        if (!manager || !manager.assignedCommunity)
-            return sendError(res, 404, "Community not found");
-
-        const community = await Community.findById(manager.assignedCommunity)
-            .select('blocks name');
-        if (!community) return sendError(res, 404, "Community not found");
+        const community = req.community;
 
         const rows = [];
         for (const block of community.blocks || []) {
@@ -184,12 +158,7 @@ export const regenerateRegistrationCodes = async (req, res) => {
     try {
         const { flatNumber, flatNumbers } = req.body;
         const managerId = req.user.id;
-        const manager = await CommunityManager.findById(managerId);
-        if (!manager || !manager.assignedCommunity)
-            return sendError(res, 404, "Community not found");
-
-        const community = await Community.findById(manager.assignedCommunity);
-        if (!community) return sendError(res, 404, "Community not found");
+        const community = req.community;
 
         let regenerated = 0;
         let newCode = null;

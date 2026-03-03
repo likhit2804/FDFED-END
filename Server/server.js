@@ -283,12 +283,14 @@ app.use((req, res, next) => {
   next();
 });
 
+import { attachCommunity } from "./middleware/attachCommunity.js";
+
 // ROUTES
 app.use("/admin", auth, authorizeA, AdminRouter);
-app.use("/resident", auth, authorizeR, residentRouter);
-app.use("/security", auth, authorizeS, securityRouter);
-app.use("/worker", auth, authorizeW, workerRouter);
-app.use("/manager", auth, authorizeC, managerRouter);
+app.use("/resident", auth, authorizeR, attachCommunity, residentRouter);
+app.use("/security", auth, authorizeS, attachCommunity, securityRouter);
+app.use("/worker", auth, authorizeW, attachCommunity, workerRouter);
+app.use("/manager", auth, authorizeC, attachCommunity, managerRouter);
 app.use("/leaves", leaveRouter);
 
 app.use("/interest", interestRouter);

@@ -1,4 +1,4 @@
-import CommonSpaces from "../../../models/commonSpaces.js";
+﻿import CommonSpaces from "../../../models/commonSpaces.js";
 import Amenity from "../../../models/Amenities.js";
 import Community from "../../../models/communities.js";
 import mongoose from "mongoose";

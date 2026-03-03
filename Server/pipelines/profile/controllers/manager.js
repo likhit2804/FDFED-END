@@ -23,16 +23,8 @@ export const getManagerProfile = async (req, res) => {
 export const getProfileWithCommunity = async (req, res) => {
     try {
         const managerId = req.user.id;
-        const manager = await CommunityManager.findById(managerId);
-
-        if (!manager) {
-            return sendError(res, 404, "Manager not found");
-        }
-
-        const community = await Community.findById(manager.assignedCommunity);
-        if (!community) {
-            return sendError(res, 404, "Community not found");
-        }
+        const manager = await CommunityManager.findById(managerId); // Profile still needs the manager object for name/email
+        const community = req.community;
 
         await community.rotateCodeIfExpired();
         const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
