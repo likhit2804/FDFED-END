@@ -1,6 +1,6 @@
 ﻿import express from "express";
-import multer from "multer";
-import cloudinary from "../../../configs/cloudinary.js";
+import { memoryUpload } from "../../../configs/multer.js";
+import { uploadToCloudinary } from "../../../utils/cloudinaryUpload.js";
 import Community from "../../../models/communities.js";
 import CommunityManager from "../../../models/cManager.js";
 import {
@@ -13,38 +13,13 @@ import {
 
 const communityManagerRouter = express.Router();
 
-// Cloudinary upload helper for community images
-const uploadCommunityImageToCloudinary = (buffer) => {
-    return new Promise((resolve, reject) => {
-        const uploadStream = cloudinary.uploader.upload_stream(
-            {
-                folder: "communities",
-                resource_type: "image",
-                transformation: [
-                    { width: 1600, crop: "limit" },
-                    { quality: "auto:good" },
-                ],
-            },
-            (error, result) => {
-                if (error) return reject(error);
-                resolve(result);
-            }
-        );
-        uploadStream.end(buffer);
-    });
-};
-
-const upload2 = multer({
-    storage: multer.memoryStorage(),
-    limits: { fileSize: 5 * 1024 * 1024, files: 10 },
-});
 
 communityManagerRouter.get("/new-community", (req, res) => {
     res.render("communityManager/new-community");
 });
 
 // Create new community with photo upload
-communityManagerRouter.post("/communities", upload2.array("photos", 10), async (req, res) => {
+communityManagerRouter.post("/communities", memoryUpload.array("photos", 10), async (req, res) => {
     try {
         const managerId = req.session?.managerId || req.user?.id;
         const manager = await CommunityManager.findById(managerId);
@@ -57,8 +32,13 @@ communityManagerRouter.post("/communities", upload2.array("photos", 10), async (
         if (req.files && Array.isArray(req.files)) {
             for (const file of req.files) {
                 try {
-                    const result = await uploadCommunityImageToCloudinary(file.buffer);
-                    photoUrls.push({ url: result.secure_url, publicId: result.public_id });
+                    const result = await uploadToCloudinary(file.buffer, "communities", {
+                        transformation: [
+                            { width: 1600, crop: "limit" },
+                            { quality: "auto:good" },
+                        ],
+                    });
+                    photoUrls.push({ url: result.url, publicId: result.publicId });
                 } catch (err) {
                     console.error("Error uploading community image:", err);
                     return res.status(500).json({ success: false, message: "Failed to upload community images." });

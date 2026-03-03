@@ -10,6 +10,8 @@ import bcrypt from 'bcryptjs';
 import validator from 'validator';
 import mongoose from 'mongoose';
 import cloudinary from '../../configs/cloudinary.js';
+import { uploadToCloudinary as uploadBufferToCloudinary } from '../../utils/cloudinaryUpload.js';
+import { generateTransactionId } from '../../utils/idGenerator.js';
 import fs from 'fs';
 import dotenv from 'dotenv';
 import { sendApplicationApprovedEmail, sendApplicationRejectedEmail, sendAccountActivatedEmail, sendPaymentLinkEmail } from '../../utils/emailService.js';
@@ -17,35 +19,22 @@ dotenv.config();
 
 // Lightweight router for direct submit with Cloudinary uploads
 import express from 'express';
-import multer from 'multer';
-const upload = multer({ storage: multer.memoryStorage() });
+import { memoryUpload } from '../../configs/multer.js';
 
-
-// Helper: Upload buffer to Cloudinary (uses existing cloudinary config)
-const uploadToCloudinary = (buffer) => {
-  return new Promise((resolve, reject) => {
-    cloudinary.uploader
-      .upload_stream({ folder: 'communities' }, (error, result) => {
-        if (error) reject(error);
-        else resolve(result);
-      })
-      .end(buffer);
-  });
-};
 
 // Named export router to avoid breaking existing controller exports
 export const interestUploadRouter = (() => {
   const router = express.Router();
 
   // POST /submit: Accept photos and upload to Cloudinary, return URLs
-  router.post('/submit', upload.array('photos', 5), async (req, res) => {
+  router.post('/submit', memoryUpload.array('photos', 5), async (req, res) => {
     try {
       const photoUrls = [];
 
       if (req.files && Array.isArray(req.files)) {
         for (const file of req.files) {
-          const result = await uploadToCloudinary(file.buffer);
-          photoUrls.push(result.secure_url);
+          const result = await uploadBufferToCloudinary(file.buffer, 'communities');
+          photoUrls.push(result.url);
         }
       }
 
@@ -89,34 +78,16 @@ export const uploadPhoto = async (req, res) => {
       size: req.file.size
     });
 
-    // Upload to Cloudinary using buffer
-    const result = await new Promise((resolve, reject) => {
-      const uploadStream = cloudinary.uploader.upload_stream(
-        {
-          folder: 'interest-applications',
-          transformation: [
-            { width: 1024, crop: 'limit' },
-            { quality: 'auto:good' }
-          ],
-          resource_type: 'image'
-        },
-        (error, result) => {
-          if (error) {
-            console.error('Cloudinary upload error:', error);
-            reject(error);
-          } else {
-            console.log('Cloudinary upload success:', result.secure_url);
-            resolve(result);
-          }
-        }
-      );
-
-      uploadStream.end(req.file.buffer);
+    const result = await uploadBufferToCloudinary(req.file.buffer, 'interest-applications', {
+      transformation: [
+        { width: 1024, crop: 'limit' },
+        { quality: 'auto:good' }
+      ],
     });
 
     res.json({
       success: true,
-      url: result.secure_url
+      url: result.url
     });
 
   } catch (error) {
@@ -197,29 +168,13 @@ export const submitInterestForm = async (req, res) => {
     if (req.files && req.files.length > 0) {
       for (const file of req.files) {
         try {
-          // Upload to Cloudinary using buffer from memory storage
-          const result = await new Promise((resolve, reject) => {
-            const uploadStream = cloudinary.uploader.upload_stream(
-              {
-                folder: 'interest-applications',
-                transformation: [
-                  { width: 1024, crop: 'limit' },
-                  { quality: 'auto:good' }
-                ],
-                resource_type: 'image'
-              },
-              (error, result) => {
-                if (error) reject(error);
-                else resolve(result);
-              }
-            );
-
-            // Write file buffer to upload stream
-            uploadStream.end(file.buffer);
+          const result = await uploadBufferToCloudinary(file.buffer, 'interest-applications', {
+            transformation: [
+              { width: 1024, crop: 'limit' },
+              { quality: 'auto:good' }
+            ],
           });
-
-          // Store Cloudinary URL
-          photoUrls.push(result.secure_url);
+          photoUrls.push(result.url);
 
         } catch (uploadError) {
           console.error('Cloudinary upload error:', uploadError);
@@ -551,8 +506,8 @@ export const resendPaymentLink = async (req, res) => {
   } catch (error) {
     console.error('[Resend Payment Link Error]:', error.message);
     console.error('Stack:', error.stack);
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       message: 'Error performing resend action',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
@@ -700,7 +655,7 @@ export const completeOnboardingPayment = async (req, res) => {
     await CommunitySubscription.create(
       [{
         communityId: newCommunity[0]._id,
-        transactionId: paymentDetails?.transactionId || `TXN-${Date.now()}`,
+        transactionId: paymentDetails?.transactionId || generateTransactionId('TXN'),
         planName: planDoc.name,
         planType: planDoc.planKey,
         amount: planDoc.price,

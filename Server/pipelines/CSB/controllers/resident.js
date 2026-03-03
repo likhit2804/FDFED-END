@@ -5,22 +5,12 @@ import Resident from "../../../models/resident.js";
 import Payment from "../../../models/payment.js";
 import { createPaymentRecord } from "../../payment/services/paymentService.js";
 import { pushNotification, emitToRoom } from "../../notifications/services/notificationService.js";
+import { generateCustomID, generateRefundId } from "../../../utils/idGenerator.js";
 
 import CommunityManager from "../../../models/cManager.js";
 import mongoose from "mongoose";
 import { getIO } from "../../../utils/socket.js";
 
-// --------------------------------------------------
-// Shared helper
-// --------------------------------------------------
-function generateCustomID(userEmail, facility, countOrRandom = null) {
-    const code = userEmail.toUpperCase().trim();
-    const facilityCode = facility.toUpperCase().slice(0, 2);
-    const suffix = countOrRandom
-        ? String(countOrRandom).padStart(4, "0")
-        : String(Math.floor(1000 + Math.random() * 9000));
-    return `${code}-${facilityCode}-${suffix}`;
-}
 
 // --------------------------------------------------
 // RESIDENT: Get Common Spaces (bookings + spaces list)
@@ -270,7 +260,7 @@ export const cancelBooking = async (req, res) => {
             refundAmount = 0;
         }
 
-        const refundId = generateCustomID(String(booking._id), "RF", null);
+        const refundId = generateRefundId(String(booking._id));
         console.log("After block : ", refundAmount);
 
         await CommonSpaces.findByIdAndUpdate(bookingId, {

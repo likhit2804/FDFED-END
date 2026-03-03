@@ -1,6 +1,7 @@
 import express from "express";
 import mongoose from "mongoose";
 import visitor from "../../../models/visitors.js";
+import { generateVisitorID } from "../../../utils/idGenerator.js";
 import {
     getVisitorManagementPage,
     getVisitorsApi,
@@ -8,12 +9,6 @@ import {
 } from "../controllers/manager.js";
 
 const visitorManagementSecurityRouter = express.Router();
-
-function generateVisitorID(base, suffix = null) {
-    const id = base.toUpperCase().slice(0, 2);
-    const s = suffix ? String(suffix).padStart(4, "0") : String(Math.floor(1000 + Math.random() * 9000));
-    return `UE-${id}PA${s}`;
-}
 
 // POST /security/addVisitor (moved from securityRouter)
 visitorManagementSecurityRouter.post("/addVisitor", async (req, res) => {

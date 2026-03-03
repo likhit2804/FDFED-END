@@ -1,6 +1,6 @@
 import express from "express";
 import path from 'path';
-import multer from 'multer';
+import { memoryUpload } from '../configs/multer.js';
 import { requirePermission } from '../middleware/rbac.js';
 import { validateCommunity, validateObjectId, validatePasswordChange } from '../middleware/validation.js';
 
@@ -31,11 +31,6 @@ import { getSettings, updateSettings } from "../controllers/admin/settingsContro
 
 const AdminRouter = express.Router();
 
-// Multer config for admin image uploads (Cloudinary handled in controller)
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 },
-});
 
 
 // Admin dashboard & overview routes (delegated to controller)
@@ -50,7 +45,7 @@ AdminRouter.get('/api/admin/security/failed-logins', requirePermission('read:ana
 
 // Profile routes
 AdminRouter.get('/api/profile', getProfile);
-AdminRouter.post('/api/profile/update', upload.single('image'), updateProfile);
+AdminRouter.post('/api/profile/update', memoryUpload.single('image'), updateProfile);
 AdminRouter.post('/api/profile/change-password', validatePasswordChange, changePassword);
 
 // System Settings

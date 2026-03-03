@@ -1,6 +1,6 @@
 ﻿import CommunityManager from "../../../models/cManager.js";
 import bcrypt from "bcrypt";
-import cloudinary from "../../../configs/cloudinary.js";
+import { uploadToCloudinary } from "../../../utils/cloudinaryUpload.js";
 import Community from "../../../models/communities.js";
 import { sendError, sendSuccess } from "../../shared/helpers.js";
 
@@ -68,8 +68,20 @@ export const updateManagerProfile = async (req, res) => {
         manager.location = location || manager.location;
         manager.address = address || manager.address;
 
-        if (req.file) {
-            manager.image = req.file.path;
+        if (req.file && req.file.buffer) {
+            try {
+                const result = await uploadToCloudinary(req.file.buffer, "profiles/manager", {
+                    transformation: [
+                        { width: 512, height: 512, crop: "limit" },
+                        { quality: "auto:good" },
+                    ],
+                });
+                manager.image = result.url;
+                manager.imagePublicId = result.publicId;
+            } catch (err) {
+                console.error("Manager profile image upload error:", err);
+                return sendError(res, 500, "Failed to upload profile image", err);
+            }
         }
 
         await manager.save();

@@ -1,5 +1,5 @@
 import express from "express";
-import multer from "multer";
+import { memoryUpload } from "../../../configs/multer.js";
 import { requirePermission } from "../../../middleware/rbac.js";
 import {
     getAllCommunities,
@@ -28,7 +28,6 @@ import {
 } from "../controllers/manager.js";
 
 const communityRegistrationRouter = express.Router();
-const upload = multer({ storage: multer.memoryStorage() });
 
 // --------------------------------------------------
 // Interest Form / Admin Approval
@@ -42,7 +41,7 @@ communityRegistrationRouter.post("/interests/:id/resend-link", resendPaymentLink
 // Public: onboarding flow
 communityRegistrationRouter.get("/onboarding/:token", getOnboardingDetails);
 communityRegistrationRouter.post("/onboarding/complete", completeOnboardingPayment);
-communityRegistrationRouter.post("/photo-upload", upload.single("photo"), uploadPhoto);
+communityRegistrationRouter.post("/photo-upload", memoryUpload.single("photo"), uploadPhoto);
 communityRegistrationRouter.use("/interest", interestUploadRouter);
 
 // --------------------------------------------------

@@ -4,6 +4,7 @@ import Payment from "../../../models/payment.js";
 import SubscriptionPlan from "../../../models/subscriptionPlan.js";
 import { sendError, sendSuccess } from "../../shared/helpers.js";
 import { createCommunitySubscription } from "../../../crud/index.js";
+import { generateTransactionId } from "../../../utils/idGenerator.js";
 
 export const getCommunityDetails = async (req, res) => {
     try {
@@ -44,9 +45,9 @@ export const processSubscriptionPayment = async (req, res) => {
         const community = req.community;
 
         // Fetch plan details from database
-        const planDoc = await SubscriptionPlan.findOne({ 
+        const planDoc = await SubscriptionPlan.findOne({
             planKey: subscriptionPlan,
-            isActive: true 
+            isActive: true
         });
 
         if (!planDoc) {
@@ -81,7 +82,7 @@ export const processSubscriptionPayment = async (req, res) => {
         const subscriptionPayment = {
             transactionId:
                 transactionId ||
-                `TXN_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                generateTransactionId("TXN"),
             planName: planDoc.name,
             planType: planDoc.planKey,
             amount: amount,
@@ -360,7 +361,7 @@ export const changePlan = async (req, res) => {
         }
 
         const currentPlan = community.subscriptionPlan || null;
-        
+
         let currentPlanDoc = null;
         if (currentPlan) {
             currentPlanDoc = await SubscriptionPlan.findOne({
@@ -393,9 +394,7 @@ export const changePlan = async (req, res) => {
             const priceDifference = newPrice - currentPrice;
 
             if (paymentMethod && priceDifference > 0) {
-                const transactionId = `PLAN_CHANGE_${Date.now()}_${Math.random()
-                    .toString(36)
-                    .substr(2, 9)}`;
+                const transactionId = generateTransactionId("PLAN_CHANGE");
 
                 // Calculate end date based on plan duration
                 const endDate = new Date(now);
@@ -486,9 +485,7 @@ export const changePlan = async (req, res) => {
                     community.subscriptionHistory = [];
                 }
                 community.subscriptionHistory.push({
-                    transactionId: `PLAN_CHANGE_${Date.now()}_${Math.random()
-                        .toString(36)
-                        .substr(2, 9)}`,
+                    transactionId: generateTransactionId("PLAN_CHANGE"),
                     planName: `${newPlanDoc.name} (Downgrade)`,
                     planType: newPlan,
                     amount: 0,

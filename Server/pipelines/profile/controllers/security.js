@@ -1,6 +1,6 @@
 import Security from "../../../models/security.js";
 import Ad from "../../../models/Ad.js";
-import cloudinary from "../../../configs/cloudinary.js";
+import { uploadToCloudinary } from "../../../utils/cloudinaryUpload.js";
 import bcrypt from "bcrypt";
 
 /**
@@ -47,26 +47,14 @@ export const updateProfile = async (req, res) => {
 
         if (req.file?.buffer) {
             try {
-                const result = await new Promise((resolve, reject) => {
-                    const stream = cloudinary.uploader.upload_stream(
-                        {
-                            folder: "profiles/security",
-                            resource_type: "image",
-                            transformation: [
-                                { width: 512, height: 512, crop: "limit" },
-                                { quality: "auto:good" },
-                            ],
-                        },
-                        (err, result) => {
-                            if (err) reject(err);
-                            else resolve(result);
-                        }
-                    );
-                    stream.end(req.file.buffer);
+                const result = await uploadToCloudinary(req.file.buffer, "profiles/security", {
+                    transformation: [
+                        { width: 512, height: 512, crop: "limit" },
+                        { quality: "auto:good" },
+                    ],
                 });
-
-                security.image = result.secure_url;
-                security.imagePublicId = result.public_id;
+                security.image = result.url;
+                security.imagePublicId = result.publicId;
             } catch (err) {
                 console.error("Profile image upload error:", err);
                 return res.status(500).json({ success: false, message: "Failed to upload profile image" });

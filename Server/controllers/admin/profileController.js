@@ -1,4 +1,4 @@
-import cloudinary from '../../configs/cloudinary.js';
+import { uploadToCloudinary } from '../../utils/cloudinaryUpload.js';
 import bcrypt from 'bcrypt';
 import { listAdmins, updateAdminById } from '../../crud/index.js';
 
@@ -39,27 +39,14 @@ export const updateProfile = async (req, res) => {
 
     if (req.file && req.file.buffer) {
       try {
-        const result = await new Promise((resolve, reject) => {
-          const uploadStream = cloudinary.uploader.upload_stream(
-            {
-              folder: 'profiles/admin',
-              resource_type: 'image',
-              transformation: [
-                { width: 512, height: 512, crop: 'limit' },
-                { quality: 'auto:good' },
-              ],
-            },
-            (error, result) => {
-              if (error) return reject(error);
-              resolve(result);
-            }
-          );
-
-          uploadStream.end(req.file.buffer);
+        const result = await uploadToCloudinary(req.file.buffer, 'profiles/admin', {
+          transformation: [
+            { width: 512, height: 512, crop: 'limit' },
+            { quality: 'auto:good' },
+          ],
         });
-
-        updates.image = result.secure_url;
-        updates.imagePublicId = result.public_id;
+        updates.image = result.url;
+        updates.imagePublicId = result.publicId;
       } catch (uploadError) {
         console.error('Admin profile image upload error:', uploadError);
         return res.status(500).json({

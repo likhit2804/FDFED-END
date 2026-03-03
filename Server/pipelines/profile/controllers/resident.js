@@ -1,7 +1,6 @@
 import Resident from "../../../models/resident.js";
 import bcrypt from "bcrypt";
-import cloudinary from "../../../configs/cloudinary.js";
-
+import { uploadToCloudinary } from "../../../utils/cloudinaryUpload.js";
 
 export const updateProfile = async (req, res) => {
     const resident = await Resident.findById(req.user.id);
@@ -12,13 +11,16 @@ export const updateProfile = async (req, res) => {
     const { firstName, lastName, contact, email } = req.body;
 
     if (req.file?.buffer) {
-        const result = await cloudinary.uploader.upload_stream({
-            folder: "profiles/resident",
-            transformation: [{ width: 512, height: 512, crop: "limit" }],
-        });
-
-        resident.image = result.secure_url;
-        resident.imagePublicId = result.public_id;
+        try {
+            const result = await uploadToCloudinary(req.file.buffer, "profiles/resident", {
+                transformation: [{ width: 512, height: 512, crop: "limit" }],
+            });
+            resident.image = result.url;
+            resident.imagePublicId = result.publicId;
+        } catch (err) {
+            console.error("Resident profile image upload error:", err);
+            return res.status(500).json({ success: false, message: "Failed to upload profile image." });
+        }
     }
 
     resident.residentFirstname = firstName;
