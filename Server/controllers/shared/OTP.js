@@ -1,7 +1,7 @@
-import { sendOTPEmail, sendTemporaryPasswordEmail } from "../utils/emailService.js";
-import Resident from "../models/resident.js";
-import Worker from "../models/workers.js";
-import Security from "../models/security.js";
+﻿import { sendOTPEmail, sendTemporaryPasswordEmail } from "../../utils/emailService.js";
+import Resident from "../../models/resident.js";
+import Worker from "../../models/workers.js";
+import Security from "../../models/security.js";
 
 import dotenv from "dotenv";
 dotenv.config();

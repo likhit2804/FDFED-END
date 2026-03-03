@@ -1,25 +1,12 @@
 import Issue from "../../../models/issues.js";
 import Worker from "../../../models/workers.js";
 import CommunityManager from "../../../models/cManager.js";
-import Notifications from "../../../models/Notifications.js";
+import { pushNotification } from "../../notifications/services/notificationService.js";
 import Ad from "../../../models/Ad.js";
 import { getIO } from "../../../utils/socket.js";
 import { flagMisassigned } from "../../../utils/issueAutomation.js";
 
-// --------------------------------------------------
-// Shared helpers (duplicated here for isolation)
-// --------------------------------------------------
-const pushNotification = async (userModel, userId, notificationData) => {
-    if (!userId) return null;
-    const notification = new Notifications(notificationData);
-    await notification.save();
-    const user = await userModel.findById(userId);
-    if (user) {
-        user.notifications.push(notification._id);
-        await user.save();
-    }
-    return notification;
-};
+// pushNotification is now imported from notifications pipeline
 
 const getCommunityManagerForCommunity = async (communityId) => {
     if (!communityId) return null;

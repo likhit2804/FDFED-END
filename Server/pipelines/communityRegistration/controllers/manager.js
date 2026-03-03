@@ -1,4 +1,4 @@
-// Community Registration Pipeline — Admin (Manager) Controller
+﻿// Community Registration Pipeline — Admin (Manager) Controller
 // Sources: controllers/admin/communityController.js + controllers/subscriptionPlanController.js
 
 export {
@@ -12,10 +12,10 @@ export {
     getManagersList,
     bulkUpdateStatus,
     restoreCommunity,
-} from "../../controllers/admin/communityController.js";
+} from "../../../controllers/admin/communityController.js";
 
 // -- Subscription Plans (inlined — source file removed) --
-import SubscriptionPlan from "../../models/subscriptionPlan.js";
+import SubscriptionPlan from "../../../models/subscriptionPlan.js";
 
 export const getAllPlans = async (req, res) => {
     try {
@@ -96,4 +96,4 @@ export {
     getOnboardingDetails,
     completeOnboardingPayment,
     interestUploadRouter,
-} from "../../controllers/admin/interestForm.js";
+} from "../../../controllers/admin/interestForm.js";

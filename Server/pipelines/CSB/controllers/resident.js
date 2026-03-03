@@ -3,7 +3,9 @@ import Amenity from "../../../models/Amenities.js";
 import Community from "../../../models/communities.js";
 import Resident from "../../../models/resident.js";
 import Payment from "../../../models/payment.js";
-import Notifications from "../../../models/Notifications.js";
+import { createPaymentRecord } from "../../payment/services/paymentService.js";
+import { pushNotification, emitToRoom } from "../../notifications/services/notificationService.js";
+
 import CommunityManager from "../../../models/cManager.js";
 import mongoose from "mongoose";
 import { getIO } from "../../../utils/socket.js";
@@ -158,20 +160,19 @@ export const createBooking = async (req, res) => {
 
         uniqueId = generateCustomID(b._id.toString(), "PY", null);
 
-        const payment = await Payment.create({
-            title: b._id,
-            sender: b.bookedBy._id,
-            receiver: new mongoose.Types.ObjectId(req.user.community),
+        const payment = await createPaymentRecord({
+            title: b._id.toString(),
+            senderId: b.bookedBy,
+            receiverId: new mongoose.Types.ObjectId(req.user.community),
             amount,
-            paymentDate: new Date(),
+            communityId: req.user.community,
             paymentMethod,
             status: "Completed",
-            remarks: null,
-            ID: uniqueId,
             belongTo: "CommonSpaces",
-            community: new mongoose.Types.ObjectId(req.user.community),
             belongToId: b._id,
         });
+        payment.ID = uniqueId;
+        await payment.save();
 
         b.paymentstatus = "Paid";
         b.payment = payment._id;
@@ -187,39 +188,21 @@ export const createBooking = async (req, res) => {
 
         // Emit booking notification to community managers
         try {
-            const io = getIO();
             const managers = await CommunityManager.find({
                 assignedCommunity: req.user.community,
-            }).populate("notifications");
-
-            console.log("community manager : ", managers);
-
-            let isN = [];
-            if (managers[0].notifications.length > 0) {
-                isN = managers?.notifications?.filter(
-                    (n) => n.title !== "New Common Space Bookings"
-                );
-            }
-
-            const payload = new Notifications({
-                type: "CommonSpaceBooking",
-                title: "New Common Space Bookings",
-                message: "There are new common space bookings",
-                referenceId: b._id,
-                referenceType: "CommonSpaces",
             });
 
-            await payload.save();
-            managers[0].notifications = [...isN, payload];
-            await managers[0].save();
+            if (managers.length > 0) {
+                const notif = await pushNotification(CommunityManager, managers[0]._id, {
+                    type: "CommonSpaceBooking",
+                    title: "New Common Space Bookings",
+                    message: "There are new common space bookings",
+                    referenceId: b._id,
+                    referenceType: "CommonSpaces",
+                });
 
-            if (io) {
-                const communityId = req.user.community;
-                const room = `community_${communityId}`;
-                io.to(room).emit("booking:new", payload);
+                emitToRoom(`community_${req.user.community}`, "booking:new", notif);
                 console.log(`✅ Booking emission sent successfully`);
-            } else {
-                console.error("❌ Socket.IO instance not available");
             }
         } catch (emitErr) {
             console.error("❌ Failed to emit booking:new:", emitErr);

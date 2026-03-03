@@ -2,8 +2,9 @@ import Issue from "../../../models/issues.js";
 import Worker from "../../../models/workers.js";
 import Resident from "../../../models/resident.js";
 import CommunityManager from "../../../models/cManager.js";
-import Notifications from "../../../models/Notifications.js";
 import Payment from "../../../models/payment.js";
+import { createPaymentRecord } from "../../payment/services/paymentService.js";
+import { pushNotification } from "../../notifications/services/notificationService.js";
 import { getIO } from "../../../utils/socket.js";
 import {
     autoAssignResidentIssue,
@@ -12,20 +13,7 @@ import {
     checkDuplicateCommunityIssue,
 } from "../../../utils/issueAutomation.js";
 
-// --------------------------------------------------
-// Shared helpers
-// --------------------------------------------------
-const pushNotification = async (userModel, userId, notificationData) => {
-    if (!userId) return null;
-    const notification = new Notifications(notificationData);
-    await notification.save();
-    const user = await userModel.findById(userId);
-    if (user) {
-        user.notifications.push(notification._id);
-        await user.save();
-    }
-    return notification;
-};
+// pushNotification is now imported from notifications pipeline
 
 const getCommunityManagerForCommunity = async (communityId) => {
     if (!communityId) return null;
@@ -407,17 +395,16 @@ export const submitFeedback = async (req, res) => {
             });
         }
 
-        const payment = new Payment({
+        const payment = await createPaymentRecord({
             title: issue.title,
-            sender: issue.resident,
-            receiver: communityManagerId,
+            senderId: issue.resident,
+            receiverId: communityManagerId,
             amount: issue.estimatedCost || 0,
+            communityId: issue.community?._id || issue.community,
             status: "Pending",
-            community: issue.community?._id,
             belongTo: "Issue",
             belongToId: issue._id,
         });
-        await payment.save();
 
         issue.payment = payment._id;
         await issue.save();

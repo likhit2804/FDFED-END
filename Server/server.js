@@ -56,7 +56,7 @@ import leaveRouter from "./routes/leaveRouter.js";
 
 
 import { interestUploadRouter } from "./controllers/admin/interestForm.js";
-import { initializeDefaultPlans } from "./controllers/subscriptionPlanController.js";
+import { initializeDefaultPlans } from "./pipelines/communityRegistration/controllers/manager.js";
 
 import Resident from "./models/resident.js";
 import Community from "./models/communities.js";

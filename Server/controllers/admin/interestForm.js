@@ -1,18 +1,18 @@
-import Interest from '../models/interestForm.js';
-import CommunityManager from '../models/cManager.js';
-import admin from '../models/admin.js';
-import Community from '../models/communities.js';
-import SubscriptionPlan from '../models/subscriptionPlan.js';
-import CommunitySubscription from '../models/communitySubscription.js';
+﻿import Interest from '../../models/interestForm.js';
+import CommunityManager from '../../models/cManager.js';
+import admin from '../../models/admin.js';
+import Community from '../../models/communities.js';
+import SubscriptionPlan from '../../models/subscriptionPlan.js';
+import CommunitySubscription from '../../models/communitySubscription.js';
 import nodemailer from 'nodemailer';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import validator from 'validator';
 import mongoose from 'mongoose';
-import cloudinary from '../configs/cloudinary.js';
+import cloudinary from '../../configs/cloudinary.js';
 import fs from 'fs';
 import dotenv from 'dotenv';
-import { sendApplicationApprovedEmail, sendApplicationRejectedEmail, sendAccountActivatedEmail, sendPaymentLinkEmail } from '../utils/emailService.js';
+import { sendApplicationApprovedEmail, sendApplicationRejectedEmail, sendAccountActivatedEmail, sendPaymentLinkEmail } from '../../utils/emailService.js';
 dotenv.config();
 
 // Lightweight router for direct submit with Cloudinary uploads

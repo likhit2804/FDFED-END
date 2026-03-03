@@ -1,7 +1,7 @@
-import Resident from '../models/resident.js';
-import Security from '../models/security.js';
-import communityManager from '../models/cManager.js';
-import Worker from '../models/workers.js';
+﻿import Resident from '../../models/resident.js';
+import Security from '../../models/security.js';
+import communityManager from '../../models/cManager.js';
+import Worker from '../../models/workers.js';
 
 async function registerUser(model, email, password, req , res) {
     console.log(email);

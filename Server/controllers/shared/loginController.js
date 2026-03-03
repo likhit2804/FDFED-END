@@ -1,10 +1,10 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import CommunityManager from '../models/cManager.js';
-import Resident from '../models/resident.js';
-import Security from '../models/security.js';
-import Worker from '../models/workers.js';
-import Admin from '../models/admin.js';
+import CommunityManager from '../../models/cManager.js';
+import Resident from '../../models/resident.js';
+import Security from '../../models/security.js';
+import Worker from '../../models/workers.js';
+import Admin from '../../models/admin.js';
 
 async function authenticateUser(model, email, password, res) {
     const user = await model.findOne({ email });
@@ -23,11 +23,11 @@ async function authenticateUser(model, email, password, res) {
         userType
     };
 
-    if(userType === 'Resident' || userType === 'Security' || userType === 'Worker'){
+    if (userType === 'Resident' || userType === 'Security' || userType === 'Worker') {
         userPayload.community = user.community;
-    }else if(userType === 'CommunityManager'){
+    } else if (userType === 'CommunityManager') {
         userPayload.community = user.assignedCommunity;
-    }else{
+    } else {
         userPayload.community = null;
     }
 
@@ -56,7 +56,7 @@ async function verifyCredentials(model, email, password) {
     if (!user) return null;
 
     const newOne = await bcrypt.hash(password, 10);
-    console.log(newOne,user.password);
+    console.log(newOne, user.password);
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return null;
@@ -69,11 +69,11 @@ async function verifyCredentials(model, email, password) {
         userType
     };
 
-    if(userType === 'Resident' || userType === 'Security' || userType === 'Worker'){
+    if (userType === 'Resident' || userType === 'Security' || userType === 'Worker') {
         userPayload.community = user.community;
-    }else if(userType === 'CommunityManager'){
+    } else if (userType === 'CommunityManager') {
         userPayload.community = user.assignedCommunity;
-    }else{
+    } else {
         userPayload.community = null;
     }
 
