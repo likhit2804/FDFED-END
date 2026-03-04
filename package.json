@@ -1,15 +1,16 @@
 {
-  "name": "fdfed-end",
+  "name": "urban-ease",
   "private": true,
   "scripts": {
-    "start:server": "npm --prefix Server run dev",
-    "start:client": "npm --prefix Client run dev",
+    "install-all": "npm install && npm install --prefix server && npm install --prefix frontend",
+    "start:server": "npm run dev --prefix Server",
+    "start:client": "npm run dev --prefix Client ",
     "dev": "concurrently \"npm run start:server\" \"npm run start:client\""
   },
   "dependencies": {
     "express-flash": "^0.0.2"
   },
   "devDependencies": {
-    "concurrently": "^8.2.0"
+    "concurrently": "^8.2.2"
   }
 }
