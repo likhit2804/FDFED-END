@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
-import "../../assets/css/Resident/PaymentPopUp.css";
+
 import { ConfirmBooking, optimisticAddBooking } from "../../Slices/CommonSpaceSlice";
 import { useDispatch } from "react-redux";
 import { toast } from "react-toastify";
+import { Modal, Input, Select } from "../shared";
+
 
 const PAYMENT_POLICY_CONTENT = `
 1. All payments are processed through a secure third-party gateway.
@@ -85,143 +87,73 @@ const PaymentPopUp = ({ setonClose, paymentDetails, newBooking, clearBookingForm
   };
 
   return (
-    <div id="paymentFormPopup" className="popup">
-      <div className="popup-content">
-        <span className="close-btn" style={{ zIndex: "20" }} onClick={closepopUp}>
-          &times;
-        </span>
-        <h3 className="form-title">Make Payment</h3>
-
-        <form id="paymentForm" onSubmit={handleSubmit(onSubmit)}>
-          {next ? (
-            <div className="px-3 py-2">
-              <div className="fw-4">
-                <i onClick={() => setNext(false)} className="bi bi-arrow-left" style={{ cursor: "pointer" }}></i>
-              </div>
-
-              <div className="policy-box px-4 mt-2">
-
-                <div className="policy-content">
-                  <h3 className="m-0">Payment Policy</h3>
-                  <pre className="policy-text">{PAYMENT_POLICY_CONTENT}</pre>
-
-                  <h3 className="m-0">Cancellation Policy</h3>
-                  <pre className="policy-text">{CANCELLATION_POLICY_CONTENT}</pre>
+    <Modal
+      isOpen={true}
+      onClose={closepopUp}
+      title="Make Payment"
+      size="md"
+      footer={
+        <button type="button" onClick={handleSubmit(onSubmit)} className="btn btn-success" disabled={isSubmitting}>
+          <i className="bi bi-credit-card me-2"></i>{isSubmitting ? "Processing..." : "Pay Now"}
+        </button>
+      }
+    >
+      {next ? (
+        <div className="px-3 py-2">
+          <div className="fw-4"><i onClick={() => setNext(false)} className="bi bi-arrow-left" style={{ cursor: "pointer" }}></i></div>
+          <div className="policy-box px-4 mt-2">
+            <div className="policy-content">
+              <h3 className="m-0">Payment Policy</h3>
+              <pre className="policy-text">{PAYMENT_POLICY_CONTENT}</pre>
+              <h3 className="m-0">Cancellation Policy</h3>
+              <pre className="policy-text">{CANCELLATION_POLICY_CONTENT}</pre>
+            </div>
+          </div>
+          <div className="form-group-checkbox mt-3">
+            <input className="m-0" type="checkbox" id="termsAccepted" {...register("agree", { required: true })} />
+            <label htmlFor="termsAccepted">I have read and agree to the Payment &amp; Cancellation Policy.</label>
+            {errors.agree && <p className="error">You must agree before making payment.</p>}
+          </div>
+        </div>
+      ) : (
+        <>
+          <Input label="Bill" id="bill" readOnly {...register("bill")} />
+          <Select
+            label="Payment Method"
+            id="paymentMethod"
+            placeholder="Select payment method"
+            options={[
+              { label: 'Credit Card (+2%)', value: 'Credit' },
+              { label: 'Debit Card', value: 'Debit' },
+              { label: 'UPI', value: 'UPI' },
+              { label: 'Net Banking', value: 'Netbanking' },
+            ]}
+            error={errors.paymentMethod ? 'Select a payment method' : ''}
+            {...register("paymentMethod", { required: true })}
+          />
+          {(paymentMethod === "Credit" || paymentMethod === "Debit") && (
+            <div id="cardFields">
+              <Input label="Card Number" id="cardNumber" placeholder="XXXX XXXX XXXX XXXX" maxLength={19} error={errors.cardNumber ? 'Enter a valid card number' : ''} {...register("cardNumber", { required: true, pattern: /^[0-9\s]{16,19}$/ })} />
+              <div className="row">
+                <div className="col">
+                  <Input label="Expiry Date" id="expiryDate" placeholder="MM/YY" maxLength={5} error={errors.expiryDate ? 'Enter valid expiry (MM/YY)' : ''} {...register("expiryDate", { required: true, pattern: /^(0[1-9]|1[0-2])\/\d{2}$/ })} />
                 </div>
-              </div>
-
-              <div className="form-group-checkbox mt-3">
-                <input
-                  className="m-0"
-                  type="checkbox"
-                  id="termsAccepted"
-                  {...register("agree", { required: true })}
-                />
-                <label htmlFor="termsAccepted">
-                  I have read and agree to the Payment & Cancellation Policy.
-                </label>
-                {errors.agree && (
-                  <p className="error">You must agree before making payment.</p>
-                )}
+                <div className="col">
+                  <Input type="password" label="CVV" id="cvv" placeholder="XXX" maxLength={3} error={errors.cvv ? 'Enter valid CVV' : ''} {...register("cvv", { required: true, pattern: /^[0-9]{3}$/ })} />
+                </div>
               </div>
             </div>
-          ) : (
-            <>
-              {/* BILL INFO */}
-              <div className="form-group">
-                <label htmlFor="bill">Bill:</label>
-                <input type="text" id="bill" {...register("bill")} readOnly />
-              </div>
-
-              {/* PAYMENT METHOD */}
-              <div className="form-group">
-                <label htmlFor="paymentMethod">Payment Method:</label>
-                <select id="paymentMethod" {...register("paymentMethod", { required: true })}>
-                  <option value="">Select payment method</option>
-                  <option value="Credit">Credit Card (+2%)</option>
-                  <option value="Debit">Debit Card</option>
-                  <option value="UPI">UPI</option>
-                  <option value="Netbanking">Net Banking</option>
-                </select>
-                {errors.paymentMethod && <p className="error">Select a payment method</p>}
-              </div>
-
-              {/* CARD DETAILS */}
-              {(paymentMethod === "Credit" || paymentMethod === "Debit") && (
-                <div id="cardFields">
-                  <div className="form-group">
-                    <label htmlFor="cardNumber">Card Number:</label>
-                    <input
-                      type="text"
-                      id="cardNumber"
-                      placeholder="XXXX XXXX XXXX XXXX"
-                      maxLength="19"
-                      {...register("cardNumber", {
-                        required: true,
-                        pattern: /^[0-9\s]{16,19}$/,
-                      })}
-                    />
-                    {errors.cardNumber && <p className="error">Enter a valid card number</p>}
-                  </div>
-
-                  <div className="row">
-                    <div className="col form-group">
-                      <label htmlFor="expiryDate">Expiry Date:</label>
-                      <input
-                        type="text"
-                        id="expiryDate"
-                        placeholder="MM/YY"
-                        maxLength="5"
-                        {...register("expiryDate", {
-                          required: true,
-                          pattern: /^(0[1-9]|1[0-2])\/\d{2}$/,
-                        })}
-                      />
-                      {errors.expiryDate && <p className="error">Enter valid expiry (MM/YY)</p>}
-                    </div>
-                    <div className="col form-group">
-                      <label htmlFor="cvv">CVV:</label>
-                      <input
-                        type="password"
-                        id="cvv"
-                        placeholder="XXX"
-                        maxLength="3"
-                        {...register("cvv", { required: true, pattern: /^[0-9]{3}$/ })}
-                      />
-                      {errors.cvv && <p className="error">Enter valid CVV</p>}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* AMOUNT */}
-              <div className="form-group">
-                <label htmlFor="amount">Amount:</label>
-                <input type="text" id="amount" {...register("amount")} readOnly />
-              </div>
-
-              <div className="form-group-checkbox mb-2">
-                <input
-                  className="m-0"
-                  type="checkbox"
-                  id="termsAccepted"
-                  onClick={() => setNext(true)}
-                />
-                <label htmlFor="termsAccepted">
-                  I have read and agree to the Payment & Cancellation Policy.
-                </label>
-              </div>
-            </>
           )}
-
-          <button type="submit" className="btn btn-success" disabled={isSubmitting}>
-            <i className="bi bi-credit-card me-2"></i>{" "}
-            {isSubmitting ? "Processing..." : "Pay Now"}
-          </button>
-        </form>
-      </div>
-    </div>
+          <Input label="Amount" id="amount" readOnly {...register("amount")} />
+          <div className="form-group-checkbox mb-2">
+            <input className="m-0" type="checkbox" id="termsAccepted" onClick={() => setNext(true)} />
+            <label htmlFor="termsAccepted">I have read and agree to the Payment &amp; Cancellation Policy.</label>
+          </div>
+        </>
+      )}
+    </Modal>
   );
 };
 
 export default PaymentPopUp;
+

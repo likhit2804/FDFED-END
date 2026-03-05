@@ -105,7 +105,7 @@ const OnboardingPayment = () => {
             <div className="SignInCon">
                 <div className="signin-container" style={{ height: 'auto', padding: '40px', justifyContent: 'center' }}>
                     <div className="text-center">
-                        <div className="mb-3 text-success" style={{ fontSize: "50px" }}>✅</div>
+                        <div className="mb-3 text-success" style={{ fontSize: "50px" }}>&#10003;</div>
                         <h2 className="mb-3">Onboarding Complete!</h2>
                         <p className="subtitle mb-4">
                             Your account is active. We've sent credentials to <strong>{details?.email}</strong>.

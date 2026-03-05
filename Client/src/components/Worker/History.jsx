@@ -1,7 +1,10 @@
-import React, {useEffect, useState} from 'react';
-import {motion, AnimatePresence} from 'framer-motion';
+import React, { useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { SearchBar, Dropdown, EmptyState } from '../shared';
+import { ClipboardList } from 'lucide-react';
 
-const TaskCard = ({task, onClick, isSelected}) => {
+
+const TaskCard = ({ task, onClick, isSelected }) => {
     const statusClasses = {
         Resolved: 'border-success-subtle',
         'Review Pending': 'border-warning-subtle'
@@ -17,28 +20,28 @@ const TaskCard = ({task, onClick, isSelected}) => {
         return (
             <div className="d-flex px-1 flex-column align-items-center"
                 style={
-                    {backgroundColor: '#d9d9d971'}
-            }>
+                    { backgroundColor: '#d9d9d971' }
+                }>
                 <div> {
                     [...Array(fullStars)].map((_, i) => (
                         <span key={
-                                `full-${i}`
-                            }
+                            `full-${i}`
+                        }
                             className="text-warning fs-5">&#9733;</span>
                     ))
                 }
                     {
-                    [...Array(emptyStars)].map((_, i) => (
-                        <span key={
+                        [...Array(emptyStars)].map((_, i) => (
+                            <span key={
                                 `empty-${i}`
                             }
-                            className="text-secondary fs-5 opacity-50">&#9733;</span>
-                    ))
-                } </div>
+                                className="text-secondary fs-5 opacity-50">&#9733;</span>
+                        ))
+                    } </div>
                 <span className="ms-2 fw-semibold text-dark fs-6">
                     {
-                    rating.toFixed(1)
-                }/10
+                        rating.toFixed(1)
+                    }/10
                 </span>
             </div>
         );
@@ -50,11 +53,9 @@ const TaskCard = ({task, onClick, isSelected}) => {
                 `task-card
         card border-4 border-start-0 border-end-0 border-top-0 rounded-3 shadow-sm 
         cursor-pointer transition
-        ${
-                    statusClasses[task.status]
+        ${statusClasses[task.status]
                 }
-        ${
-                    isSelected ? 'border-primary shadow-lg scale-up' : 'hover-shadow'
+        ${isSelected ? 'border-primary shadow-lg scale-up' : 'hover-shadow'
                 }
       `
             }
@@ -63,46 +64,46 @@ const TaskCard = ({task, onClick, isSelected}) => {
                     minWidth: '250px',
                     transition: 'all 0.3s ease-in-out'
                 }
-        }>
+            }>
             <div className="card-body p-3 d-flex">
                 <div className="d-flex flex-column align-items-center me-3 text-center">
                     <StarRating rating={
-                        task ?. rating
-                    }/>
+                        task?.rating
+                    } />
                 </div>
 
                 <div>
                     <h3 className="fs-6 fw-bold mb-1 text-dark">
                         {
-                        task.title
-                    }</h3>
+                            task.title
+                        }</h3>
                     <p className="text-muted small mb-0">
                         {
-                        task.resident ?. name || 'Resident'
-                    } </p>
+                            task.resident?.name || 'Resident'
+                        } </p>
                     <p className="text-muted small mb-0">
                         Status: {
-                        task.status
-                    } </p>
+                            task.status
+                        } </p>
                 </div>
             </div>
         </div>
     );
 };
 
-const TaskDetails = ({task, onClose}) => {
-    if (!task) 
+const TaskDetails = ({ task, onClose }) => {
+    if (!task)
         return null;
-    
+
 
 
     return (
         <motion.div initial={
-                {
-                    x: '100%',
-                    opacity: 0
-                }
+            {
+                x: '100%',
+                opacity: 0
             }
+        }
             animate={
                 {
                     x: 0,
@@ -124,8 +125,8 @@ const TaskDetails = ({task, onClose}) => {
             }
             className="p-4 bg-white rounded-3 shadow-lg h-100 overflow-auto"
             style={
-                {minWidth: '300px'}
-        }>
+                { minWidth: '300px' }
+            }>
             <div className="d-flex justify-content-between align-items-start mb-4">
                 <h2 className="fs-4 fw-bold text-dark">TASK Details: {
                     task.title
@@ -140,34 +141,33 @@ const TaskDetails = ({task, onClose}) => {
                     <span className="fw-semibold">Resident:</span>
                     <span className="fw-medium text-dark">
                         {
-                        task.resident ?. name || 'N/A'
-                    } </span>
+                            task.resident?.name || 'N/A'
+                        } </span>
                 </div>
 
                 <div className="d-flex justify-content-between align-items-center border-bottom pb-2">
                     <span className="fw-semibold">Resolved At:</span>
                     <span className="fw-medium text-dark">
                         {
-                        task.resolvedAt ? new Date(task.resolvedAt).toLocaleString() : 'N/A'
-                    } </span>
+                            task.resolvedAt ? new Date(task.resolvedAt).toLocaleString() : 'N/A'
+                        } </span>
                 </div>
 
                 <div className="d-flex justify-content-between align-items-center border-bottom pb-2">
                     <span className="fw-semibold">Status:</span>
                     <span className="fw-medium text-dark">
                         {
-                        task.status
-                    }</span>
+                            task.status
+                        }</span>
                 </div>
 
                 <div className="d-flex justify-content-between align-items-center border-bottom pb-2">
                     <span className="fw-semibold">Rating:</span>
                     <span className="fs-5 fw-bold text-danger">
                         {
-                        task.rating ? `${
-                            task.rating
-                        }/5` : 'N/A'
-                    } </span>
+                            task.rating ? `${task.rating
+                                }/5` : 'N/A'
+                        } </span>
                 </div>
             </div>
 
@@ -175,11 +175,11 @@ const TaskDetails = ({task, onClose}) => {
                 <h3 className="fs-5 fw-bold text-dark mb-3">Client Notes</h3>
                 <div className="bg-light p-3 rounded border border-light-subtle"
                     style={
-                        {minHeight: '100px'}
-                }>
+                        { minHeight: '100px' }
+                    }>
                     {
-                    task.feedback || '*No feedback provided yet*'
-                } </div>
+                        task.feedback || '*No feedback provided yet*'
+                    } </div>
             </div>
         </motion.div>
     );
@@ -225,14 +225,14 @@ export const History = () => {
     const normalizedSearch = search.trim().toLowerCase();
 
     const filteredIssues = issues.filter((issue) => {
-        if (issue.status !== 'Resolved') 
+        if (issue.status !== 'Resolved')
             return false;
-        
 
 
-        if (! normalizedSearch) 
+
+        if (!normalizedSearch)
             return true;
-        
+
 
 
         const titleMatch = issue.title && issue.title.toLowerCase().includes(normalizedSearch);
@@ -242,7 +242,7 @@ export const History = () => {
         return titleMatch || residentNameMatch || ratingMatch;
     });
 
-    const resolvedIssues = [... filteredIssues].sort((a, b) => { // Parse dates if present; fallback to createdAt
+    const resolvedIssues = [...filteredIssues].sort((a, b) => { // Parse dates if present; fallback to createdAt
         const dateA = new Date(a.resolvedAt || a.createdAt || 0);
         const dateB = new Date(b.resolvedAt || b.createdAt || 0);
         const ratingA = typeof a.rating === 'number' ? a.rating : -Infinity;
@@ -271,93 +271,82 @@ export const History = () => {
                 {
                     width: '100%'
                 }
-        }>
+            }>
             <div className="row w-100 h-100 flex-nowrap">
                 <div className={
-                        `${leftColClasses} d-flex flex-column transition`
-                    }
+                    `${leftColClasses} d-flex flex-column transition`
+                }
                     style={
-                        {transition: 'all 0.5s ease-in-out'}
-                }>
-                    <div className="w-100 d-flex align-items-center mb-4 search-filter-bar  ">
-                        <div className="d-flex align-items-center search-wrapper border">
-                            <input type="text" placeholder="Search here" className="form-control m-0 search-input"
-                                value={search}
-                                onChange={
-                                    (e) => setSearch(e.target.value)
-                                }/>
-                            <button className="btn search-btn d-flex align-items-center justify-content-center">
-                                <i className="bi bi-search"></i>
-                            </button>
+                        { transition: 'all 0.5s ease-in-out' }
+                    }>
+                    <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 16, flexWrap: 'wrap' }}>
+                        <div style={{ flex: 1, minWidth: 200 }}>
+                            <SearchBar placeholder="Search by title, resident or rating..." value={search} onChange={setSearch} />
                         </div>
-
-                        <select className="form-select form-select-sm filter-select m-0"
-                            value={sortBy}
-                            onChange={
-                                (e) => setSortBy(e.target.value)
-                        }>
-                            <option value="date_desc">Newest first</option>
-                            <option value="date_asc">Oldest first</option>
-                            <option value="rating_desc">Rating: high to low</option>
-                            <option value="rating_asc">Rating: low to high</option>
-                        </select>
+                        <Dropdown
+                            options={[
+                                { label: 'Newest first', value: 'date_desc' },
+                                { label: 'Oldest first', value: 'date_asc' },
+                                { label: 'Rating: high to low', value: 'rating_desc' },
+                                { label: 'Rating: low to high', value: 'rating_asc' },
+                            ]}
+                            selected={sortBy}
+                            onChange={setSortBy}
+                            width="180px"
+                        />
                     </div>
+
 
                     <div className={
-                            `row ${taskGridCols} g-3 overflow-auto pe-2 hide-scrollbar flex-grow-1`
-                        }
+                        `row ${taskGridCols} g-3 overflow-auto pe-2 hide-scrollbar flex-grow-1`
+                    }
                         style={
-                            {maxHeight: 'calc(100vh - 150px)'}
-                    }>
+                            { maxHeight: 'calc(100vh - 150px)' }
+                        }>
                         {
-                        resolvedIssues.length === 0 ? (
-                            <p></p>
-                        ) : (resolvedIssues.map((task) => (
-                            <motion.div key={
+                            resolvedIssues.length === 0 ? (
+                                <p></p>
+                            ) : (resolvedIssues.map((task) => (
+                                <motion.div key={
                                     task._id
                                 }
-                                className="col"
-                                initial={
-                                    {
-                                        opacity: 0,
-                                        y: 40
+                                    className="col"
+                                    initial={
+                                        {
+                                            opacity: 0,
+                                            y: 40
+                                        }
                                     }
-                                }
-                                animate={
-                                    {
-                                        opacity: 1,
-                                        y: 0
+                                    animate={
+                                        {
+                                            opacity: 1,
+                                            y: 0
+                                        }
                                     }
-                                }
-                                transition={
-                                    {duration: 0.8}
-                            }>
-                                <TaskCard task={task}
-                                    onClick={
-                                        () => handleCardClick(task)
-                                    }
-                                    isSelected={
-                                        selectedTask && selectedTask._id === task._id
-                                    }/>
-                            </motion.div>
-                        )))
-                    } </div>
+                                    transition={
+                                        { duration: 0.8 }
+                                    }>
+                                    <TaskCard task={task}
+                                        onClick={
+                                            () => handleCardClick(task)
+                                        }
+                                        isSelected={
+                                            selectedTask && selectedTask._id === task._id
+                                        } />
+                                </motion.div>
+                            )))
+                        } </div>
 
-                    <div className="col-12 d-flex flex-column justify-content-center align-items-center"
-                        style={
-                            {minHeight: '400px'}
-                    }>
-                        <div className="text-center">
-                            <i className="bi bi-inbox fs-1 text-muted mb-3"></i>
-                            <h4 className="text-muted mb-2">No Issues to Show</h4>
-                            <p className="text-muted small">
-                                {
-                                issues.length === 0 ? "You haven't resolved any issues yet." : "No resolved issues match your search criteria."
-                            } </p>
-                        </div>
-                    </div>
+                    {resolvedIssues.length === 0 && (
+                        <EmptyState
+                            icon={<ClipboardList size={48} />}
+                            title="No Issues to Show"
+                            sub={issues.length === 0 ? "You haven't resolved any issues yet." : "No resolved issues match your search criteria."}
+                        />
+                    )}
 
-                   
+
+
                 </div>
 
                 <AnimatePresence> {
@@ -370,89 +359,15 @@ export const History = () => {
                                 {
                                     minWidth: selectedTask ? '300px' : '0'
                                 }
-                        }>
+                            }>
                             <TaskDetails task={selectedTask}
-                                onClose={handleCloseDetails}/>
+                                onClose={handleCloseDetails} />
                         </motion.div>
                     )
                 } </AnimatePresence>
             </div>
 
-            <style jsx="true">
-                {`
-        .task-card {
-          height: 140px;
-          display: flex;
-          align-items: stretch;
-        }
-        .task-card .card-body {
-          display: flex;
-        }
-        .search-filter-bar {
-          gap: 8px;
-        }
-        .search-wrapper {
-          width: 85%;
-          background: #fff;
-          border-radius: 999px;
-          box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-          overflow: hidden;
-        }
-        .search-input {
-          border: none;
-          padding: 0.75rem 1.25rem;
-          font-size: 0.9rem;
-        }
-        .search-input:focus {
-          box-shadow: none;
-        }
-        .search-btn {
-          background-color: #ff5b2e;
-          color: #fff;
-          border-radius: 0 999px 999px 0;
-          padding: 0.6rem 1.2rem;
-          border: none;
-        }
-        .search-btn i {
-          font-size: 1.1rem;
-        }
-        .filter-select {
-          width: 15%;
-          border-radius: 8px;
-          padding: 0.4rem 1rem;
-          font-size: 0.85rem;
-          box-shadow: 0 4px 10px rgba(0,0,0,0.04);
-          border: 1px solid #e0e0e0;
-        }
-        .transition {
-          transition: width 0.5s ease-in-out, margin 0.5s ease-in-out;
-        }
-        .scale-up {
-          transform: scale(1.02);
-          transition: transform 0.3s ease-in-out;
-        }
-        .hover-shadow:hover {
-          box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important;
-        }
-        .h-100 {
-          height: 100% !important;
-        }
-        .hide-scrollbar {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-        .hide-scrollbar::-webkit-scrollbar {
-          display: none;
-        }
-        body::-webkit-scrollbar,
-        html::-webkit-scrollbar {
-          display: none;
-        }
-        body, html {
-          -ms-overflow-style: none; 
-          scrollbar-width: none; 
-        }
-      `}</style>
         </div>
     );
 };
+

@@ -6,62 +6,23 @@ import {
     BarChart3
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import "../../assets/css/Manager/Payments.css";
-import { Loader } from '../Loader.jsx'
+
+import { Loader } from '../Loader.jsx';
+import { StatCard, SearchBar, Dropdown, StatusBadge, EmptyState, Select } from '../shared';
+
 
 /* -------------------------------
    Payments Overview Cards
 -------------------------------- */
-const PaymentsOverview = ({ stats }) => {
-    const cards = [
-        {
-            icon: <DollarSign size={22} className="text-success" />,
-            title: "Total Transactions",
-            value: stats?.totalTransactions ?? "-",
-            color: "text-success"
-        },
-        {
-            icon: <Clock size={22} className="text-warning" />,
-            title: "Pending Payments",
-            value: stats?.pendingAmount ? `₹${stats.pendingAmount}` : "-",
-            color: "text-warning"
-        },
-        {
-            icon: <AlertCircle size={22} className="text-danger" />,
-            title: "Overdue Payments",
-            value: stats?.overdueAmount ? `₹${stats.overdueAmount}` : "-",
-            color: "text-danger"
-        },
-        {
-            icon: <BarChart3 size={22} className="text-primary" />,
-            title: "Total Amount Paid",
-            value: stats?.paidAmount ? `₹${stats.paidAmount}` : "-",
-            color: "text-primary"
-        }
-    ];
+const PaymentsOverview = ({ stats }) => (
+    <div className="ue-stat-grid" style={{ marginBottom: 4 }}>
+        <StatCard label="Total Transactions" value={stats?.totalTransactions ?? "-"} icon={<DollarSign size={22} />} iconColor="#16a34a" iconBg="#dcfce7" />
+        <StatCard label="Pending Payments" value={stats?.pendingAmount ? `\u20B9${stats.pendingAmount}` : "-"} icon={<Clock size={22} />} iconColor="#d97706" iconBg="#fef3c7" />
+        <StatCard label="Overdue Payments" value={stats?.overdueAmount ? `\u20B9${stats.overdueAmount}` : "-"} icon={<AlertCircle size={22} />} iconColor="#dc2626" iconBg="#fee2e2" />
+        <StatCard label="Total Amount Paid" value={stats?.paidAmount ? `\u20B9${stats.paidAmount}` : "-"} icon={<BarChart3 size={22} />} iconColor="#2563eb" iconBg="#dbeafe" />
+    </div>
+);
 
-    return (
-        <div className="py-4">
-            <div className="row g-4">
-                {cards.map((card, i) => (
-                    <motion.div
-                        key={i}
-                        className="col-md-6 col-lg-3"
-                        initial={{ opacity: 0, y: 25 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: i * 0.1 }}
-                    >
-                        <div className="payment-card p-3 bg-white rounded-4 shadow-sm">
-                            <div className="icon-box" style={{ width: 'fit-content' }}>{card.icon}</div>
-                            <h6 className="mt-2 text-secondary">{card.title}</h6>
-                            <h4 className={`fw-semibold ${card.color}`}>{card.value}</h4>
-                        </div>
-                    </motion.div>
-                ))}
-            </div>
-        </div>
-    );
-};
 
 /* -------------------------------
    Receipt Popup
@@ -78,59 +39,26 @@ const formatDate = (iso) => {
 
 const PaymentsDetailsPopUp = ({ show, close, details }) => {
     if (!details) return null;
-
-    const receiver = details.receiver || details.reciever || details.to || "-";
-    const sender = details.sender || details.from || "-";
     const txnId = details.ID || details.transactionId || details._id || "-";
     const amount = details.amount ?? details.amt ?? "-";
     const penalty = details.penalty || {};
 
     return (
-        <AnimatePresence>
-            {show && (
-                <motion.div
-                    className="popup"
-                    onClick={close}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                >
-                    <motion.div
-                        className="popup-content bg-white rounded-4 p-4 shadow"
-                        onClick={(e) => e.stopPropagation()}
-                        initial={{ scale: 0.85 }}
-                        animate={{ scale: 1 }}
-                        exit={{ scale: 0.85 }}
-                    >
-                        <div className="d-flex justify-content-between">
-                            <h5 className="fw-semibold">Payment Receipt</h5>
-                            <button className="btn btn-sm btn-outline-secondary" onClick={close}>
-                                ✕
-                            </button>
-                        </div>
-
-                        <hr />
-
-                        <p><strong>Title:</strong> {details.title || "-"}</p>
-                        <p><strong>Payment ID:</strong> {txnId}</p>
-                        <p><strong>Amount:</strong> {amount !== "-" ? `₹${amount}` : "-"}</p>
-                        <p><strong>Payment Date:</strong> {formatDate(details.paymentDate)}</p>
-                        <p><strong>Deadline:</strong> {formatDate(details.paymentDeadline)}</p>
-                        <p><strong>Payment Method:</strong> {details.paymentMethod || "-"}</p>
-                        <p><strong>Status:</strong> {details.status || "-"}</p>
-                        <p><strong>Penalty:</strong> {penalty.p ?? 0} {penalty.changedOn ? `(changed: ${formatDate(penalty.changedOn)})` : ""}</p>
-                        <p><strong>Payment Type:</strong> {details.paymentType || details.type || "-"}</p>
-                        <p><strong>Remarks:</strong> {details.remarks || "-"}</p>
-
-                        <div className="text-end">
-                            <button className="btn btn-dark mt-2" onClick={close}>Close</button>
-                        </div>
-                    </motion.div>
-                </motion.div>
-            )}
-        </AnimatePresence>
+        <Modal isOpen={show} onClose={close} title="Payment Receipt" size="sm">
+            <p><strong>Title:</strong> {details.title || "-"}</p>
+            <p><strong>Payment ID:</strong> {txnId}</p>
+            <p><strong>Amount:</strong> {amount !== "-" ? `₹${amount}` : "-"}</p>
+            <p><strong>Payment Date:</strong> {formatDate(details.paymentDate)}</p>
+            <p><strong>Deadline:</strong> {formatDate(details.paymentDeadline)}</p>
+            <p><strong>Payment Method:</strong> {details.paymentMethod || "-"}</p>
+            <p><strong>Status:</strong> {details.status || "-"}</p>
+            <p><strong>Penalty:</strong> {penalty.p ?? 0} {penalty.changedOn ? `(changed: ${formatDate(penalty.changedOn)})` : ""}</p>
+            <p><strong>Payment Type:</strong> {details.paymentType || details.type || "-"}</p>
+            <p><strong>Remarks:</strong> {details.remarks || "-"}</p>
+        </Modal>
     );
 };
+
 
 /* -------------------------------
    Payment Cards List
@@ -292,9 +220,8 @@ const PaymentsHistory = ({ onStats, filters = {} }) => {
                                         <h6 className="fw-semibold">{p.title || p.paymentType || "Payment"}</h6>
                                         <small className="text-muted">{p.paymentMethod || "Online"}</small>
                                     </div>
-                                    <span className={`badge ${p.status && p.status.toLowerCase() === 'completed' ? 'bg-success' : p.status && p.status.toLowerCase() === 'pending' ? 'bg-warning' : 'bg-secondary'}`}>
-                                        {p.status || "Unknown"}
-                                    </span>
+                                    <StatusBadge status={p.status || 'Unknown'} />
+
                                 </div>
 
                                 <hr />
@@ -335,49 +262,34 @@ const PaymentsHistory = ({ onStats, filters = {} }) => {
                 details={selected}
             />
 
-            <AnimatePresence>
-                {showPayModal && selected && (
-                    <motion.div
-                        className="popup"
-                        onClick={closePayModal}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                    >
-                        <motion.div
-                            className="popup-content bg-white rounded-4 p-4 shadow"
-                            onClick={(e) => e.stopPropagation()}
-                            initial={{ scale: 0.9 }}
-                            animate={{ scale: 1 }}
-                            exit={{ scale: 0.9 }}
-                        >
-                            <div className="d-flex justify-content-between align-items-center">
-                                <h5 className="fw-semibold">Complete Payment</h5>
-                                <button className="btn btn-sm btn-outline-secondary" onClick={closePayModal}>✕</button>
-                            </div>
-                            <hr />
-                            <p className="mb-2"><strong>Title:</strong> {selected.title || "Payment"}</p>
-                            <p className="mb-2"><strong>Amount:</strong> ₹{selected.amount || 0}</p>
-                            <div className="mb-3">
-                                <label className="form-label">Payment Method</label>
-                                <select className="form-select" value={payMethod} onChange={(e) => setPayMethod(e.target.value)}>
-                                    <option value="UPI">UPI</option>
-                                    <option value="Debit">Debit Card</option>
-                                    <option value="Credit">Credit Card</option>
-                                    <option value="Netbanking">Net Banking</option>
-                                    <option value="Cash">Cash</option>
-                                </select>
-                            </div>
-                            <div className="d-flex gap-2">
-                                <button className="btn btn-secondary w-100" onClick={closePayModal} disabled={paying}>Cancel</button>
-                                <button className="btn btn-success w-100" onClick={handlePayNow} disabled={paying}>
-                                    {paying ? "Processing..." : "Pay Now"}
-                                </button>
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+            <Modal
+                isOpen={showPayModal && !!selected}
+                onClose={closePayModal}
+                title="Complete Payment"
+                size="sm"
+                footer={
+                    <>
+                        <button className="btn btn-secondary w-50" onClick={closePayModal} disabled={paying}>Cancel</button>
+                        <button className="btn btn-success w-50" onClick={handlePayNow} disabled={paying}>{paying ? "Processing..." : "Pay Now"}</button>
+                    </>
+                }
+            >
+                <p className="mb-2"><strong>Title:</strong> {selected?.title || "Payment"}</p>
+                <p className="mb-2"><strong>Amount:</strong> ₹{selected?.amount || 0}</p>
+                <Select
+                    label="Payment Method"
+                    value={payMethod}
+                    onChange={(e) => setPayMethod(e.target.value)}
+                    options={[
+                        { label: 'UPI', value: 'UPI' },
+                        { label: 'Debit Card', value: 'Debit' },
+                        { label: 'Credit Card', value: 'Credit' },
+                        { label: 'Net Banking', value: 'Netbanking' },
+                        { label: 'Cash', value: 'Cash' },
+                    ]}
+                />
+            </Modal>
+
         </div>
     );
 };
@@ -395,33 +307,32 @@ export const ResidentPayments = () => {
         <div>
             <PaymentsOverview stats={stats} />
 
-            {/* Filters: search + dropdowns below overview */}
-            <div className="py-3">
-                <div className="d-flex gap-2 flex-wrap align-items-center">
-                    <input
-                        type="text"
-                        className="form-control shadow-sm"
-                        placeholder="Search by title or payment ID..."
-                        style={{ maxWidth: '60%' }}
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                    />
-
-                    <select className="form-select" style={{ maxWidth: 180 }} value={status} onChange={(e) => setStatus(e.target.value)}>
-                        <option value="all">All Status</option>
-                        <option value="completed">Completed</option>
-                        <option value="pending">Pending</option>
-                        <option value="overdue">Overdue</option>
-                    </select>
-
-                    <select className="form-select" style={{ maxWidth: 180 }} value={type} onChange={(e) => setType(e.target.value)}>
-                        <option value="all">All Types</option>
-                        <option value="maintenance">Maintenance</option>
-                        <option value="subscription">Subscription</option>
-                        <option value="booking">Booking</option>
-                    </select>
-
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', marginBottom: 4 }}>
+                <div style={{ flex: 1, minWidth: 200 }}>
+                    <SearchBar placeholder="Search by title or payment ID..." value={search} onChange={setSearch} />
                 </div>
+                <Dropdown
+                    options={[
+                        { label: 'All Status', value: 'all' },
+                        { label: 'Completed', value: 'completed' },
+                        { label: 'Pending', value: 'pending' },
+                        { label: 'Overdue', value: 'overdue' },
+                    ]}
+                    selected={status}
+                    onChange={setStatus}
+                    width="180px"
+                />
+                <Dropdown
+                    options={[
+                        { label: 'All Types', value: 'all' },
+                        { label: 'Maintenance', value: 'maintenance' },
+                        { label: 'Subscription', value: 'subscription' },
+                        { label: 'Booking', value: 'booking' },
+                    ]}
+                    selected={type}
+                    onChange={setType}
+                    width="180px"
+                />
             </div>
 
             <PaymentsHistory onStats={setStats} filters={{ search, status, type }} />

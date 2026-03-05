@@ -6,62 +6,23 @@ import {
   BarChart3
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import "../../assets/css/Manager/Payments.css";
-import { Loader } from '../Loader.jsx'
+
+import { Loader } from '../Loader.jsx';
+import { StatCard, StatusBadge, SearchBar, Dropdown, EmptyState, Modal } from '../shared';
+
 
 /* -------------------------------
    Payments Overview Cards
 -------------------------------- */
-const PaymentsOverview = ({ stats }) => {
-  const cards = [
-    {
-      icon: <DollarSign size={22} className="text-success" />,
-      title: "Total Transactions",
-      value: stats?.totalTransactions ?? "-",
-      color: "text-success"
-    },
-    {
-      icon: <Clock size={22} className="text-warning" />,
-      title: "Pending Payments",
-      value: stats?.pendingAmount ? `₹${stats.pendingAmount}` : "-",
-      color: "text-warning"
-    },
-    {
-      icon: <AlertCircle size={22} className="text-danger" />,
-      title: "Overdue Payments",
-      value: stats?.overdueAmount ? `₹${stats.overdueAmount}` : "-",
-      color: "text-danger"
-    },
-    {
-      icon: <BarChart3 size={22} className="text-primary" />,
-      title: "Total Revenue",
-      value: stats?.paidAmount ? `₹${stats.paidAmount}` : "-",
-      color: "text-primary"
-    }
-  ];
+const PaymentsOverview = ({ stats }) => (
+  <div className="ue-stat-grid" style={{ marginBottom: 4 }}>
+    <StatCard label="Total Transactions" value={stats?.totalTransactions ?? "-"} icon={<DollarSign size={22} />} iconColor="#16a34a" iconBg="#dcfce7" />
+    <StatCard label="Pending Payments" value={stats?.pendingAmount ? `\u20B9${stats.pendingAmount}` : "-"} icon={<Clock size={22} />} iconColor="#d97706" iconBg="#fef3c7" />
+    <StatCard label="Overdue Payments" value={stats?.overdueAmount ? `\u20B9${stats.overdueAmount}` : "-"} icon={<AlertCircle size={22} />} iconColor="#dc2626" iconBg="#fee2e2" />
+    <StatCard label="Total Revenue" value={stats?.paidAmount ? `\u20B9${stats.paidAmount}` : "-"} icon={<BarChart3 size={22} />} iconColor="#2563eb" iconBg="#dbeafe" />
+  </div>
+);
 
-  return (
-    <div className="py-4">
-      <div className="row g-4">
-        {cards.map((card, i) => (
-          <motion.div
-            key={i}
-            className="col-md-6 col-lg-3"
-            initial={{ opacity: 0, y: 25 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.1 }}
-          >
-            <div className="payment-card p-3 bg-white rounded-4 shadow-sm">
-              <div className="icon-box" style={{ width: 'fit-content' }}>{card.icon}</div>
-              <h6 className="mt-2 text-secondary">{card.title}</h6>
-              <h4 className={`fw-semibold ${card.color}`}>{card.value}</h4>
-            </div>
-          </motion.div>
-        ))}
-      </div>
-    </div>
-  );
-};
 
 /* -------------------------------
    Receipt Popup
@@ -78,61 +39,28 @@ const formatDate = (iso) => {
 
 const PaymentsDetailsPopUp = ({ show, close, details }) => {
   if (!details) return null;
-
-  const receiver = details.receiver || details.reciever || details.to || "-";
-  const sender = details.sender || details.from || "-";
   const txnId = details.ID || details.transactionId || details._id || "-";
   const amount = details.amount ?? details.amt ?? "-";
   const penalty = details.penalty || {};
 
   return (
-    <AnimatePresence>
-      {show && (
-        <motion.div
-          className="popup"
-          onClick={close}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-        >
-          <motion.div
-            className="popup-content bg-white rounded-4 p-4 shadow"
-            onClick={(e) => e.stopPropagation()}
-            initial={{ scale: 0.85 }}
-            animate={{ scale: 1 }}
-            exit={{ scale: 0.85 }}
-          >
-            <div className="d-flex justify-content-between">
-              <h5 className="fw-semibold">Payment Details</h5>
-              <button className="btn btn-sm btn-outline-secondary" onClick={close}>
-                ✕
-              </button>
-            </div>
-
-            <hr />
-
-            <p><strong>Title:</strong> {details.title || "-"}</p>
-            <p><strong>Payment ID:</strong> {txnId}</p>
-            <p><strong>Belongs To:</strong> {details.belongTo || "-"}</p>
-            <p><strong>Amount:</strong> {amount !== "-" ? `₹${amount}` : "-"}</p>
-            <p><strong>Payment Date:</strong> {formatDate(details.paymentDate)}</p>
-            <p><strong>Deadline:</strong> {formatDate(details.paymentDeadline)}</p>
-            <p><strong>Method:</strong> {details.paymentMethod || "-"}</p>
-            <p><strong>Penalty:</strong> {penalty.p ?? 0} {penalty.changedOn ? `(changed: ${formatDate(penalty.changedOn)})` : ""}</p>
-            <p><strong>Receiver:</strong> {details.receiver?.email || details.reciever?.email || "-"}</p>
-            <p><strong>Sender:</strong> {details.sender?.email || details.from?.email || "-"}</p>
-            <p><strong>Remarks:</strong> {details.remarks || "-"}</p>
-            <p><strong>Status:</strong> {details.status || "-"}</p>
-
-            <div className="text-end">
-              <button className="btn btn-dark mt-2" onClick={close}>Close</button>
-            </div>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+    <Modal isOpen={show} onClose={close} title="Payment Details" size="sm">
+      <p><strong>Title:</strong> {details.title || "-"}</p>
+      <p><strong>Payment ID:</strong> {txnId}</p>
+      <p><strong>Belongs To:</strong> {details.belongTo || "-"}</p>
+      <p><strong>Amount:</strong> {amount !== "-" ? `₹${amount}` : "-"}</p>
+      <p><strong>Payment Date:</strong> {formatDate(details.paymentDate)}</p>
+      <p><strong>Deadline:</strong> {formatDate(details.paymentDeadline)}</p>
+      <p><strong>Method:</strong> {details.paymentMethod || "-"}</p>
+      <p><strong>Penalty:</strong> {penalty.p ?? 0} {penalty.changedOn ? `(changed: ${formatDate(penalty.changedOn)})` : ""}</p>
+      <p><strong>Receiver:</strong> {details.receiver?.email || details.reciever?.email || "-"}</p>
+      <p><strong>Sender:</strong> {details.sender?.email || details.from?.email || "-"}</p>
+      <p><strong>Remarks:</strong> {details.remarks || "-"}</p>
+      <p><strong>Status:</strong> {details.status || "-"}</p>
+    </Modal>
   );
 };
+
 
 /* -------------------------------
    Payment Cards List
@@ -220,9 +148,12 @@ const PaymentsHistory = ({ onStats, filters = {} }) => {
       ) : error ? (
         <div className="text-center text-danger p-4">{error}</div>
       ) : payments.length === 0 ? (
-        <div className=" shadow-sm text-center text-muted p-4"> <i className="bi bi-wallet2 me-1"></i>  No payments found.</div>
+        <EmptyState icon={<DollarSign size={48} />} title="No Payments Found" sub="No payment records match your current filters." />
+
       ) : (
         <div className="row g-4 payments-grid mt-2">
+
+
           {filteredPayments.map((p, i) => (
             <motion.div
               className="col-md-6 col-lg-4"
@@ -237,7 +168,9 @@ const PaymentsHistory = ({ onStats, filters = {} }) => {
                     <h6 className="fw-semibold">{p.title}</h6>
                     <small className="text-muted">{p.sender.email || p.sender.email || "-"}</small>
                   </div>
-                  <span className={`badge ${p.status && p.status.toLowerCase() === 'completed' ? 'bg-success' : p.status && p.status.toLowerCase() === 'pending' ? 'bg-warning' : 'bg-secondary'}`}>{p.status}</span>
+                  <div className="badge-cell">
+                    <StatusBadge status={p.status} />
+                  </div>
                 </div>
 
                 <hr />
@@ -284,34 +217,34 @@ export const Payments = () => {
     <div>
       <PaymentsOverview stats={stats} />
 
-      {/* Filters: search + dropdowns below overview */}
-      <div className="py-3">
-        <div className="d-flex gap-2 flex-wrap align-items-center">
-          <input
-            type="text"
-            className="form-control shadow-sm "
-            placeholder="Search by name, flat or txn..."
-            style={{ maxWidth: '60%' }}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-
-          <select className="form-select" style={{ maxWidth: 180 }} value={status} onChange={(e) => setStatus(e.target.value)}>
-            <option value="all">All Status</option>
-            <option value="completed">Completed</option>
-            <option value="pending">Pending</option>
-            <option value="overdue">Overdue</option>
-          </select>
-
-          <select className="form-select" style={{ maxWidth: 180 }} value={type} onChange={(e) => setType(e.target.value)}>
-            <option value="all">All Types</option>
-            <option value="maintenance">Maintenance</option>
-            <option value="subscription">Subscription</option>
-            <option value="booking">Booking</option>
-          </select>
-
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', marginBottom: 4 }}>
+        <div style={{ flex: 1, minWidth: 200 }}>
+          <SearchBar placeholder="Search by name, flat or txn..." value={search} onChange={setSearch} />
         </div>
+        <Dropdown
+          options={[
+            { label: 'All Status', value: 'all' },
+            { label: 'Completed', value: 'completed' },
+            { label: 'Pending', value: 'pending' },
+            { label: 'Overdue', value: 'overdue' },
+          ]}
+          selected={status}
+          onChange={setStatus}
+          width="180px"
+        />
+        <Dropdown
+          options={[
+            { label: 'All Types', value: 'all' },
+            { label: 'Maintenance', value: 'maintenance' },
+            { label: 'Subscription', value: 'subscription' },
+            { label: 'Booking', value: 'booking' },
+          ]}
+          selected={type}
+          onChange={setType}
+          width="180px"
+        />
       </div>
+
 
       <PaymentsHistory onStats={setStats} filters={{ search, status, type }} />
     </div>

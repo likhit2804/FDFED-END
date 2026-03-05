@@ -3,7 +3,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import axios from "axios";
-import "../../assets/css/Manager/Payments.css"; // reuse basic styling
+
 import { setUser } from "../../Slices/authSlice";
 
 const API_BASE =
@@ -140,9 +140,8 @@ export const Subscription = () => {
             {Object.entries(plans).map(([key, plan]) => (
               <div className="col-md-4" key={key}>
                 <div
-                  className={`card h-100 p-3 shadow-sm ${
-                    selectedPlan === key ? "border-primary" : ""
-                  }`}
+                  className={`card h-100 p-3 shadow-sm ${selectedPlan === key ? "border-primary" : ""
+                    }`}
                   style={{ cursor: "pointer" }}
                   onClick={() => {
                     const max = plan.maxResidents;

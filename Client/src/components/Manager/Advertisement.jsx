@@ -9,12 +9,14 @@ import {
     Edit,
     Plus,
     UploadCloud,
-    AlertCircle,
     Loader2
 } from "lucide-react";
-import "../../assets/css/Manager/Ad.css";
+
 import { useForm } from "react-hook-form";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
+import { StatCard, SearchBar as SharedSearchBar, Dropdown, StatusBadge, EmptyState, Modal, Input, Select, Textarea, FormSection } from '../shared';
+
+
 
 const API_BASE_URL = process.env.NODE_ENV === "production" ? `${window.location.origin
     }/manager/api` : "http://localhost:3000/manager/api";
@@ -23,27 +25,7 @@ const API_BASE_URL = process.env.NODE_ENV === "production" ? `${window.location.
 const MANAGER_BASE_URL = process.env.NODE_ENV === "production" ? `${window.location.origin
     }/manager` : "http://localhost:3000/manager";
 
-const statusBadge = (status) => {
-    switch (status) {
-        case "Active":
-            return <span className="badge bg-success">
-                {status}</span>;
-        case "Pending":
-            return (
-                <span className="badge bg-warning text-dark">
-                    {status}</span>
-            );
-        case "Expired":
-            return <span className="badge bg-secondary">
-                {status}</span>;
-        case "Rejected":
-            return <span className="badge bg-danger">
-                {status}</span>;
-        default:
-            return <span className="badge bg-light text-dark">
-                {status}</span>;
-    }
-};
+
 
 const getAdImageUrl = (imagePath) => {
     if (!imagePath)
@@ -78,16 +60,11 @@ const AdvertisementPopup = ({
     const {
         register,
         handleSubmit,
-        formState: {
-            errors
-        },
+        formState: { errors },
         reset,
         setValue,
         watch
-    } = useForm({
-        mode: "onChange",
-        shouldUnregister: false
-    });
+    } = useForm({ mode: "onChange", shouldUnregister: false });
 
     const [imagePreview, setImagePreview] = useState(null);
     const [fileToUpload, setFileToUpload] = useState(null);
@@ -96,12 +73,8 @@ const AdvertisementPopup = ({
 
     const isEditing = !!ad;
 
-    console.log(ad);
-
-
     useEffect(() => {
         if (isEditing && ad) {
-            // Use reset() with default values to properly populate all fields including dropdowns
             reset({
                 title: ad.title || "",
                 startDate: ad.startDate || "",
@@ -111,27 +84,18 @@ const AdvertisementPopup = ({
                 link: ad.link || "",
                 status: ad.status || ""
             });
-
             setImagePreview(getAdImageUrl(ad.imagePath || ad.image || ""));
         } else {
             reset();
             setImagePreview(null);
             setFileToUpload(null);
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [ad, isEditing]);
 
     const handleImageUpload = (e) => {
         const file = e.target.files && e.target.files[0];
-        if (!file)
-            return;
-
-
-
-        if (file.size > 5 * 1024 * 1024) {
-            alert("File size should be less than 5MB.");
-            return;
-        }
+        if (!file) return;
+        if (file.size > 5 * 1024 * 1024) { alert("File size should be less than 5MB."); return; }
         setFileToUpload(file);
         setImagePreview(URL.createObjectURL(file));
     };
@@ -140,11 +104,7 @@ const AdvertisementPopup = ({
         try {
             setSubmitting(true);
             setSubmitError(null);
-
-            // Basic client-side validation for required image when creating
-            if (!isEditing && !fileToUpload) {
-                throw new Error("Advertisement image is required for new ads.");
-            }
+            if (!isEditing && !fileToUpload) throw new Error("Advertisement image is required for new ads.");
 
             const formData = new FormData();
             formData.append("title", data.title || "");
@@ -152,254 +112,160 @@ const AdvertisementPopup = ({
             formData.append("endDate", data.endDate || "");
             formData.append("adType", data.adType || "");
             formData.append("targetAudience", data.targetAudience || "");
+            if (data.link) formData.append("link", data.link);
+            if (fileToUpload) formData.append("image", fileToUpload);
 
-
-
-            if (data.link)
-                formData.append("link", data.link);
-
-
-
-            if (fileToUpload)
-                formData.append("image", fileToUpload);
-
-
-
-            const url = isEditing ? `${API_BASE_URL}/ad/${ad._id
-                }` : `${API_BASE_URL}/ad`;
-
+            const url = isEditing ? `${API_BASE_URL}/ad/${ad._id}` : `${API_BASE_URL}/ad`;
             const method = isEditing ? "PUT" : "POST";
+            const response = await fetch(url, { method, credentials: "include", body: formData });
 
-            const response = await fetch(url, {
-                method,
-                credentials: "include",
-                body: formData
-            });
-
-            if (response.status === 401) {
-                throw new Error("Unauthorized access. Please log in again.");
-            }
-
+            if (response.status === 401) throw new Error("Unauthorized access. Please log in again.");
             if (!response.ok) {
                 const text = await response.text();
-                throw new Error(`Failed to ${isEditing ? "update" : "create"
-                    } advertisement: ${response.status
-                    } ${text}`);
+                throw new Error(`Failed to ${isEditing ? "update" : "create"} advertisement: ${response.status} ${text}`);
             }
 
             const json = await response.json();
+            if (!json.success || !json.ad) throw new Error(json.message || "Failed to save advertisement");
 
-            if (!json.success || !json.ad) {
-                throw new Error(json.message || `Failed to ${isEditing ? "update" : "create"
-                    } advertisement`);
-            }
-
-            // Update ads state in parent
             if (isEditing) {
-                setAds((prev) => {
-                    const safePrev = Array.isArray(prev) ? prev : [];
-                    return safePrev.map((a) => (a._id === json.ad._id ? json.ad : a));
-                });
+                setAds(prev => (Array.isArray(prev) ? prev : []).map(a => a._id === json.ad._id ? json.ad : a));
             } else {
-                setAds((prev) => {
-                    const safePrev = Array.isArray(prev) ? prev : [];
-                    return [
-                        json.ad,
-                        ...safePrev
-                    ];
-                });
+                setAds(prev => [json.ad, ...(Array.isArray(prev) ? prev : [])]);
             }
 
-            // Reset and close
-            reset();
-            setImagePreview(null);
-            setFileToUpload(null);
-            setShowPopup(false);
-            setEditingAd(null);
-
-            // Trigger Layout refresh
-            if (onAdCreated && typeof onAdCreated === 'function') {
-                onAdCreated();
-            }
+            reset(); setImagePreview(null); setFileToUpload(null);
+            setShowPopup(false); setEditingAd(null);
+            if (onAdCreated && typeof onAdCreated === 'function') onAdCreated();
         } catch (err) {
             console.error("Error submitting advertisement:", err);
-            setSubmitError(err.message || `An error occurred while ${isEditing ? "updating" : "creating"
-                } the advertisement. Please try again.`);
+            setSubmitError(err.message || "An error occurred. Please try again.");
         } finally {
             setSubmitting(false);
         }
     };
 
     return (
-        <AnimatePresence>
-            <motion.div className="popup"
-                initial={
-                    { opacity: 0 }
-                }
-                animate={
-                    { opacity: 1 }
-                }
-                exit={
-                    { opacity: 0 }
-                }>
-                <motion.div className="popup-content"
-                    initial={
-                        {
-                            scale: 0.8,
-                            opacity: 0
-                        }
-                    }
-                    animate={
-                        {
-                            scale: 1,
-                            opacity: 1
-                        }
-                    }
-                    exit={
-                        {
-                            scale: 0.8,
-                            opacity: 0
-                        }
-                    }>
-                    <div className="d-flex justify-content-between align-items-center mb-3">
-                        <h5 className="mb-0">
-                            {
-                                isEditing ? "Edit Advertisement" : "Create Advertisement"
-                            }</h5>
-                        <button type="button" className="btn-close" aria-label="Close"
-                            onClick={
-                                () => {
-                                    setShowPopup(false);
-                                    setEditingAd(null);
-                                }
-                            }></button>
-                    </div>
+        <Modal
+            isOpen={true}
+            onClose={() => { setShowPopup(false); setEditingAd(null); }}
+            title={isEditing ? "Edit Advertisement" : "Create Advertisement"}
+            size="lg"
+            footer={
+                <>
+                    <button
+                        type="button"
+                        onClick={() => { setShowPopup(false); setEditingAd(null); }}
+                        disabled={submitting}
+                        style={{ padding: '9px 20px', borderRadius: 8, border: '1px solid #e5e7eb', background: '#f9fafb', color: '#374151', fontWeight: 600, cursor: 'pointer' }}
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        type="button"
+                        onClick={handleSubmit(submitHandler)}
+                        disabled={submitting}
+                        style={{ padding: '9px 24px', borderRadius: 8, border: 'none', background: '#16a34a', color: '#fff', fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer', opacity: submitting ? 0.7 : 1 }}
+                    >
+                        {submitting ? "Saving..." : isEditing ? "Update Ad" : "Create Ad"}
+                    </button>
+                </>
+            }
+        >
+            {submitError && (
+                <div style={{ background: '#fee2e2', color: '#991b1b', padding: '10px 14px', borderRadius: 8, marginBottom: 16, fontSize: 13 }}>
+                    {submitError}
+                </div>
+            )}
 
-                    <form onSubmit={
-                        handleSubmit(submitHandler)
-                    }
-                        className="px-2">
-                        <div className="mb-3">
-                            <label className="form-label fw-medium">Advertisement Title *</label>
-                            <input type="text" className="form-control" placeholder="Enter ad title (max 60 characters)"
-                                maxLength={60}
-                                {...register("title", { required: true })} /> {
-                                errors.title && <small className="text-danger">Title is required</small>
-                            } </div>
+            <FormSection title="Basic Info" columns={1}>
+                <Input
+                    label="Advertisement Title"
+                    required
+                    placeholder="Enter ad title (max 60 characters)"
+                    maxLength={60}
+                    error={errors.title ? "Title is required" : undefined}
+                    {...register("title", { required: true })}
+                />
+            </FormSection>
 
-                        <div className="mb-3">
-                            <label className="form-label fw-medium">Image/Banner Upload {
-                                isEditing ? "(Optional)" : "*"
-                            }</label>
-                            <div className="border border-2 rounded-3 p-4 text-center"
-                                style={
-                                    {
-                                        borderStyle: "dashed",
-                                        background: "#f9fafb",
-                                        cursor: "pointer"
-                                    }
-                                }
-                                onClick={
-                                    () => document.getElementById("fileInput")?.click()
-                                }>
-                                {
-                                    imagePreview ? (
-                                        <img src={imagePreview}
-                                            alt="Ad Preview"
-                                            className="img-fluid rounded"
-                                            style={
-                                                {
-                                                    maxHeight: "160px",
-                                                    objectFit: "cover"
-                                                }
-                                            } />
-                                    ) : (
-                                        <>
-                                            <UploadCloud size={36}
-                                                className="text-secondary mb-2" />
-                                            <p className="text-secondary mb-0">Click to upload or drag and drop</p>
-                                            <p className="small text-muted mb-0">JPEG or PNG (max 5MB)</p>
-                                        </>
-                                    )
-                                }
+            <FormSection title="Image / Banner" columns={1}>
+                <div
+                    onClick={() => document.getElementById("fileInput")?.click()}
+                    style={{
+                        border: '2px dashed #d1d5db', borderRadius: 10, padding: 24,
+                        textAlign: 'center', cursor: 'pointer', background: '#f9fafb', marginBottom: 8,
+                    }}
+                >
+                    {imagePreview ? (
+                        <img src={imagePreview} alt="Ad Preview" style={{ maxHeight: 160, objectFit: 'cover', borderRadius: 6 }} />
+                    ) : (
+                        <>
+                            <UploadCloud size={36} style={{ color: '#9ca3af', marginBottom: 8 }} />
+                            <p style={{ color: '#6b7280', margin: 0 }}>Click to upload or drag and drop</p>
+                            <p style={{ color: '#9ca3af', fontSize: 12, margin: 0 }}>JPEG or PNG (max 5MB)</p>
+                        </>
+                    )}
+                    <input type="file" id="fileInput" accept="image/png, image/jpeg" style={{ display: 'none' }} onChange={handleImageUpload} />
+                </div>
+            </FormSection>
 
-                                <input type="file" id="fileInput" accept="image/png, image/jpeg"
-                                    style={
-                                        { display: "none" }
-                                    }
-                                    onChange={handleImageUpload} />
-                            </div>
-                            {
-                                submitError && <small className="text-danger d-block mt-1">
-                                    {submitError}</small>
-                            } </div>
+            <FormSection title="Scheduling" columns={2}>
+                <Input
+                    type="date"
+                    label="Start Date"
+                    required
+                    error={errors.startDate ? "Start date required" : undefined}
+                    {...register("startDate", { required: true })}
+                />
+                <Input
+                    type="date"
+                    label="End Date"
+                    required
+                    error={errors.endDate ? "End date required" : undefined}
+                    {...register("endDate", { required: true })}
+                />
+            </FormSection>
 
-                        <div className="row">
-                            <div className="col-md-6 mb-3">
-                                <label className="form-label fw-medium">Start Date *</label>
-                                <input type="date" className="form-control" {...register("startDate", { required: true })} /> {
-                                    errors.startDate && <small className="text-danger">Start date is required</small>
-                                } </div>
-                            <div className="col-md-6 mb-3">
-                                <label className="form-label fw-medium">End Date *</label>
-                                <input type="date" className="form-control" {...register("endDate", { required: true })} /> {
-                                    errors.endDate && <small className="text-danger">End date is required</small>
-                                } </div>
-                        </div>
+            <FormSection title="Targeting" columns={2}>
+                <Select
+                    label="Ad Type"
+                    required
+                    placeholder="Select type"
+                    options={[
+                        { label: 'Sponsored', value: 'Sponsored' },
+                        { label: 'Announcement', value: 'Announcement' },
+                    ]}
+                    error={errors.adType ? "Ad type required" : undefined}
+                    {...register("adType", { required: true })}
+                />
+                <Select
+                    label="Target Audience"
+                    required
+                    placeholder="Select audience"
+                    options={[
+                        { label: 'All Residents', value: 'All' },
+                        { label: 'Block A', value: 'Block A' },
+                        { label: 'Block B', value: 'Block B' },
+                    ]}
+                    error={errors.targetAudience ? "Target audience required" : undefined}
+                    {...register("targetAudience", { required: true })}
+                />
+            </FormSection>
 
-                        <div className="row">
-                            <div className="col-md-6 mb-3">
-                                <label className="form-label fw-medium">Ad Type *</label>
-                                <select className="form-select" {...register("adType", { required: true })}>
-                                    <option value="">Select type</option>
-                                    <option value="Sponsored">Sponsored</option>
-                                    <option value="Announcement">Announcement</option>
-                                </select>
-                                {
-                                    errors.adType && <small className="text-danger">Ad type is required</small>
-                                } </div>
-                            <div className="col-md-6 mb-3">
-                                <label className="form-label fw-medium">Target Audience *</label>
-                                <select className="form-select" {...register("targetAudience", { required: true })}>
-                                    <option value="">Select audience</option>
-                                    <option value="All">All Residents</option>
-                                    <option value="Block A">Block A</option>
-                                    <option value="Block B">Block B</option>
-                                </select>
-                                {
-                                    errors.targetAudience && <small className="text-danger">Target audience is required</small>
-                                } </div>
-                        </div>
-
-                        <div className="mb-3">
-                            <label className="form-label fw-medium">Link (Optional)</label>
-                            <input type="url" className="form-control" placeholder="Enter advertisement link (e.g., https://example.com)" {...register("link")} />
-                        </div>
-
-                        <div className="d-flex justify-content-end gap-2 mt-3">
-                            <button type="button" className="btn btn-outline-secondary"
-                                onClick={
-                                    () => {
-                                        setShowPopup(false);
-                                        setEditingAd(null);
-                                    }
-                                }
-                                disabled={submitting}>
-                                Cancel
-                            </button>
-
-                            <button type="submit" className="btn btn-success"
-                                disabled={submitting}>
-                                {
-                                    submitting ? "Saving..." : isEditing ? "Update Ad" : "Create Ad"
-                                } </button>
-                        </div>
-                    </form>
-                </motion.div>
-            </motion.div>
-        </AnimatePresence>
+            <FormSection title="Optional" columns={1}>
+                <Input
+                    type="url"
+                    label="Link"
+                    placeholder="https://example.com"
+                    hint="Optional — link visitors will open when they tap the ad"
+                    {...register("link")}
+                />
+            </FormSection>
+        </Modal>
     );
 };
+
 
 /* ==============================
    ManagerAdvertisementContainer
@@ -475,9 +341,8 @@ const ManagerAdvertisementContainer = ({ ads, setShowPopup, setEditingAd, handle
                                             {
                                                 ad.title || "Untitled Ad"
                                             }</h5>
-                                        {
-                                            statusBadge(ad.status || "Pending")
-                                        } </div>
+                                        <StatusBadge status={ad.status || "Pending"} />
+                                    </div>
 
                                     {
                                         ad.link && (
@@ -505,27 +370,18 @@ const ManagerAdvertisementContainer = ({ ads, setShowPopup, setEditingAd, handle
 
                                     <div className="d-flex justify-content-start gap-3 mt-3">
                                         <button className="AdActionEditBtn btn"
-                                            onClick={
-                                                () => {
-                                                    setEditingAd(ad);
-                                                    setShowPopup(true);
-                                                }
-                                            }>
-                                            <Edit size={18}
-                                                title="Edit" />
-                                            Edit
+                                            onClick={() => { setEditingAd(ad); setShowPopup(true); }}
+                                        >
+                                            <Edit size={18} title="Edit" /> Edit
                                         </button>
-
                                         <button className="btn btn-outline-danger"
-                                            onClick={
-                                                () => handleDelete(ad._id)
-                                            }
-                                            title="Delete">
-                                            <Trash2 size={18}
-                                                title="Delete" />
-                                            Delete
+                                            onClick={() => handleDelete(ad._id)}
+                                            title="Delete"
+                                        >
+                                            <Trash2 size={18} title="Delete" /> Delete
                                         </button>
                                     </div>
+
                                 </div>
                             </div>
                         </motion.div>
@@ -539,151 +395,50 @@ const ManagerAdvertisementContainer = ({ ads, setShowPopup, setEditingAd, handle
    AdOverview Component
    ============================== */
 const AdOverview = ({ statistics }) => {
-    const stats = statistics || {
-        total: 0,
-        active: 0,
-        expired: 0,
-        pending: 0
-    };
-
-    const data = [
-        {
-            icon: <Megaphone size={24}
-                className="text-success" />,
-            title: "Total Ads",
-            value: stats.total || 0,
-            color: "text-success"
-        }, {
-            icon: <Eye size={24}
-                className="text-warning" />,
-            title: "Active ads",
-            value: stats.active || 0,
-            color: "text-warning"
-        }, {
-            icon: <Timer size={24}
-                className="text-danger" />,
-            title: "Expired ads",
-            value: stats.expired || 0,
-            color: "text-danger"
-        }, {
-            icon: <DollarSign size={24}
-                className="text-info" />,
-            title: "Pending ads",
-            value: stats.pending || 0,
-            color: "text-info"
-        }
-    ];
-
+    const s = statistics || { total: 0, active: 0, expired: 0, pending: 0 };
     return (
-        <div className="p-0 py-4">
-            <div className="row g-4">
-                {
-                    data.map((item, i) => (
-                        <motion.div key={i}
-                            className="col-md-6 col-lg-3"
-                            initial={
-                                {
-                                    opacity: 0,
-                                    y: 30
-                                }
-                            }
-                            animate={
-                                {
-                                    opacity: 1,
-                                    y: 0
-                                }
-                            }
-                            transition={
-                                {
-                                    delay: i * 0.1
-                                }
-                            }>
-                            <div className="payment-card shadow-sm p-3 rounded-4 bg-white">
-                                <div className="d-flex justify-content-between align-items-start">
-                                    <div className="icon-box">
-                                        {
-                                            item.icon
-                                        }</div>
-                                </div>
-                                <h6 className="mt-3 text-secondary">
-                                    {
-                                        item.title
-                                    }</h6>
-                                <h4 className={
-                                    `fw-semibold mt-1 ${item.color
-                                    }`
-                                }>
-                                    {
-                                        item.value
-                                    }</h4>
-                            </div>
-                        </motion.div>
-                    ))
-                } </div>
+        <div className="ue-stat-grid" style={{ marginBottom: 4 }}>
+            <StatCard label="Total Ads" value={s.total || 0} icon={<Megaphone size={22} />} iconColor="#16a34a" iconBg="#dcfce7" />
+            <StatCard label="Active Ads" value={s.active || 0} icon={<Eye size={22} />} iconColor="#d97706" iconBg="#fef3c7" />
+            <StatCard label="Expired Ads" value={s.expired || 0} icon={<Timer size={22} />} iconColor="#dc2626" iconBg="#fee2e2" />
+            <StatCard label="Pending Ads" value={s.pending || 0} icon={<DollarSign size={22} />} iconColor="#0891b2" iconBg="#e0f2fe" />
         </div>
     );
 };
+
 
 /* ==============================
-   SearchBar (basic UI)
+   SearchBar (uses shared components)
    ============================== */
-const SearchBar = ({ setShowPopup, setEditingAd, searchTerm, setSearchTerm, statusFilter, setStatusFilter }) => {
-    const handleSearch = (e) => {
-        setSearchTerm(e.target.value);
-    };
-
-    const handleStatusFilter = (e) => {
-        setStatusFilter(e.target.value);
-    };
-
-    const handleClearFilters = () => {
-        setSearchTerm("");
-        setStatusFilter("");
-    };
-
-    return (
-        <div className="d-flex gap-2 align-items-center mb-3 flex-wrap">
-            <input
-                type="text"
-                className="form-control m-0"
+const SearchBar = ({ setShowPopup, setEditingAd, searchTerm, setSearchTerm, statusFilter, setStatusFilter }) => (
+    <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 12, flexWrap: 'wrap' }}>
+        <div style={{ flex: 1, minWidth: 200 }}>
+            <SharedSearchBar
                 placeholder="Search by ad title..."
                 value={searchTerm}
-                onChange={handleSearch}
-                style={{
-                    maxWidth: "70%"
-                }}
+                onChange={setSearchTerm}
             />
-            <select
-                className="form-select m-0"
-                value={statusFilter}
-                onChange={handleStatusFilter}
-                style={{
-                    maxWidth: "120px"
-                }}
-            >
-                <option value="">All Status</option>
-                <option value="Active">Active</option>
-                <option value="Pending">Pending</option>
-                <option value="Expired">Expired</option>
-            </select>
-
-            <button
-                className="btn"
-                style={{
-                    backgroundColor: "orangeRed",
-                    color: "white"
-                }}
-                onClick={() => {
-                    setEditingAd(null);
-                    setShowPopup(true);
-                }}
-            >
-                <Plus size={18} />
-                Add new ad
-            </button>
         </div>
-    );
-};
+        <Dropdown
+            options={[
+                { label: 'All Status', value: '' },
+                { label: 'Active', value: 'Active' },
+                { label: 'Pending', value: 'Pending' },
+                { label: 'Expired', value: 'Expired' },
+            ]}
+            selected={statusFilter}
+            onChange={setStatusFilter}
+            width="150px"
+        />
+        <button
+            style={{ padding: '9px 16px', background: 'orangeRed', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
+            onClick={() => { setEditingAd(null); setShowPopup(true); }}
+        >
+            <Plus size={18} /> Add new ad
+        </button>
+    </div>
+);
+
 
 /* ==============================
    Main Advertisement Component
