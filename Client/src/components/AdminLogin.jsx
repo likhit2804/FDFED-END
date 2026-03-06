@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { adminLogin, adminVerifyOtp, adminResendOtp } from "../Services/adminService";
+import { adminLogin, adminVerifyOtp, adminResendOtp } from "../services/adminService";
 import { useAdminAuth } from "../context/AdminAuthContext";
 
 const AdminLogin = () => {

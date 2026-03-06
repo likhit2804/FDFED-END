@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import Header from "./Header";
-import { getSystemSettings, updateSystemSettings } from "../../Services/adminService";
+import { getSystemSettings, updateSystemSettings } from "../../services/adminService";
 
 export default function AdminProfile() {
   const [formData, setFormData] = useState({

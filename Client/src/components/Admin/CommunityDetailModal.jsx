@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { X, Mail, Phone, Users, Wrench, Shield, Info, MapPin, Calendar, Building2, Image as ImageIcon, Key } from 'lucide-react';
-import adminApiClient from '../../Services/adminApiClient';
+import adminApiClient from '../../services/adminApiClient';
 import styles from './CommunityDetailModal.module.css';
 
 const CommunityDetailModal = ({ isOpen, onClose, communityId, communityName }) => {

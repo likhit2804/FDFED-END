@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast, ToastContainer } from "react-toastify";
 import { useDispatch, useSelector } from "react-redux";
-import { fetchIssues, raiseIssue, submitFeedback } from "../../Slices/IssueSlice";
+import { fetchIssues, raiseIssue, submitFeedback } from "../../slices/IssueSlice";
 import { Loader } from "../Loader";
 import { useSocket } from "../../hooks/useSocket";
 import { Modal, Input, Select, Textarea, Tabs } from "../shared";

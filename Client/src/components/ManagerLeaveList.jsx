@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchLeaves, approveLeave, rejectLeave } from '../Slices/leaveSlice';
+import { fetchLeaves, approveLeave, rejectLeave } from '../slices/leaveSlice';
 import '../assets/css/Leave.css';
 import { FileText, Clock, CheckCircle } from 'lucide-react';
 import { StatCard, StatusBadge, EmptyState, Textarea } from './shared';

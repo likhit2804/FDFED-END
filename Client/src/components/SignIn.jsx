@@ -8,7 +8,7 @@ import showPass from '../imgs/showPass.svg';
 import hidePass from '../imgs/hidePass.svg';
 import { useSelector, useDispatch } from 'react-redux';
 import { ToastContainer, toast } from 'react-toastify';
-import { loginUser, verifyOtp } from '../Slices/authSlice.js';
+import { loginUser, verifyOtp } from '../slices/authSlice.js';
 import axios from 'axios';
 import { Loader } from './Loader.jsx';
 import { OtpInput } from './SignIn/OtpInput';

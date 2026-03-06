@@ -8,7 +8,7 @@ import '../../assets/css/Worker/Dashboard.css';
 import {CircularProgressbar, buildStyles} from 'react-circular-progressbar';
 import 'react-circular-progressbar/dist/styles.css';
 import {motion} from 'framer-motion';
-import {setDashboardData, setIssues} from '../../Slices/workerSlice';
+import {setDashboardData, setIssues} from '../../slices/workerSlice';
 import {use, useEffect, useState} from 'react';
 import {useSelector, useDispatch} from 'react-redux';
 import LeaveApplyForm from '../LeaveApplyForm';

@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import leaveService from '../Services/leaveService';
+import leaveService from '../services/leaveService';
 
 export const applyLeave = createAsyncThunk('leave/apply', async (payload, thunkAPI) => {
   const res = await leaveService.applyLeave(payload);

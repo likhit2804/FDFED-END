@@ -9,7 +9,7 @@ import {
   closeManagerIssue,
   clearIssueDetails,
   fetchWorkers,
-} from "../../Slices/ManagerIssuesSlice";
+} from "../../slices/ManagerIssuesSlice";
 import { toast, ToastContainer } from "react-toastify";
 import { useSocket } from "../../hooks/useSocket";
 import { StatCard, Tabs, SearchBar, Dropdown } from "../shared";

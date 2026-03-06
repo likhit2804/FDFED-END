@@ -8,7 +8,7 @@ import AdminTable from "./AdminTables";
 import DeleteCommunityModal from "./DeleteCommunityModal";
 import CommunityDetailModal from "./CommunityDetailModal";
 import ManagerDetailModal from "./ManagerDetailModal";
-import adminApiClient from "../../Services/adminApiClient";
+import adminApiClient from "../../services/adminApiClient";
 import { useTableFilter } from "../../hooks/useAdminHooks";
 import { LoadingOverlay } from "../common/Loader";
 

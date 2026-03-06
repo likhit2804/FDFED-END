@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import axios from "axios";
 
-import { setUser } from "../../Slices/authSlice";
+import { setUser } from "../../slices/authSlice";
 
 const API_BASE =
   process.env.NODE_ENV === "production"

@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { useSelector, useDispatch } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import '../../assets/css/Manager/commonSpace.css';
-import { optimisticDeleteSpace, AddSpace, DeleteSpace, EditSpace, fetchDataforManager } from '../../Slices/CommonSpaceSlice';
+import { optimisticDeleteSpace, AddSpace, DeleteSpace, EditSpace, fetchDataforManager } from '../../slices/CommonSpaceSlice';
 import { ToastContainer, toast } from 'react-toastify';
 import { BarChart3, Building2, Calendar, CheckCircle } from 'lucide-react';
 import { io } from 'socket.io-client';

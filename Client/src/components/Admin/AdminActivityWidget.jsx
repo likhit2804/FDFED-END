@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Activity, AlertTriangle, Clock, TrendingUp } from 'lucide-react';
-import adminApiClient from '../../Services/adminApiClient.js';     
+import adminApiClient from '../../services/adminApiClient.js';     
 
 import styles from './AdminActivityWidget.module.css';
 

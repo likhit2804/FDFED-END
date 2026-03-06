@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import adminApiClient from '../Services/adminApiClient';
+import adminApiClient from '../services/adminApiClient';
 
 // Custom hook for API data fetching with loading and error states
 export const useAdminAPI = (apiMethod, dependencies = []) => {

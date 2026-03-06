@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useDispatch } from 'react-redux';
-import { applyLeave } from '../Slices/leaveSlice';
+import { applyLeave } from '../slices/leaveSlice';
 import { Modal, Select, Input, Textarea } from './shared';
 
 export default function LeaveApplyForm({ isOpen, onClose }) {

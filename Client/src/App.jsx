@@ -30,7 +30,7 @@ import ProtectedAdminRoute from "./components/Admin/ProtectedAdminRoute";
 
 import React, { useEffect, Suspense, lazy } from "react";
 import { useDispatch } from "react-redux";
-import { setUser } from "./Slices/authSlice";
+import { setUser } from "./slices/authSlice";
 
 import OnboardingPayment from "./components/Onboarding/OnboardingPayment";
 import { Loader } from "./components/Loader";

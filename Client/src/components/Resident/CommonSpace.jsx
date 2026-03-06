@@ -6,7 +6,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import {
   fetchuserBookings, cancelUserBooking,
   optimisticAddBooking, optimisticCancelBooking, removeOptimisticBooking,
-} from '../../Slices/CommonSpaceSlice';
+} from '../../slices/CommonSpaceSlice';
 import { Loader } from '../Loader';
 import PaymentPopUp from './PaymentPopUp';
 import { Modal, Input, Select, Textarea } from '../shared';
