@@ -11,7 +11,7 @@ body {
   width: 100vw;
 }
 
-.SignInCon{
+.SignInCon {
   height: 100vh;
   width: 100vw;
   display: flex;
@@ -51,7 +51,7 @@ body {
 
 .left-panel {
   width: 45%;
-  background-image: url("../../imgs/image\ copy.png");
+  background-image: url("../../imgs/image copy.png");
   background-size: cover;
   background-position: center;
   padding: 40px;
