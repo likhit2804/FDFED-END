@@ -4,7 +4,7 @@ import GraphLine from "./GraphLine";
 import GraphPie from "./GraphPie";
 import AdminActivityWidget from "./AdminActivityWidget";
 import { Building2, Users, FileText, Wallet, RefreshCw } from "lucide-react";
-import adminApiClient from "../../services/adminApiClient";
+import adminApiClient from "../../Services/adminApiClient";
 import { Spinner } from "../common/Loader";
 import styles from "./AdminDashboard.module.css";
 

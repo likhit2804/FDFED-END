@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import Header from "./Header";
 import SearchBar from "./SearchBar";
 import AdminTable from "./AdminTables";
-import adminApiClient from "../../services/adminApiClient";
+import adminApiClient from "../../Services/adminApiClient";
 import { useTableFilter } from "../../hooks/useAdminHooks";
 import { LoadingOverlay } from "../common/Loader";
 
