@@ -5,7 +5,7 @@ import { toast } from "react-toastify";
 import "../../assets/css/SignIn.css"; // Reuse SignIn styles
 import logo from '../../imgs/Logo.png'; // Correct path from components/Onboarding
 
-const API_BASE = "http://localhost:3000";
+const API_BASE = "";
 
 const OnboardingPayment = () => {
     const [searchParams] = useSearchParams();

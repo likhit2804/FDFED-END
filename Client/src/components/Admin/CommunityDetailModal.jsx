@@ -109,7 +109,7 @@ const CommunityDetailModal = ({ isOpen, onClose, communityId, communityName }) =
     const renderOverview = () => {
         if (!data) return null;
         const c = data.community;
-        const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+        const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
 
         return (
             <div className={styles.overviewSection}>

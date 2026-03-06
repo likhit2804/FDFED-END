@@ -170,7 +170,7 @@ export function ManagerDashboard() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [bookingNotifications, setBookingNotifications] = useState([]);
-    const socket = useSocket("http://localhost:3000");
+    const socket = useSocket("");
 
     useEffect(() => {
         if (!socket) return;
@@ -185,7 +185,7 @@ export function ManagerDashboard() {
         (async () => {
             try {
                 setLoading(true); setError(null);
-                const res = await fetch("http://localhost:3000/manager/api/dashboard", { method: "GET", credentials: "include", headers: { "Content-Type": "application/json" } });
+                const res = await fetch("/manager/api/dashboard", { method: "GET", credentials: "include", headers: { "Content-Type": "application/json" } });
                 if (res.status === 401) { setError("Unauthorized: Please log in again"); return; }
                 if (!res.ok) { const e = await res.json(); throw new Error(e.message || `Failed: ${res.status}`); }
                 const ct = res.headers.get("content-type");

@@ -11,7 +11,7 @@ export const SecurityProfile = () => {
   useEffect(() => {
     async function loadProfile() {
       try {
-        const res = await fetch("http://localhost:3000/security/profile", { method: "GET", credentials: "include" });
+        const res = await fetch("/security/profile", { method: "GET", credentials: "include" });
         const data = await res.json();
         if (data.success) {
           const s = data.security;
@@ -31,7 +31,7 @@ export const SecurityProfile = () => {
 
   const handleSaveProfile = async () => {
     try {
-      const res = await fetch("http://localhost:3000/security/profile", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify({ name: formData.name, email: formData.email, contact: formData.contact, address: formData.address }) });
+      const res = await fetch("/security/profile", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify({ name: formData.name, email: formData.email, contact: formData.contact, address: formData.address }) });
       const data = await res.json();
       if (!data.success) { toast.error(data.message); return; }
       toast.success("Profile updated!");
@@ -42,7 +42,7 @@ export const SecurityProfile = () => {
   const handlePasswordSubmit = async ({ cp, np, cnp }) => {
     if (np !== cnp) { toast.error("Passwords do not match."); return; }
     try {
-      const res = await fetch("http://localhost:3000/security/change-password", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify({ currentPassword: cp, newPassword: np }) });
+      const res = await fetch("/security/change-password", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify({ currentPassword: cp, newPassword: np }) });
       const data = await res.json();
       if (!data.success) { toast.error(data.message); return; }
       toast.success("Password updated successfully!");

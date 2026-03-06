@@ -5,7 +5,7 @@ export const fetchIssues = createAsyncThunk(
   "issue/fetchIssues",
   async (_, { rejectWithValue }) => {
     try {
-      const res = await fetch("http://localhost:3000/resident/issue/data", {
+      const res = await fetch("/resident/issue/data", {
         credentials: "include",
       });
       if (!res.ok) throw new Error("Failed to fetch issues");
@@ -22,7 +22,7 @@ export const raiseIssue = createAsyncThunk(
   "issue/raiseIssue",
   async (issueData, { rejectWithValue }) => {
     try {
-      const res = await fetch("http://localhost:3000/resident/issue/raise", {
+      const res = await fetch("/resident/issue/raise", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -42,7 +42,7 @@ export const approveIssue = createAsyncThunk(
   "issue/approveIssue",
   async (issueId, { rejectWithValue }) => {
     try {
-      const res = await fetch(`http://localhost:3000/resident/issue/confirmIssue/${issueId}`, {
+      const res = await fetch(`/resident/issue/confirmIssue/${issueId}`, {
         method: "POST",
         credentials: "include",
       });
@@ -60,7 +60,7 @@ export const rejectIssue = createAsyncThunk(
   "issue/rejectIssue",
   async (issueId, { rejectWithValue }) => {
     try {
-      const res = await fetch(`http://localhost:3000/resident/issue/rejectIssueResolution/${issueId}`, {
+      const res = await fetch(`/resident/issue/rejectIssueResolution/${issueId}`, {
         method: "POST",
         credentials: "include",
       });
@@ -78,7 +78,7 @@ export const submitFeedback = createAsyncThunk(
   "issue/submitFeedback",
   async ({ id, feedback, rating }, { rejectWithValue }) => {
     try {
-      const res = await fetch("http://localhost:3000/resident/issue/submitFeedback", {
+      const res = await fetch("/resident/issue/submitFeedback", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

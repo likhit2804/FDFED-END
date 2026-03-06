@@ -94,7 +94,7 @@ const PaymentsHistory = ({ onStats, filters = {} }) => {
         setLoading(true);
         setError(null);
 
-        fetch("http://localhost:3000/resident/payments", {
+        fetch("/resident/payments", {
             method: "GET",
             headers: { "Content-Type": "application/json" },
             credentials: "include",
@@ -132,7 +132,7 @@ const PaymentsHistory = ({ onStats, filters = {} }) => {
         if (!selected?._id) return;
         setPaying(true);
         try {
-            const res = await fetch(`http://localhost:3000/resident/payment/${selected._id}`, {
+            const res = await fetch(`/resident/payment/${selected._id}`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 credentials: "include",

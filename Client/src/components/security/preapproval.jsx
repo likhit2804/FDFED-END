@@ -25,7 +25,7 @@ export function SecurityPreApproval() {
 
   const onScanSuccess = async (decodedText) => {
     try {
-      const res = await fetch("http://localhost:3000/security/verify-qr", {
+      const res = await fetch("/security/verify-qr", {
         method: "POST", credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token: decodedText }),
@@ -42,7 +42,7 @@ export function SecurityPreApproval() {
 
   const fetchData = async () => {
     try {
-      const res = await fetch("http://localhost:3000/security/preApproval", { method: "GET", credentials: "include" });
+      const res = await fetch("/security/preApproval", { method: "GET", credentials: "include" });
       const data = await res.json();
       if (!data.success) return;
       setList(data.preApprovalList || []);
@@ -54,7 +54,7 @@ export function SecurityPreApproval() {
 
   const handleAction = async (id, status) => {
     try {
-      const res = await fetch("http://localhost:3000/security/preApproval/action", {
+      const res = await fetch("/security/preApproval/action", {
         method: "POST", credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ID: id, status }),

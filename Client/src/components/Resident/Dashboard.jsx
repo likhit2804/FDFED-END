@@ -16,7 +16,7 @@ export const ResidentDashboard = () => {
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch("http://localhost:3000/resident/api/dashboard", {
+        const res = await fetch("/resident/api/dashboard", {
           method: "GET",
           credentials: "include",
         });

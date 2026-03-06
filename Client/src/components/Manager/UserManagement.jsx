@@ -9,7 +9,7 @@ import { RegistrationCodesModal } from "./UserManagement/RegistrationCodesModal"
 const makeBase = () =>
     process.env.NODE_ENV === "production"
         ? `${window.location.origin}/manager`
-        : "http://localhost:3000/manager";
+        : "/manager";
 
 /* -------------------------
    Small Helpers & Subcomponents

@@ -9,7 +9,7 @@ export const SecurityDashboard = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await fetch("http://localhost:3000/security/dashboard/api", { method: "GET", credentials: "include" });
+        const res = await fetch("/security/dashboard/api", { method: "GET", credentials: "include" });
         const data = await res.json();
         if (!data.success) return;
         setStats(data.stats || {});

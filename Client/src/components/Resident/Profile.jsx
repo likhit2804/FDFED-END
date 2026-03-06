@@ -36,7 +36,7 @@ export const ResidentProfile = () => {
   useEffect(() => {
     async function loadProfile() {
       try {
-        const res = await fetch("http://localhost:3000/resident/profile", {
+        const res = await fetch("/resident/profile", {
           method: "GET",
           credentials: "include",
         });
@@ -94,7 +94,7 @@ export const ResidentProfile = () => {
       // only if image upload exists later
       // form.append("image", selectedFile);
 
-      const res = await fetch("http://localhost:3000/resident/profile", {
+      const res = await fetch("/resident/profile", {
         method: "POST",
         credentials: "include",
         body: form,
@@ -125,7 +125,7 @@ export const ResidentProfile = () => {
   const handlePasswordSubmitShared = async ({ cp, np, cnp }) => {
     if (np !== cnp) { alert('New password and confirm password do not match.'); return; }
     try {
-      const res = await fetch('http://localhost:3000/resident/change-password', {
+      const res = await fetch('/resident/change-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

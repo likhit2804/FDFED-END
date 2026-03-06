@@ -9,7 +9,7 @@ import { setUser } from "../../Slices/authSlice";
 const API_BASE =
   process.env.NODE_ENV === "production"
     ? `${window.location.origin}/manager`
-    : "http://localhost:3000/manager";
+    : "/manager";
 
 export const Subscription = () => {
   const { user } = useSelector((state) => state.auth);

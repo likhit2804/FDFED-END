@@ -19,7 +19,7 @@ export const WorkerDashboard = () => {
 
     useEffect(() => {
         const fetchData = async () => {
-            const response = await fetch("http://localhost:3000/worker/getDashboardData", {
+            const response = await fetch("/worker/getDashboardData", {
                 method: "GET",
                 headers: {
                     "Content-Type": "application/json"

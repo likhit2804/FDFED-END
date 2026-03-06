@@ -6,7 +6,7 @@ export const loginUser = createAsyncThunk(
   async ({ email, password, userType }, { rejectWithValue }) => {
     try {
       const response = await axios.post(
-        "http://localhost:3000/login",
+        "/login",
         { email, password, userType },
         { withCredentials: true }
       );
@@ -25,7 +25,7 @@ export const verifyOtp = createAsyncThunk(
   async ({ otp, tempToken }, { rejectWithValue }) => {
     try {
       const response = await axios.post(
-        "http://localhost:3000/verify-otp",
+        "/verify-otp",
         { otp, tempToken },
         { withCredentials: true }
       );

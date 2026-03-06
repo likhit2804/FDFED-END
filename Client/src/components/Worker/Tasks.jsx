@@ -15,7 +15,7 @@ export const Tasks = () => {
   const [selectedTask, setSelectedTask] = useState(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [estimatedCost, setEstimatedCost] = useState("");
-  const socket = useSocket("http://localhost:3000");
+  const socket = useSocket("");
 
   const [statusFilter, setStatusFilter] = useState("All");
   const [priorityFilter, setPriorityFilter] = useState("All");
@@ -27,7 +27,7 @@ export const Tasks = () => {
   const fetchTasks = async () => {
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:3000/worker/api/tasks", { credentials: "include" });
+      const res = await fetch("/worker/api/tasks", { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch tasks");
       const data = await res.json();
       setTasks(data.tasks || []);
@@ -83,7 +83,7 @@ export const Tasks = () => {
       if (payload && (!Number.isFinite(payload.estimatedCost) || payload.estimatedCost <= 0)) {
         setActionLoading(false); toast.error("Enter a positive estimated cost before completing."); return;
       }
-      const res = await fetch(`http://localhost:3000/worker/issue/${endpoint}/${taskId}`, {
+      const res = await fetch(`/worker/issue/${endpoint}/${taskId}`, {
         method: "POST", credentials: "include",
         headers: payload ? { "Content-Type": "application/json" } : undefined,
         body: payload ? JSON.stringify(payload) : undefined,
@@ -99,7 +99,7 @@ export const Tasks = () => {
   const handleMisassigned = async (id) => {
     setActionLoading(true);
     try {
-      const res = await fetch(`http://localhost:3000/worker/issue/misassigned/${id}`, { method: "POST", credentials: "include" });
+      const res = await fetch(`/worker/issue/misassigned/${id}`, { method: "POST", credentials: "include" });
       const data = await res.json();
       if (!data.success) throw new Error(data.message);
       toast.success("Flagged as misassigned");

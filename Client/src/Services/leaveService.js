@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API = axios.create({ baseURL: 'http://localhost:3000' });
+const API = axios.create({ baseURL: '' });
 API.defaults.withCredentials = true; // send cookies for auth
 
 export const applyLeave = (payload) => API.post('/leaves', payload);

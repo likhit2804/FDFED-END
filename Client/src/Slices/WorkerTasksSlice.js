@@ -5,7 +5,7 @@ export const fetchWorkerTasks = createAsyncThunk(
   "workerTasks/fetchWorkerTasks",
   async (_, { rejectWithValue }) => {
     try {
-      const res = await fetch("http://localhost:3000/worker/api/tasks", {
+      const res = await fetch("/worker/api/tasks", {
         credentials: "include",
       });
       if (!res.ok) throw new Error("Failed to fetch tasks");
@@ -22,7 +22,7 @@ export const startWorkerTask = createAsyncThunk(
   "workerTasks/startWorkerTask",
   async (taskId, { rejectWithValue }) => {
     try {
-      const res = await fetch(`http://localhost:3000/worker/issue/start/${taskId}`, {
+      const res = await fetch(`/worker/issue/start/${taskId}`, {
         method: "POST",
         credentials: "include",
       });
@@ -40,7 +40,7 @@ export const resolveWorkerTask = createAsyncThunk(
   "workerTasks/resolveWorkerTask",
   async (taskId, { rejectWithValue }) => {
     try {
-      const res = await fetch(`http://localhost:3000/worker/issue/resolve/${taskId}`, {
+      const res = await fetch(`/worker/issue/resolve/${taskId}`, {
         method: "POST",
         credentials: "include",
       });
@@ -58,7 +58,7 @@ export const misassignedWorkerTask = createAsyncThunk(
   "workerTasks/misassignedWorkerTask",
   async (taskId, { rejectWithValue }) => {
     try {
-      const res = await fetch(`http://localhost:3000/worker/issue/misassigned/${taskId}`, {
+      const res = await fetch(`/worker/issue/misassigned/${taskId}`, {
         method: "POST",
         credentials: "include",
       });

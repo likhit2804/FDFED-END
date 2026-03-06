@@ -1,7 +1,7 @@
 // src/context/AdminAuthContext.jsx
 import React, { createContext, useContext, useState, useEffect } from "react";
 
-const API_BASE = "http://localhost:3000";
+const API_BASE = "";
 
 const AdminAuthContext = createContext();
 

@@ -11,7 +11,7 @@ const initialState = {
 
 export const fetchuserBookings = createAsyncThunk("commonSpace/fetchBookings", async (_, { rejectWithValue }) => {
   try {
-    const response = await fetch("http://localhost:3000/resident/commonSpace", {
+    const response = await fetch("/resident/commonSpace", {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -39,7 +39,7 @@ export const fetchuserBookings = createAsyncThunk("commonSpace/fetchBookings", a
 
 export const ConfirmBooking = createAsyncThunk("commonSpace/ConfirmBooking", async ({ data, newBooking, requestId }, { rejectWithValue }) => {
   try {
-    const response = await fetch("http://localhost:3000/resident/commonSpace", {
+    const response = await fetch("/resident/commonSpace", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -65,7 +65,7 @@ export const ConfirmBooking = createAsyncThunk("commonSpace/ConfirmBooking", asy
 
 export const fetchDataforManager = createAsyncThunk("commonSpace/fetchDataforManager", async (_, { rejectWithValue }) => {
   try {
-    const response = await fetch("http://localhost:3000/manager/commonSpace",
+    const response = await fetch("/manager/commonSpace",
       {
         method: "GET",
         headers: {
@@ -94,7 +94,7 @@ export const EditSpace = createAsyncThunk("commonSpace/EditSpace",
   async ({ id, updatedData }, { rejectWithValue }) => {
     try {
       const response = await fetch(
-        `http://localhost:3000/manager/spaces/${id}`,
+        `/manager/spaces/${id}`,
         {
           method: "PUT",
           headers: {
@@ -122,7 +122,7 @@ export const DeleteSpace = createAsyncThunk(
   async (id, { rejectWithValue }) => {
     try {
       const response = await fetch(
-        `http://localhost:3000/manager/spaces/${id}`,
+        `/manager/spaces/${id}`,
         {
           method: "DELETE",
           headers: {
@@ -148,7 +148,7 @@ export const AddSpace = createAsyncThunk(
   "commonSpace/AddSpace",
   async (newSpaceData, { rejectWithValue }) => {
     try {
-      const response = await fetch("http://localhost:3000/manager/spaces", {
+      const response = await fetch("/manager/spaces", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -173,7 +173,7 @@ export const ProceedPayment = createAsyncThunk("commonSpace/ProceedPayment",
     console.log("Data in slice :", paymentData);
 
     try {
-      const response = await fetch("http://localhost:3000/resident/payment/post", {
+      const response = await fetch("/resident/payment/post", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -200,7 +200,7 @@ export const cancelUserBooking = createAsyncThunk(
   async ({ bookingId, originalStatus }, { rejectWithValue }) => {
     try {
       const response = await fetch(
-        `http://localhost:3000/resident/booking/cancel/${bookingId}`,
+        `/resident/booking/cancel/${bookingId}`,
         {
           method: "PUT",
           headers: {

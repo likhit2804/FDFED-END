@@ -76,7 +76,7 @@ function App() {
   const dispatch = useDispatch();
 
   useEffect(() => {
-    fetch("http://localhost:3000/api/auth/getUser", {
+    fetch("/api/auth/getUser", {
       credentials: "include",
     })
       .then(res => res.json())

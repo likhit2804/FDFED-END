@@ -4,7 +4,7 @@ class AdminApiClient {
     this.baseURL =
       process.env.NODE_ENV === "production"
         ? `${window.location.origin}/admin/api`
-        : "http://localhost:3000/admin/api";
+        : "/admin/api";
     this.maxRetries = 3;
     this.retryDelay = 1000; // 1 second base delay
   }

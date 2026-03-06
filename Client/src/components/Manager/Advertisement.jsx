@@ -19,11 +19,11 @@ import { StatCard, SearchBar as SharedSearchBar, Dropdown, StatusBadge, EmptySta
 
 
 const API_BASE_URL = process.env.NODE_ENV === "production" ? `${window.location.origin
-    }/manager/api` : "http://localhost:3000/manager/api";
+    }/manager/api` : "/manager/api";
 
 // Base URL for non-API manager routes (e.g. file uploads / images)
 const MANAGER_BASE_URL = process.env.NODE_ENV === "production" ? `${window.location.origin
-    }/manager` : "http://localhost:3000/manager";
+    }/manager` : "/manager";
 
 
 
@@ -41,7 +41,7 @@ const getAdImageUrl = (imagePath) => {
 
 
     // Otherwise construct full URL
-    const baseUrl = process.env.NODE_ENV === "production" ? window.location.origin : "http://localhost:3000";
+    const baseUrl = process.env.NODE_ENV === "production" ? window.location.origin : "";
     return `${baseUrl}/${normalizedPath.replace(/^\/+/, "")
         }`;
 };

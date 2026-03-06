@@ -20,7 +20,7 @@ import { WorkerAssignModal } from "./IssueResolving/WorkerAssignModal";
 
 export const IssueResolving = () => {
   const dispatch = useDispatch();
-  const socket = useSocket("http://localhost:3000");
+  const socket = useSocket("");
 
   const managerState = useSelector((s) => s?.managerIssues) || {};
   const { issues = [], loading = false, error = null, workers = [], workersLoading = false } = managerState;

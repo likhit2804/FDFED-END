@@ -194,7 +194,7 @@ export const History = () => {
     useEffect(() => {
         const fetchHistory = async () => {
             try {
-                const res = await fetch('http://localhost:3000/worker/history', {
+                const res = await fetch('/worker/history', {
                     method: 'GET',
                     credentials: 'include'
                 });

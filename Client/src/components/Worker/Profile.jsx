@@ -67,7 +67,7 @@ export const WorkerProfile = () => {
                 body.append("image", imageFile);
             }
 
-            const response = await fetch("http://localhost:3000/worker/profile", {
+            const response = await fetch("/worker/profile", {
                 method: "POST",
                 credentials: "include",
                 body
@@ -86,7 +86,7 @@ export const WorkerProfile = () => {
                     address: data.r.address || prev.address,
                     department: Array.isArray(jobRole) ? jobRole.join(", ") : jobRole || prev.department,
                     // Refresh image preview if it was updated
-                    image: data.r.image ? `http://localhost:3000/${data.r.image
+                    image: data.r.image ? `/${data.r.image
                         }` : prev.image
                 }));
             } else {
@@ -115,7 +115,7 @@ export const WorkerProfile = () => {
     const handlePasswordSubmitShared = async ({ cp, np, cnp }) => {
         if (np !== cnp) { toast.error('New password and confirm password do not match'); return; }
         try {
-            const response = await fetch('http://localhost:3000/worker/change-password', {
+            const response = await fetch('/worker/change-password', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',

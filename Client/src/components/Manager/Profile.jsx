@@ -32,7 +32,7 @@ export const ManagerProfile = () => {
     useEffect(() => {
         setLoading(true); setError(null);
 
-        fetch("http://localhost:3000/manager/profile/api", { method: "GET", headers: { "Content-Type": "application/json" }, credentials: "include" })
+        fetch("/manager/profile/api", { method: "GET", headers: { "Content-Type": "application/json" }, credentials: "include" })
             .then((r) => r.json()).then((data) => {
                 if (data.success) {
                     setFormData({
@@ -48,7 +48,7 @@ export const ManagerProfile = () => {
             .catch(() => setError("Failed to load profile data"))
             .finally(() => setLoading(false));
 
-        fetch("http://localhost:3000/manager/subscription-status", { method: "GET", headers: { "Content-Type": "application/json" }, credentials: "include" })
+        fetch("/manager/subscription-status", { method: "GET", headers: { "Content-Type": "application/json" }, credentials: "include" })
             .then((r) => r.json()).then((sub) => { if (sub.success && sub.community) setSubscriptionInfo(sub.community); })
             .catch(() => { });
     }, []);
@@ -62,7 +62,7 @@ export const ManagerProfile = () => {
         fd.append("contact", formData.phone); fd.append("location", formData.location);
         fd.append("address", formData.address);
 
-        fetch("http://localhost:3000/manager/profile", { method: "POST", body: fd, credentials: "include" })
+        fetch("/manager/profile", { method: "POST", body: fd, credentials: "include" })
             .then((r) => r.json()).then((data) => {
                 if (data.success) { setError(null); alert("Profile updated successfully!"); }
                 else { setError(data.message || "Failed to update profile"); }
@@ -73,7 +73,7 @@ export const ManagerProfile = () => {
         setPasswordMessage("");
         if (np !== cnp) { setPasswordMessage("Passwords do not match!"); return; }
         try {
-            const res = await fetch("http://localhost:3000/manager/profile/changePassword", {
+            const res = await fetch("/manager/profile/changePassword", {
                 method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include",
                 body: JSON.stringify({ cp, np, cnp }),
             });
@@ -89,7 +89,7 @@ export const ManagerProfile = () => {
         setShowPlanForm(true); setPlanError("");
         if (plans) return;
         setPlanLoading(true);
-        fetch("http://localhost:3000/manager/subscription-plans", { method: "GET", headers: { "Content-Type": "application/json" }, credentials: "include" })
+        fetch("/manager/subscription-plans", { method: "GET", headers: { "Content-Type": "application/json" }, credentials: "include" })
             .then((r) => r.json()).then((data) => {
                 if (data.success && data.plans) setPlans(data.plans);
                 else setPlanError(data.message || "Failed to load plans");
@@ -103,7 +103,7 @@ export const ManagerProfile = () => {
         if (!plans?.[selectedPlan]) { setPlanError("Please select a valid plan"); return; }
         const plan = plans[selectedPlan];
         setPlanSubmitting(true);
-        fetch("http://localhost:3000/manager/subscription-payment", {
+        fetch("/manager/subscription-payment", {
             method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include",
             body: JSON.stringify({ communityId: subscriptionInfo._id, subscriptionPlan: selectedPlan, amount: plan.price, paymentMethod: "card", planDuration: plan.duration || "monthly", paymentDate: new Date().toISOString() }),
         }).then((r) => r.json()).then((data) => {
@@ -118,7 +118,7 @@ export const ManagerProfile = () => {
 
     const handleRotateCommunityCode = () => {
         setCodeLoading(true);
-        fetch("http://localhost:3000/manager/community/rotate-code", { method: "POST", credentials: "include" })
+        fetch("/manager/community/rotate-code", { method: "POST", credentials: "include" })
             .then((r) => r.json()).then((data) => {
                 if (data.success) { setCommunityCode(data.communityCode); alert("Community code updated successfully"); }
                 else { alert(data.message || "Failed to update code"); }

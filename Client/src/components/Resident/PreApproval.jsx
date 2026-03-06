@@ -14,7 +14,7 @@ export function PreApproval() {
 
   async function loadVisitors() {
     try {
-      const res = await fetch("http://localhost:3000/resident/preApprovals", { method: "GET", credentials: "include" });
+      const res = await fetch("/resident/preApprovals", { method: "GET", credentials: "include" });
       const data = await res.json();
       if (!data.success) return;
       setVisitors(data.visitors || []);
@@ -28,7 +28,7 @@ export function PreApproval() {
   async function cancelRequest(id) {
     if (!window.confirm("Cancel this visitor request?")) return;
     try {
-      const res = await fetch(`http://localhost:3000/resident/preapproval/cancel/${id}`, { method: "DELETE", credentials: "include" });
+      const res = await fetch(`/resident/preapproval/cancel/${id}`, { method: "DELETE", credentials: "include" });
       const data = await res.json();
       if (data.ok) loadVisitors();
     } catch (err) { console.error("Cancel error:", err); }
@@ -36,7 +36,7 @@ export function PreApproval() {
 
   async function viewQR(id) {
     try {
-      const res = await fetch(`http://localhost:3000/resident/preapproval/qr/${id}`, { method: "GET", credentials: "include" });
+      const res = await fetch(`/resident/preapproval/qr/${id}`, { method: "GET", credentials: "include" });
       const data = await res.json();
       setQrImage(data.qrCodeBase64);
       setShowQR(true);
@@ -46,7 +46,7 @@ export function PreApproval() {
   async function handleSubmit(e) {
     e.preventDefault();
     try {
-      const res = await fetch("http://localhost:3000/resident/preapproval", {
+      const res = await fetch("/resident/preapproval", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

@@ -16,7 +16,7 @@ const C_CATEGORIES = ["Streetlight", "Elevator", "Garden", "Common Area"];
 export const IssueRaising = () => {
   const dispatch = useDispatch();
   const { issues, loading } = useSelector((state) => state.Issue);
-  const socket = useSocket("http://localhost:3000");
+  const socket = useSocket("");
 
   const [isIssueFormOpen, setIsIssueFormOpen] = useState(false);
   const [isDetailsPopupOpen, setIsDetailsPopupOpen] = useState(false);
@@ -56,8 +56,8 @@ export const IssueRaising = () => {
 
   const handleIssueAction = async (id, action) => {
     const url = action === "confirm"
-      ? `http://localhost:3000/resident/issue/confirmIssue/${id}`
-      : `http://localhost:3000/resident/issue/rejectIssueResolution/${id}`;
+      ? `/resident/issue/confirmIssue/${id}`
+      : `/resident/issue/rejectIssueResolution/${id}`;
     try {
       const res = await fetch(url, { method: "POST", credentials: "include" });
       const text = await res.text();

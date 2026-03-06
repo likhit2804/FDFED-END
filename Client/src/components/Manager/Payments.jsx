@@ -76,7 +76,7 @@ const PaymentsHistory = ({ onStats, filters = {} }) => {
     setLoading(true);
     setError(null);
 
-    fetch("http://localhost:3000/manager/api/payments", {
+    fetch("/manager/api/payments", {
       method: "GET",
       headers: { "Content-Type": "application/json" },
       credentials: "include",

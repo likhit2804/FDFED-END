@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 
-const API = "http://localhost:3000/manager/issue";
+const API = "/manager/issue";
 
 // GET: manager issues + analytics
 export const fetchManagerIssues = createAsyncThunk(
@@ -167,7 +167,7 @@ export const fetchWorkers = createAsyncThunk(
   "managerIssues/fetchWorkers",
   async (_, { rejectWithValue }) => {
     try {
-      const res = await fetch("http://localhost:3000/manager/workers", { credentials: "include" });
+      const res = await fetch("/manager/workers", { credentials: "include" });
       
       if (!res.ok) {
         const errData = await res.json();
