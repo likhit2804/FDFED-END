@@ -791,7 +791,7 @@ app.use(express.static(path.join(__dirname, "../Client/dist")));
 
 // Catch-all route to serve the React index.html for unknown routes
 // This delegates routing back to React Router in the browser
-app.get("*", (req, res) => {
+app.get(/.*/, (req, res) => {
   res.sendFile(path.join(__dirname, "../Client/dist/index.html"));
 });
 
