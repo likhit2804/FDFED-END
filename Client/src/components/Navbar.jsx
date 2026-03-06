@@ -1,5 +1,5 @@
 import React from "react";
-import logo from '../imgs/logo.png';
+import logo from '../imgs/Logo.png';
 import "../assets/css/Navbar.css"
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useDispatch } from "react-redux";
