@@ -11,7 +11,7 @@ export const loginUser = createAsyncThunk(
         { withCredentials: true }
       );
       localStorage.setItem("token", response.data.tempToken);
-      localStorage.setItem("user", JSON.stringify({ email,userType }));
+      localStorage.setItem("user", JSON.stringify({ email, userType }));
       return { ...response.data, email, userType };
     } catch (err) {
       console.log(err);
@@ -41,7 +41,7 @@ export const registerUser = createAsyncThunk(
   async ({ name, email, password, userType }, { rejectWithValue }) => {
     try {
       const response = await axios.post(
-        "http://localhost:5000/api/auth/register",
+        "/api/auth/register",
         { name, email, password, userType },
         { withCredentials: true }
       );
@@ -58,7 +58,7 @@ const authSlice = createSlice({
     user: localStorage.getItem("user")
       ? JSON.parse(localStorage.getItem("user"))
       : null,
-    token: localStorage.getItem("token") ||  null,
+    token: localStorage.getItem("token") || null,
     loading: false,
     error: null,
     pending2fa: null,
@@ -102,27 +102,27 @@ const authSlice = createSlice({
           }
         }
       })
-            .addCase(verifyOtp.pending, (state) => {
-              state.loading = true;
-              state.error = null;
-            })
-            .addCase(verifyOtp.fulfilled, (state, action) => {
-              state.loading = false;
-              state.user = action.payload.user;
-              state.token = action.payload.token;
-              state.pending2fa = null;
-              // persist full user + token after successful OTP
-              try {
-                localStorage.setItem("token", action.payload.token);
-                localStorage.setItem("user", JSON.stringify(action.payload.user));
-              } catch (e) {
-                console.warn("Failed to persist auth to localStorage", e);
-              }
-            })
-            .addCase(verifyOtp.rejected, (state, action) => {
-              state.loading = false;
-              state.error = action.payload;
-            })
+      .addCase(verifyOtp.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(verifyOtp.fulfilled, (state, action) => {
+        state.loading = false;
+        state.user = action.payload.user;
+        state.token = action.payload.token;
+        state.pending2fa = null;
+        // persist full user + token after successful OTP
+        try {
+          localStorage.setItem("token", action.payload.token);
+          localStorage.setItem("user", JSON.stringify(action.payload.user));
+        } catch (e) {
+          console.warn("Failed to persist auth to localStorage", e);
+        }
+      })
+      .addCase(verifyOtp.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
       .addCase(loginUser.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
