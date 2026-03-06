@@ -2,10 +2,13 @@
   "name": "urban-ease",
   "private": true,
   "scripts": {
-    "install-all": "npm install && npm install --prefix server && npm install --prefix frontend",
-    "start:server": "npm run dev --prefix Server",
-    "start:client": "npm run dev --prefix Client ",
-    "dev": "concurrently \"npm run start:server\" \"npm run start:client\""
+    "install-all": "npm install && npm install --prefix Server && npm install --prefix Client",
+    "postinstall": "npm install --prefix Server",
+    "start": "npm run start:server",
+    "start:server": "npm run start --prefix Server",
+    "start:server:dev": "npm run dev --prefix Server",
+    "start:client": "npm run dev --prefix Client",
+    "dev": "concurrently \"npm run start:server:dev\" \"npm run start:client\""
   },
   "dependencies": {
     "express-flash": "^0.0.2"

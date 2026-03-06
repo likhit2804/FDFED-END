@@ -100,7 +100,7 @@ mongoose
   });
 
 const app = express();
-const PORT = 3000;
+const PORT = Number(process.env.PORT) || 3000;
 
 // SOCKET SERVER CREATION
 const server = http.createServer(app);
