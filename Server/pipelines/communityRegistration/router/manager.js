@@ -33,7 +33,6 @@ const communityRegistrationRouter = express.Router();
 // Interest Form / Admin Approval
 // --------------------------------------------------
 communityRegistrationRouter.get("/api/interests", getAllApplications);
-communityRegistrationRouter.get("/interests", getAllApplications);
 communityRegistrationRouter.post("/interests/:id/approve", approveApplication);
 communityRegistrationRouter.post("/interests/:id/reject", rejectApplication);
 communityRegistrationRouter.post("/interests/:id/resend-link", resendPaymentLink);

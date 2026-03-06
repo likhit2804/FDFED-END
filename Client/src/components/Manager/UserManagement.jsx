@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import { Key, Pencil, Trash2, X } from "lucide-react";
 import { toast } from "react-toastify";
 
-import { Tabs, ConfirmModal } from '../shared';
+import { Tabs, ConfirmModal, Modal, Input, Textarea } from '../shared';
 import { RegistrationCodesModal } from "./UserManagement/RegistrationCodesModal";
 
 const makeBase = () =>
@@ -14,22 +14,6 @@ const makeBase = () =>
 /* -------------------------
    Small Helpers & Subcomponents
 --------------------------*/
-const Modal = ({ visible, onClose, title, children }) => {
-    if (!visible) return null;
-    return (
-        <div className="um-backdrop" onClick={onClose}>
-            <div className="um-modal" onClick={(e) => e.stopPropagation()}>
-                <div className="um-modal-header">
-                    <h4>{title}</h4>
-                    <button className="um-close" onClick={onClose} style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        <X size={20} />
-                    </button>
-                </div>
-                <div className="um-modal-body">{children}</div>
-            </div>
-        </div>
-    );
-};
 
 const Card = ({ title, subtitle, meta = [], onEdit, onDelete }) => (
     <div className="um-card">
@@ -76,12 +60,11 @@ const DynamicForm = ({ fields, initial = {}, onSubmit, submitLabel = "Save" }) =
     return (
         <form className="um-form" onSubmit={(e) => { e.preventDefault(); onSubmit(form); }}>
             {fields.map((f) => (
-                <div className="um-form-row" key={f.key}>
-                    <label>{f.label}</label>
+                <div key={f.key} style={{ marginBottom: 16 }}>
                     {f.type === "textarea" ? (
-                        <textarea value={form[f.key]} onChange={(e) => handle(f.key, e.target.value)} />
+                        <Textarea label={f.label} value={form[f.key]} onChange={(e) => handle(f.key, e.target.value)} />
                     ) : (
-                        <input type={f.type || "text"} value={form[f.key]} onChange={(e) => handle(f.key, e.target.value)} placeholder={f.placeholder || ""} />
+                        <Input label={f.label} type={f.type || "text"} value={form[f.key]} onChange={(e) => handle(f.key, e.target.value)} placeholder={f.placeholder || ""} />
                     )}
                 </div>
             ))}
@@ -329,7 +312,7 @@ export default function UserManagement() {
             </div>
 
             {/* Add/Edit Modal */}
-            <Modal visible={modalVisible} onClose={() => { setModalVisible(false); setModalCfg(null); }} title={modalCfg ? (modalCfg.mode === "edit" ? `Edit ${cfg.label}` : `Add ${cfg.label}`) : ""}>
+            <Modal isOpen={modalVisible} onClose={() => { setModalVisible(false); setModalCfg(null); }} title={modalCfg ? (modalCfg.mode === "edit" ? `Edit ${cfg.label}` : `Add ${cfg.label}`) : ""} size="md">
                 {modalCfg && (
                     <DynamicForm fields={modalCfg.fields} initial={modalCfg.initial} submitLabel={modalCfg.mode === "edit" ? "Update" : "Create"} onSubmit={(values) => saveEntity(values, modalCfg.mode === "edit" ? modalCfg.id : null)} />
                 )}

@@ -5,46 +5,13 @@ import CommunityManager from "../../../models/cManager.js";
 import Payment from "../../../models/payment.js";
 import { createPaymentRecord } from "../../payment/services/paymentService.js";
 import { pushNotification } from "../../notifications/services/notificationService.js";
-import { getIO } from "../../../utils/socket.js";
 import {
     autoAssignResidentIssue,
     autoAssignCommunityIssue,
     checkDuplicateIssue,
     checkDuplicateCommunityIssue,
 } from "../../../utils/issueAutomation.js";
-
-// pushNotification is now imported from notifications pipeline
-
-const getCommunityManagerForCommunity = async (communityId) => {
-    if (!communityId) return null;
-    return CommunityManager.findOne({ assignedCommunity: communityId });
-};
-
-const toId = (value) => (value && value._id ? value._id : value);
-
-const emitIssueUpdate = (issue, action = "updated") => {
-    const io = getIO();
-    if (!io || !issue) return;
-
-    const payload = {
-        action,
-        issueId: issue._id,
-        status: issue.status,
-        categoryType: issue.categoryType,
-        community: issue.community,
-        workerAssigned: toId(issue.workerAssigned) || null,
-        resident: toId(issue.resident) || null,
-        updatedAt: new Date().toISOString(),
-    };
-
-    const residentId = toId(issue.resident);
-    const workerId = toId(issue.workerAssigned);
-    const communityId = toId(issue.community);
-
-    if (residentId) io.to(`resident_${residentId}`).emit("issue:updated", payload);
-    if (workerId) io.to(`worker_${workerId}`).emit("issue:updated", payload);
-    if (communityId) io.to(`community_${communityId}`).emit("issue:updated", payload);
-};
+import { getCommunityManagerForCommunity, emitIssueUpdate } from "../utils/issueShared.js";
 
 function determineIssuePriority(category, categoryType, description = "", title = "") {
     const now = new Date();
@@ -297,14 +264,13 @@ export const deleteIssue = async (req, res) => {
         if (!issue)
             return res.status(404).json({ success: false, message: "Issue not found" });
 
-        const resident = await Resident.findById({ _id: req.user.id, community: req.user.community });
+        const resident = await Resident.findOneAndUpdate(
+            { _id: req.user.id, community: req.user.community },
+            { $pull: { raisedIssues: issueID } }
+        );
+
         if (!resident)
             return res.status(404).json({ success: false, message: "Resident not found" });
-
-        resident.raisedIssues = resident.raisedIssues.filter(
-            (id) => id.toString() !== issueID
-        );
-        await resident.save();
 
         res.json({ success: true, message: "Issue deleted successfully" });
     } catch (error) {

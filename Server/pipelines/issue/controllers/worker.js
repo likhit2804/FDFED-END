@@ -3,54 +3,9 @@ import Worker from "../../../models/workers.js";
 import Resident from "../../../models/resident.js";
 import CommunityManager from "../../../models/cManager.js";
 import Notifications from "../../../models/Notifications.js";
-import { getIO } from "../../../utils/socket.js";
 import { flagMisassigned } from "../../../utils/issueAutomation.js";
-
-// --------------------------------------------------
-// Shared helpers
-// --------------------------------------------------
-const pushNotification = async (userModel, userId, notificationData) => {
-    if (!userId) return null;
-    const notification = new Notifications(notificationData);
-    await notification.save();
-    const user = await userModel.findById(userId);
-    if (user) {
-        user.notifications.push(notification._id);
-        await user.save();
-    }
-    return notification;
-};
-
-const getCommunityManagerForCommunity = async (communityId) => {
-    if (!communityId) return null;
-    return CommunityManager.findOne({ assignedCommunity: communityId });
-};
-
-const toId = (value) => (value && value._id ? value._id : value);
-
-const emitIssueUpdate = (issue, action = "updated") => {
-    const io = getIO();
-    if (!io || !issue) return;
-
-    const payload = {
-        action,
-        issueId: issue._id,
-        status: issue.status,
-        categoryType: issue.categoryType,
-        community: issue.community,
-        workerAssigned: toId(issue.workerAssigned) || null,
-        resident: toId(issue.resident) || null,
-        updatedAt: new Date().toISOString(),
-    };
-
-    const residentId = toId(issue.resident);
-    const workerId = toId(issue.workerAssigned);
-    const communityId = toId(issue.community);
-
-    if (residentId) io.to(`resident_${residentId}`).emit("issue:updated", payload);
-    if (workerId) io.to(`worker_${workerId}`).emit("issue:updated", payload);
-    if (communityId) io.to(`community_${communityId}`).emit("issue:updated", payload);
-};
+import { pushNotification } from "../../notifications/services/notificationService.js";
+import { getCommunityManagerForCommunity, emitIssueUpdate } from "../utils/issueShared.js";
 
 // --------------------------------------------------
 // WORKER: Start Issue
@@ -125,16 +80,13 @@ export const resolveIssue = async (req, res) => {
         if (issue.categoryType === "Resident") {
             issue.status = "Resolved (Awaiting Confirmation)";
             issue.resolvedAt = new Date();
-            const notification = new Notifications({
+            await pushNotification(Resident, issue.resident._id, {
                 type: "Issue",
                 title: "Issue Resolved",
                 message: `Your issue ${issue.issueID || issue._id} has been resolved. Please confirm.`,
                 referenceId: issue._id,
                 referenceType: "Issue",
             });
-            await notification.save();
-            issue.resident.notifications.push(notification._id);
-            await issue.resident.save();
         } else if (issue.categoryType === "Community") {
             issue.status = "Closed";
             issue.resolvedAt = new Date();

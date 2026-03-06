@@ -5,6 +5,7 @@ import SubscriptionPlan from "../../../models/subscriptionPlan.js";
 import { sendError, sendSuccess } from "../../shared/helpers.js";
 import { createCommunitySubscription } from "../../../crud/index.js";
 import { generateTransactionId } from "../../../utils/idGenerator.js";
+import { calculatePlanEndDate } from "../utils/helpers.js";
 
 export const getCommunityDetails = async (req, res) => {
     try {
@@ -70,13 +71,7 @@ export const processSubscriptionPayment = async (req, res) => {
 
         // Calculate plan end date based on plan duration
         const startDate = new Date(paymentDate);
-        const endDate = new Date(startDate);
-
-        if (planDoc.duration === "monthly") {
-            endDate.setMonth(endDate.getMonth() + 1);
-        } else if (planDoc.duration === "yearly") {
-            endDate.setFullYear(endDate.getFullYear() + 1);
-        }
+        const endDate = calculatePlanEndDate(startDate, planDoc.duration);
 
         // Create subscription payment record
         const subscriptionPayment = {
@@ -396,13 +391,7 @@ export const changePlan = async (req, res) => {
             if (paymentMethod && priceDifference > 0) {
                 const transactionId = generateTransactionId("PLAN_CHANGE");
 
-                // Calculate end date based on plan duration
-                const endDate = new Date(now);
-                if (newPlanDoc.duration === "monthly") {
-                    endDate.setMonth(endDate.getMonth() + 1);
-                } else if (newPlanDoc.duration === "yearly") {
-                    endDate.setFullYear(endDate.getFullYear() + 1);
-                }
+                const endDate = calculatePlanEndDate(now, newPlanDoc.duration);
 
                 const paymentRecord = {
                     transactionId,
@@ -469,13 +458,7 @@ export const changePlan = async (req, res) => {
                     planEndDate: community.planEndDate,
                 });
             } else if (priceDifference <= 0) {
-                // Calculate end date for downgrade
-                const endDate = new Date(now);
-                if (newPlanDoc.duration === "monthly") {
-                    endDate.setMonth(endDate.getMonth() + 1);
-                } else if (newPlanDoc.duration === "yearly") {
-                    endDate.setFullYear(endDate.getFullYear() + 1);
-                }
+                const endDate = calculatePlanEndDate(now, newPlanDoc.duration);
 
                 community.subscriptionPlan = newPlan;
                 community.planStartDate = now;

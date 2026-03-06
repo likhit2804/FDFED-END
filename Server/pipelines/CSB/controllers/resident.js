@@ -17,80 +17,21 @@ import CommunityManager from "../../../models/cManager.js";
 import mongoose from "mongoose";
 import { getIO } from "../../../utils/socket.js";
 import { sendSuccess, sendError } from "./manager.js";
+import { validateBookingPayload } from "../utils/csbValidation.js";
 
-export const validateBookingPayload = (newBooking) => {
-  const {
-    facility,
-    Date: dateString,
-    from,
-    to,
-    Type,
-    timeSlots,
-  } = newBooking || {};
 
-  if (!facility || !dateString) {
-    return {
-      valid: false,
-      status: 400,
-      message: "Facility, date, and time are required fields.",
-    };
-  }
-
-  const bookingDate = new Date(dateString);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  if (bookingDate < today) {
-    return {
-      valid: false,
-      status: 400,
-      message: "Cannot book for past dates.",
-    };
-  }
-
-  if (Type === "Slot") {
-    const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
-    if (!timeRegex.test(from) || !timeRegex.test(to)) {
-      return { valid: false, status: 400, message: "Invalid time format." };
-    }
-
-    const [fromHour, fromMin] = from.split(":").map(Number);
-    const [toHour, toMin] = to.split(":").map(Number);
-    const fromMinutes = fromHour * 60 + fromMin;
-    const toMinutes = toHour * 60 + toMin;
-
-    if (toMinutes <= fromMinutes) {
-      return {
-        valid: false,
-        status: 400,
-        message: "End time must be after start time.",
-      };
-    }
-
-    if (!timeSlots || timeSlots.length === 0) {
-      return {
-        valid: false,
-        status: 400,
-        message: "Selected time range is invalid.",
-      };
-    }
-
-    return { valid: true, bookingDate, fromMinutes, toMinutes, timeSlots };
-  }
-
-  return { valid: true, bookingDate };
-};
 
 // --------------------------------------------------
 // RESIDENT: Get Common Spaces (bookings + spaces list)
 // --------------------------------------------------
 export const getResidentCommonSpaces = async (req, res) => {
   try {
-    const bookings = await CommonSpaces.find({ bookedBy: req.user.id })
-      .populate("payment")
-      .sort({ createdAt: -1 });
-
-    const spaces = await Amenity.find({ community: req.user.community });
+    const [bookings, spaces] = await Promise.all([
+      CommonSpaces.find({ bookedBy: req.user.id })
+        .populate("payment")
+        .sort({ createdAt: -1 }),
+      Amenity.find({ community: req.user.community })
+    ]);
 
     return res.json({ success: true, bookings, spaces });
   } catch (err) {
@@ -173,23 +114,25 @@ export const createBooking = async (req, res) => {
       const bookingDateStr = bookingDate.toISOString().split("T")[0];
       const requestTimeSlots = validation.timeSlots;
 
-      let existingBooking = Space.bookedSlots.find(
+      const spaceDoc = await Amenity.findById(Space._id);
+      let existingBookingIndex = spaceDoc.bookedSlots.findIndex(
         (b) => new Date(b.date).toISOString().split("T")[0] === bookingDateStr,
       );
 
-      if (existingBooking) {
-        const newSlots = requestTimeSlots.filter(
-          (slot) => !existingBooking.slots.includes(slot),
-        );
-        existingBooking.slots.push(...newSlots);
+      if (existingBookingIndex !== -1) {
+        requestTimeSlots.forEach((slot) => {
+          if (!spaceDoc.bookedSlots[existingBookingIndex].slots.includes(slot)) {
+            spaceDoc.bookedSlots[existingBookingIndex].slots.push(slot);
+          }
+        });
       } else {
-        Space.bookedSlots.push({
+        spaceDoc.bookedSlots.push({
           date: bookingDate,
           slots: requestTimeSlots,
         });
       }
 
-      await Space.save();
+      await spaceDoc.save();
     }
 
     uniqueId = generateCustomID(b._id.toString(), "PY", null);
@@ -288,29 +231,29 @@ export const cancelBooking = async (req, res) => {
         .json({ error: "Cannot cancel past or ongoing bookings." });
     }
 
-    const diffHours = Math.abs((bookingDate - now) / (1000 * 60 * 60));
-    const amount = Number(booking?.amount || 0);
+    const diffHours = (bookingDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+    const amount = Number(booking?.amount) || 0;
     console.log("booking : ", booking);
 
-    if (isNaN(amount)) {
+    if (isNaN(amount) || amount < 0) {
       return res.status(400).json({ error: "Invalid booking amount." });
     }
 
-    console.log(diffHours);
+    console.log("Difference in hours until booking:", diffHours);
 
-    let refundAmount = booking?.amount;
+    let refundAmount = amount;
     if (diffHours >= 48) {
       refundAmount = amount;
-      console.log("greater than 48", refundAmount);
+      console.log("Refund 100% (>48h)", refundAmount);
     } else if (diffHours >= 24) {
       refundAmount = amount * 0.75;
-      console.log("greater than 24", refundAmount);
+      console.log("Refund 75% (>24h)", refundAmount);
     } else if (diffHours >= 4) {
       refundAmount = amount * 0.25;
-      console.log("greater than 4", refundAmount);
+      console.log("Refund 25% (>4h)", refundAmount);
     } else {
-      console.log("greater than 0");
       refundAmount = 0;
+      console.log("Refund 0% (<4h)", refundAmount);
     }
 
     const refundId = generateRefundId(String(booking._id));
@@ -351,24 +294,11 @@ export const getFacilities = async (req, res) => {
     );
     const facilities = community.commonSpaces || [];
 
-    console.log("Raw facilities from database:", facilities);
+    console.log("Raw facilities from database fetched successfully.");
 
     res.json({ success: true, facilities });
   } catch (error) {
     console.error("Error fetching facilities:", error);
     return sendError(res, 500, "Failed to fetch facilities data", error);
-  }
-};
-
-// --------------------------------------------------
-// RESIDENT: Get All Bookings (simple list)
-// --------------------------------------------------
-export const getResidentBookings = async (req, res) => {
-  try {
-    const bookings = await CommonSpaces.find({ bookedBy: req.user.id });
-    return res.json({ success: true, bookings });
-  } catch (err) {
-    console.log(err);
-    return sendError(res, 500, "Internal server error", err);
   }
 };

@@ -60,6 +60,8 @@ import { initializeDefaultPlans } from "./pipelines/communityRegistration/contro
 
 import Resident from "./models/resident.js";
 import Community from "./models/communities.js";
+import Block from "./models/blocks.js";
+import Flat from "./models/flats.js";
 import SystemSettings from "./models/systemSettings.js";
 
 dotenv.config();
@@ -343,30 +345,23 @@ app.post("/resident-register/validate-code", async (req, res) => {
 
     const code = rawCode.trim().toLowerCase();
 
-    // Find the community + flat that owns this code (case-insensitive)
-    const community = await Community.findOne({
-      "blocks.flats.registrationCode": { $regex: new RegExp(`^${code}$`, 'i') }
-    }).select("name blocks");
+    // Find the flat that owns this code (case-insensitive) and populate related info
+    const foundFlat = await Flat.findOne({
+      registrationCode: new RegExp(`^${code}$`, 'i')
+    }).populate("community block");
 
-    if (!community)
+    if (!foundFlat)
       return res.status(404).json({ success: false, message: "Invalid or already-used registration code" });
 
-    let foundFlat = null;
-    let foundBlock = null;
-    for (const block of community.blocks) {
-      const flat = block.flats.find(f => f.registrationCode && f.registrationCode.toLowerCase() === code);
-      if (flat) { foundFlat = flat; foundBlock = block; break; }
-    }
-
-    if (!foundFlat || foundFlat.status !== "Vacant")
+    if (foundFlat.status !== "Vacant")
       return res.status(400).json({ success: false, message: "This code is no longer valid (flat already occupied)" });
 
     return res.json({
       success: true,
       data: {
-        communityId: community._id,
-        communityName: community.name,
-        block: foundBlock.name,
+        communityId: foundFlat.community._id,
+        communityName: foundFlat.community.name,
+        block: foundFlat.block.name,
         flatNumber: foundFlat.flatNumber,
         floor: foundFlat.floor,
         registrationCode: code
@@ -389,21 +384,18 @@ app.post("/resident-register/complete", async (req, res) => {
 
     const registrationCode = rawCode.trim().toLowerCase();
 
-    // Re-validate the code (case-insensitive)
-    const community = await Community.findOne({
-      "blocks.flats.registrationCode": { $regex: new RegExp(`^${registrationCode}$`, 'i') }
-    });
-    if (!community)
+    // Re-validate the code (case-insensitive) against the Flat model
+    const foundFlat = await Flat.findOne({
+      registrationCode: new RegExp(`^${registrationCode}$`, 'i')
+    }).populate("community");
+
+    if (!foundFlat)
       return res.status(404).json({ success: false, message: "Invalid or already-used registration code" });
 
-    let foundFlat = null;
-    let foundBlock = null;
-    for (const block of community.blocks) {
-      const flat = block.flats.find(f => f.registrationCode && f.registrationCode.toLowerCase() === registrationCode);
-      if (flat) { foundFlat = flat; foundBlock = block; break; }
-    }
-    if (!foundFlat || foundFlat.status !== "Vacant")
+    if (foundFlat.status !== "Vacant")
       return res.status(400).json({ success: false, message: "Code is no longer valid" });
+
+    const community = foundFlat.community;
 
     // Check email uniqueness
     const existing = await Resident.findOne({ email });
@@ -429,7 +421,9 @@ app.post("/resident-register/complete", async (req, res) => {
     foundFlat.residentId = resident._id;
     foundFlat.status = "Occupied";
     foundFlat.registrationCode = undefined;
-    await community.save();
+
+    // Save the flat directly
+    await foundFlat.save();
 
     await sendTemporaryPassword(email, tempPassword);
 

@@ -29,15 +29,16 @@ export const validateFields = (fields, res) => {
 export const getCommonSpaces = async (req, res) => {
   try {
     const c = req.user.community;
-    const bookings = await CommonSpaces.find({
-      community: c,
-      status: { $ne: "Rejected" },
-    })
-      .populate("payment")
-      .populate("bookedBy", "residentFirstname residentLastname email")
-      .sort({ createdAt: -1 });
-
-    const commonSpaces = await Amenity.find({ community: c });
+    const [bookings, commonSpaces] = await Promise.all([
+      CommonSpaces.find({
+        community: c,
+        status: { $ne: "Rejected" },
+      })
+        .populate("payment")
+        .populate("bookedBy", "residentFirstname residentLastname email")
+        .sort({ createdAt: -1 }),
+      Amenity.find({ community: c })
+    ]);
 
     res.status(200).json({ bookings, commonSpaces });
   } catch (err) {
@@ -94,12 +95,12 @@ export const getBookingDetails = async (req, res) => {
       ID: booking.ID,
       bookedBy: booking.bookedBy
         ? {
-            name:
-              booking.bookedBy.residentFirstname +
-              " " +
-              booking.bookedBy.residentLastname,
-            email: booking.bookedBy.email,
-          }
+          name:
+            booking.bookedBy.residentFirstname +
+            " " +
+            booking.bookedBy.residentLastname,
+          email: booking.bookedBy.email,
+        }
         : null,
       community: booking.community?.name || null,
       feedback: booking.feedback,

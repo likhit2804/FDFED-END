@@ -64,6 +64,8 @@ residentSchema.pre("save", async function (next) {
   }
 });
 
+residentSchema.index({ community: 1 });
+
 const Resident = mongoose.model("Resident", residentSchema);
 
 export default Resident;

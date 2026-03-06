@@ -1,8 +1,7 @@
 ﻿import CommunityManager from "../../../models/cManager.js";
-import bcrypt from "bcrypt";
-import { uploadToCloudinary } from "../../../utils/cloudinaryUpload.js";
 import Community from "../../../models/communities.js";
 import { sendError, sendSuccess } from "../../shared/helpers.js";
+import { handleProfileImageUpload, handlePasswordChange } from "../utils/profileShared.js";
 
 export const getManagerProfile = async (req, res) => {
     try {
@@ -70,17 +69,13 @@ export const updateManagerProfile = async (req, res) => {
 
         if (req.file && req.file.buffer) {
             try {
-                const result = await uploadToCloudinary(req.file.buffer, "profiles/manager", {
-                    transformation: [
-                        { width: 512, height: 512, crop: "limit" },
-                        { quality: "auto:good" },
-                    ],
-                });
-                manager.image = result.url;
-                manager.imagePublicId = result.publicId;
+                const uploadData = await handleProfileImageUpload(req.file, "profiles/manager");
+                if (uploadData) {
+                    manager.image = uploadData.url;
+                    manager.imagePublicId = uploadData.publicId;
+                }
             } catch (err) {
-                console.error("Manager profile image upload error:", err);
-                return sendError(res, 500, "Failed to upload profile image", err);
+                return sendError(res, 500, err.message, err);
             }
         }
 
@@ -104,36 +99,9 @@ export const updateManagerProfile = async (req, res) => {
 };
 
 export const changePassword = async (req, res) => {
-    try {
-        const { cp, np, cnp } = req.body;
-        const managerId = req.user.id;
-
-        if (!cp || !np || !cnp) {
-            return sendError(res, 400, "All fields are required");
-        }
-
-        if (np !== cnp) {
-            return sendError(res, 400, "New passwords do not match");
-        }
-
-        const manager = await CommunityManager.findById(managerId);
-        if (!manager) {
-            return sendError(res, 404, "Manager not found");
-        }
-
-        const isMatch = await bcrypt.compare(cp, manager.password);
-        if (!isMatch) {
-            return sendError(res, 400, "Current password is incorrect");
-        }
-
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(np, salt);
-        manager.password = hashedPassword;
-
-        await manager.save();
-        return sendSuccess(res, "Password changed successfully");
-    } catch (error) {
-        console.error("Error changing password:", error);
-        return sendError(res, 500, "Failed to change password", error);
+    const { cp, np, cnp } = req.body;
+    if (np !== cnp) {
+        return sendError(res, 400, "New passwords do not match");
     }
+    return handlePasswordChange(res, CommunityManager, req.user.id, cp, np);
 };

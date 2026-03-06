@@ -3,41 +3,10 @@ import Worker from "../../../models/workers.js";
 import CommunityManager from "../../../models/cManager.js";
 import { pushNotification } from "../../notifications/services/notificationService.js";
 import Ad from "../../../models/Ad.js";
-import { getIO } from "../../../utils/socket.js";
 import { flagMisassigned } from "../../../utils/issueAutomation.js";
+import { emitIssueUpdate } from "../utils/issueShared.js";
 
 // pushNotification is now imported from notifications pipeline
-
-const getCommunityManagerForCommunity = async (communityId) => {
-    if (!communityId) return null;
-    return CommunityManager.findOne({ assignedCommunity: communityId });
-};
-
-const toId = (value) => (value && value._id ? value._id : value);
-
-const emitIssueUpdate = (issue, action = "updated") => {
-    const io = getIO();
-    if (!io || !issue) return;
-
-    const payload = {
-        action,
-        issueId: issue._id,
-        status: issue.status,
-        categoryType: issue.categoryType,
-        community: issue.community,
-        workerAssigned: toId(issue.workerAssigned) || null,
-        resident: toId(issue.resident) || null,
-        updatedAt: new Date().toISOString(),
-    };
-
-    const residentId = toId(issue.resident);
-    const workerId = toId(issue.workerAssigned);
-    const communityId = toId(issue.community);
-
-    if (residentId) io.to(`resident_${residentId}`).emit("issue:updated", payload);
-    if (workerId) io.to(`worker_${workerId}`).emit("issue:updated", payload);
-    if (communityId) io.to(`community_${communityId}`).emit("issue:updated", payload);
-};
 
 // --------------------------------------------------
 // MANAGER: Assign Issue
@@ -95,19 +64,15 @@ export const assignIssue = async (req, res) => {
 
         // Remove from old worker if reassigning
         if (issue.workerAssigned && issue.workerAssigned.toString() !== worker) {
-            const oldWorker = await Worker.findById(issue.workerAssigned);
-            if (oldWorker) {
-                oldWorker.assignedIssues = oldWorker.assignedIssues.filter(
-                    (id) => id.toString() !== issue._id.toString()
-                );
-                await oldWorker.save();
-            }
+            await Worker.findByIdAndUpdate(issue.workerAssigned, {
+                $pull: { assignedIssues: issue._id }
+            });
         }
 
-        if (!workerData.assignedIssues.includes(issue._id)) {
-            workerData.assignedIssues.push(issue._id);
-            await workerData.save();
-        }
+        // Add to new worker utilizing atomic combination to avoid race conditions
+        await Worker.findByIdAndUpdate(worker, {
+            $addToSet: { assignedIssues: issue._id }
+        });
 
         await pushNotification(Worker, workerData._id, {
             type: "Issue",
@@ -139,18 +104,11 @@ export const assignIssue = async (req, res) => {
 // --------------------------------------------------
 export const getManagerIssues = async (req, res) => {
     try {
-        const managerId = req.user.id;
-        const manager = await CommunityManager.findById(managerId);
-
-        if (!manager) {
-            return res.status(404).json({ success: false, message: "Community manager not found" });
-        }
-
-        const community = manager.assignedCommunity;
+        const community = req.user.community;
         if (!community) {
             return res.status(404).json({
                 success: false,
-                message: "No community assigned to this manager",
+                message: "No community assigned to this user",
             });
         }
 
@@ -241,13 +199,9 @@ export const reassignIssue = async (req, res) => {
             return res.status(404).json({ success: false, message: "New worker not found." });
 
         if (issue.workerAssigned) {
-            const oldWorker = await Worker.findById(issue.workerAssigned);
-            if (oldWorker) {
-                oldWorker.assignedIssues = oldWorker.assignedIssues.filter(
-                    (w) => w.toString() !== issue._id.toString()
-                );
-                await oldWorker.save();
-            }
+            await Worker.findByIdAndUpdate(issue.workerAssigned, {
+                $pull: { assignedIssues: issue._id }
+            });
         }
 
         issue.workerAssigned = newWorker;
@@ -257,10 +211,9 @@ export const reassignIssue = async (req, res) => {
         issue.remarks = remarks || issue.remarks;
         await issue.save();
 
-        if (!workerData.assignedIssues.map(String).includes(issue._id.toString())) {
-            workerData.assignedIssues.push(issue._id);
-            await workerData.save();
-        }
+        await Worker.findByIdAndUpdate(newWorker, {
+            $addToSet: { assignedIssues: issue._id }
+        });
 
         emitIssueUpdate(issue, "reassigned");
 
@@ -322,14 +275,10 @@ export const getIssueById = async (req, res) => {
 // --------------------------------------------------
 export const getRejectedPendingIssues = async (req, res) => {
     try {
-        const managerId = req.user.id;
-        const manager = await CommunityManager.findById(managerId);
-
-        if (!manager) {
-            return res.status(404).json({ success: false, message: "Manager not found" });
+        const community = req.user.community;
+        if (!community) {
+            return res.status(404).json({ success: false, message: "Community missing from user" });
         }
-
-        const community = manager.assignedCommunity;
 
         const rejectedIssues = await Issue.find({
             community,
@@ -356,20 +305,11 @@ export const getRejectedPendingIssues = async (req, res) => {
 // --------------------------------------------------
 export const getIssueResolvingApiIssues = async (req, res) => {
     try {
-        const managerId = req.user.id;
-        const manager = await CommunityManager.findById(managerId);
-
-        if (!manager) {
-            return res
-                .status(404)
-                .json({ success: false, message: "Community manager not found" });
-        }
-
-        const community = manager.assignedCommunity;
+        const community = req.user.community;
         if (!community) {
             return res
                 .status(404)
-                .json({ success: false, message: "Community not found" });
+                .json({ success: false, message: "Community not found for this user" });
         }
 
         const issues = await Issue.find({ community })
@@ -389,27 +329,21 @@ export const getIssueResolvingApiIssues = async (req, res) => {
 // --------------------------------------------------
 export const getIssueResolvingData = async (req) => {
     try {
-        const managerId = req.user.id;
-        const manager = await CommunityManager.findById(managerId);
-
-        const ads = await Ad.find({
-            community: req.user.community,
-            status: "Active",
-        });
-
-        if (!manager) {
-            throw new Error("Community manager not found");
-        }
-
-        const community = manager.assignedCommunity;
+        const community = req.user.community;
         if (!community) {
             throw new Error("Community not found");
         }
 
-        const workers = await Worker.find({ community });
-        const issues = await Issue.find({ community })
-            .populate("resident")
-            .populate("workerAssigned");
+        const [ads, workers, issues] = await Promise.all([
+            Ad.find({
+                community: req.user.community,
+                status: "Active",
+            }),
+            Worker.find({ community }),
+            Issue.find({ community })
+                .populate("resident")
+                .populate("workerAssigned")
+        ]);
 
         return { issues, workers, ads };
     } catch (error) {

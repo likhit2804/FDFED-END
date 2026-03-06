@@ -52,22 +52,6 @@ const CommunitySchema = new mongoose.Schema(
 
     // Community Structure (Blocks & Flats)
     hasStructure: { type: Boolean, default: false },
-    blocks: [
-      {
-        name: { type: String, required: true }, // e.g., "Block A"
-        totalFloors: { type: Number, required: true },
-        flatsPerFloor: { type: Number, required: true },
-        flats: [
-          {
-            flatNumber: { type: String, required: true }, // e.g., "A-101"
-            floor: { type: Number, required: true },      // e.g., 1
-            status: { type: String, enum: ["Vacant", "Occupied", "Owner"], default: "Vacant" },
-            residentId: { type: mongoose.Schema.Types.ObjectId, ref: "Resident" },
-            registrationCode: { type: String, unique: true, sparse: true } // unique per-flat code for resident self-registration
-          }
-        ]
-      }
-    ],
 
     // legacy (optional)
     paymentHistory: [

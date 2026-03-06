@@ -1,6 +1,5 @@
 import Resident from "../../../models/resident.js";
-import bcrypt from "bcrypt";
-import { uploadToCloudinary } from "../../../utils/cloudinaryUpload.js";
+import { handleProfileImageUpload, handlePasswordChange } from "../utils/profileShared.js";
 
 export const updateProfile = async (req, res) => {
     const resident = await Resident.findById(req.user.id);
@@ -10,16 +9,15 @@ export const updateProfile = async (req, res) => {
 
     const { firstName, lastName, contact, email } = req.body;
 
-    if (req.file?.buffer) {
+    if (req.file && req.file.buffer) {
         try {
-            const result = await uploadToCloudinary(req.file.buffer, "profiles/resident", {
-                transformation: [{ width: 512, height: 512, crop: "limit" }],
-            });
-            resident.image = result.url;
-            resident.imagePublicId = result.publicId;
+            const uploadData = await handleProfileImageUpload(req.file, "profiles/resident");
+            if (uploadData) {
+                resident.image = uploadData.url;
+                resident.imagePublicId = uploadData.publicId;
+            }
         } catch (err) {
-            console.error("Resident profile image upload error:", err);
-            return res.status(500).json({ success: false, message: "Failed to upload profile image." });
+            return res.status(500).json({ success: false, message: err.message });
         }
     }
 
@@ -35,16 +33,7 @@ export const updateProfile = async (req, res) => {
 
 export const changePassword = async (req, res) => {
     const { currentPassword, newPassword } = req.body;
-    const resident = await Resident.findById(req.user.id);
-
-    if (!await bcrypt.compare(currentPassword, resident.password)) {
-        return res.status(400).json({ message: "Incorrect password" });
-    }
-
-    resident.password = await bcrypt.hash(newPassword, 10);
-    await resident.save();
-
-    res.json({ success: true });
+    return handlePasswordChange(res, Resident, req.user.id, currentPassword, newPassword);
 };
 
 export const getResidentProfile = async (req, res) => {

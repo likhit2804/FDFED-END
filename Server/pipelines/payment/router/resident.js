@@ -4,8 +4,8 @@ import {
     createResidentPayment,
     updateResidentPayment,
     getSinglePayment,
+    getCommunityPaymentInfo,
 } from "../controllers/index.js";
-import Payment from "../../../models/payment.js";
 
 const paymentResidentRouter = express.Router();
 
@@ -25,16 +25,7 @@ paymentResidentRouter.get("/payment/receipt/:id", getSinglePayment);
 paymentResidentRouter.get("/payment/:paymentId", getSinglePayment);
 
 // GET /resident/payment/community — community payment info
-import Community from "../../../models/communities.js";
-paymentResidentRouter.get("/payment/community", async (req, res) => {
-    try {
-        const community = req.community;
-        return res.status(200).json(community);
-    } catch (err) {
-        console.error("Community fetch error:", err);
-        return res.status(500).json({ message: "Error fetching community data" });
-    }
-});
+paymentResidentRouter.get("/payment/community", getCommunityPaymentInfo);
 
 export default paymentResidentRouter;
 

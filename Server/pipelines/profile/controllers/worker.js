@@ -1,7 +1,6 @@
 import Worker from "../../../models/workers.js";
 import Ad from "../../../models/Ad.js";
-import bcrypt from "bcrypt";
-import { uploadToCloudinary } from "../../../utils/cloudinaryUpload.js";
+import { handleProfileImageUpload, handlePasswordChange } from "../utils/profileShared.js";
 
 // GET /worker/profile
 export const getProfile = async (req, res) => {
@@ -24,17 +23,13 @@ export const updateProfile = async (req, res) => {
 
         if (req.file && req.file.buffer) {
             try {
-                const result = await uploadToCloudinary(req.file.buffer, "profiles/worker", {
-                    transformation: [
-                        { width: 512, height: 512, crop: "limit" },
-                        { quality: "auto:good" },
-                    ],
-                });
-                image = result.url;
-                r.imagePublicId = result.publicId;
+                const uploadData = await handleProfileImageUpload(req.file, "profiles/worker");
+                if (uploadData) {
+                    image = uploadData.url;
+                    r.imagePublicId = uploadData.publicId;
+                }
             } catch (err) {
-                console.error("Worker profile image upload error:", err);
-                return res.status(500).json({ success: false, message: "Failed to upload profile image." });
+                return res.status(500).json({ success: false, message: err.message });
             }
         }
 
@@ -57,26 +52,6 @@ export const updateProfile = async (req, res) => {
 
 // POST /worker/change-password
 export const changePassword = async (req, res) => {
-    try {
-        const { cp, np } = req.body;
-        const security = await Worker.findById(req.user.id);
-
-        if (!security) {
-            return res.json({ success: false, message: "Worker not found." });
-        }
-
-        const isMatch = await bcrypt.compare(cp, security.password);
-        if (!isMatch) {
-            return res.json({ success: false, message: "Current password does not match." });
-        }
-
-        const salt = await bcrypt.genSalt(10);
-        security.password = await bcrypt.hash(np, salt);
-        await security.save();
-
-        res.json({ success: true, message: "Password changed successfully." });
-    } catch (err) {
-        console.error(err);
-        return res.status(500).json({ success: false, message: "Failed to change password" });
-    }
+    const { cp, np } = req.body;
+    return handlePasswordChange(res, Worker, req.user.id, cp, np);
 };

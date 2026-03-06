@@ -14,6 +14,7 @@ import {
     deletePaymentById,
 } from "../services/paymentService.js";
 import Resident from "../../../models/resident.js";
+import Payment from "../../../models/payment.js";
 
 // ── MANAGER ──────────────────────────────────
 
@@ -44,7 +45,6 @@ export const updatePayment = async (req, res) => {
     try {
         const { id } = req.params;
         const { status, remarks, paymentMethod, amount } = req.body;
-        const Payment = (await import("../../../models/payment.js")).default;
         const payment = await Payment.findOne({ _id: id, community: req.user.community });
         if (!payment) return res.status(404).json({ message: "Payment not found or access denied" });
         if (status) {
@@ -130,5 +130,15 @@ export const getSinglePayment = async (req, res) => {
         return res.status(200).json(payment);
     } catch (e) {
         return res.status(500).json({ message: "Error fetching payment", error: e.message });
+    }
+};
+
+export const getCommunityPaymentInfo = async (req, res) => {
+    try {
+        const community = req.community;
+        return res.status(200).json(community);
+    } catch (err) {
+        console.error("Community fetch error:", err);
+        return res.status(500).json({ message: "Error fetching community data" });
     }
 };

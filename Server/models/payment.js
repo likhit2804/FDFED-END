@@ -21,8 +21,8 @@ const paymentSchema = new mongoose.Schema(
       required: true,
       min: 0,
     },
-    penalty:{
-      p:{type:Number,min:0},changedOn:{type:Date}
+    penalty: {
+      p: { type: Number, min: 0 }, changedOn: { type: Date }
     },
     paymentDeadline: {
       type: Date,
@@ -57,5 +57,9 @@ const paymentSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+paymentSchema.index({ community: 1, status: 1 });
+paymentSchema.index({ sender: 1 });
+paymentSchema.index({ receiver: 1 });
+
 const Payment = mongoose.model("Payment", paymentSchema);
 export default Payment;

@@ -1,25 +1,9 @@
 import Leave from "../../../models/leave.js";
 import Worker from "../../../models/workers.js";
 import CommunityManager from "../../../models/cManager.js";
-import Notifications from "../../../models/Notifications.js";
 import { getIO } from "../../../utils/socket.js";
 import emailService from "../../../utils/emailService.js";
-
-// --------------------------------------------------
-// Shared helper
-// --------------------------------------------------
-const pushNotification = async (userModel, userId, notificationData) => {
-    if (!userId) return null;
-    const notification = new Notifications(notificationData);
-    await notification.save();
-    const user = await userModel.findById(userId);
-    if (user) {
-        user.notifications = user.notifications || [];
-        user.notifications.push(notification._id);
-        await user.save();
-    }
-    return notification;
-};
+import { pushNotification } from "../../notifications/services/notificationService.js";
 
 // --------------------------------------------------
 // MANAGER: List leaves for the community (with optional status filter)

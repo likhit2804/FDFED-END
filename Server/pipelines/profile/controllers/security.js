@@ -1,7 +1,6 @@
 import Security from "../../../models/security.js";
 import Ad from "../../../models/Ad.js";
-import { uploadToCloudinary } from "../../../utils/cloudinaryUpload.js";
-import bcrypt from "bcrypt";
+import { handleProfileImageUpload, handlePasswordChange } from "../utils/profileShared.js";
 
 /**
  * GET /security/profile
@@ -45,19 +44,15 @@ export const updateProfile = async (req, res) => {
         if (contact) security.contact = contact;
         if (address) security.address = address;
 
-        if (req.file?.buffer) {
+        if (req.file && req.file.buffer) {
             try {
-                const result = await uploadToCloudinary(req.file.buffer, "profiles/security", {
-                    transformation: [
-                        { width: 512, height: 512, crop: "limit" },
-                        { quality: "auto:good" },
-                    ],
-                });
-                security.image = result.url;
-                security.imagePublicId = result.publicId;
+                const uploadData = await handleProfileImageUpload(req.file, "profiles/security");
+                if (uploadData) {
+                    security.image = uploadData.url;
+                    security.imagePublicId = uploadData.publicId;
+                }
             } catch (err) {
-                console.error("Profile image upload error:", err);
-                return res.status(500).json({ success: false, message: "Failed to upload profile image" });
+                return res.status(500).json({ success: false, message: err.message });
             }
         }
 
@@ -73,25 +68,6 @@ export const updateProfile = async (req, res) => {
  * POST /security/change-password
  */
 export const changePassword = async (req, res) => {
-    try {
-        const { currentPassword, newPassword } = req.body;
-
-        const security = await Security.findById(req.user.id);
-        if (!security) {
-            return res.status(404).json({ success: false, message: "Security not found" });
-        }
-
-        const isMatch = await bcrypt.compare(currentPassword, security.password);
-        if (!isMatch) {
-            return res.status(400).json({ success: false, message: "Current password does not match" });
-        }
-
-        security.password = await bcrypt.hash(newPassword, 10);
-        await security.save();
-
-        return res.json({ success: true, message: "Password changed successfully" });
-    } catch (err) {
-        console.error("Password change error:", err);
-        return res.status(500).json({ success: false, message: "Server error" });
-    }
+    const { currentPassword, newPassword } = req.body;
+    return handlePasswordChange(res, Security, req.user.id, currentPassword, newPassword);
 };

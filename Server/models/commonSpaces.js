@@ -24,9 +24,9 @@ const commonSpacesSchema = new mongoose.Schema({
     required: true,
   },
 
-  Type:{
-    type:String,
-    required : true
+  Type: {
+    type: String,
+    required: true
   },
 
   to: {
@@ -75,7 +75,7 @@ const commonSpacesSchema = new mongoose.Schema({
     type: Number,
     default: 0,
   },
-  
+
   availability: {
     type: String,
   },
@@ -130,6 +130,7 @@ const commonSpacesSchema = new mongoose.Schema({
     default: false,
   },
 });
+commonSpacesSchema.index({ community: 1, status: 1 });
 
 const CommonSpaces = mongoose.model("CommonSpaces", commonSpacesSchema);
 export default CommonSpaces;

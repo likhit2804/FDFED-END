@@ -12,7 +12,7 @@ const workerSchema = new mongoose.Schema({
 
   address: { type: String, required: true },
 
-  
+
 
   // 🔥 REQUIRED for Auto-Assign
   jobRole: {
@@ -58,8 +58,10 @@ const workerSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "Notifications",
   }]
-  
+
 }, { timestamps: true });
+
+workerSchema.index({ community: 1, isActive: 1 });
 
 const Worker = mongoose.model("Worker", workerSchema);
 

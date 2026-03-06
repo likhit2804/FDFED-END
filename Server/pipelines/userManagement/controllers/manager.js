@@ -5,6 +5,7 @@ import Ad from "../../../models/Ad.js";
 import bcrypt from "bcrypt";
 import { sendPassword } from "../../../controllers/shared/OTP.js";
 import { sendError, sendSuccess } from "../../shared/helpers.js";
+import { handleMongooseError } from "../../../controllers/shared/errorHandler.js";
 
 export const getUserManagement = async (req, res) => {
     const ads = await Ad.find({
@@ -57,20 +58,7 @@ export const createResident = async (req, res) => {
         }
     } catch (err) {
         console.error("Error in /userManagement/resident:", err);
-
-        let flashMsg;
-        if (err.name === "ValidationError") {
-            flashMsg = Object.values(err.errors)
-                .map((e) => e.message)
-                .join(", ");
-        } else if (err.code === 11000) {
-            const field = Object.keys(err.keyValue)[0];
-            flashMsg = `Duplicate value for ${field}: ${err.keyValue[field]}`;
-        } else {
-            flashMsg = err.message || "Unexpected error occurred";
-        }
-
-        res.json({ success: false, message: flashMsg });
+        return handleMongooseError(err, res);
     }
 };
 
@@ -136,19 +124,7 @@ export const createSecurity = async (req, res) => {
         }
     } catch (err) {
         console.error("Error in /userManagement/security:", err);
-
-        let flashMsg;
-        if (err.name === "ValidationError") {
-            flashMsg = Object.values(err.errors)
-                .map((e) => e.message)
-                .join(", ");
-        } else if (err.code === 11000) {
-            const field = Object.keys(err.keyValue)[0];
-            flashMsg = `Duplicate value for ${field}: ${err.keyValue[field]}`;
-        } else {
-            flashMsg = err.message || "Unexpected error occurred";
-        }
-        res.status(400).json({ success: false, message: flashMsg });
+        return handleMongooseError(err, res);
     }
 };
 
@@ -214,20 +190,7 @@ export const createWorker = async (req, res) => {
         }
     } catch (err) {
         console.error("Error in /userManagement/worker:", err);
-
-        let flashMsg;
-        if (err.name === "ValidationError") {
-            flashMsg = Object.values(err.errors)
-                .map((e) => e.message)
-                .join(", ");
-        } else if (err.code === 11000) {
-            const field = Object.keys(err.keyValue)[0];
-            flashMsg = `Duplicate value for ${field}: ${err.keyValue[field]}`;
-        } else {
-            flashMsg = err.message || "Unexpected error occurred";
-        }
-
-        res.status(400).json({ success: false, message: flashMsg });
+        return handleMongooseError(err, res);
     }
 };
 
