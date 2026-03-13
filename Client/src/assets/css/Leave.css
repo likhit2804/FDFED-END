@@ -1,0 +1,10 @@
+.leave-card { max-width: 820px; margin: 28px 0 28px 40px; border-radius: 12px; }
+.leave-card.card { background: transparent; box-shadow: none; border: none; }
+.leave-card .card-body { padding: 28px; background: transparent; }
+.leave-actions { display:flex; gap:12px; margin-top:18px; }
+.leave-list { max-width: 980px; margin: 18px auto; }
+.leave-item { padding:16px; border-radius:10px; border: none; background: #ffffff; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04); }
+.leave-item + .leave-item { margin-top:14px; }
+
+/* match page background used by other profile pages */
+.leave-page-wrapper { background: #f8f9fc; padding: 24px 0; min-height: 60vh; }
