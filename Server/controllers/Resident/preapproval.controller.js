@@ -45,7 +45,6 @@ export const createPreApproval = async (req, res) => {
       scheduledAt,
       approvedBy: resident._id,
       community: resident.community._id,
-      otp: OTP(),
     });
 
     const token = jwt.sign(
