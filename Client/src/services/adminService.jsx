@@ -3,7 +3,7 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
 
 export const adminLogin = async (email, password) => {
   try {
-    const response = await fetch(`${API_BASE}/AdminLogin`, {
+    const response = await fetch(`${API_BASE}/api/AdminLogin`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
@@ -21,7 +21,7 @@ export const adminLogin = async (email, password) => {
 
 export const adminVerifyOtp = async (otp, tempToken) => {
   try {
-    const response = await fetch(`${API_BASE}/verify-otp`, {
+    const response = await fetch(`${API_BASE}/api/verify-otp`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
@@ -36,7 +36,7 @@ export const adminVerifyOtp = async (otp, tempToken) => {
 
 export const adminResendOtp = async (tempToken) => {
   try {
-    const response = await fetch(`${API_BASE}/resend-otp`, {
+    const response = await fetch(`${API_BASE}/api/resend-otp`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",

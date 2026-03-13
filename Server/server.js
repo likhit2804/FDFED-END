@@ -454,10 +454,13 @@ app.post("/logout", (req, res) => {
 });
 
 // ---------------- ADMIN LOGIN (2FA) ----------------
-app.post("/AdminLogin", authLimiter, async (req, res) => {
+app.post("/api/AdminLogin", authLimiter, async (req, res) => {
+  console.log("HIT /api/AdminLogin route", req.body);
   try {
     const { email, password } = req.body;
     const verified = await VerifyA(email, password);
+    console.log("VerifyA result:", !!verified);
+    
     if (!verified) {
       console.log('Admin login failed for', email, { ip: req.ip });
       return res.status(401).json({
@@ -467,7 +470,9 @@ app.post("/AdminLogin", authLimiter, async (req, res) => {
     }
 
     // Send OTP for 2FA
+    console.log("Sending OTP to:", email);
     await sendLoginOtp(email);
+    console.log("OTP sent successfully");
 
     // Create a temp token for OTP verification
     const tempToken = jwt.sign(
@@ -476,6 +481,7 @@ app.post("/AdminLogin", authLimiter, async (req, res) => {
       { expiresIn: "1d" }
     );
 
+    console.log("Returning requiresOtp: true");
     return res.json({ requiresOtp: true, user: verified.userPayload, tempToken });
   } catch (error) {
     console.error("Admin login error:", error);
@@ -558,7 +564,7 @@ app.post("/login", authLimiter, async (req, res) => {
 
 // ---------------- OTP VERIFY ----------------
 
-app.post("/verify-otp", async (req, res) => {
+app.post("/api/verify-otp", async (req, res) => {
   try {
     const { otp, tempToken } = req.body;
 
@@ -627,7 +633,7 @@ app.post("/verify-otp", async (req, res) => {
 
 // ---------------- RESEND OTP ----------------
 
-app.post("/resend-otp", async (req, res) => {
+app.post("/api/resend-otp", async (req, res) => {
   try {
     const { tempToken } = req.body;
 
