@@ -7,7 +7,7 @@ const adminSchema = new mongoose.Schema(
     password: { type: String , required: true },
     role: { 
       type: String, 
-      enum: ['super-admin', 'admin', 'support'], 
+      enum: ['admin', 'support'], 
       default: 'admin' 
     },
     lastLogin: { type: Date },

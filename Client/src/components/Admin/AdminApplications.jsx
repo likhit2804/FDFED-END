@@ -135,7 +135,7 @@ export default function ManagerApplications() {
     try {
       setActionLoading(appId);
       setActionType('approve');
-      const res = await fetch(`${API_BASE_URL}/admin/interests/${appId}/approve`, {
+      const res = await fetch(`${API_BASE_URL}/admin/api/interests/${appId}/approve`, {
         method: "POST",
         credentials: "include",
         headers: {
@@ -182,7 +182,7 @@ export default function ManagerApplications() {
     try {
       setActionLoading(appId);
       setActionType('reject');
-      const res = await fetch(`${API_BASE_URL}/admin/interests/${appId}/reject`, {
+      const res = await fetch(`${API_BASE_URL}/admin/api/interests/${appId}/reject`, {
         method: "POST",
         credentials: "include",
         headers: {
@@ -604,7 +604,7 @@ export default function ManagerApplications() {
                   try {
                     setActionLoading(selectedApp.id);
                     setActionType('resend');
-                    const res = await fetch(`${API_BASE_URL}/admin/interests/${selectedApp.id}/resend-link`, {
+                    const res = await fetch(`${API_BASE_URL}/admin/api/interests/${selectedApp.id}/resend-link`, {
                       method: "POST",
                       headers: {
                         Authorization: `Bearer ${localStorage.getItem("token") || ""}`,

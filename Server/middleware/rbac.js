@@ -5,29 +5,9 @@
  * Define what each role can do
  */
 export const PERMISSIONS = {
-  'super-admin': ['*'], // All permissions
+  'admin': ['*'], // Admin has highest access - all permissions
 
-  'admin': [
-    // Read permissions
-    'read:communities',
-    'read:users',
-    'read:applications',
-    'read:payments',
-    'read:issues',
-    'read:analytics',
 
-    // Write permissions
-    'write:communities',
-    'write:users',
-    'write:applications',
-    'write:issues',
-
-    // Delete permissions (non-critical)
-    'delete:users',
-    'delete:issues',
-
-    // Cannot delete communities (critical operation)
-  ],
 
   'support': [
     // Read-only access to most resources
@@ -51,7 +31,7 @@ export const PERMISSIONS = {
 export function hasPermission(role, permission) {
   const rolePermissions = PERMISSIONS[role] || [];
 
-  // Super admin has all permissions
+
   if (rolePermissions.includes('*')) {
     return true;
   }

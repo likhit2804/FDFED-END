@@ -17,6 +17,7 @@ const SecuritySchema = new mongoose.Schema(
     image: String,
     password: {
       type: String,
+      required: true,
     },
     contact: {
       type: String,

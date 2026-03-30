@@ -3,6 +3,8 @@ import { memoryUpload } from '../configs/multer.js';
 import {
   submitInterestForm,
   showInterestForm,
+  getOnboardingDetails,
+  completeOnboardingPayment,
 } from '../controllers/admin/interestForm.js';
 
 const interestRouter = express.Router();
@@ -11,4 +13,8 @@ const interestRouter = express.Router();
 interestRouter.get('/', showInterestForm);
 interestRouter.post('/submit', memoryUpload.array('photos', 5), submitInterestForm);
 
-export default interestRouter;
+// Public onboarding routes (accessed by applicants, not admins)
+interestRouter.get('/onboarding/:token', getOnboardingDetails);
+interestRouter.post('/onboarding/complete', completeOnboardingPayment);
+
+export default interestRouter;

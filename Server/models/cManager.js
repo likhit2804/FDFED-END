@@ -44,8 +44,8 @@ communityManagerSchema.pre("findOneAndDelete", async function (next) {
       await Issue.deleteMany({ community: { $in: communityIds } });
       await Payment.deleteMany({ communityId: { $in: communityIds } });
       await Resident.deleteMany({ community: { $in: communityIds } });
-      await Security.deleteMany({ communityAssigned: { $in: communityIds } });
-      await Worker.deleteMany({ communityAssigned: { $in: communityIds } });
+      await Security.deleteMany({ community: { $in: communityIds } });
+      await Worker.deleteMany({ community: { $in: communityIds } });
       await VisitorPreApproval.deleteMany({ community: { $in: communityIds } });
 
       // Finally delete communities
