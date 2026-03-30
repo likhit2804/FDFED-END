@@ -44,7 +44,7 @@ export default function AdminProfile() {
           credentials: "include",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("adminToken") || ""}`,
+            Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
           },
         });
 
@@ -154,7 +154,7 @@ export default function AdminProfile() {
         method: "POST",
         credentials: "include",
         headers: {
-          Authorization: `Bearer ${localStorage.getItem("adminToken") || ""}`,
+          Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
         },
         body: formDataToSend,
       });
@@ -198,7 +198,7 @@ export default function AdminProfile() {
         credentials: "include",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("adminToken") || ""}`,
+          Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
         },
         body: JSON.stringify({
           currentPassword: passwordData.current,

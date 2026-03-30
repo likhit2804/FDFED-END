@@ -11,7 +11,7 @@ class AdminApiClient {
 
   // Get authorization headers
   getHeaders() {
-    const token = localStorage.getItem("adminToken");
+    const token = localStorage.getItem("token");
     return {
       "Content-Type": "application/json",
       ...(token && { Authorization: `Bearer ${token}` }),
@@ -20,8 +20,8 @@ class AdminApiClient {
 
   // Handle 401 Unauthorized
   handleUnauthorized() {
-    localStorage.removeItem("adminToken");
-    localStorage.removeItem("adminSession");
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
     window.location.href = "/adminLogin";
   }
 

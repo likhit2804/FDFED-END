@@ -20,12 +20,12 @@ export function useApplicationsData() {
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('adminToken') || ''}`,
+          Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
         },
       });
 
       if (res.status === 401) {
-        localStorage.removeItem('adminToken');
+        localStorage.removeItem('token');
         window.location.href = '/adminLogin';
         return;
       }
@@ -81,7 +81,7 @@ export function useApplicationsData() {
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('adminToken') || ''}`,
+          Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
         },
       });
 
@@ -111,7 +111,7 @@ export function useApplicationsData() {
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('adminToken') || ''}`,
+          Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
         },
         body: JSON.stringify({ reason }),
       });

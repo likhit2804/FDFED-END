@@ -1,15 +1,12 @@
-// src/components/Admin/ProtectedAdminRoute.jsx
 import React from "react";
 import { Navigate } from "react-router-dom";
-import { useAdminAuth } from "../../context/AdminAuthContext";
+import { useSelector } from "react-redux";
 
 export default function ProtectedAdminRoute({ children }) {
-  const { admin, loading } = useAdminAuth();
+  const { user } = useSelector((state) => state.auth);
 
-  if (loading) return <div className="text-center mt-5">Loading...</div>;
-
-  // ✅ If not logged in → redirect to login
-  if (!admin) return <Navigate to="/adminLogin" replace />;
+  // If not logged in or not admin -> redirect to login
+  if (!user || user.userType !== "admin") return <Navigate to="/adminLogin" replace />;
 
   return children;
 }

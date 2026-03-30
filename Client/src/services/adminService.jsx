@@ -55,7 +55,7 @@ export const getSystemSettings = async () => {
       method: "GET",
       credentials: "include",
       headers: {
-        Authorization: `Bearer ${localStorage.getItem("adminToken") || ""}`,
+        Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
       },
     });
     return await response.json();
@@ -71,7 +71,7 @@ export const updateSystemSettings = async (settings) => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${localStorage.getItem("adminToken") || ""}`,
+        Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
       },
       credentials: "include",
       body: JSON.stringify(settings),

@@ -11,14 +11,14 @@ export const AdminAuthProvider = ({ children }) => {
 
   // ✅ Load saved session (if exists)
   useEffect(() => {
-    const savedAdmin = localStorage.getItem("adminSession");
+    const savedAdmin = localStorage.getItem("user");
     if (savedAdmin) setAdmin(JSON.parse(savedAdmin));
     setLoading(false);
   }, []);
 
   // ✅ Login and persist session
   const login = (adminData) => {
-    localStorage.setItem("adminSession", JSON.stringify(adminData));
+    localStorage.setItem("user", JSON.stringify(adminData));
     setAdmin(adminData);
   };
 
@@ -32,8 +32,8 @@ export const AdminAuthProvider = ({ children }) => {
     } catch (err) {
       console.error("Admin logout error:", err);
     } finally {
-      localStorage.removeItem("adminSession");
-      localStorage.removeItem("adminToken");
+      localStorage.removeItem("user");
+      localStorage.removeItem("token");
       setAdmin(null);
     }
   };

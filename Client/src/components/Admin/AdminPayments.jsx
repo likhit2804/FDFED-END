@@ -50,7 +50,7 @@ export default function Payments() {
           credentials: "include",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("adminToken") || ""}`,
+            Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
           },
         });
 
