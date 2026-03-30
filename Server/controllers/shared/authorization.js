@@ -1,7 +1,10 @@
-// Shared helper: respond with JSON for API calls, redirect for others
 const handleForbidden = (req, res, redirectPath) => {
-    if (req.originalUrl.startsWith('/api') || req.headers.accept?.includes('application/json')) {
-        return res.status(403).json({ message: "Forbidden" });
+    const isApi = req.originalUrl.includes('/api') || 
+                  req.headers.accept?.includes('application/json') ||
+                  req.headers.authorization?.startsWith('Bearer');
+                  
+    if (isApi) {
+        return res.status(403).json({ success: false, message: "Forbidden: You do not have permission to access this resource." });
     }
     return res.redirect(redirectPath);
 };

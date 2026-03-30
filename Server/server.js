@@ -58,6 +58,9 @@ import leaveRouter from "./routes/leaveRouter.js";
 import { interestUploadRouter } from "./controllers/admin/interestForm.js";
 import { initializeDefaultPlans } from "./pipelines/communityRegistration/controllers/manager.js";
 
+import swaggerUi from 'swagger-ui-express';
+import swaggerSpec from './configs/swaggerConfig.js';
+
 import Resident from "./models/resident.js";
 import Community from "./models/communities.js";
 import Block from "./models/blocks.js";
@@ -287,6 +290,13 @@ app.use((req, res, next) => {
 
 import { attachCommunity } from "./middleware/attachCommunity.js";
 
+// SWAGGER API DOCS (mounted before auth routes so it's publicly accessible)
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'UrbanEase API Docs',
+}));
+app.get('/api-docs.json', (req, res) => res.json(swaggerSpec));
+
 // ROUTES
 app.use("/admin", auth, authorizeA, AdminRouter);
 app.use("/resident", auth, authorizeR, attachCommunity, residentRouter);
@@ -335,8 +345,31 @@ const otpLimiter = rateLimit({
 
 // ---------------- PUBLIC RESIDENT REGISTRATION (CODE-BASED) ----------------
 
-// POST /resident-register/validate-code
-// Resident enters their physical registration code → returns flat + community info
+/**
+ * @swagger
+ * /resident-register/validate-code:
+ *   post:
+ *     summary: Validate a resident registration code
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [code]
+ *             properties:
+ *               code:
+ *                 type: string
+ *                 example: "abc123"
+ *     responses:
+ *       200:
+ *         description: Valid code — returns community and flat info
+ *       404:
+ *         description: Invalid or already-used code
+ *       400:
+ *         description: Flat already occupied
+ */
 app.post("/resident-register/validate-code", async (req, res) => {
   try {
     const { code: rawCode } = req.body;
@@ -373,8 +406,39 @@ app.post("/resident-register/validate-code", async (req, res) => {
   }
 });
 
-// POST /resident-register/complete
-// Accepts code + personal details → creates resident, links to flat, marks Occupied
+/**
+ * @swagger
+ * /resident-register/complete:
+ *   post:
+ *     summary: Complete resident registration with code + personal details
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [residentFirstname, residentLastname, email, registrationCode]
+ *             properties:
+ *               residentFirstname:
+ *                 type: string
+ *               residentLastname:
+ *                 type: string
+ *               contact:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               registrationCode:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Registration complete, temporary password emailed
+ *       404:
+ *         description: Invalid registration code
+ *       409:
+ *         description: Email already exists
+ */
 app.post("/resident-register/complete", async (req, res) => {
   try {
     const { residentFirstname, residentLastname, contact, email, registrationCode: rawCode } = req.body;
@@ -438,7 +502,16 @@ app.post("/resident-register/complete", async (req, res) => {
   }
 });
 
-// --- Logout route for all users (clears auth cookie) ---
+/**
+ * @swagger
+ * /logout:
+ *   post:
+ *     summary: Logout (clears auth cookie)
+ *     tags: [Auth]
+ *     responses:
+ *       200:
+ *         description: Successfully logged out
+ */
 app.post("/logout", (req, res) => {
   try {
     res.clearCookie("token", {
@@ -453,7 +526,33 @@ app.post("/logout", (req, res) => {
   }
 });
 
-// ---------------- ADMIN LOGIN (2FA) ----------------
+/**
+ * @swagger
+ * /api/AdminLogin:
+ *   post:
+ *     summary: Admin login (triggers 2FA OTP)
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, password]
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: OTP sent, returns tempToken for verification
+ *       401:
+ *         description: Invalid credentials
+ *       429:
+ *         description: Rate limited
+ */
 app.post("/api/AdminLogin", authLimiter, async (req, res) => {
   console.log("HIT /api/AdminLogin route", req.body);
   try {
@@ -493,8 +592,36 @@ app.post("/api/AdminLogin", authLimiter, async (req, res) => {
 });
 
 
-// ---------------- USER LOGIN (2FA) ----------------
-
+/**
+ * @swagger
+ * /login:
+ *   post:
+ *     summary: User login (all roles, 2FA)
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, password, userType]
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               password:
+ *                 type: string
+ *               userType:
+ *                 type: string
+ *                 enum: [Resident, Security, Worker, communityManager, Admin]
+ *     responses:
+ *       200:
+ *         description: Returns requiresOtp flag, user payload, and tempToken
+ *       401:
+ *         description: Invalid email or password
+ *       429:
+ *         description: Rate limited
+ */
 app.post("/login", authLimiter, async (req, res) => {
   try {
     const { email, password, userType } = req.body;
@@ -562,8 +689,30 @@ app.post("/login", authLimiter, async (req, res) => {
   }
 });
 
-// ---------------- OTP VERIFY ----------------
-
+/**
+ * @swagger
+ * /api/verify-otp:
+ *   post:
+ *     summary: Verify OTP and get final JWT token
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [otp, tempToken]
+ *             properties:
+ *               otp:
+ *                 type: string
+ *               tempToken:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Returns final JWT token and user data
+ *       401:
+ *         description: Invalid OTP or expired session
+ */
 app.post("/api/verify-otp", async (req, res) => {
   try {
     const { otp, tempToken } = req.body;
@@ -631,8 +780,28 @@ app.post("/api/verify-otp", async (req, res) => {
   }
 });
 
-// ---------------- RESEND OTP ----------------
-
+/**
+ * @swagger
+ * /api/resend-otp:
+ *   post:
+ *     summary: Resend OTP for 2FA verification
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [tempToken]
+ *             properties:
+ *               tempToken:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: OTP resent successfully
+ *       401:
+ *         description: Invalid or expired session
+ */
 app.post("/api/resend-otp", async (req, res) => {
   try {
     const { tempToken } = req.body;
@@ -677,6 +846,34 @@ const forgotPasswordLimiter = rateLimit({
   }
 });
 
+/**
+ * @swagger
+ * /forgot-password:
+ *   post:
+ *     summary: Request password reset (sends new temp password via email)
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, userType]
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               userType:
+ *                 type: string
+ *                 enum: [Resident, Security, Worker, communityManager]
+ *     responses:
+ *       200:
+ *         description: If email exists, a new password is sent
+ *       400:
+ *         description: Missing fields or invalid email
+ *       429:
+ *         description: Rate limited
+ */
 app.post("/forgot-password", forgotPasswordLimiter, async (req, res) => {
   try {
     const { email, userType } = req.body;
@@ -763,6 +960,20 @@ app.post("/forgot-password", forgotPasswordLimiter, async (req, res) => {
 
 // ---------------- AUTH CHECK ----------------
 
+/**
+ * @swagger
+ * /api/auth/getUser:
+ *   get:
+ *     summary: Get currently authenticated user from JWT cookie
+ *     tags: [Auth]
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: Returns user data with subscription status
+ *       401:
+ *         description: Unauthorized — no valid token
+ */
 app.get("/api/auth/getUser", auth, async (req, res) => {
   const cookie = req.cookies.token;
 
