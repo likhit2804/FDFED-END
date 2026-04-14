@@ -172,5 +172,8 @@ InterestSchema.pre(/^find/, function (next) {
   next();
 });
 
+InterestSchema.index({ status: 1, createdAt: -1 });
+InterestSchema.index({ email: 1 });
+
 const Interest = mongoose.model('Interest', InterestSchema);
 export default Interest;

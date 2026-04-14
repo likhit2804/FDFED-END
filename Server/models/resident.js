@@ -65,6 +65,7 @@ residentSchema.pre("save", async function (next) {
 });
 
 residentSchema.index({ community: 1 });
+residentSchema.index({ email: 1, community: 1 }); // covers login + per-community email checks
 
 const Resident = mongoose.model("Resident", residentSchema);
 

@@ -47,6 +47,8 @@ const Amenities = new mongoose.Schema(
   { timestamps: true }
 );
 
+Amenities.index({ community: 1 });
+
 const Amenity = mongoose.model("Amenity", Amenities);
 
 export default Amenity;
