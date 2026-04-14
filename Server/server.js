@@ -53,6 +53,7 @@ import workerRouter from "./routes/workerRouter.js";
 import managerRouter from "./routes/managerRouter.js";
 import interestRouter from "./routes/InterestRouter.js";
 import leaveRouter from "./routes/leaveRouter.js";
+import searchRouter from "./routes/searchRouter.js";
 
 
 import { interestUploadRouter } from "./controllers/admin/interestForm.js";
@@ -307,6 +308,7 @@ app.use("/leaves", leaveRouter);
 
 app.use("/interest", interestRouter);
 app.use("/interest", interestUploadRouter);
+app.use("/api/search", auth, searchRouter); // full-text search across issues, communities, residents
 
 // ---------------- RATE LIMITERS FOR AUTH ENDPOINTS ----------------
 
