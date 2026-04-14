@@ -49,10 +49,15 @@ const paymentSchema = new mongoose.Schema(
     ID: {
       type: String,
     },
-    belongTo: String,
+    // Which entity this payment belongs to (Issue, CommonSpaces, etc.)
+    // refPath makes Mongoose use the value of `belongTo` to resolve the ref
+    belongTo: {
+      type: String,
+      enum: ["Issue", "CommonSpaces", "Resident"],
+    },
     belongToId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Resident" || "Issue" || "commonSpaces",
+      refPath: "belongTo",  // ← dynamically uses belongTo value as the model name
     },
   },
   { timestamps: true }
