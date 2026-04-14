@@ -27,6 +27,7 @@ const leaveSchema = new mongoose.Schema(
 
 leaveSchema.index({ worker: 1, status: 1, appliedAt: -1 });
 leaveSchema.index({ community: 1, status: 1 }); // manager views all leaves in their community
+leaveSchema.index({ reason: 'text', notes: 'text' });
 
 const Leave = mongoose.model("Leave", leaveSchema);
 

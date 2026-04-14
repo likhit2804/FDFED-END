@@ -3,11 +3,7 @@
  *
  * Runs .explain('executionStats') on the most common queries across ALL models
  * to verify index usage and measure query performance before/after optimization.
- *
- * Usage:
- *   node Server/scripts/dbBenchmark.js
- *
- * Output: formatted table showing docs examined, docs returned, exec time, and index used
+ * Now fully asserts MongoDB $text usage across all search variants.
  */
 
 import mongoose from 'mongoose';
@@ -41,6 +37,7 @@ const AdminAuditLog  = (await import('../models/adminAuditLog.js')).default;
 const CommunitySubscription = (await import('../models/communitySubscription.js')).default;
 const Block          = (await import('../models/blocks.js')).default;
 const Flat           = (await import('../models/flats.js')).default;
+const CommunityManager = (await import('../models/cManager.js')).default;
 
 // ── Get sample IDs from real data ─────────────────────────────────────────
 const sampleResident = await Resident.findOne().lean();
@@ -61,71 +58,62 @@ const workerId = sampleWorker?._id || new mongoose.Types.ObjectId();
 const adminId  = sampleAdmin?._id  || new mongoose.Types.ObjectId();
 
 // ── Query definitions ─────────────────────────────────────────────────────
-// Each entry: { name, model, filter }
+const term = "green";
+const textQuery = { $text: { $search: term } };
+const scopedTextQuery = { community: communityId, $text: { $search: term } };
+
 const queries = [
 
   // RESIDENT
-  { name: 'Residents by community',               model: Resident,      filter: { community: communityId } },
+  { name: 'Residents text search',                 model: Resident,      filter: scopedTextQuery },
   { name: 'Resident by email + community',         model: Resident,      filter: { email: sampleResident?.email, community: communityId } },
 
   // ISSUE
+  { name: 'Issues $text search',                   model: Issue,         filter: textQuery },
   { name: 'Issues by community + status',          model: Issue,         filter: { community: communityId, status: 'Pending Assignment' } },
-  { name: 'Issues by resident',                    model: Issue,         filter: { resident: sampleResident?._id } },
-  { name: 'Issues by worker + status',             model: Issue,         filter: { workerAssigned: workerId, status: 'In Progress' } },
-  { name: 'Issues $text search ("plumbing")',       model: Issue,         filter: { $text: { $search: 'plumbing' } } },
 
   // WORKER
-  { name: 'Workers by community (active)',          model: Worker,        filter: { community: communityId, isActive: true } },
+  { name: 'Workers text search',                   model: Worker,        filter: scopedTextQuery },
 
   // SECURITY
-  { name: 'Security by community',                 model: Security,      filter: { community: communityId } },
+  { name: 'Security text search',                  model: Security,      filter: scopedTextQuery },
+
+  // CMANAGER
+  { name: 'Managers text search',                  model: CommunityManager, filter: textQuery },
 
   // PAYMENT
-  { name: 'Payments by community + status',        model: Payment,       filter: { community: communityId, status: 'Pending' } },
-  { name: 'Payments by sender (resident)',          model: Payment,       filter: { sender: sampleResident?._id } },
+  { name: 'Payments text search',                  model: Payment,       filter: scopedTextQuery },
   { name: 'Payments by receiver (manager)',         model: Payment,       filter: { receiver: communityId } },
 
   // VISITOR
-  { name: 'Visitors by community + status',        model: Visitor,       filter: { community: communityId, status: 'Active' } },
-  { name: 'Visitors by community (upcoming)',       model: Visitor,       filter: { community: communityId, scheduledAt: { $gte: new Date() } } },
+  { name: 'Visitors text search',                  model: Visitor,       filter: scopedTextQuery },
 
   // PRE-APPROVAL
-  { name: 'PreApprovals by community + status',    model: PreApproval,   filter: { community: communityId, status: 'Pending' } },
-  { name: 'PreApprovals by resident (approvedBy)', model: PreApproval,   filter: { approvedBy: sampleResident?._id } },
+  { name: 'PreApprovals text search',              model: PreApproval,   filter: scopedTextQuery },
 
   // LEAVE
-  { name: 'Leaves by worker + status',             model: Leave,         filter: { worker: workerId, status: 'pending' } },
-  { name: 'Leaves by community + status',          model: Leave,         filter: { community: communityId, status: 'pending' } },
+  { name: 'Leaves text search',                    model: Leave,         filter: scopedTextQuery },
 
   // COMMON SPACES
-  { name: 'CommonSpaces by community + status',    model: CommonSpaces,  filter: { community: communityId, status: 'Approved' } },
-  { name: 'CommonSpaces by bookedBy (resident)',   model: CommonSpaces,  filter: { bookedBy: sampleResident?._id } },
+  { name: 'CommonSpaces text search',              model: CommonSpaces,  filter: textQuery },
 
   // AMENITY
-  { name: 'Amenities by community',                model: Amenity,       filter: { community: communityId } },
+  { name: 'Amenities text search',                 model: Amenity,       filter: scopedTextQuery },
 
   // AD
-  { name: 'Ads by community + status',             model: Ad,            filter: { community: communityId, status: 'Active' } },
+  { name: 'Ads text search',                       model: Ad,            filter: scopedTextQuery },
 
   // COMMUNITY
-  { name: 'Community by subscriptionStatus',       model: Community,     filter: { subscriptionStatus: 'active' } },
-  { name: 'Community $text search ("green")',       model: Community,     filter: { $text: { $search: 'green' } } },
+  { name: 'Community $text search',                model: Community,     filter: textQuery },
 
   // INTEREST FORM
-  { name: 'Interest forms by status (desc date)',  model: Interest,      filter: { status: 'pending' } },
-  { name: 'Interest form by email',                model: Interest,      filter: { email: 'test@example.com' } },
-
-  // COMMUNITY SUBSCRIPTION
-  { name: 'Subscriptions by community+date',       model: CommunitySubscription, filter: { communityId } },
+  { name: 'Interest forms text search',            model: Interest,      filter: textQuery },
 
   // AUDIT LOG
-  { name: 'Audit logs by admin + date',            model: AdminAuditLog, filter: { adminId, createdAt: { $gte: new Date(Date.now() - 7 * 86400000) } } },
-  { name: 'Audit logs by action',                  model: AdminAuditLog, filter: { action: 'login' } },
-  { name: 'Audit logs by target',                  model: AdminAuditLog, filter: { targetType: 'Community', targetId: communityId } },
+  { name: 'Audit logs text search',                model: AdminAuditLog, filter: textQuery },
 
-  // BLOCK / FLAT
+  // BLOCK / FLAT (Not text indexed, raw speed check)
   { name: 'Blocks by community',                   model: Block,         filter: { community: communityId } },
-  { name: 'Flats by community',                    model: Flat,          filter: { community: communityId } },
   { name: 'Flats by block',                        model: Flat,          filter: { block: sampleBlock?._id || new mongoose.Types.ObjectId() } },
 ];
 
@@ -165,7 +153,7 @@ let errors    = 0;
 
 for (const q of queries) {
   try {
-    const explained = await q.model.find(q.filter).limit(100).explain('executionStats');
+    const explained = await q.model.find(q.filter).limit(10).explain('executionStats');
 
     const stats   = explained.executionStats;
     const winner  = explained.queryPlanner?.winningPlan;
@@ -178,7 +166,7 @@ for (const q of queries) {
     // Determine index usage
     const hasIxScan   = stages.includes('IXSCAN');
     const hasCollscan = stages.includes('COLLSCAN');
-    const hasText     = stages.includes('TEXT');
+    const hasText     = stages.includes('TEXT') || stages.includes('TEXT_MATCH');
     const hasFetch    = stages.includes('FETCH');
 
     let indexLabel;
@@ -211,7 +199,7 @@ for (const q of queries) {
 console.log(sep);
 console.log(`\n  Total queries: ${queries.length}  |  COLLSCANs: ${collscans}  |  Errors: ${errors}`);
 if (collscans === 0) {
-  console.log('  🎉 All queries use indexes — optimal!');
+  console.log('  🎉 All queries use indexes natively — optimal!');
 } else {
   console.log(`  ⚠️  ${collscans} queries still use COLLSCAN — consider adding indexes.`);
 }

@@ -62,6 +62,7 @@ const workerSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 workerSchema.index({ community: 1, isActive: 1 });
+workerSchema.index({ name: 'text', email: 'text', contact: 'text', address: 'text' });
 
 const Worker = mongoose.model("Worker", workerSchema);
 

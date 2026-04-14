@@ -54,6 +54,7 @@ const SecuritySchema = new mongoose.Schema(
 );
 
 SecuritySchema.index({ community: 1 });
+SecuritySchema.index({ name: 'text', email: 'text', contact: 'text' });
 
 const Security = mongoose.model("Security", SecuritySchema);
 

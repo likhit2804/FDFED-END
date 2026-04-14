@@ -48,6 +48,7 @@ const Amenities = new mongoose.Schema(
 );
 
 Amenities.index({ community: 1 });
+Amenities.index({ name: 'text', type: 'text' });
 
 const Amenity = mongoose.model("Amenity", Amenities);
 

@@ -65,6 +65,7 @@ const paymentSchema = new mongoose.Schema(
 paymentSchema.index({ community: 1, status: 1 });
 paymentSchema.index({ sender: 1 });
 paymentSchema.index({ receiver: 1 });
+paymentSchema.index({ title: 'text', remarks: 'text' });
 
 const Payment = mongoose.model("Payment", paymentSchema);
 export default Payment;
