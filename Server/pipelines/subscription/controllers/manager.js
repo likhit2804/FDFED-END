@@ -237,41 +237,53 @@ export const getPaymentsData = async (req, res) => {
     try {
         const community = req.community;
 
-        const payments = await Payment.find({ community: community._id })
-            .populate("community")
-            .populate("sender")
-            .populate("receiver")
-            .lean();
+        const [payments, paymentSummary] = await Promise.all([
+            Payment.find({ community: community._id })
+                .select(
+                    "title sender receiver amount penalty paymentDeadline paymentDate paymentMethod status remarks ID belongTo belongToId createdAt"
+                )
+                .populate("sender", "email residentFirstname residentLastname uCode flatNo name")
+                .populate("receiver", "email name")
+                .sort({ paymentDeadline: -1, createdAt: -1 })
+                .lean(),
+            Payment.aggregate([
+                { $match: { community: community._id } },
+                {
+                    $project: {
+                        normalizedStatus: { $toLower: { $ifNull: ["$status", ""] } },
+                        amount: { $ifNull: ["$amount", 0] },
+                    },
+                },
+                {
+                    $group: {
+                        _id: "$normalizedStatus",
+                        count: { $sum: 1 },
+                        totalAmount: { $sum: "$amount" },
+                    },
+                },
+            ]),
+        ]);
 
-        const totalTransactions = payments.length;
+        const paymentSummaryMap = paymentSummary.reduce((acc, item) => {
+            acc[item._id] = item;
+            return acc;
+        }, {});
 
-        const toLower = (v) => (v || "").toString().toLowerCase();
+        const paidPayments =
+            (paymentSummaryMap.completed?.count || 0) + (paymentSummaryMap.complete?.count || 0);
+        const pendingPayments = paymentSummaryMap.pending?.count || 0;
+        const overduePayments = paymentSummaryMap.overdue?.count || 0;
 
-        const paidPayments = payments.filter(
-            (p) =>
-                toLower(p.status) === "completed" || toLower(p.status) === "complete"
-        ).length;
-        const pendingPayments = payments.filter(
-            (p) => toLower(p.status) === "pending"
-        ).length;
-        const overduePayments = payments.filter(
-            (p) => toLower(p.status) === "overdue"
-        ).length;
+        const paidAmount =
+            (paymentSummaryMap.completed?.totalAmount || 0) +
+            (paymentSummaryMap.complete?.totalAmount || 0);
+        const pendingAmount = paymentSummaryMap.pending?.totalAmount || 0;
+        const overdueAmount = paymentSummaryMap.overdue?.totalAmount || 0;
 
-        const paidAmount = payments
-            .filter(
-                (p) =>
-                    toLower(p.status) === "completed" || toLower(p.status) === "complete"
-            )
-            .reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
-
-        const pendingAmount = payments
-            .filter((p) => toLower(p.status) === "pending")
-            .reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
-
-        const overdueAmount = payments
-            .filter((p) => toLower(p.status) === "overdue")
-            .reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+        const totalTransactions = paymentSummary.reduce(
+            (sum, entry) => sum + (entry.count || 0),
+            0
+        );
 
         return res.json({
             success: true,
