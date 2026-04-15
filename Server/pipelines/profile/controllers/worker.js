@@ -43,7 +43,7 @@ export const updateProfile = async (req, res) => {
         }
 
         await r.save();
-        return res.json({ success: true, message: "Profile updated successfully", r });
+        return res.json({ success: true, message: "Profile updated successfully", worker: r });
     } catch (err) {
         console.error(err);
         return res.json({ success: false, message: "Server error" });
@@ -52,6 +52,8 @@ export const updateProfile = async (req, res) => {
 
 // POST /worker/change-password
 export const changePassword = async (req, res) => {
-    const { cp, np } = req.body;
+    // Accept both { cp, np } (legacy) and { currentPassword, newPassword } (frontend)
+    const cp = req.body.cp || req.body.currentPassword;
+    const np = req.body.np || req.body.newPassword;
     return handlePasswordChange(res, Worker, req.user.id, cp, np);
 };
