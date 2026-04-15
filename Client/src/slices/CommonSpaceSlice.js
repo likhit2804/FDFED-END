@@ -229,9 +229,19 @@ const CommonSpaceSlice = createSlice({
   initialState,
   reducers: {
     optimisticAddBooking: (state, action) => {
-      const b = action.payload;
+      const { bookingData, requestId } = action.payload;
       state.loading = true;
-      state.Bookings.push(b);
+      state.Bookings.push({
+        ...bookingData,
+        _id: requestId,
+        ID: `TEMP-${requestId}`,
+        name: bookingData?.name || bookingData?.facility || "Common Space",
+        description: bookingData?.purpose || "No purpose specified",
+        status: "Processing...",
+        createdAt: new Date().toISOString(),
+        isOptimistic: true,
+        payment: bookingData?.amount > 0 ? { status: "Processing..." } : null,
+      });
     },
 
     optimisticCancelBooking: (state, action) => {
@@ -249,7 +259,7 @@ const CommonSpaceSlice = createSlice({
         if (!bookingToUpdate.payment) {
           bookingToUpdate.payment = {};
         }
-        bookingToUpdate.payment.paymentStatus = 'Processing...';
+        bookingToUpdate.payment.status = 'Processing...';
         state.loading = true;
       }
     },
@@ -386,7 +396,7 @@ const CommonSpaceSlice = createSlice({
 
         if (bookingToUpdate) {
           bookingToUpdate.status = 'Booked';
-          bookingToUpdate.payment.paymentStatus = 'Completed';
+          bookingToUpdate.payment.status = 'Completed';
         }
         state.loading = false;
       })
@@ -395,7 +405,7 @@ const CommonSpaceSlice = createSlice({
         const bookingToRevert = state.Bookings.find(b => b._id === bookingId);
 
         if (bookingToRevert && bookingToRevert.payment) {
-          bookingToRevert.payment.paymentStatus = 'Failed';
+          bookingToRevert.payment.status = 'Failed';
         }
         state.loading = false;
         state.error = action.payload;

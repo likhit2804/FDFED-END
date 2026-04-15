@@ -5,7 +5,7 @@ import { ToastContainer, toast } from 'react-toastify';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   fetchuserBookings, cancelUserBooking,
-  optimisticAddBooking, optimisticCancelBooking, removeOptimisticBooking,
+  ConfirmBooking, optimisticAddBooking, optimisticCancelBooking, removeOptimisticBooking,
 } from '../../slices/CommonSpaceSlice';
 import { Loader } from '../Loader';
 import PaymentPopUp from './PaymentPopUp';
@@ -63,7 +63,7 @@ export const CommonSpaceBooking = () => {
 
   useEffect(() => {
     const latest = bookings?.filter((b) => b?.payment)?.sort((a, b) => new Date(b.createdAt || '1970/01/01') - new Date(a.createdAt || '1970/01/01'))?.[0];
-    if (latest && latest.payment.amount > 0 && latest.payment.paymentStatus !== 'Paid') {
+    if (latest && latest.payment.amount > 0 && latest.payment.status !== 'Completed') {
       setpaymentDetails(latest.payment);
     } else { setpaymentDetails({}); }
   }, [bookings]);
@@ -107,6 +107,36 @@ export const CommonSpaceBooking = () => {
     return `${formatTime(first)} - ${formatTime(last + 1)}`;
   };
 
+  const submitBookingWithoutPayment = async (bookingPayload, amount) => {
+    const requestId = new Date().getTime();
+    setFormSubmitting(true);
+    dispatch(optimisticAddBooking({ bookingData: bookingPayload, requestId }));
+
+    try {
+      await dispatch(ConfirmBooking({
+        data: {
+          bill: bookingPayload.Type === 'Slot' ? 'Common Space Booking' : 'Common Space Subscription',
+          amount,
+          paymentMethod: 'None',
+        },
+        newBooking: bookingPayload,
+        requestId,
+      })).unwrap();
+
+      toast.success('Booking submitted successfully!');
+      clearBookingFormState();
+    } catch (error) {
+      const message =
+        error?.error?.message ||
+        error?.message ||
+        error?.error ||
+        'Failed to submit booking.';
+      toast.error(message);
+    } finally {
+      setFormSubmitting(false);
+    }
+  };
+
   const onSubmit = (data) => {
     if (selectedFacility.Type === 'Slot' && selectedSlots.length === 0) { toast.error('Please select at least one time slot.'); return; }
     let fromTime = 'N/A', toTime = 'N/A', amount = selectedFacility.rent, timeSlots = [];
@@ -117,6 +147,10 @@ export const CommonSpaceBooking = () => {
       amount = selectedSlots.length * selectedFacility.rent;
     }
     const newBookingData = { ...data, fid: selectedFacility._id, name: selectedFacility.name, Type: selectedFacility.Type, from: fromTime, to: toTime, timeSlots, Date: data.date };
+    if ((Number(amount) || 0) <= 0) {
+      submitBookingWithoutPayment(newBookingData, Number(amount) || 0);
+      return;
+    }
     setNewBooking(newBookingData);
     setpaymentDetails({ belongTo: selectedFacility.Type === 'Slot' ? "Common Space Booking" : "Common Space Subscription", amount });
     setIsBookingFormOpen(false); setonClose(true);
@@ -135,7 +169,7 @@ export const CommonSpaceBooking = () => {
     setSelectedBooking({
       ...booking,
       isCancelled: booking.status.includes('Cancel'),
-      paymentStatus: booking.status === 'Approved' || booking.payment?.paymentStatus === 'Paid' ? 'Paid' : booking.payment?.paymentStatus || 'Pending',
+      paymentStatus: booking.status === 'Approved' || booking.payment?.status === 'Completed' ? 'Paid' : booking.payment?.status || 'Pending',
       amount: booking.payment?.amount || 0,
       created: new Date(booking.createdAt || Date.now()).toLocaleDateString('en-IN'),
     });

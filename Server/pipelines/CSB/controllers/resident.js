@@ -3,7 +3,10 @@ import Amenity from "../../../models/Amenities.js";
 import Community from "../../../models/communities.js";
 import Resident from "../../../models/resident.js";
 import Payment from "../../../models/payment.js";
-import { createPaymentRecord } from "../../payment/services/paymentService.js";
+import {
+  createPaymentRecord,
+  resolveReceiver,
+} from "../../payment/services/paymentService.js";
 import {
   pushNotification,
   emitToRoom,
@@ -83,24 +86,28 @@ export const createBooking = async (req, res) => {
       Type,
     } = req.body.newBooking;
 
-    const { bill, amount, paymentMethod } = req.body.data;
+    const { amount, paymentMethod } = req.body.data;
 
     const Space = await Amenity.findById(fid);
+    if (!Space) return sendError(res, 404, "Selected amenity not found");
+    if (!Space.bookable) return sendError(res, 400, "This amenity is not bookable");
 
     const validation = validateBookingPayload(req.body.newBooking);
     if (!validation.valid)
       return sendError(res, validation.status, validation.message);
     const bookingDate = validation.bookingDate;
+    const bookingAmount = Number(amount) || 0;
 
     const b = await CommonSpaces.create({
-      name: facility,
+      name: facility || Space.name,
       description: purpose || "No purpose specified",
       Date: new Date(dateString),
       from,
       to,
       Type,
-      amount,
+      amount: bookingAmount,
       status: Type === "Slot" ? "Booked" : "Active",
+      paymentStatus: bookingAmount > 0 ? "Pending" : "Success",
       availability: null,
       bookedBy: uid,
       community: new mongoose.Types.ObjectId(req.user.community),
@@ -137,23 +144,34 @@ export const createBooking = async (req, res) => {
 
     uniqueId = generateCustomID(b._id.toString(), "PY", null);
 
-    const payment = await createPaymentRecord({
-      title: b._id.toString(),
-      senderId: b.bookedBy,
-      receiverId: new mongoose.Types.ObjectId(req.user.community),
-      amount,
-      communityId: req.user.community,
-      paymentMethod,
-      status: "Completed",
-      belongTo: "CommonSpaces",
-      belongToId: b._id,
-    });
-    payment.ID = uniqueId;
-    await payment.save();
+    if (bookingAmount > 0) {
+      const receiverId = await resolveReceiver(req.user.community);
+      if (!receiverId) {
+        return sendError(
+          res,
+          400,
+          "Community manager not found for this booking payment",
+        );
+      }
 
-    b.paymentstatus = "Paid";
-    b.payment = payment._id;
-    await b.save();
+      const payment = await createPaymentRecord({
+        title: b._id.toString(),
+        senderId: b.bookedBy,
+        receiverId,
+        amount: bookingAmount,
+        communityId: req.user.community,
+        paymentMethod: paymentMethod || "None",
+        status: "Completed",
+        belongTo: "CommonSpaces",
+        belongToId: b._id,
+      });
+      payment.ID = uniqueId;
+      await payment.save();
+
+      b.paymentStatus = payment.status === "Completed" ? "Success" : "Pending";
+      b.payment = payment._id;
+      await b.save();
+    }
 
     const user = await Resident.findById(uid);
     if (user) {
@@ -161,7 +179,9 @@ export const createBooking = async (req, res) => {
       await user.save();
     }
 
-    await b.populate("payment");
+    if (b.payment) {
+      await b.populate("payment");
+    }
 
     // Emit booking notification to community managers
     try {
