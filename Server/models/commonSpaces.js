@@ -122,6 +122,7 @@ const commonSpacesSchema = new mongoose.Schema({
   },
 }, { timestamps: true });
 commonSpacesSchema.index({ community: 1, status: 1 });
+commonSpacesSchema.index({ community: 1, createdAt: -1 });
 commonSpacesSchema.index({ bookedBy: 1 });
 commonSpacesSchema.index({ Date: -1 });
 commonSpacesSchema.index({ name: 'text', description: 'text' });

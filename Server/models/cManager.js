@@ -59,6 +59,7 @@ communityManagerSchema.pre("findOneAndDelete", async function (next) {
 });
 
 communityManagerSchema.index({ name: 'text', email: 'text', contact: 'text' });
+communityManagerSchema.index({ assignedCommunity: 1 });
 
 const CommunityManager = mongoose.model(
   "CommunityManager",

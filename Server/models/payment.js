@@ -63,6 +63,7 @@ const paymentSchema = new mongoose.Schema(
   { timestamps: true }
 );
 paymentSchema.index({ community: 1, status: 1 });
+paymentSchema.index({ community: 1, paymentDeadline: -1 });
 paymentSchema.index({ sender: 1 });
 paymentSchema.index({ receiver: 1 });
 paymentSchema.index({ title: 'text', remarks: 'text' });
