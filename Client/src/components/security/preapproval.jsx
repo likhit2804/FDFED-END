@@ -46,8 +46,8 @@ export function SecurityPreApproval() {
       const data = await res.json();
       if (!data.success) return;
       setList(data.preApprovalList || []);
-      setLoading(false);
     } catch (err) { console.error("Error loading pre-approvals:", err); }
+    finally { setLoading(false); }
   };
 
   useEffect(() => { fetchData(); }, []);
@@ -79,15 +79,15 @@ export function SecurityPreApproval() {
 
       <Tabs
         tabs={tabItems}
-        activeTab={tab}
-        onTabChange={setTab}
+        active={tab}
+        onChange={setTab}
       />
 
       <div className="pre-list">
         {loading ? (
           <p className="loading">Loading...</p>
         ) : filtered.length === 0 ? (
-          <EmptyState message={`No ${tab} requests`} />
+          <EmptyState title={`No ${tab} requests`} />
         ) : (
           filtered.map((v) => (
             <div key={v._id} className="pre-card">
