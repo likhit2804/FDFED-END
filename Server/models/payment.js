@@ -34,6 +34,22 @@ const paymentSchema = new mongoose.Schema(
       type: String,
       default: "None",
     },
+    gateway: {
+      type: String,
+      default: null,
+    },
+    gatewayOrderId: {
+      type: String,
+      default: null,
+    },
+    gatewayPaymentId: {
+      type: String,
+      default: null,
+    },
+    gatewaySignature: {
+      type: String,
+      default: null,
+    },
     status: {
       type: String,
       enum: ["Pending", "Completed", "Failed", "Overdue"],

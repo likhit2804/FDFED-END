@@ -15,6 +15,7 @@ import { generateTransactionId } from '../../utils/idGenerator.js';
 import fs from 'fs';
 import dotenv from 'dotenv';
 import { sendApplicationApprovedEmail, sendApplicationRejectedEmail, sendAccountActivatedEmail, sendPaymentLinkEmail } from '../../utils/emailService.js';
+import { createRazorpayOrder, getRazorpayPublicConfig, verifyRazorpaySignature } from '../../services/razorpayService.js';
 dotenv.config();
 
 // Lightweight router for direct submit with Cloudinary uploads
@@ -562,6 +563,8 @@ export const getOnboardingDetails = async (req, res) => {
         firstName: interest.firstName,
         lastName: interest.lastName,
         email: interest.email,
+        phone: interest.phone,
+        location: interest.location,
         communityName: interest.communityName,
         paymentStatus: interest.paymentStatus,
         plans // Return plans here
@@ -574,13 +577,102 @@ export const getOnboardingDetails = async (req, res) => {
   }
 };
 
+export const createOnboardingPaymentOrder = async (req, res) => {
+  try {
+    const { token, plan } = req.body;
+
+    if (!token || !plan) {
+      return res.status(400).json({
+        success: false,
+        message: 'Token and plan are required to create a payment order.'
+      });
+    }
+
+    const interest = await Interest.findOne({
+      onboardingToken: token,
+      onboardingTokenExpires: { $gt: Date.now() }
+    }).lean();
+
+    if (!interest) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or expired onboarding session'
+      });
+    }
+
+    if (interest.paymentStatus === 'completed') {
+      return res.status(400).json({
+        success: false,
+        message: 'Account already activated'
+      });
+    }
+
+    const planDoc = await SubscriptionPlan.findOne({
+      planKey: plan,
+      isActive: true
+    }).lean();
+
+    if (!planDoc) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or inactive subscription plan selected'
+      });
+    }
+
+    const order = await createRazorpayOrder({
+      amountInPaise: Math.round(planDoc.price * 100),
+      receipt: `onboard_${interest._id}_${Date.now()}`.slice(0, 40),
+      notes: {
+        flow: 'onboarding',
+        interestId: String(interest._id),
+        planKey: planDoc.planKey,
+        communityName: interest.communityName || '',
+      },
+    });
+
+    const { keyId } = getRazorpayPublicConfig();
+
+    return res.json({
+      success: true,
+      data: {
+        key: keyId,
+        orderId: order.id,
+        amount: order.amount,
+        currency: order.currency,
+        plan: {
+          key: planDoc.planKey,
+          name: planDoc.name,
+          price: planDoc.price,
+          duration: planDoc.duration,
+        }
+      }
+    });
+  } catch (error) {
+    console.error('[Onboarding Order Error]', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to create payment order'
+    });
+  }
+};
+
 // Public: Complete Onboarding Payment & Activate Account
 export const completeOnboardingPayment = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
-    const { token, paymentDetails } = req.body;
+    const {
+      token,
+      plan,
+      razorpayOrderId,
+      razorpayPaymentId,
+      razorpaySignature
+    } = req.body;
+
+    if (!token || !plan || !razorpayOrderId || !razorpayPaymentId || !razorpaySignature) {
+      throw new Error('Missing verified Razorpay payment details');
+    }
 
     // 1. Validate Token
     const interest = await Interest.findOne({
@@ -597,19 +689,27 @@ export const completeOnboardingPayment = async (req, res) => {
     }
 
     // 2. Validate Plan
-    const planDoc = await SubscriptionPlan.findOne({
-      planKey: paymentDetails?.plan,
-      isActive: true
-    }).session(session);
+    const planDoc = await SubscriptionPlan.findOne({ planKey: plan, isActive: true }).session(session);
 
     if (!planDoc) {
       throw new Error('Invalid or inactive subscription plan selected');
     }
 
-    // 3. "Process" Payment 
-    // In a real app, you'd verify Stripe/Razorpay signature here.
-    // For now, we assume success if this endpoint is called with paymentDetails.
-    console.log(`[Payment] Processing payment for ${interest.email}`, paymentDetails);
+    const isSignatureValid = verifyRazorpaySignature({
+      orderId: razorpayOrderId,
+      paymentId: razorpayPaymentId,
+      signature: razorpaySignature,
+    });
+
+    if (!isSignatureValid) {
+      throw new Error('Payment signature verification failed');
+    }
+
+    console.log(`[Payment] Verified onboarding payment for ${interest.email}`, {
+      razorpayOrderId,
+      razorpayPaymentId,
+      plan: planDoc.planKey,
+    });
 
     // 4. Generate Credentials
     const randomPassword = crypto.randomBytes(8).toString('hex');
@@ -655,11 +755,14 @@ export const completeOnboardingPayment = async (req, res) => {
     await CommunitySubscription.create(
       [{
         communityId: newCommunity[0]._id,
-        transactionId: paymentDetails?.transactionId || generateTransactionId('TXN'),
+        transactionId: razorpayPaymentId || generateTransactionId('TXN'),
         planName: planDoc.name,
         planType: planDoc.planKey,
         amount: planDoc.price,
-        paymentMethod: paymentDetails?.paymentMethod || 'online',
+        paymentMethod: 'razorpay',
+        gateway: 'razorpay',
+        gatewayOrderId: razorpayOrderId,
+        gatewayPaymentId: razorpayPaymentId,
         paymentDate: new Date(),
         planStartDate: new Date(),
         planEndDate: planEndDate,
@@ -668,7 +771,8 @@ export const completeOnboardingPayment = async (req, res) => {
         isRenewal: false,
         metadata: {
           userAgent: req.headers['user-agent'],
-          ipAddress: req.ip || req.connection.remoteAddress
+          ipAddress: req.ip || req.connection.remoteAddress,
+          receipt: `onboard_${interest._id}`,
         }
       }],
       { session }

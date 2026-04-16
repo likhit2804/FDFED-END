@@ -4,6 +4,7 @@ import {
   submitInterestForm,
   showInterestForm,
   getOnboardingDetails,
+  createOnboardingPaymentOrder,
   completeOnboardingPayment,
 } from '../controllers/admin/interestForm.js';
 
@@ -15,6 +16,7 @@ interestRouter.post('/submit', memoryUpload.array('photos', 5), submitInterestFo
 
 // Public onboarding routes (accessed by applicants, not admins)
 interestRouter.get('/onboarding/:token', getOnboardingDetails);
+interestRouter.post('/onboarding/create-order', createOnboardingPaymentOrder);
 interestRouter.post('/onboarding/complete', completeOnboardingPayment);
 
-export default interestRouter;
+export default interestRouter;

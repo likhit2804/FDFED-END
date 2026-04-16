@@ -15,6 +15,11 @@ import {
 } from "../services/paymentService.js";
 import Resident from "../../../models/resident.js";
 import Payment from "../../../models/payment.js";
+import {
+    createRazorpayOrder,
+    getRazorpayPublicConfig,
+    verifyRazorpaySignature,
+} from "../../../services/razorpayService.js";
 
 // ── MANAGER ──────────────────────────────────
 
@@ -118,6 +123,91 @@ export const updateResidentPayment = async (req, res) => {
         const { status, paymentMethod, paymentDate } = req.body;
         const payment = await markPaymentPaid(req.params.id, req.user.id, { paymentMethod, paymentDate });
         return res.status(200).json({ message: "Payment updated successfully", payment });
+    } catch (e) {
+        return res.status(404).json({ message: e.message });
+    }
+};
+
+export const createResidentPaymentOrder = async (req, res) => {
+    try {
+        const payment = await Payment.findOne({
+            _id: req.params.id,
+            sender: req.user.id,
+        });
+
+        if (!payment) {
+            return res.status(404).json({ message: "Payment not found or access denied" });
+        }
+
+        if (payment.status === "Completed") {
+            return res.status(400).json({ message: "Payment has already been completed" });
+        }
+
+        const order = await createRazorpayOrder({
+            amountInPaise: Math.round(Number(payment.amount || 0) * 100),
+            receipt: `pay_${payment._id}_${Date.now()}`.slice(0, 40),
+            notes: {
+                flow: "resident_payment",
+                paymentId: String(payment._id),
+                title: payment.title || "UrbanEase Payment",
+            },
+        });
+
+        const { keyId } = getRazorpayPublicConfig();
+
+        return res.status(200).json({
+            success: true,
+            data: {
+                key: keyId,
+                orderId: order.id,
+                amount: order.amount,
+                currency: order.currency,
+                payment: {
+                    id: payment._id,
+                    title: payment.title,
+                    amount: payment.amount,
+                },
+            },
+        });
+    } catch (e) {
+        return res.status(500).json({ message: "Error creating payment order", error: e.message });
+    }
+};
+
+export const verifyResidentPayment = async (req, res) => {
+    try {
+        const { razorpayOrderId, razorpayPaymentId, razorpaySignature } = req.body;
+
+        if (!razorpayOrderId || !razorpayPaymentId || !razorpaySignature) {
+            return res.status(400).json({ message: "Missing Razorpay verification details" });
+        }
+
+        const isSignatureValid = verifyRazorpaySignature({
+            orderId: razorpayOrderId,
+            paymentId: razorpayPaymentId,
+            signature: razorpaySignature,
+        });
+
+        if (!isSignatureValid) {
+            return res.status(400).json({ message: "Payment signature verification failed" });
+        }
+
+        const payment = await markPaymentPaid(req.params.id, req.user.id, {
+            paymentMethod: "Razorpay",
+            paymentDate: new Date(),
+        });
+
+        payment.gateway = "razorpay";
+        payment.gatewayOrderId = razorpayOrderId;
+        payment.gatewayPaymentId = razorpayPaymentId;
+        payment.gatewaySignature = razorpaySignature;
+        await payment.save();
+
+        return res.status(200).json({
+            success: true,
+            message: "Payment updated successfully",
+            payment,
+        });
     } catch (e) {
         return res.status(404).json({ message: e.message });
     }
