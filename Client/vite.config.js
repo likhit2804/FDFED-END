@@ -69,6 +69,48 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
+      // Role-based route prefixes — proxy API fetch calls to Express,
+      // but let browser navigation (Accept: text/html) through to Vite/React.
+      "/resident": {
+        target: "http://localhost:3000",
+        changeOrigin: true,
+        secure: false,
+        bypass: (req) => {
+          if (req.headers.accept?.includes("text/html")) return req.url;
+        },
+      },
+      "/security": {
+        target: "http://localhost:3000",
+        changeOrigin: true,
+        secure: false,
+        bypass: (req) => {
+          if (req.headers.accept?.includes("text/html")) return req.url;
+        },
+      },
+      "/worker": {
+        target: "http://localhost:3000",
+        changeOrigin: true,
+        secure: false,
+        bypass: (req) => {
+          if (req.headers.accept?.includes("text/html")) return req.url;
+        },
+      },
+      "/manager": {
+        target: "http://localhost:3000",
+        changeOrigin: true,
+        secure: false,
+        bypass: (req) => {
+          if (req.headers.accept?.includes("text/html")) return req.url;
+        },
+      },
+      "/resident-register": {
+        target: "http://localhost:3000",
+        changeOrigin: true,
+        secure: false,
+        bypass: (req) => {
+          if (req.headers.accept?.includes("text/html")) return req.url;
+        },
+      },
     },
 
   },

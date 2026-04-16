@@ -47,7 +47,9 @@ const visitorSchema = new mongoose.Schema(
 );
 
 visitorSchema.index({ community: 1, status: 1 });
-visitorSchema.index({ community: 1, scheduledAt: 1 });
+visitorSchema.index({ community: 1, scheduledAt: -1 });
+visitorSchema.index({ community: 1, addedBy: 1, createdAt: -1 });
+visitorSchema.index({ name: 'text', email: 'text', contactNumber: 'text', purpose: 'text', vehicleNumber: 'text' });
 
 const Visitor = mongoose.model("Visitor", visitorSchema);
 

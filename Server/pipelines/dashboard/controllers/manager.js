@@ -6,161 +6,317 @@ import Payment from "../../../models/payment.js";
 import visitor from "../../../models/visitors.js";
 import Ad from "../../../models/Ad.js";
 import CommunityManager from "../../../models/cManager.js";
+import mongoose from "mongoose";
 import { sendError } from "../../shared/helpers.js";
 
 export const getDashboardData = async (req, res) => {
     try {
         const communityId = req.user.community;
+        const communityMatchId =
+            typeof communityId === "string" && mongoose.Types.ObjectId.isValid(communityId)
+                ? new mongoose.Types.ObjectId(communityId)
+                : communityId;
+        const now = new Date();
 
-        // Fetch all required data in parallel for better performance
         const [
-            residents,
-            workers,
-            issues,
-            commonSpacesBookings,
-            payments,
-            visitors,
-            advertisements,
+            totalResidents,
+            totalWorkers,
+            totalAdvisitorsCount,
+            issueDashboardData,
+            bookingDashboardData,
+            paymentDashboardData,
+            adsDashboardData,
+            notificationsDoc,
         ] = await Promise.all([
-            Resident.find({ community: communityId }).populate("notifications").lean(),
-            Worker.find({ community: communityId }).lean(),
-            Issue.find({ community: communityId })
-                .populate("resident", "residentFirstname residentLastname email")
-                .lean(),
-            CommonSpaces.find({ community: communityId })
-                .populate("bookedBy", "residentFirstname residentLastname email")
-                .lean(),
-            Payment.find({ community: communityId }).lean(),
-            visitor.find({ community: communityId }).lean(),
-            Ad.find({ community: communityId })
-                .select("title status startDate endDate")
+            Resident.countDocuments({ community: communityMatchId }),
+            Worker.countDocuments({ community: communityMatchId }),
+            visitor.countDocuments({ community: communityMatchId }),
+            Issue.aggregate([
+                { $match: { community: communityMatchId } },
+                {
+                    $facet: {
+                        counts: [
+                            {
+                                $group: {
+                                    _id: null,
+                                    pending: {
+                                        $sum: {
+                                            $cond: [
+                                                { $in: ["$status", ["Pending", "Assigned"]] },
+                                                1,
+                                                0,
+                                            ],
+                                        },
+                                    },
+                                    resolved: {
+                                        $sum: {
+                                            $cond: [{ $eq: ["$status", "Resolved"] }, 1, 0],
+                                        },
+                                    },
+                                    urgent: {
+                                        $sum: {
+                                            $cond: [
+                                                {
+                                                    $and: [
+                                                        { $eq: ["$priority", "High"] },
+                                                        { $ne: ["$status", "Resolved"] },
+                                                    ],
+                                                },
+                                                1,
+                                                0,
+                                            ],
+                                        },
+                                    },
+                                },
+                            },
+                        ],
+                        recent: [
+                            { $sort: { createdAt: -1 } },
+                            { $limit: 5 },
+                            {
+                                $lookup: {
+                                    from: "residents",
+                                    localField: "resident",
+                                    foreignField: "_id",
+                                    as: "residentDoc",
+                                },
+                            },
+                            {
+                                $unwind: {
+                                    path: "$residentDoc",
+                                    preserveNullAndEmptyArrays: true,
+                                },
+                            },
+                            {
+                                $project: {
+                                    _id: 1,
+                                    title: 1,
+                                    status: 1,
+                                    priority: 1,
+                                    createdAt: 1,
+                                    residentFirstname: "$residentDoc.residentFirstname",
+                                    residentLastname: "$residentDoc.residentLastname",
+                                },
+                            },
+                        ],
+                    },
+                },
+            ]),
+            CommonSpaces.aggregate([
+                { $match: { community: communityMatchId } },
+                {
+                    $facet: {
+                        counts: [
+                            {
+                                $group: {
+                                    _id: null,
+                                    total: { $sum: 1 },
+                                    pending: {
+                                        $sum: {
+                                            $cond: [{ $eq: ["$status", "Pending"] }, 1, 0],
+                                        },
+                                    },
+                                    approved: {
+                                        $sum: {
+                                            $cond: [{ $eq: ["$status", "Approved"] }, 1, 0],
+                                        },
+                                    },
+                                },
+                            },
+                        ],
+                        recent: [
+                            { $sort: { createdAt: -1 } },
+                            { $limit: 5 },
+                            {
+                                $lookup: {
+                                    from: "residents",
+                                    localField: "bookedBy",
+                                    foreignField: "_id",
+                                    as: "bookedByDoc",
+                                },
+                            },
+                            {
+                                $unwind: {
+                                    path: "$bookedByDoc",
+                                    preserveNullAndEmptyArrays: true,
+                                },
+                            },
+                            {
+                                $project: {
+                                    _id: 1,
+                                    name: 1,
+                                    status: 1,
+                                    Date: 1,
+                                    createdAt: 1,
+                                    residentFirstname: "$bookedByDoc.residentFirstname",
+                                    residentLastname: "$bookedByDoc.residentLastname",
+                                },
+                            },
+                        ],
+                    },
+                },
+            ]),
+            Payment.aggregate([
+                { $match: { community: communityMatchId } },
+                {
+                    $project: {
+                        statusLower: { $toLower: { $ifNull: ["$status", ""] } },
+                        amount: { $ifNull: ["$amount", 0] },
+                    },
+                },
+                {
+                    $group: {
+                        _id: null,
+                        total: { $sum: 1 },
+                        paidCount: {
+                            $sum: {
+                                $cond: [{ $in: ["$statusLower", ["completed", "complete"]] }, 1, 0],
+                            },
+                        },
+                        pendingCount: {
+                            $sum: {
+                                $cond: [{ $eq: ["$statusLower", "pending"] }, 1, 0],
+                            },
+                        },
+                        overdueCount: {
+                            $sum: {
+                                $cond: [{ $eq: ["$statusLower", "overdue"] }, 1, 0],
+                            },
+                        },
+                        paidAmount: {
+                            $sum: {
+                                $cond: [
+                                    { $in: ["$statusLower", ["completed", "complete"]] },
+                                    "$amount",
+                                    0,
+                                ],
+                            },
+                        },
+                        pendingAmount: {
+                            $sum: {
+                                $cond: [{ $eq: ["$statusLower", "pending"] }, "$amount", 0],
+                            },
+                        },
+                        overdueAmount: {
+                            $sum: {
+                                $cond: [{ $eq: ["$statusLower", "overdue"] }, "$amount", 0],
+                            },
+                        },
+                    },
+                },
+            ]),
+            Ad.aggregate([
+                { $match: { community: communityMatchId } },
+                {
+                    $group: {
+                        _id: null,
+                        total: { $sum: 1 },
+                        active: {
+                            $sum: {
+                                $cond: [
+                                    {
+                                        $and: [
+                                            { $lte: ["$startDate", now] },
+                                            { $gte: ["$endDate", now] },
+                                        ],
+                                    },
+                                    1,
+                                    0,
+                                ],
+                            },
+                        },
+                        pending: {
+                            $sum: {
+                                $cond: [{ $gt: ["$startDate", now] }, 1, 0],
+                            },
+                        },
+                        expired: {
+                            $sum: {
+                                $cond: [{ $lt: ["$endDate", now] }, 1, 0],
+                            },
+                        },
+                    },
+                },
+            ]),
+            CommunityManager.findById(req.user.id)
+                .select("notifications")
+                .populate({
+                    path: "notifications",
+                    select: "type title message read referenceId referenceType createdAt",
+                    options: { sort: { createdAt: -1 } },
+                })
                 .lean(),
         ]);
 
-        const notifications = await CommunityManager.findById(req.user.id).populate("notifications").lean();
+        const issueCounts = issueDashboardData?.[0]?.counts?.[0] || {};
+        const bookingCounts = bookingDashboardData?.[0]?.counts?.[0] || {};
+        const paymentCounts = paymentDashboardData?.[0] || {};
+        const adCounts = adsDashboardData?.[0] || {};
+        const recentIssuesRaw = issueDashboardData?.[0]?.recent || [];
+        const recentBookingsRaw = bookingDashboardData?.[0]?.recent || [];
 
-        // Calculate statistics
-        const totalResidents = residents.length;
-        const totalWorkers = workers.length;
-        const totalAdvisitorsCount = visitors.length;
-        const totalActiveBookings = commonSpacesBookings.length;
-        const totalPayments = payments.length;
+        const paidPayments = paymentCounts.paidCount || 0;
+        const pendingPayments = paymentCounts.pendingCount || 0;
+        const overduePayments = paymentCounts.overdueCount || 0;
+        const paidAmount = paymentCounts.paidAmount || 0;
+        const pendingAmount = paymentCounts.pendingAmount || 0;
+        const overdueAmount = paymentCounts.overdueAmount || 0;
 
-        // Calculate payment statistics
-        const paidPayments = payments.filter(
-            (p) => p.status === "Completed"
-        ).length;
-        const pendingPayments = payments.filter(
-            (p) => p.status === "Pending"
-        ).length;
-        const overduePayments = payments.filter(
-            (p) => p.status === "Overdue"
-        ).length;
-
-        // Calculate payment amounts
-        const paidAmount = payments
-            .filter((p) => p.status === "Completed")
-            .reduce((sum, p) => sum + (p.amount || 0), 0);
-        const pendingAmount = payments
-            .filter((p) => p.status === "Pending")
-            .reduce((sum, p) => sum + (p.amount || 0), 0);
-        const overdueAmount = payments
-            .filter((p) => p.status === "Overdue")
-            .reduce((sum, p) => sum + (p.amount || 0), 0);
-
-        // Calculate issue statistics
-        const pendingIssues = issues.filter(
-            (issue) => issue.status === "Pending" || issue.status === "Assigned"
-        ).length;
-        const resolvedIssues = issues.filter(
-            (issue) => issue.status === "Resolved"
-        ).length;
-        const urgentIssues = issues.filter(
-            (issue) => issue.priority === "High" && issue.status !== "Resolved"
-        ).length;
-
-        // Get recent issues (last 5)
-        const recentIssues = [...issues]
-            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-            .slice(0, 5)
-            .map((issue) => ({
+        const recentIssues = recentIssuesRaw.map((issue) => ({
                 _id: issue._id,
                 title: issue.title || "No Title",
                 status: issue.status,
                 priority: issue.priority,
-                resident: issue.resident
-                    ? `${issue.resident.residentFirstname} ${issue.resident.residentLastname}`
+                resident:
+                    issue.residentFirstname || issue.residentLastname
+                        ? `${issue.residentFirstname || ""} ${issue.residentLastname || ""}`.trim()
                     : "Unknown",
                 createdAt: issue.createdAt,
             }));
 
-        // Get recent bookings (last 5)
-        const recentBookings = [...commonSpacesBookings]
-            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-            .slice(0, 5)
-            .map((booking) => ({
+        const recentBookings = recentBookingsRaw.map((booking) => ({
                 _id: booking._id,
                 name: booking.name || "No Name",
                 status: booking.status,
                 date: booking.Date,
-                bookedBy: booking.bookedBy
-                    ? `${booking.bookedBy.residentFirstname} ${booking.bookedBy.residentLastname}`
+                bookedBy:
+                    booking.residentFirstname || booking.residentLastname
+                        ? `${booking.residentFirstname || ""} ${booking.residentLastname || ""}`.trim()
                     : "Unknown",
                 createdAt: booking.createdAt,
             }));
 
-        // Get revenue data for charts
         const revenueData = [
             { name: "Paid", value: paidAmount, count: paidPayments },
             { name: "Pending", value: pendingAmount, count: pendingPayments },
             { name: "Overdue", value: overdueAmount, count: overduePayments },
         ];
 
-        // Calculate ad statistics
-        const now = new Date();
-        const activeAds = advertisements.filter((ad) => {
-            const startDate = new Date(ad.startDate);
-            const endDate = new Date(ad.endDate);
-            return startDate <= now && now <= endDate;
-        }).length;
-
-        const pendingAds = advertisements.filter((ad) => {
-            const startDate = new Date(ad.startDate);
-            return startDate > now;
-        }).length;
-
-        const expiredAds = advertisements.filter((ad) => {
-            const endDate = new Date(ad.endDate);
-            return endDate < now;
-        }).length;
-
         // Prepare response
         res.status(200).json({
             success: true,
             data: {
-                notifications: notifications?.notifications || [],
+                notifications: notificationsDoc?.notifications || [],
                 summary: {
                     totalResidents,
                     totalWorkers,
                     totalVisitors: totalAdvisitorsCount,
-                    totalActiveBookings,
+                    totalActiveBookings: bookingCounts.total || 0,
                 },
                 issues: {
-                    pending: pendingIssues,
-                    resolved: resolvedIssues,
-                    urgent: urgentIssues,
+                    pending: issueCounts.pending || 0,
+                    resolved: issueCounts.resolved || 0,
+                    urgent: issueCounts.urgent || 0,
                     recent: recentIssues,
                 },
                 bookings: {
-                    total: totalActiveBookings,
-                    pending: commonSpacesBookings.filter((b) => b.status === "Pending")
-                        .length,
-                    approved: commonSpacesBookings.filter((b) => b.status === "Approved")
-                        .length,
+                    total: bookingCounts.total || 0,
+                    pending: bookingCounts.pending || 0,
+                    approved: bookingCounts.approved || 0,
                     recent: recentBookings,
                 },
                 payments: {
-                    total: totalPayments,
+                    total: paymentCounts.total || 0,
                     paid: paidPayments,
                     pending: pendingPayments,
                     overdue: overduePayments,
@@ -172,10 +328,10 @@ export const getDashboardData = async (req, res) => {
                     },
                 },
                 advertisements: {
-                    active: activeAds,
-                    pending: pendingAds,
-                    expired: expiredAds,
-                    total: advertisements.length,
+                    active: adCounts.active || 0,
+                    pending: adCounts.pending || 0,
+                    expired: adCounts.expired || 0,
+                    total: adCounts.total || 0,
                 },
                 visitors: {
                     today: totalAdvisitorsCount,

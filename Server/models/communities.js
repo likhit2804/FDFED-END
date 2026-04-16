@@ -75,6 +75,7 @@ const CommunitySchema = new mongoose.Schema(
 );
 
 CommunitySchema.index({ subscriptionStatus: 1, planEndDate: 1 });
+CommunitySchema.index({ name: 'text', location: 'text', description: 'text' }); // enables $text search
 
 // Helper to generate a readable unique community code
 function normalize(str) {

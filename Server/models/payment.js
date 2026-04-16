@@ -49,17 +49,24 @@ const paymentSchema = new mongoose.Schema(
     ID: {
       type: String,
     },
-    belongTo: String,
+    // Which entity this payment belongs to (Issue, CommonSpaces, etc.)
+    // refPath makes Mongoose use the value of `belongTo` to resolve the ref
+    belongTo: {
+      type: String,
+      enum: ["Issue", "CommonSpaces", "Resident"],
+    },
     belongToId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Resident" || "Issue" || "commonSpaces",
+      refPath: "belongTo",  // ← dynamically uses belongTo value as the model name
     },
   },
   { timestamps: true }
 );
 paymentSchema.index({ community: 1, status: 1 });
+paymentSchema.index({ community: 1, paymentDeadline: -1 });
 paymentSchema.index({ sender: 1 });
 paymentSchema.index({ receiver: 1 });
+paymentSchema.index({ title: 'text', remarks: 'text' });
 
 const Payment = mongoose.model("Payment", paymentSchema);
 export default Payment;

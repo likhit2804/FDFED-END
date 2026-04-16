@@ -74,13 +74,18 @@ const PaymentPopUp = ({ setonClose, paymentDetails, newBooking, clearBookingForm
 
       const requestId = new Date().getTime();
       dispatch(optimisticAddBooking({ bookingData: newBooking, requestId }));
-      toast.success("Booking approved");
-      dispatch(ConfirmBooking({ data, newBooking, requestId }));
+      await dispatch(ConfirmBooking({ data, newBooking, requestId })).unwrap();
+      toast.success("Booking submitted successfully.");
 
       setonClose(false);
       clearBookingFormState();
     } catch (error) {
-      toast.error(error.message || "Payment failed.");
+      const message =
+        error?.error?.message ||
+        error?.message ||
+        error?.error ||
+        "Payment failed.";
+      toast.error(message);
     } finally {
       setIsSubmitting(false);
     }

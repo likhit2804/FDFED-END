@@ -42,6 +42,10 @@ const visitorPreApprovalSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+visitorPreApprovalSchema.index({ community: 1, status: 1 });
+visitorPreApprovalSchema.index({ approvedBy: 1 });
+visitorPreApprovalSchema.index({ visitorName: 'text', contactNumber: 'text', purpose: 'text', vehicleNo: 'text' });
+
 const VisitorPreApproval = mongoose.model(
   "VisitorPreApproval",
   visitorPreApprovalSchema

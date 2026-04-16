@@ -1,6 +1,7 @@
-﻿import CommonSpaces from "../../../models/commonSpaces.js";
+import CommonSpaces from "../../../models/commonSpaces.js";
 import Amenity from "../../../models/Amenities.js";
 import Community from "../../../models/communities.js";
+import CommunityManager from "../../../models/cManager.js";
 import mongoose from "mongoose";
 
 export const sendSuccess = (res, message, data = {}, statusCode = 200) =>
@@ -21,23 +22,41 @@ export const validateFields = (fields, res) => {
   return true;
 };
 
+const normalizeObjectId = (value) => {
+  if (!value) return null;
+  if (value instanceof mongoose.Types.ObjectId) return value;
+  return mongoose.Types.ObjectId.isValid(value)
+    ? new mongoose.Types.ObjectId(value)
+    : value;
+};
 
+const getManagerCommunityId = async (req) => {
+  const manager = await CommunityManager.findById(req.user.id)
+    .select("assignedCommunity")
+    .lean();
+
+  return normalizeObjectId(manager?.assignedCommunity || req.user.community);
+};
 
 // --------------------------------------------------
 // MANAGER: Get Common Spaces + All Bookings
 // --------------------------------------------------
 export const getCommonSpaces = async (req, res) => {
   try {
-    const c = req.user.community;
+    const communityId = await getManagerCommunityId(req);
+    if (!communityId) {
+      return sendError(res, 404, "Community not found for this manager");
+    }
+
     const [bookings, commonSpaces] = await Promise.all([
       CommonSpaces.find({
-        community: c,
+        community: communityId,
         status: { $ne: "Rejected" },
       })
         .populate("payment")
         .populate("bookedBy", "residentFirstname residentLastname email")
         .sort({ createdAt: -1 }),
-      Amenity.find({ community: c })
+      Amenity.find({ community: communityId }),
     ]);
 
     res.status(200).json({ bookings, commonSpaces });
@@ -57,8 +76,12 @@ export const getCommonSpaces = async (req, res) => {
 // --------------------------------------------------
 export const getCommonSpaceBookings = async (req, res) => {
   try {
-    const c = req.user.community;
-    const csb = await CommonSpaces.find({ community: c }).sort({
+    const communityId = await getManagerCommunityId(req);
+    if (!communityId) {
+      return sendError(res, 404, "Community not found for this manager");
+    }
+
+    const csb = await CommonSpaces.find({ community: communityId }).sort({
       createdAt: -1,
     });
 
@@ -74,12 +97,20 @@ export const getCommonSpaceBookings = async (req, res) => {
 // --------------------------------------------------
 export const getBookingDetails = async (req, res) => {
   try {
+    const communityId = await getManagerCommunityId(req);
     const booking = await CommonSpaces.findById(req.params.id)
       .populate("bookedBy", "residentFirstname residentLastname email")
       .populate("payment")
       .populate("community", "name");
 
     if (!booking) return sendError(res, 404, "Booking not found");
+    if (
+      communityId &&
+      booking.community &&
+      booking.community._id.toString() !== communityId.toString()
+    ) {
+      return sendError(res, 403, "Unauthorized access to this booking");
+    }
 
     res.json({
       success: true,
@@ -95,12 +126,12 @@ export const getBookingDetails = async (req, res) => {
       ID: booking.ID,
       bookedBy: booking.bookedBy
         ? {
-          name:
-            booking.bookedBy.residentFirstname +
-            " " +
-            booking.bookedBy.residentLastname,
-          email: booking.bookedBy.email,
-        }
+            name:
+              booking.bookedBy.residentFirstname +
+              " " +
+              booking.bookedBy.residentLastname,
+            email: booking.bookedBy.email,
+          }
         : null,
       community: booking.community?.name || null,
       feedback: booking.feedback,
@@ -118,22 +149,30 @@ export const rejectBooking = async (req, res) => {
   const id = req.params.id;
   const { reason } = req.body;
   try {
-    const b = await CommonSpaces.findById(id).populate("bookedBy");
+    const communityId = await getManagerCommunityId(req);
+    const booking = await CommonSpaces.findById(id).populate("bookedBy");
 
-    if (!b) return sendError(res, 404, "Booking not found");
+    if (!booking) return sendError(res, 404, "Booking not found");
+    if (
+      communityId &&
+      booking.community &&
+      booking.community.toString() !== communityId.toString()
+    ) {
+      return sendError(res, 403, "Unauthorized access to this booking");
+    }
 
-    b.availability = "NO";
-    b.paymentStatus = null;
-    b.status = "Rejected";
-    b.feedback = reason;
+    booking.availability = "NO";
+    booking.paymentStatus = null;
+    booking.status = "Rejected";
+    booking.feedback = reason;
 
-    b.bookedBy.notifications.push({
+    booking.bookedBy.notifications.push({
       belongs: "CS",
-      n: `Your common space booking ${b.ID ? b.ID : b.title} has been cancelled`,
+      n: `Your common space booking ${booking.ID ? booking.ID : booking.title} has been cancelled`,
       createdAt: new Date(),
     });
 
-    await b.save();
+    await booking.save();
     return sendSuccess(res, "Booking rejected successfully.");
   } catch (err) {
     console.error(err);
@@ -147,12 +186,16 @@ export const rejectBooking = async (req, res) => {
 export const createSpace = async (req, res) => {
   try {
     const { spaceType, spaceName, bookingRent, Type } = req.body;
+    const communityId = await getManagerCommunityId(req);
 
     if (!validateFields({ spaceType, spaceName }, res)) return;
+    if (!communityId) {
+      return sendError(res, 404, "Community not found for this manager");
+    }
 
     const existingSpace = await Amenity.find({
-      spaceName,
-      community: req.user.community,
+      name: spaceName.trim(),
+      community: communityId,
     });
 
     if (existingSpace.length > 0) {
@@ -166,7 +209,7 @@ export const createSpace = async (req, res) => {
         req.body.bookable !== undefined ? Boolean(req.body.bookable) : true,
       bookingRules: req.body.bookingRules ? req.body.bookingRules.trim() : "",
       rent: bookingRent,
-      community: new mongoose.Types.ObjectId(req.user.community),
+      community: communityId,
       createdAt: new Date(),
       updatedAt: new Date(),
       Type,
@@ -190,10 +233,18 @@ export const createSpace = async (req, res) => {
 export const updateSpace = async (req, res) => {
   try {
     const spaceId = req.params.id;
+    const communityId = await getManagerCommunityId(req);
+
     if (!spaceId) return sendError(res, 400, "Space ID is required");
+    if (!communityId) {
+      return sendError(res, 404, "Community not found for this manager");
+    }
 
     const space = await Amenity.findById(spaceId);
     if (!space) return sendError(res, 404, "Space not found");
+    if (space.community.toString() !== communityId.toString()) {
+      return sendError(res, 403, "Unauthorized access to this space");
+    }
 
     const { spaceType, spaceName, bookingRules, bookable, bookingRent, Type } =
       req.body;
@@ -207,8 +258,8 @@ export const updateSpace = async (req, res) => {
 
     if (spaceName && spaceName.trim()) {
       const duplicateSpace = await Amenity.find({
-        spaceName,
-        community: req.user.community,
+        name: spaceName.trim(),
+        community: communityId,
       });
       if (
         duplicateSpace.length > 0 &&
@@ -240,10 +291,20 @@ export const updateSpace = async (req, res) => {
 export const deleteSpace = async (req, res) => {
   try {
     const spaceId = req.params.id;
-    if (!spaceId) return sendError(res, 400, "Space ID is required");
+    const communityId = await getManagerCommunityId(req);
 
-    const space = await Amenity.findByIdAndDelete(spaceId);
+    if (!spaceId) return sendError(res, 400, "Space ID is required");
+    if (!communityId) {
+      return sendError(res, 404, "Community not found for this manager");
+    }
+
+    const space = await Amenity.findById(spaceId);
     if (!space) return sendError(res, 404, "Space not found");
+    if (space.community.toString() !== communityId.toString()) {
+      return sendError(res, 403, "Unauthorized access to this space");
+    }
+
+    await space.deleteOne();
 
     return sendSuccess(res, "Common space deleted successfully", {
       deletedSpace: { id: spaceId },
@@ -259,11 +320,13 @@ export const deleteSpace = async (req, res) => {
 // --------------------------------------------------
 export const updateBookingRules = async (req, res) => {
   try {
+    const communityId = await getManagerCommunityId(req);
+
     if (req.body.rules === undefined) {
       return sendError(res, 400, "Booking rules are required");
     }
 
-    const community = await Community.findById(req.user.community);
+    const community = await Community.findById(communityId);
     if (!community) return sendError(res, 404, "Community not found");
 
     const sanitizedRules = req.body.rules ? req.body.rules.trim() : "";
@@ -285,7 +348,8 @@ export const updateBookingRules = async (req, res) => {
 // --------------------------------------------------
 export const getSpaces = async (req, res) => {
   try {
-    const community = await Community.findById(req.user.community);
+    const communityId = await getManagerCommunityId(req);
+    const community = await Community.findById(communityId);
     if (!community) return sendError(res, 404, "Community not found");
 
     return sendSuccess(res, "Spaces fetched successfully", {

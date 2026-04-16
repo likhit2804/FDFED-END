@@ -8,7 +8,8 @@ import { handleProfileImageUpload, handlePasswordChange } from "../utils/profile
 export const getProfile = async (req, res) => {
     try {
         const security = await Security.findById(req.user.id)
-            .select("name email contact address image Shift workplace joiningDate community");
+            .select("name email contact address image Shift workplace joiningDate community")
+            .populate("community", "name"); // populate so community.name is available
 
         if (!security) {
             return res.status(404).json({ success: false, message: "Security not found" });
@@ -20,7 +21,14 @@ export const getProfile = async (req, res) => {
             endDate: { $gte: new Date() },
         });
 
-        return res.json({ success: true, security, ads });
+        // Flatten community name so frontend can read s.community?.communityName
+        const securityObj = security.toObject();
+        securityObj.community = {
+            ...securityObj.community,
+            communityName: security.community?.name || "",
+        };
+
+        return res.json({ success: true, security: securityObj, ads });
     } catch (err) {
         console.error("Error loading security profile:", err);
         return res.status(500).json({ success: false, message: "Server error" });

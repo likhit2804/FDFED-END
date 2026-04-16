@@ -87,7 +87,7 @@ export const getAllResidents = async (req, res) => {
 export const getResidentPayments = async (req, res) => {
     try {
         const payments = await getPaymentsByResident(req.user.id);
-        return res.status(200).json(payments);
+        return res.status(200).json({ payments }); // wrapped so frontend can read data.payments
     } catch (e) {
         return res.status(500).json({ message: "Error fetching payments", error: e.message });
     }

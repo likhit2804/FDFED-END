@@ -8,7 +8,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 
 import { Loader } from '../Loader.jsx';
-import { StatCard, SearchBar, Dropdown, StatusBadge, EmptyState, Select } from '../shared';
+import { StatCard, SearchBar, Dropdown, StatusBadge, EmptyState, Select, Modal } from '../shared';
 
 
 /* -------------------------------

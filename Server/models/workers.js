@@ -8,7 +8,6 @@ const workerSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  jobRole: { type: [String], required: true },
   contact: { type: String, required: true },
 
   address: { type: String, required: true },
@@ -63,6 +62,7 @@ const workerSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 workerSchema.index({ community: 1, isActive: 1 });
+workerSchema.index({ name: 'text', email: 'text', contact: 'text', address: 'text' });
 
 const Worker = mongoose.model("Worker", workerSchema);
 

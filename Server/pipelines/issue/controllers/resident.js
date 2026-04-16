@@ -54,7 +54,7 @@ export const raiseIssue = async (req, res) => {
             return res.status(400).json({ success: false, message: "Missing required fields" });
         }
 
-        const resident = await Resident.findById({ _id: req.user.id, community: req.user.community });
+        const resident = await Resident.findOne({ _id: req.user.id, community: req.user.community });
         if (!resident) return res.status(404).json({ success: false, message: "Resident not found" });
 
         const finalPriority = determineIssuePriority(category, categoryType, description, title);
@@ -131,10 +131,7 @@ export const raiseIssue = async (req, res) => {
             console.error("Auto-assignment failed:", autoAssignError);
         }
 
-        const updatedIssue = await Issue.findById({
-            _id: issue._id,
-            community: req.user.community,
-        }).populate("workerAssigned");
+        const updatedIssue = await Issue.findById(issue._id).populate("workerAssigned");
 
         if (updatedIssue?.workerAssigned) {
             await pushNotification(Worker, updatedIssue.workerAssigned._id, {
@@ -171,7 +168,7 @@ export const raiseIssue = async (req, res) => {
 // --------------------------------------------------
 export const confirmIssue = async (req, res) => {
     try {
-        const issue = await Issue.findById({ _id: req.params.id, community: req.user.community });
+        const issue = await Issue.findOne({ _id: req.params.id, community: req.user.community });
 
         if (!issue)
             return res.status(404).json({ success: false, message: "Issue not found" });
@@ -214,7 +211,7 @@ export const confirmIssue = async (req, res) => {
 // --------------------------------------------------
 export const rejectIssueResolution = async (req, res) => {
     try {
-        const issue = await Issue.findById({ _id: req.params.id, community: req.user.community });
+        const issue = await Issue.findOne({ _id: req.params.id, community: req.user.community });
 
         if (!issue)
             return res.status(404).json({ success: false, message: "Issue not found" });
