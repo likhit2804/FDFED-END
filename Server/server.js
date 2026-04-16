@@ -54,10 +54,12 @@ import managerRouter from "./routes/managerRouter.js";
 import interestRouter from "./routes/InterestRouter.js";
 import leaveRouter from "./routes/leaveRouter.js";
 import searchRouter from "./routes/searchRouter.js";
+import b2bRouter from "./routes/b2bRouter.js";
 
 
 import { interestUploadRouter } from "./controllers/admin/interestForm.js";
 import { initializeDefaultPlans } from "./pipelines/communityRegistration/controllers/manager.js";
+import { apiKeyAuth } from "./middleware/apiKeyAuth.js";
 
 import swaggerUi from 'swagger-ui-express';
 import swaggerSpec from './configs/swaggerConfig.js';
@@ -309,6 +311,7 @@ app.use("/leaves", leaveRouter);
 app.use("/interest", interestRouter);
 app.use("/interest", interestUploadRouter);
 app.use("/api/search", auth, searchRouter); // full-text search across issues, communities, residents
+app.use("/api/v1", apiKeyAuth, b2bRouter);
 
 // ---------------- RATE LIMITERS FOR AUTH ENDPOINTS ----------------
 

@@ -25,6 +25,12 @@ const options = {
           bearerFormat: 'JWT',
           description: 'Enter the JWT token obtained from /login or /api/AdminLogin',
         },
+        apiKeyAuth: {
+          type: 'apiKey',
+          in: 'header',
+          name: 'x-api-key',
+          description: 'API key for B2B endpoints. Default demo key: ue-demo-api-key-2024',
+        },
         cookieAuth: {
           type: 'apiKey',
           in: 'cookie',
@@ -44,6 +50,7 @@ const options = {
       { name: 'Resident', description: 'Resident dashboard, issues, payments' },
       { name: 'Security', description: 'Security guard operations' },
       { name: 'Worker', description: 'Worker issues and dashboard' },
+      { name: 'B2B', description: 'API-key protected partner and webhook endpoints' },
       { name: 'Interest & Onboarding', description: 'Public interest forms and onboarding payment' },
       { name: 'Leaves', description: 'Worker leave management' },
     ],
