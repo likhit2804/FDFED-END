@@ -15,8 +15,8 @@ export const BookingCard = ({ booking, onViewDetails, onCancel }) => {
         <EntityCard
             id={`#${b?._id}`}
             status={b?.status}
-            statusClass={`status-badge status-${b?.status || ""}`}
-            className={`booking-card ${b?.status || ""}`}
+            statusClass={`status-badge status-${(b?.status || "").toLowerCase().replace(/\s+/g, "-")}`}
+            className={`resident-booking-card ${b?.status || ""}`}
             details={[
                 { label: "Facility", value: b?.name || "-" },
                 { label: "Date", value: b?.Date ? new Date(b.Date).toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "numeric" }) : "-" },
@@ -24,8 +24,8 @@ export const BookingCard = ({ booking, onViewDetails, onCancel }) => {
                 ...(b?.purpose ? [{ label: "Purpose", value: b.purpose }] : []),
             ]}
             actions={[
-                { label: "View Details", onClick: () => onViewDetails(b), variant: "view", icon: <i className="bi bi-eye" /> },
-                { label: "Cancel", onClick: () => onCancel(b), variant: "cancel", icon: <i className="bi bi-x-circle" />, show: b?.status !== "Cancelled" && b?.Type === "Slot" },
+                { label: "View Details", onClick: () => onViewDetails(b), variant: "secondary", icon: <i className="bi bi-eye" /> },
+                { label: "Cancel", onClick: () => onCancel(b), variant: "danger", icon: <i className="bi bi-x-circle" />, show: b?.status !== "Cancelled" && b?.Type === "Slot" },
             ]}
         />
     );

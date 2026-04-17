@@ -1,0 +1,103 @@
+/* Shared resident shell alignment for all ManagerPageShell-based resident pages */
+.resident-ui-page .manager-ui-page__inner {
+  width: min(100%, 1320px);
+  margin-inline: auto;
+}
+
+/* Keep field rows inside each card stacked in one column */
+.manager-ui-page.resident-ui-page .ue-entity-card__details {
+  grid-template-columns: 1fr;
+}
+
+.manager-ui-page.resident-ui-page .ue-entity-card__detail {
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 4px;
+  text-align: left;
+}
+
+.manager-ui-page.resident-ui-page .ue-entity-card__label,
+.manager-ui-page.resident-ui-page .ue-entity-card__value {
+  width: 100%;
+  text-align: left;
+}
+
+.manager-ui-page.resident-ui-page .ue-entity-card__value-wrap {
+  justify-content: flex-start;
+  align-items: flex-start;
+  width: 100%;
+}
+
+/* Normalize old legacy action variants into manager palette */
+.resident-ui-page .action-btn.view {
+  background: #fff;
+  color: var(--manager-text);
+  border: 1px solid var(--manager-border-strong);
+}
+
+.resident-ui-page .action-btn.cancel {
+  background: var(--manager-danger-soft);
+  color: var(--manager-danger);
+  border: 1px solid color-mix(in srgb, var(--manager-danger) 30%, transparent);
+}
+
+/* Resident status colors (consistent across issue/common-space/payments) */
+.resident-ui-page .status-badge.status-pending {
+  background: #fef3c7;
+  color: #b45309;
+  border-color: #fcd34d;
+}
+
+.resident-ui-page .status-badge.status-approved,
+.resident-ui-page .status-badge.status-completed,
+.resident-ui-page .status-badge.status-resolved {
+  background: #dcfce7;
+  color: #166534;
+  border-color: #86efac;
+}
+
+.resident-ui-page .status-badge.status-cancelled,
+.resident-ui-page .status-badge.status-rejected,
+.resident-ui-page .status-badge.status-overdue {
+  background: #fee2e2;
+  color: #991b1b;
+  border-color: #fca5a5;
+}
+
+.resident-ui-page .status-badge.status-assigned,
+.resident-ui-page .status-badge.status-in-progress {
+  background: #f3edff;
+  color: #6d28d9;
+  border-color: #d6c6f4;
+}
+
+@media (max-width: 1024px) {
+  .manager-ui-page.resident-ui-page .manager-ui-page__inner {
+    width: 100%;
+  }
+
+  .manager-ui-page.resident-ui-page .ue-entity-grid {
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .manager-ui-page.resident-ui-page .ue-entity-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .manager-ui-page.resident-ui-page .ue-entity-card__header {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  .manager-ui-page.resident-ui-page .ue-entity-card__badges {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .manager-ui-page.resident-ui-page .ue-entity-card__actions > * {
+    flex: 1 1 100%;
+  }
+}

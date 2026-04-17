@@ -8,6 +8,7 @@ import React, { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import { Loader } from "../Loader";
 import { ProfileHeader, PasswordChangeForm, Input } from "../shared";
+import { ManagerPageShell, ManagerSection } from "../Manager/ui";
 
 export const WorkerProfile = () => {
     const [formData, setFormData] = useState({
@@ -131,7 +132,17 @@ export const WorkerProfile = () => {
         : "?";
 
     return (
-        <div className="container worker-profile-container m-0">
+        <ManagerPageShell
+            eyebrow="Worker Desk"
+            title="Manage worker profile details and account access."
+            description="Keep personal details, shift assignment, and password settings updated in one place."
+        >
+            <ManagerSection
+                eyebrow="Identity"
+                title="Worker profile"
+                description="Review profile details and work assignment information."
+            >
+        <div className="container worker-profile-container m-0 ue-profile-page-stack ue-role-page">
             <ProfileHeader
                 initials={workerInitials}
                 imageSrc={formData.image || ""}
@@ -144,12 +155,12 @@ export const WorkerProfile = () => {
             />
 
             {isPassword ? (
-                <div className="mt-3">
+                <div className="ue-profile-block">
                     <PasswordChangeForm onSubmit={handlePasswordSubmit} />
                 </div>
             ) : (
                 <form onSubmit={handleSubmit}>
-                    <div className="row mt-4">
+                    <div className="row g-3 ue-profile-grid">
                         <div className="col-md-6">
                             <div className="card border-0 shadow-sm rounded-4 p-4 h-100">
                                 <h5 className="mb-4">Profile Information</h5>
@@ -180,5 +191,7 @@ export const WorkerProfile = () => {
                 </form>
             )}
         </div>
+            </ManagerSection>
+        </ManagerPageShell>
     );
 };

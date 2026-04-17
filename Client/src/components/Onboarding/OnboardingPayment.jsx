@@ -5,6 +5,7 @@ import { toast } from "react-toastify";
 import "../../assets/css/SignIn.css";
 import logo from "../../imgs/Logo.png";
 import { openRazorpayCheckout } from "../../services/razorpay";
+import { Loader } from "../Loader";
 
 const API_BASE = "";
 
@@ -101,9 +102,7 @@ const OnboardingPayment = () => {
     if (loading) {
         return (
             <div className="SignInCon">
-                <div className="spinner-border text-primary" role="status">
-                    <span className="visually-hidden">Loading...</span>
-                </div>
+                <Loader label="Loading onboarding details..." />
             </div>
         );
     }

@@ -9,9 +9,12 @@ import {CircularProgressbar, buildStyles} from 'react-circular-progressbar';
 import 'react-circular-progressbar/dist/styles.css';
 import {motion} from 'framer-motion';
 import {setDashboardData, setIssues} from '../../slices/workerSlice';
-import {use, useEffect, useState} from 'react';
+import {useEffect, useState} from 'react';
 import {useSelector, useDispatch} from 'react-redux';
 import LeaveApplyForm from '../LeaveApplyForm';
+import { StatCard } from '../shared';
+import { ClipboardList, CircleAlert, CircleCheck } from 'lucide-react';
+import { ManagerActionButton, ManagerPageShell, ManagerSection } from '../Manager/ui';
 
 export const WorkerDashboard = () => {
     const dispatch = useDispatch();
@@ -67,236 +70,91 @@ export const WorkerDashboard = () => {
     const efficiency = totalTasks === 0 ? 0 : Math.round((tasksCompleted / totalTasks) * 100);
 
 
-    // ---------- UI ----------
     return (
         <>
-        <LeaveApplyForm isOpen={showLeaveModal} onClose={() => setShowLeaveModal(false)} />
-        <div className="container-fluid px-4 py-4 worker-dashboard">
-            {/* HEADER SECTION */}
-            <div className="row mb-4">
-                <div className="col-12">
-                    <div className="d-flex justify-content-between align-items-center mb-3">
-                        <div>
-                            <h2 className="fw-bold mb-1" style={{color: '#1a3a52'}}>Dashboard</h2>
-                            <p className="text-muted small mb-0">Welcome back! Here's your work summary.</p>
-                        </div>
-                        <button className="btn btn-success btn-lg px-4" onClick={() => setShowLeaveModal(true)} style={{borderRadius: '8px'}}>
-                            <i className="bi bi-calendar-check me-2"></i> Apply for Leave
-                        </button>
-                    </div>
-                    <hr style={{marginTop: '1rem', marginBottom: '1rem', opacity: 0.2}} />
-                </div>
-            </div>
-            
-            {/* MAIN CONTENT */}
-            <div className="row g-4">
-                <div className="col-lg-8 d-flex flex-column">
-                    <motion.div className="stats-grid"
-                        initial={
-                            {
-                                opacity: 0,
-                                y: 20
-                            }
-                        }
-                        animate={
-                            {
-                                opacity: 1,
-                                y: 0
-                            }
-                        }
-                        transition={
-                            {duration: 0.6}
-                    }>
-                        {/* TOTAL TASKS */}
-                        <div className="card info-card shadow-sm">
-                            <div className="card-body d-flex flex-column justify-content-center align-items-center py-4">
-                                <div className="card-label">Total Tasks</div>
-                                <div className="card-value text-success">
-                                    {totalTasks} </div>
-                                <i className="bi bi-list-task fs-2 text-success mt-2"></i>
-                            </div>
-                        </div>
-
-                        {
-                        console.log(totalTasks)
+            <LeaveApplyForm isOpen={showLeaveModal} onClose={() => setShowLeaveModal(false)} />
+            <ManagerPageShell
+                eyebrow="Worker Desk"
+                title="Track work progress and performance in one view."
+                description="Monitor assigned tasks, completion pace, and reminders without switching between disconnected cards."
+            >
+                <ManagerSection
+                    eyebrow="Snapshot"
+                    title="Task dashboard"
+                    description="Current work summary for the logged-in worker."
+                    actions={
+                        <ManagerActionButton variant="primary" onClick={() => setShowLeaveModal(true)}>
+                            <i className="bi bi-calendar-check" /> Apply for Leave
+                        </ManagerActionButton>
                     }
+                >
+                    <div className="ue-stat-grid" style={{ marginBottom: 12 }}>
+                        <StatCard label="Total Tasks" value={totalTasks} icon={<ClipboardList size={22} />} iconColor="#16a34a" iconBg="#dcfce7" />
+                        <StatCard label="New Tasks" value={newTasks} icon={<CircleAlert size={22} />} iconColor="#d97706" iconBg="#fef3c7" />
+                        <StatCard label="Completed" value={tasksCompleted} icon={<CircleCheck size={22} />} iconColor="#2563eb" iconBg="#dbeafe" />
+                    </div>
+                </ManagerSection>
 
-                        {/* NEW TASKS */}
-                        <div className="card info-card shadow-sm">
-                            <div className="card-body d-flex flex-column justify-content-center align-items-center py-4">
-                                <div className="card-label">New Tasks</div>
-                                <div className="card-value text-warning">
-                                    {newTasks} </div>
-                                <i className="bi bi-exclamation-circle fs-2 text-warning mt-2"></i>
-                            </div>
-                        </div>
+                <div className="manager-ui-two-column">
+                    <ManagerSection eyebrow="Performance" title="Performance indicators" description="Efficiency, completion ratio, and current worker rating.">
+                        <motion.div className="performance-stats d-flex justify-content-around align-items-center py-4 rounded-3 bg-white"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 0.2, duration: 0.8 }}
+                        >
+                            <motion.div className="stat-circle" style={{ width: 150 }} whileHover={{ scale: 1.08 }} transition={{ type: "spring", stiffness: 300 }}>
+                                <div className="position-relative chart-hover">
+                                    <CircularProgressbar
+                                        value={efficiency}
+                                        text={`${efficiency}%`}
+                                        styles={buildStyles({ pathColor: "#007bff", textColor: "#000", trailColor: "#007bff40", textSize: "16px" })}
+                                    />
+                                    <i className="bi bi-lightning-charge-fill position-absolute bottom-0 end-0 text-primary fs-5" />
+                                </div>
+                                <div className="text-center mt-2 fw-semibold">Efficiency</div>
+                            </motion.div>
 
-                        {/* COMPLETED TASKS */}
-                        <div className="card info-card shadow-sm">
-                            <div className="card-body d-flex flex-column justify-content-center align-items-center py-4">
-                                <div className="card-label">Completed Tasks</div>
-                                <div className="card-value text-primary">
-                                    {tasksCompleted} </div>
-                                <i className="bi bi-check-circle fs-2 text-primary mt-2"></i>
-                            </div>
-                        </div>
-                    </motion.div>
+                            <motion.div className="stat-circle" style={{ width: 150 }} whileHover={{ scale: 1.08 }} transition={{ type: "spring", stiffness: 300 }}>
+                                <div className="position-relative chart-hover">
+                                    <CircularProgressbar
+                                        value={totalTasks === 0 ? 0 : (tasksCompleted / totalTasks) * 100}
+                                        text={`${tasksCompleted}/${totalTasks}`}
+                                        styles={buildStyles({ pathColor: "#28a745", textColor: "#000", trailColor: "#28a7465e", textSize: "16px" })}
+                                    />
+                                    <i className="bi bi-check-circle-fill position-absolute bottom-0 end-0 text-success fs-5" />
+                                </div>
+                                <div className="text-center mt-2 fw-semibold">Tasks Completed</div>
+                            </motion.div>
 
-                    {/* PERFORMANCE SECTION */}
-                    <motion.div className="performance-stats d-flex justify-content-around align-items-center mt-4 py-4 rounded-3 shadow-sm bg-white"
-                        initial={
-                            {opacity: 0}
-                        }
-                        animate={
-                            {opacity: 1}
-                        }
-                        transition={
-                            {
-                                delay: 0.2,
-                                duration: 0.8
-                            }
-                    }>
-                        {/* EFFICIENCY */}
-                        <motion.div className="stat-circle"
-                            style={
-                                {width: 150}
-                            }
-                            whileHover={
-                                {scale: 1.08}
-                            }
-                            transition={
-                                {
-                                    type: "spring",
-                                    stiffness: 300
-                                }
-                        }>
-                            <div className="position-relative chart-hover">
-                                <CircularProgressbar value={efficiency}
-                                    text={
-                                        `${efficiency}%`
-                                    }
-                                    styles={
-                                        buildStyles({pathColor: "#007bff", textColor: "#000", trailColor: "#007bff40", textSize: "16px"})
-                                    }/>
-                                <i className="bi bi-lightning-charge-fill position-absolute bottom-0 end-0 text-primary fs-5"></i>
-                            </div>
-                            <div className="text-center mt-2 fw-semibold">
-                                Efficiency
-                            </div>
+                            <motion.div className="stat-circle" style={{ width: 150 }} whileHover={{ scale: 1.08 }} transition={{ type: "spring", stiffness: 300 }}>
+                                <div className="position-relative chart-hover">
+                                    <CircularProgressbar
+                                        value={(workerRating / 5) * 100}
+                                        text={`${workerRating.toFixed(1)}/5.0`}
+                                        styles={buildStyles({ pathColor: "#ff8c00", textColor: "#000", trailColor: "#ff8c0040", textSize: "16px" })}
+                                    />
+                                    <i className="bi bi-star-fill position-absolute bottom-0 end-0 text-warning fs-5" />
+                                </div>
+                                <div className="text-center mt-2 fw-semibold">Worker Rating</div>
+                            </motion.div>
                         </motion.div>
+                    </ManagerSection>
 
-                        {/* TASKS COMPLETED GRAPH */}
-                        <motion.div className="stat-circle"
-                            style={
-                                {width: 150}
-                            }
-                            whileHover={
-                                {scale: 1.08}
-                            }
-                            transition={
-                                {
-                                    type: "spring",
-                                    stiffness: 300
-                                }
-                        }>
-                            <div className="position-relative chart-hover">
-                                <CircularProgressbar value={
-                                        totalTasks === 0 ? 0 : (tasksCompleted / totalTasks) * 100
-                                    }
-                                    text={
-                                        `${tasksCompleted}/${totalTasks}`
-                                    }
-                                    styles={
-                                        buildStyles({pathColor: "#28a745", textColor: "#000", trailColor: "#28a7465e", textSize: "16px"})
-                                    }/>
-                                <i className="bi bi-check-circle-fill position-absolute bottom-0 end-0 text-success fs-5"></i>
-                            </div>
-                            <div className="text-center mt-2 fw-semibold">
-                                Tasks Completed
-                            </div>
-                        </motion.div>
-
-                        {/* RATING */}
-                        <motion.div className="stat-circle"
-                            style={
-                                {width: 150}
-                            }
-                            whileHover={
-                                {scale: 1.08}
-                            }
-                            transition={
-                                {
-                                    type: "spring",
-                                    stiffness: 300
-                                }
-                        }>
-                            <div className="position-relative chart-hover">
-                                <CircularProgressbar value={
-                                        (workerRating / 5) * 100
-                                    }
-                                    text={
-                                        `${
-                                            workerRating.toFixed(1)
-                                        }/5.0`
-                                    }
-                                    styles={
-                                        buildStyles({pathColor: "#ff8c00", textColor: "#000", trailColor: "#ff8c0040", textSize: "16px"})
-                                    }/>
-                                <i className="bi bi-star-fill position-absolute bottom-0 end-0 text-warning fs-5"></i>
-                            </div>
-                            <div className="text-center mt-2 fw-semibold">
-                                Worker Rating
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                </div>
-
-                {/* ----------- NOTIFICATIONS ----------- */}
-                <div className="col-lg-4">
-                    <motion.div className="notifications h-100 rounded-3 shadow-sm bg-white"
-                        initial={
-                            {
-                                opacity: 0,
-                                x: 40
-                            }
-                        }
-                        animate={
-                            {
-                                opacity: 1,
-                                x: 0
-                            }
-                        }
-                        transition={
-                            {duration: 0.8}
-                    }>
-                        <h4 className="text-center p-2 m-0"
-                            style={
-                                {
-                                    backgroundColor: "#83d2ff71",
-                                    borderRadius: "8px 8px 0 0"
-                                }
-                        }>
-                            <i className="bi bi-bell-fill me-1"></i>
-                            Notifications
-                        </h4>
-
-                        <ul className="list-unstyled px-1 py-3">
-                            <li className="p-2 rounded-2 shadow-sm border mx-1 d-flex">
-                                <div className="rounded-circle border px-2 me-1 d-flex align-items-center bg-danger">
-                                    <i className="bi bi-bell-fill text-white"></i>
+                    <ManagerSection eyebrow="Alerts" title="Notifications" description="Recent reminders and desk notices.">
+                        <div className="manager-ui-record-card">
+                            <div className="d-flex gap-2 align-items-start">
+                                <div className="rounded-circle border px-2 d-flex align-items-center bg-danger">
+                                    <i className="bi bi-bell-fill text-white" />
                                 </div>
                                 <div className="d-flex flex-column">
-                                    Reminder: Complete task
-                                    <small className="text-muted ms-2">
-                                        5 min ago
-                                    </small>
+                                    <strong>Reminder: Complete task</strong>
+                                    <small className="text-muted">5 min ago</small>
                                 </div>
-                            </li>
-                        </ul>
-                    </motion.div>
+                            </div>
+                        </div>
+                    </ManagerSection>
                 </div>
-            </div>
-        </div>
+            </ManagerPageShell>
         </>
     );
 };

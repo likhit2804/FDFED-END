@@ -5,18 +5,23 @@ import {
     AlertCircle,
     BarChart3
 } from "lucide-react";
-import { motion } from "framer-motion";
 
 import { Loader } from "../Loader.jsx";
-import { StatCard, SearchBar, Dropdown, StatusBadge, Modal } from "../shared";
+import { EntityCard, EmptyState, StatCard, SearchBar, Dropdown, Modal } from "../shared";
+import {
+    ManagerPageShell,
+    ManagerSection,
+    ManagerToolbar,
+    ManagerToolbarGrow,
+} from "../Manager/ui";
 import { openRazorpayCheckout } from "../../services/razorpay";
 
 const PaymentsOverview = ({ stats }) => (
     <div className="ue-stat-grid" style={{ marginBottom: 4 }}>
-        <StatCard label="Total Transactions" value={stats?.totalTransactions ?? "-"} icon={<DollarSign size={22} />} iconColor="#16a34a" iconBg="#dcfce7" />
-        <StatCard label="Pending Payments" value={stats?.pendingAmount ? `\u20B9${stats.pendingAmount}` : "-"} icon={<Clock size={22} />} iconColor="#d97706" iconBg="#fef3c7" />
-        <StatCard label="Overdue Payments" value={stats?.overdueAmount ? `\u20B9${stats.overdueAmount}` : "-"} icon={<AlertCircle size={22} />} iconColor="#dc2626" iconBg="#fee2e2" />
-        <StatCard label="Total Amount Paid" value={stats?.paidAmount ? `\u20B9${stats.paidAmount}` : "-"} icon={<BarChart3 size={22} />} iconColor="#2563eb" iconBg="#dbeafe" />
+        <StatCard label="Total Transactions" value={stats?.totalTransactions ?? "-"} icon={<DollarSign size={22} />} iconColor="#7c3aed" iconBg="#f3edff" />
+        <StatCard label="Pending Payments" value={stats?.pendingAmount ? `\u20B9${stats.pendingAmount}` : "-"} icon={<Clock size={22} />} iconColor="#8b5cf6" iconBg="#f5f3ff" />
+        <StatCard label="Overdue Payments" value={stats?.overdueAmount ? `\u20B9${stats.overdueAmount}` : "-"} icon={<AlertCircle size={22} />} iconColor="#d95d4f" iconBg="#feefed" />
+        <StatCard label="Total Amount Paid" value={stats?.paidAmount ? `\u20B9${stats.paidAmount}` : "-"} icon={<BarChart3 size={22} />} iconColor="#5b6472" iconBg="#f2f4f8" />
     </div>
 );
 
@@ -24,7 +29,7 @@ const formatDate = (iso) => {
     if (!iso) return "-";
     try {
         const d = new Date(iso);
-        return d.toLocaleString();
+        return d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
     } catch (e) {
         return iso;
     }
@@ -228,57 +233,47 @@ const PaymentsHistory = ({ onStats, filters = {} }) => {
             ) : error ? (
                 <div className="text-center text-danger p-4">{error}</div>
             ) : payments.length === 0 ? (
-                <div className="shadow-sm text-center text-muted p-4">
-                    <i className="bi bi-wallet2 me-1"></i> No payments found.
-                </div>
+                <EmptyState icon={<DollarSign size={48} />} title="No payments found" sub="You do not have any payment records yet." />
             ) : (
-                <div className="row g-4 payments-grid mt-2">
-                    {filteredPayments.map((p, i) => (
-                        <motion.div
-                            className="col-md-6 col-lg-4"
+                <div className="ue-entity-grid mt-3">
+                    {filteredPayments.map((p, i) => {
+                        const paymentId = p.gatewayPaymentId || p.ID || p.transactionId || p._id || "-";
+                        const status = p.status || "Unknown";
+
+                        return (
+                        <EntityCard
                             key={p.ID || p.transactionId || p._id || i}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: i * 0.05 }}
-                        >
-                            <div className="card p-3 rounded-4 shadow-sm">
-                                <div className="d-flex justify-content-between align-items-start">
-                                    <div>
-                                        <h6 className="fw-semibold">{p.title || p.paymentType || "Payment"}</h6>
-                                        <small className="text-muted">{p.paymentMethod || "Online"}</small>
-                                    </div>
-                                    <StatusBadge status={p.status || "Unknown"} />
-                                </div>
-
-                                <hr />
-
-                                <p><strong>Amount:</strong> {"\u20B9"}{p.amount || 0}</p>
-                                <p><strong>Date:</strong> {formatDate(p.paymentDate)}</p>
-                                <p><strong>Type:</strong> {p.paymentType || p.type || "-"}</p>
-                                <p><strong>Payment ID:</strong> {p.gatewayPaymentId || p.ID || p.transactionId || p._id || "-"}</p>
-
-                                <div className="d-flex gap-2 mt-2">
-                                    {["pending", "overdue"].includes((p.status || "").toLowerCase()) && (
-                                        <button
-                                            className="btn btn-success w-100"
-                                            onClick={() => openPayModal(p)}
-                                        >
-                                            Pay Now
-                                        </button>
-                                    )}
-                                    <button
-                                        className="reciept-btn w-100"
-                                        onClick={() => {
-                                            setSelected(p);
-                                            setShowPopup(true);
-                                        }}
-                                    >
-                                        View Receipt
-                                    </button>
-                                </div>
-                            </div>
-                        </motion.div>
-                    ))}
+                            id={`#${String(paymentId).slice(-10)}`}
+                            status={status}
+                            statusClass={`status-badge status-${status.toLowerCase().replace(/\s+/g, "-")}`}
+                            title={p.title || p.paymentType || "Payment"}
+                            index={i}
+                            details={[
+                                { label: "Amount", value: `\u20B9${p.amount || 0}` },
+                                { label: "Date", value: formatDate(p.paymentDate) },
+                                { label: "Type", value: p.paymentType || p.type || "-" },
+                                { label: "Method", value: p.paymentMethod || "Online" },
+                                { label: "Payment ID", value: paymentId },
+                            ]}
+                            badges={null}
+                            actions={[
+                                {
+                                    label: "Pay Now",
+                                    onClick: () => openPayModal(p),
+                                    variant: "primary",
+                                    show: ["pending", "overdue"].includes((p.status || "").toLowerCase()),
+                                },
+                                {
+                                    label: "View Receipt",
+                                    onClick: () => {
+                                        setSelected(p);
+                                        setShowPopup(true);
+                                    },
+                                    variant: "secondary",
+                                },
+                            ]}
+                        />
+                    )})}
                 </div>
             )}
 
@@ -295,8 +290,8 @@ const PaymentsHistory = ({ onStats, filters = {} }) => {
                 size="sm"
                 footer={
                     <>
-                        <button className="btn btn-secondary w-50" onClick={closePayModal} disabled={paying}>Cancel</button>
-                        <button className="btn btn-success w-50" onClick={handlePayNow} disabled={paying}>
+                        <button className="manager-ui-button manager-ui-button--secondary" onClick={closePayModal} disabled={paying}>Cancel</button>
+                        <button className="manager-ui-button manager-ui-button--primary" onClick={handlePayNow} disabled={paying}>
                             {paying ? "Opening Razorpay..." : "Pay with Razorpay"}
                         </button>
                     </>
@@ -319,38 +314,53 @@ export const ResidentPayments = () => {
     const [type, setType] = useState("all");
 
     return (
-        <div>
+        <ManagerPageShell
+            eyebrow="Payments"
+            title="Track dues, payments, and receipts in one clean desk."
+            description="Search payment history, complete pending dues, and open receipts without switching between disconnected card styles."
+            chips={[
+                `${stats?.totalTransactions ?? 0} transactions tracked`,
+                `${status === "all" ? "All statuses" : status} in focus`,
+            ]}
+            className="resident-ui-page resident-payments-page"
+        >
             <PaymentsOverview stats={stats} />
 
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginBottom: 4 }}>
-                <div style={{ flex: 1, minWidth: 200 }}>
-                    <SearchBar placeholder="Search by title or payment ID..." value={search} onChange={setSearch} />
-                </div>
-                <Dropdown
-                    options={[
-                        { label: "All Status", value: "all" },
-                        { label: "Completed", value: "completed" },
-                        { label: "Pending", value: "pending" },
-                        { label: "Overdue", value: "overdue" },
-                    ]}
-                    selected={status}
-                    onChange={setStatus}
-                    width="180px"
-                />
-                <Dropdown
-                    options={[
-                        { label: "All Types", value: "all" },
-                        { label: "Maintenance", value: "maintenance" },
-                        { label: "Subscription", value: "subscription" },
-                        { label: "Booking", value: "booking" },
-                    ]}
-                    selected={type}
-                    onChange={setType}
-                    width="180px"
-                />
-            </div>
+            <ManagerSection
+                eyebrow="Transactions"
+                title="Payments desk"
+                description="Filter live payment records by title, status, and charge type."
+            >
+                <ManagerToolbar>
+                    <ManagerToolbarGrow>
+                        <SearchBar placeholder="Search by title or payment ID..." value={search} onChange={setSearch} />
+                    </ManagerToolbarGrow>
+                    <Dropdown
+                        options={[
+                            { label: "All Status", value: "all" },
+                            { label: "Completed", value: "completed" },
+                            { label: "Pending", value: "pending" },
+                            { label: "Overdue", value: "overdue" },
+                        ]}
+                        selected={status}
+                        onChange={setStatus}
+                        width="180px"
+                    />
+                    <Dropdown
+                        options={[
+                            { label: "All Types", value: "all" },
+                            { label: "Maintenance", value: "maintenance" },
+                            { label: "Subscription", value: "subscription" },
+                            { label: "Booking", value: "booking" },
+                        ]}
+                        selected={type}
+                        onChange={setType}
+                        width="180px"
+                    />
+                </ManagerToolbar>
 
-            <PaymentsHistory onStats={setStats} filters={{ search, status, type }} />
-        </div>
+                <PaymentsHistory onStats={setStats} filters={{ search, status, type }} />
+            </ManagerSection>
+        </ManagerPageShell>
     );
 };

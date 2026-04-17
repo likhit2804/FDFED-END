@@ -1,19 +1,53 @@
-import React, { useEffect, useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { fetchLeaves, approveLeave, rejectLeave } from '../slices/leaveSlice';
-import '../assets/css/Leave.css';
-import { FileText, Clock, CheckCircle } from 'lucide-react';
-import { StatCard, StatusBadge, EmptyState, Textarea } from './shared';
+import React, { useEffect, useMemo, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { CheckCircle, Clock, FileText, XCircle } from "lucide-react";
 
+import { approveLeave, fetchLeaves, rejectLeave } from "../slices/leaveSlice";
+import { EmptyState, StatCard, StatusBadge, Textarea } from "./shared";
+import {
+  ManagerActionButton,
+  ManagerPageShell,
+  ManagerRecordCard,
+  ManagerRecordGrid,
+  ManagerSection,
+} from "./Manager/ui";
 
+const formatDate = (value) => {
+  if (!value) return "-";
+  return new Date(value).toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+};
+
+const formatDateTime = (value) => {
+  if (!value) return "-";
+  return new Date(value).toLocaleString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+};
 
 export default function ManagerLeaveList() {
   const dispatch = useDispatch();
-  const leaves = useSelector(s => s.leave?.leaves || []);
+  const leaves = useSelector((state) => state.leave?.leaves || []);
   const [loading, setLoading] = useState(false);
   const [notes, setNotes] = useState({});
 
-  useEffect(() => { dispatch(fetchLeaves()); }, [dispatch]);
+  useEffect(() => {
+    dispatch(fetchLeaves());
+  }, [dispatch]);
+
+  const stats = useMemo(() => ({
+    total: leaves.length,
+    pending: leaves.filter((leave) => leave.status === "pending").length,
+    approved: leaves.filter((leave) => leave.status === "approved").length,
+    rejected: leaves.filter((leave) => leave.status === "rejected").length,
+  }), [leaves]);
 
   const calculateDays = (start, end) => {
     const startDate = new Date(start);
@@ -21,148 +55,95 @@ export default function ManagerLeaveList() {
     return Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
   };
 
-  const onApprove = async (id) => {
-    if (!confirm('Approve this leave?')) return;
-    setLoading(true);
-    try {
-      await dispatch(approveLeave({ id, notes: notes[id] || '' })).unwrap();
-      await dispatch(fetchLeaves()).unwrap();
-      alert('Approved');
-      setNotes(prev => ({ ...prev, [id]: '' }));
-    } catch (err) {
-      console.error(err);
-      alert('Failed');
-    } finally { setLoading(false); }
-  };
+  const updateLeave = async (mode, id) => {
+    const confirmMessage = mode === "approve" ? "Approve this leave?" : "Reject this leave?";
+    if (!window.confirm(confirmMessage)) return;
 
-  const onReject = async (id) => {
-    if (!confirm('Reject this leave?')) return;
     setLoading(true);
     try {
-      await dispatch(rejectLeave({ id, notes: notes[id] || '' })).unwrap();
+      const action = mode === "approve" ? approveLeave : rejectLeave;
+      await dispatch(action({ id, notes: notes[id] || "" })).unwrap();
       await dispatch(fetchLeaves()).unwrap();
-      alert('Rejected');
-      setNotes(prev => ({ ...prev, [id]: '' }));
+      setNotes((current) => ({ ...current, [id]: "" }));
     } catch (err) {
       console.error(err);
-      alert('Failed');
-    } finally { setLoading(false); }
+      alert("Failed to update leave status.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <>
-      <div className="container-fluid px-4 py-4">
-        {/* HEADER */}
-        <div className="row mb-4">
-          <div className="col-12">
-            <h2 className="fw-bold mb-1" style={{ color: '#1a3a52' }}>Leave Approvals</h2>
-            <p className="text-muted small mb-0">Review and manage worker leave requests</p>
-            <hr style={{ marginTop: '1rem', marginBottom: '1rem', opacity: 0.2 }} />
-          </div>
-        </div>
-
-        {/* STATS CARDS */}
-        <div className="ue-stat-grid" style={{ marginBottom: 16 }}>
-          <StatCard label="Total Requests" value={leaves.length} icon={<FileText size={22} />} iconColor="#2563eb" iconBg="#dbeafe" />
-          <StatCard label="Pending" value={leaves.filter(l => l.status === 'pending').length} icon={<Clock size={22} />} iconColor="#d97706" iconBg="#fef3c7" />
-          <StatCard label="Approved" value={leaves.filter(l => l.status === 'approved').length} icon={<CheckCircle size={22} />} iconColor="#16a34a" iconBg="#dcfce7" />
-        </div>
-
-
-        {/* LEAVES LIST */}
-        <div className="row">
-          <div className="col-12">
-            {leaves.length === 0 && (
-              <EmptyState icon={<FileText size={48} />} title="No Leave Requests" sub="No leave requests at the moment" />
-            )}
-
-
-            {leaves.map(l => (
-              <div key={l._id} className="card border-0 shadow-sm mb-3" style={{ borderLeft: `4px solid ${l.status === 'pending' ? '#ffc107' : l.status === 'approved' ? '#28a745' : '#dc3545'}` }}>
-                <div className="card-body">
-                  {/* HEADER ROW */}
-                  <div className="row align-items-start mb-3">
-                    <div className="col-md-8">
-                      <h5 className="fw-bold mb-1">{l.worker?.name || l.worker?.email || 'Unknown Worker'}</h5>
-                      <small className="text-muted">Work ID: {l.worker?._id || 'N/A'}</small>
-                    </div>
-                    <div className="col-md-4 text-end">
-                      <StatusBadge status={l.status} />
-                    </div>
-
-                  </div>
-
-                  {/* DETAILS GRID */}
-                  <div className="row mb-3">
-                    <div className="col-md-3 mb-2">
-                      <small className="text-muted d-block">Leave Type</small>
-                      <div className="fw-semibold text-capitalize">{l.type}</div>
-                    </div>
-                    <div className="col-md-3 mb-2">
-                      <small className="text-muted d-block">Duration</small>
-                      <div className="fw-semibold">{calculateDays(l.startDate, l.endDate)} days</div>
-                    </div>
-                    <div className="col-md-6 mb-2">
-                      <small className="text-muted d-block">Period</small>
-                      <div className="fw-semibold">{new Date(l.startDate).toLocaleDateString()} — {new Date(l.endDate).toLocaleDateString()}</div>
-                    </div>
-                  </div>
-
-                  {/* REASON */}
-                  <div className="mb-3">
-                    <small className="text-muted d-block">Reason</small>
-                    <p className="mb-0">{l.reason || 'No reason provided'}</p>
-                  </div>
-
-                  {/* DATES INFO */}
-                  <div className="row text-muted small mb-3">
-                    <div className="col-md-6">
-                      <small className="text-muted d-block">Applied On</small>
-                      <span>{new Date(l.appliedAt).toLocaleString()}</span>
-                    </div>
-                    {l.decisionAt && (
-                      <div className="col-md-6">
-                        <small className="text-muted d-block">Decision On</small>
-                        <span>{new Date(l.decisionAt).toLocaleString()}</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* NOTES */}
-                  {l.notes && (
-                    <div className="alert alert-info py-2 mb-3">
-                      <small className="d-block text-muted mb-1"><strong>Notes:</strong></small>
-                      <small>{l.notes}</small>
-                    </div>
-                  )}
-
-                  {/* ACTIONS */}
-                  {l.status === 'pending' && (
-                    <div>
-                      <Textarea
-                        placeholder="Add notes (optional)"
-                        rows={2}
-                        value={notes[l._id] || ''}
-                        onChange={e => setNotes(prev => ({ ...prev, [l._id]: e.target.value }))}
-                        style={{ marginBottom: 8 }}
-                      />
-
-                      <div className="d-flex gap-2">
-                        <button className="btn btn-sm btn-success" onClick={() => onApprove(l._id)} disabled={loading}>
-                          <i className="bi bi-check-circle me-1"></i> Approve
-                        </button>
-                        <button className="btn btn-sm btn-danger" onClick={() => onReject(l._id)} disabled={loading}>
-                          <i className="bi bi-x-circle me-1"></i> Reject
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+    <ManagerPageShell
+      eyebrow="Leaves"
+      title="Review and manage worker leave requests."
+      description="Approve or reject requests from one desk without digging through long stacked Bootstrap cards."
+      chips={[`${stats.total} requests`, `${stats.pending} pending decisions`]}
+    >
+      <div className="ue-stat-grid">
+        <StatCard label="Total Requests" value={stats.total} icon={<FileText size={22} />} iconColor="#2563eb" iconBg="#dbeafe" />
+        <StatCard label="Pending" value={stats.pending} icon={<Clock size={22} />} iconColor="#d97706" iconBg="#fef3c7" />
+        <StatCard label="Approved" value={stats.approved} icon={<CheckCircle size={22} />} iconColor="#16a34a" iconBg="#dcfce7" />
       </div>
-    </>
+
+      <ManagerSection
+        eyebrow="Requests"
+        title="Leave approvals"
+        description="Open each request, review the worker context, and record notes alongside the final decision."
+      >
+        {leaves.length === 0 ? (
+          <EmptyState icon={<FileText size={48} />} title="No leave requests" sub="No leave requests are waiting right now." />
+        ) : (
+          <ManagerRecordGrid>
+            {leaves.map((leave) => (
+              <ManagerRecordCard
+                key={leave._id}
+                title={leave.worker?.name || leave.worker?.email || "Unknown Worker"}
+                subtitle={`Work ID: ${leave.worker?._id || "N/A"}`}
+                status={<StatusBadge status={leave.status} />}
+                meta={[
+                  { label: "Type", value: leave.type || "-" },
+                  { label: "Days", value: `${calculateDays(leave.startDate, leave.endDate)} days` },
+                  { label: "Period", value: `${formatDate(leave.startDate)} - ${formatDate(leave.endDate)}` },
+                  { label: "Applied", value: formatDateTime(leave.appliedAt) },
+                  { label: "Decision", value: leave.decisionAt ? formatDateTime(leave.decisionAt) : "Pending" },
+                  { label: "Reason", value: leave.reason || "No reason provided" },
+                ]}
+                footer={
+                  <div className="manager-ui-stack">
+                    {leave.notes ? <p className="manager-ui-note">Notes: {leave.notes}</p> : null}
+                    {leave.status === "pending" ? (
+                      <Textarea
+                        label="Manager notes"
+                        placeholder="Add notes for this decision (optional)"
+                        rows={2}
+                        value={notes[leave._id] || ""}
+                        onChange={(event) =>
+                          setNotes((current) => ({ ...current, [leave._id]: event.target.value }))
+                        }
+                      />
+                    ) : null}
+                  </div>
+                }
+                actions={
+                  leave.status === "pending" ? (
+                    <>
+                      <ManagerActionButton variant="primary" onClick={() => updateLeave("approve", leave._id)} disabled={loading}>
+                        <CheckCircle size={16} />
+                        Approve
+                      </ManagerActionButton>
+                      <ManagerActionButton variant="danger" onClick={() => updateLeave("reject", leave._id)} disabled={loading}>
+                        <XCircle size={16} />
+                        Reject
+                      </ManagerActionButton>
+                    </>
+                  ) : null
+                }
+              />
+            ))}
+          </ManagerRecordGrid>
+        )}
+      </ManagerSection>
+    </ManagerPageShell>
   );
 }

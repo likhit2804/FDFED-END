@@ -4,11 +4,11 @@ import { StatusTracker } from "./StatusTracker";
 
 const DETAIL_FIELDS = [
     { label: "Issue ID", render: (i) => i.issueID || `#${i._id?.slice(-6)}`, icon: null },
-    { label: "Status", render: (i) => <span className={`status-badge status-${i.status}`}>{i.status}</span>, icon: null },
+    { label: "Status", render: (i) => <span className={`status-badge status-${(i.status || "").toLowerCase().replace(/\s+/g, "-")}`}>{i.status}</span>, icon: null },
     { label: "Title", render: (i) => i.title, icon: "bi-card-heading" },
     { label: "Category", render: (i) => <>{i.category}{i.otherCategory && <span className="text-muted ms-2">({i.otherCategory})</span>}</>, icon: "bi-tag" },
     { label: "Assigned Worker", render: (i) => i.workerAssigned ? `Worker ID: ${i.workerAssigned?.toString().slice(-6)}` : <span className="text-muted">Not Assigned</span>, icon: "bi-person-badge" },
-    { label: "Auto Assigned", render: (i) => i.autoAssigned ? <span className="badge bg-success">Yes</span> : <span className="badge bg-secondary">No</span>, icon: "bi-lightning-charge" },
+    { label: "Assignment", render: (i) => i.autoAssigned ? "Auto" : "Manual", icon: "bi-lightning-charge" },
     { label: "Priority", render: (i) => <span className={`priority-${i.priority?.toLowerCase()}`}>{i.priority} <span style={{ fontSize: "11px", color: "#666" }}>(Auto-determined)</span></span>, icon: "bi-exclamation-circle" },
     { label: "Raised On", render: (i) => new Date(i.createdAt).toLocaleDateString("en-IN"), icon: "bi-calendar" },
 ];
@@ -44,15 +44,15 @@ export const ResidentIssueDetailsModal = ({
                 {issue?.categoryType === "Resident" &&
                     issue?.status?.trim().toLowerCase() === "resolved (awaiting confirmation)" && (
                         <>
-                            <button className="btn btn-success" onClick={() => onConfirm(issue._id)}>
-                                <i className="bi bi-check-circle" /> Approve Resolution
-                            </button>
-                            <button className="btn btn-danger" onClick={() => onReject(issue._id)}>
-                                <i className="bi bi-x-circle" /> Reject Resolution
-                            </button>
-                        </>
+                    <button className="manager-ui-button manager-ui-button--primary" onClick={() => onConfirm(issue._id)}>
+                        <i className="bi bi-check-circle" /> Approve Resolution
+                    </button>
+                    <button className="manager-ui-button manager-ui-button--danger" onClick={() => onReject(issue._id)}>
+                        <i className="bi bi-x-circle" /> Reject Resolution
+                    </button>
+                </>
                     )}
-                <button className="btn btn-secondary" onClick={onClose}>Close</button>
+                <button className="manager-ui-button manager-ui-button--secondary" onClick={onClose}>Close</button>
             </>
         }
     >
@@ -124,7 +124,7 @@ export const ResidentIssueDetailsModal = ({
                             options={[5, 4, 3, 2, 1].map((r) => ({ label: `${r} Star${r > 1 ? "s" : ""}`, value: r }))}
                         />
                         <button
-                            className="btn btn-primary"
+                            className="manager-ui-button manager-ui-button--primary"
                             onClick={onFeedbackSubmit}
                             disabled={feedbackSubmitting || !feedbackText}
                         >

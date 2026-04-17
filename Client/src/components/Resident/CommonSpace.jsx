@@ -4,14 +4,16 @@ import { useNavigate } from 'react-router-dom';
 import '../../assets/css/Resident/CommonSpace.css';
 import { ToastContainer, toast } from 'react-toastify';
 import { useDispatch, useSelector } from 'react-redux';
+import { Building2, Calendar, Clock } from "lucide-react";
 import {
   fetchuserBookings, cancelUserBooking,
   ConfirmBooking, optimisticAddBooking, optimisticCancelBooking,
 } from '../../slices/CommonSpaceSlice';
 import { Loader } from '../Loader';
-import { Modal, Input, Select, Textarea } from '../shared';
+import { EmptyState, Modal, Input, Select, StatCard, Textarea } from '../shared';
 import { BookingCard } from './CommonSpace/BookingCard';
 import { BookingDetailsModal } from './CommonSpace/BookingDetailsModal';
+import { ManagerActionButton, ManagerPageShell, ManagerSection } from '../Manager/ui';
 
 const formatTime = (hour) => {
   if (hour === 0) return '12:00 AM';
@@ -195,39 +197,69 @@ export const CommonSpaceBooking = () => {
   return (
     <>
       <ToastContainer position="top-center" />
-      <div className="d-flex justify-content-between align-items-center mb-3">
-        <h4 className="section-title">Common Space Bookings</h4>
-        <button id="bookFacilityBtn" className="btn btn-success" onClick={() => setIsBookingFormOpen(true)}>
-          <i className="bi bi-plus-lg me-2" />Book a Facility
-        </button>
-      </div>
+      <ManagerPageShell
+        eyebrow="Common Spaces"
+        title="Book and track common space usage in one desk."
+        description="Use the same booking UI language as manager pages so cards, controls, and actions stay consistent."
+        chips={[`${bookings?.length || 0} bookings`, `${pendingBookingsCount} pending`]}
+        className="resident-ui-page resident-common-space-page"
+      >
+        <ManagerSection
+          eyebrow="Overview"
+          title="Common space bookings"
+          description="Create a booking or review your recent activity."
+          actions={
+            <ManagerActionButton variant="primary" onClick={() => setIsBookingFormOpen(true)}>
+              <i className="bi bi-plus-lg me-1" />
+              Book a Facility
+            </ManagerActionButton>
+          }
+        >
+          <div className="ue-stat-grid">
+            <StatCard label="Total Bookings" value={bookings?.length || 0} icon={<Calendar size={22} />} iconColor="#7c3aed" iconBg="#f3edff" />
+            <StatCard label="Pending Bookings" value={pendingBookingsCount} icon={<Clock size={22} />} iconColor="#8b5cf6" iconBg="#f5f3ff" />
+            <StatCard label="Facilities" value={avalaibleSpaces.length} icon={<Building2 size={22} />} iconColor="#5b6472" iconBg="#f2f4f8" />
+          </div>
+        </ManagerSection>
 
-      <div className="stats-grid mb-4">
-        <div className="stat-card" style={{ borderLeftColor: 'green' }}><p className="card-label">Total Bookings (this month)</p><h2 className="card-value text-success">{bookings?.length || 0}</h2></div>
-        <div className="stat-card" style={{ borderLeftColor: 'var(--warning)' }}><p className="card-label">Pending Bookings</p><h2 className="card-value text-warning">{pendingBookingsCount}</h2></div>
-        <div className="stat-card" style={{ borderLeftColor: 'blue' }}><p className="card-label">Total Facilities</p><h2 className="card-value text-primary">{avalaibleSpaces.length}</h2></div>
-      </div>
-
-      <h4 className="table-title">Recent Bookings</h4>
-      <div className="row bookings-grid">
+        <ManagerSection
+          eyebrow="Queue"
+          title="Recent bookings"
+          description="Open details or cancel active slot bookings."
+        >
+      <div className="ue-entity-grid">
         {bookingLoading && <div className="col-12 d-flex justify-content-center py-5"><Loader /></div>}
         {!bookingLoading && bookings?.filter(Boolean).length > 0
           ? bookings.filter(Boolean).map((b) => <BookingCard key={b._id} booking={b} onViewDetails={showDetails} onCancel={cancelBooking} />)
           : !bookingLoading && (
-            <div className="col-12 shadow-sm rounded-2 no-bookings d-flex gap-3 justify-content-center align-items-center text-muted">
-              <i className="bi bi-calendar fs-3" /><h4 className="m-0">No bookings found</h4>
-            </div>
+            <EmptyState icon={<Calendar size={42} />} title="No bookings found" sub="Create a new booking to get started." />
           )}
       </div>
+        </ManagerSection>
+      </ManagerPageShell>
 
       {/* Booking Form Modal */}
-      <Modal isOpen={isBookingFormOpen} onClose={() => !formSubmitting && setIsBookingFormOpen(false)} title="Book Common Space" size="lg"
-        footer={<>
-          <button type="button" onClick={() => setIsBookingFormOpen(false)} style={{ padding: '9px 18px', borderRadius: 8, border: '1px solid #e5e7eb', background: '#f9fafb', color: '#374151', fontWeight: 600 }}>Cancel</button>
-          <button type="button" onClick={handleSubmit(onSubmit)} disabled={formSubmitting} style={{ padding: '9px 20px', borderRadius: 8, border: 'none', background: '#16a34a', color: '#fff', fontWeight: 600 }}>{formSubmitting ? 'Submitting...' : 'Submit Booking'}</button>
-        </>}
+      <Modal
+        isOpen={isBookingFormOpen}
+        onClose={() => !formSubmitting && setIsBookingFormOpen(false)}
+        title="Book Common Space"
+        size="lg"
+        footer={
+          <>
+            <button type="button" className="manager-ui-button manager-ui-button--secondary" onClick={() => setIsBookingFormOpen(false)}>
+              Cancel
+            </button>
+            <button type="button" className="manager-ui-button manager-ui-button--primary" onClick={handleSubmit(onSubmit)} disabled={formSubmitting}>
+              {formSubmitting ? 'Submitting...' : 'Submit Booking'}
+            </button>
+          </>
+        }
       >
-        {formSubmitting && <div style={{ textAlign: 'center', padding: 20 }}><div className="spinner-border text-primary" role="status" /></div>}
+        {formSubmitting && (
+          <div style={{ textAlign: 'center', padding: 20 }}>
+            <Loader label="Submitting booking..." size={34} />
+          </div>
+        )}
         <div className="booking-form-grid A">
           <div className="form-column w-50">
             <input className="d-none" {...register('Type', { required: true })} readOnly />

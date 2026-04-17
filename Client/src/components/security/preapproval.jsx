@@ -1,7 +1,15 @@
 import React, { useEffect, useState } from "react";
 import { Html5QrcodeScanner } from "html5-qrcode";
 
+import { Loader } from "../Loader";
 import { Modal, Tabs, StatusBadge, EmptyState } from "../shared";
+import {
+  ManagerActionButton,
+  ManagerPageShell,
+  ManagerRecordCard,
+  ManagerRecordGrid,
+  ManagerSection,
+} from "../Manager/ui";
 
 export function SecurityPreApproval() {
   const [tab, setTab] = useState("Pending");
@@ -69,63 +77,69 @@ export function SecurityPreApproval() {
   const tabItems = ["Pending", "Approved", "Rejected"].map(t => ({ label: t, value: t }));
 
   return (
-    <div className="pre-container">
-      <div className="pre-header">
-        <h2 className="page-title">Pre Approval Requests</h2>
-        <button className="scan-btn" onClick={openScanner}>
-          <i className="bi bi-qr-code-scan"></i> Scan QR
-        </button>
-      </div>
-
-      <Tabs
-        tabs={tabItems}
-        active={tab}
-        onChange={setTab}
-      />
-
-      <div className="pre-list">
-        {loading ? (
-          <p className="loading">Loading...</p>
-        ) : filtered.length === 0 ? (
-          <EmptyState title={`No ${tab} requests`} />
-        ) : (
-          filtered.map((v) => (
-            <div key={v._id} className="pre-card">
-              <div className={`card-header ${v.status.toLowerCase()}`}>
-                <span className="visitor-name"><i className="bi bi-person-fill"></i> {v.name}</span>
-                <StatusBadge status={v.status} />
-              </div>
-
-              <div className="card-body">
-                <div className="row-item"><div className="label">Requested By:</div><div className="value">{v?.approvedBy?.name || "N/A"}</div></div>
-                <div className="row-item"><div className="label">Purpose:</div><div className="value">{v.purpose}</div></div>
-                <div className="row-item">
-                  <div className="label">Visit Date:</div>
-                  <div className="value">{new Date(v.scheduledAt).toLocaleDateString("en-GB")} , {new Date(v.scheduledAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</div>
-                </div>
-                <div className="row-item"><div className="label">Contact:</div><div className="value">{v.contactNumber}</div></div>
-              </div>
-
-              {tab === "Pending" && (
-                <div className="card-footer">
-                  <button className="btn-approve" onClick={() => handleAction(v._id, "Approved")}><i className="bi bi-check-circle"></i> Approve</button>
-                  <button className="btn-reject" onClick={() => handleAction(v._id, "Rejected")}><i className="bi bi-x-circle"></i> Reject</button>
-                </div>
-              )}
-            </div>
-          ))
-        )}
-      </div>
-
-      {/* QR Scanner Modal */}
-      <Modal
-        isOpen={showScanner}
-        onClose={closeScanner}
-        title="Scan QR Code"
-        size="sm"
+    <>
+      <ManagerPageShell
+        eyebrow="Security Desk"
+        title="Process pre-approval requests quickly and safely."
+        description="Review resident submissions, approve or reject entries, and verify gate QR codes in one queue."
       >
-        <div id="qr-reader" style={{ width: "350px" }}></div>
+        <ManagerSection
+          eyebrow="Queue"
+          title="Pre-approval requests"
+          description="Filter by status and handle pending requests from residents."
+          actions={
+            <ManagerActionButton variant="primary" onClick={openScanner}>
+              <i className="bi bi-qr-code-scan" /> Scan QR
+            </ManagerActionButton>
+          }
+        >
+          <Tabs tabs={tabItems} active={tab} onChange={setTab} />
+
+          {loading ? (
+            <div className="manager-ui-empty"><Loader label="Loading requests..." /></div>
+          ) : filtered.length === 0 ? (
+            <EmptyState title={`No ${tab} requests`} />
+          ) : (
+            <ManagerRecordGrid>
+              {filtered.map((visitor) => {
+                const visitDate = visitor.scheduledAt
+                  ? `${new Date(visitor.scheduledAt).toLocaleDateString("en-GB")} ${new Date(visitor.scheduledAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
+                  : "-";
+
+                return (
+                  <ManagerRecordCard
+                    key={visitor._id}
+                    title={visitor.name || "Unknown visitor"}
+                    subtitle={`Requested by: ${visitor?.approvedBy?.name || "N/A"}`}
+                    status={<StatusBadge status={visitor.status} />}
+                    meta={[
+                      { label: "Purpose", value: visitor.purpose || "-" },
+                      { label: "Visit date", value: visitDate, wide: true },
+                      { label: "Contact", value: visitor.contactNumber || "-" },
+                    ]}
+                    actions={
+                      tab === "Pending" ? (
+                        <>
+                          <ManagerActionButton variant="primary" onClick={() => handleAction(visitor._id, "Approved")}>
+                            <i className="bi bi-check-circle" /> Approve
+                          </ManagerActionButton>
+                          <ManagerActionButton variant="danger" onClick={() => handleAction(visitor._id, "Rejected")}>
+                            <i className="bi bi-x-circle" /> Reject
+                          </ManagerActionButton>
+                        </>
+                      ) : null
+                    }
+                  />
+                );
+              })}
+            </ManagerRecordGrid>
+          )}
+        </ManagerSection>
+      </ManagerPageShell>
+
+      <Modal isOpen={showScanner} onClose={closeScanner} title="Scan QR Code" size="sm">
+        <div id="qr-reader" style={{ width: "350px" }} />
       </Modal>
-    </div>
+    </>
   );
 }

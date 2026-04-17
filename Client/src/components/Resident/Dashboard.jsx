@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap-icons/font/bootstrap-icons.css";
+import { Loader } from "../Loader";
 
 
 export const ResidentDashboard = () => {
@@ -98,7 +99,7 @@ export const ResidentDashboard = () => {
 
             <div className="scroll-area">
               {loading ? (
-                <p className="text-center text-muted">Loading...</p>
+                <div className="text-center py-3"><Loader label="Loading activity..." /></div>
               ) : recents.length > 0 ? (
                 recents.map((r, i) => (
                   <div key={i} className="recent-entry animate-card">
@@ -138,7 +139,7 @@ export const ResidentDashboard = () => {
 
             <div className="scroll-area">
               {loading ? (
-                <p className="text-center text-muted">Loading...</p>
+                <div className="text-center py-3"><Loader label="Loading notifications..." /></div>
               ) : notifications.length > 0 ? (
                 notifications.map((n, i) => (
                   <div key={i} className="notification-card animate-card">

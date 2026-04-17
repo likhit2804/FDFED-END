@@ -1,4 +1,5 @@
 import React from "react";
+import { Loader } from "../../Loader";
 
 /**
  * Subscription plan change form — shown inline on the profile page.
@@ -24,7 +25,9 @@ export const PlanChangeForm = ({
         )}
 
         {planLoading ? (
-            <div className="text-secondary">Loading plans...</div>
+            <div className="text-secondary d-flex justify-content-center py-2">
+                <Loader label="Loading plans..." size={34} />
+            </div>
         ) : plans ? (
             <form onSubmit={onSubmit}>
                 <div className="row g-3 mb-3">
