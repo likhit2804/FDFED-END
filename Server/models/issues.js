@@ -142,6 +142,7 @@ const issueSchema = new Schema({
   community: {
     type: Schema.Types.ObjectId,
     ref: "Community",
+    required: true,
   },
 
   paymentStatus: {
