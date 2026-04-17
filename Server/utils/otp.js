@@ -40,10 +40,10 @@ function setOtp(email, code, ttlMs = OTP_TTL_MS) {
  * @param {string} email
  * @returns {Promise<boolean>}
  */
-export async function sendLoginOtp(email) {
+export async function sendLoginOtp(email, context = {}) {
   const code = generateOTP();
   setOtp(email, code);
-  await sendOTPEmail(email, code, 5);
+  await sendOTPEmail(email, code, 5, "login", context);
   return true;
 }
 
@@ -53,16 +53,16 @@ export async function sendLoginOtp(email) {
  * @param {string} email
  * @returns {Promise<string>}
  */
-export async function sendOtp(email) {
+export async function sendOtp(email, context = {}) {
   const code = generateOTP();
   setOtp(email, code);
-  await sendOTPEmail(email, code, 5);
+  await sendOTPEmail(email, code, 5, "registration", context);
   return code;
 }
 
 /** Resend (re-generate) an OTP to the same email. */
-export function resendOtp(email) {
-  return sendLoginOtp(email);
+export function resendOtp(email, context = {}) {
+  return sendLoginOtp(email, context);
 }
 
 /**

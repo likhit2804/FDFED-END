@@ -10,8 +10,10 @@
 
 import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import {
-  createOTPEmailTemplate,
   createTemporaryPasswordTemplate,
   createApplicationApprovedTemplate,
   createApplicationRejectedTemplate,
@@ -19,8 +21,18 @@ import {
   createPaymentLinkTemplate,
   createNotificationTemplate
 } from './emailTemplates.js';
+import { createOtpEmailByType } from './otpEmailTemplates.js';
 
 dotenv.config();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const OTP_LOGO_PATH = path.resolve(__dirname, '../../Client/src/imgs/logo_N_white_email.png');
+const EMAIL_LOGO_URL = process.env.EMAIL_LOGO_URL || '';
+
+function buildCloudinaryLogoUrl() {
+  if (EMAIL_LOGO_URL.trim()) return EMAIL_LOGO_URL.trim();
+  return '';
+}
 
 // Validate required environment variables
 const requiredEnvVars = ['EMAIL_USER', 'EMAIL_PASS'];
@@ -76,9 +88,10 @@ const getTransporter = () => {
  * @param {string} params.subject - Email subject line
  * @param {string} params.html - Email HTML content
  * @param {string} params.text - Plain text version (optional)
+ * @param {Array} params.attachments - Inline/file attachments (optional)
  * @returns {Promise<boolean>} Success status
  */
-async function sendEmail({ to, subject, html, text = '' }) {
+async function sendEmail({ to, subject, html, text = '', attachments = [] }) {
   try {
     const transporter = getTransporter();
     
@@ -87,7 +100,8 @@ async function sendEmail({ to, subject, html, text = '' }) {
       to,
       subject,
       html,
-      text: text || subject // Fallback to subject if no text provided
+      text: text || subject, // Fallback to subject if no text provided
+      attachments,
     };
 
     const info = await transporter.sendMail(mailOptions);
@@ -104,15 +118,54 @@ async function sendEmail({ to, subject, html, text = '' }) {
  * @param {string} email - Recipient email
  * @param {string} otp - One-time password code
  * @param {number} expiryMinutes - OTP validity period (default: 5)
+ * @param {'login'|'registration'|'general'} type - OTP email context (default: login)
+ * @param {Object} context - additional identity context
+ * @param {string} context.username - login username/email to show in template
+ * @param {string} context.userType - role name to show in template
  */
-export async function sendOTPEmail(email, otp, expiryMinutes = 5) {
-  const html = createOTPEmailTemplate({ otp, expiryMinutes });
+export async function sendOTPEmail(
+  email,
+  otp,
+  expiryMinutes = 5,
+  type = 'login',
+  context = {}
+) {
+  const cloudinaryLogoUrl = buildCloudinaryLogoUrl();
+  const logoExists = fs.existsSync(OTP_LOGO_PATH);
+  const useCidFallback = !cloudinaryLogoUrl && logoExists;
+  const attachments = logoExists
+    ? useCidFallback
+      ? [
+          {
+            filename: 'urbanease-logo.png',
+            path: OTP_LOGO_PATH,
+            cid: 'urbanease-logo',
+          },
+        ]
+      : []
+    : [];
+
+  const html = createOtpEmailByType({
+    otp,
+    expiryMinutes,
+    type,
+    username: context.username || email,
+    userType: context.userType,
+    logoSrc: cloudinaryLogoUrl || (useCidFallback ? 'cid:urbanease-logo' : ''),
+  });
+  const subjectByType = {
+    login: 'Login OTP - Urban Ease',
+    registration: 'Registration OTP - Urban Ease',
+    general: 'Your OTP - Urban Ease'
+  };
+  const subject = subjectByType[type] || subjectByType.general;
   
   return sendEmail({
     to: email,
-    subject: 'Your One-Time Password (OTP) - Urban Ease',
+    subject,
     html,
-    text: `Your OTP is: ${otp}. It expires in ${expiryMinutes} minutes. Do not share this code with anyone.`
+    text: `Your OTP is: ${otp}. It expires in ${expiryMinutes} minutes. Do not share this code with anyone.`,
+    attachments,
   });
 }
 
