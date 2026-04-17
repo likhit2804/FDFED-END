@@ -23,6 +23,7 @@ import {
     resendPaymentLink,
     uploadPhoto,
     getOnboardingDetails,
+    createOnboardingPaymentOrder,
     completeOnboardingPayment,
     interestUploadRouter,
 } from "../controllers/manager.js";
@@ -123,6 +124,7 @@ communityRegistrationRouter.post("/api/interests/:id/resend-link", resendPayment
 
 // Public: onboarding flow
 communityRegistrationRouter.get("/onboarding/:token", getOnboardingDetails);
+communityRegistrationRouter.post("/onboarding/create-order", createOnboardingPaymentOrder);
 communityRegistrationRouter.post("/onboarding/complete", completeOnboardingPayment);
 communityRegistrationRouter.post("/photo-upload", memoryUpload.single("photo"), uploadPhoto);
 communityRegistrationRouter.use("/interest", interestUploadRouter);

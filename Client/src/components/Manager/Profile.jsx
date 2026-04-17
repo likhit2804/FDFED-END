@@ -3,6 +3,7 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import { ProfileHeader, PasswordChangeForm } from "../shared";
 import { PlanChangeForm } from "./Profile/PlanChangeForm";
 import { ProfileEditSection } from "./Profile/ProfileEditSection";
+import { openRazorpayCheckout } from "../../services/razorpay";
 
 export const ManagerProfile = () => {
     const [formData, setFormData] = useState({
@@ -103,16 +104,48 @@ export const ManagerProfile = () => {
         if (!plans?.[selectedPlan]) { setPlanError("Please select a valid plan"); return; }
         const plan = plans[selectedPlan];
         setPlanSubmitting(true);
-        fetch("/manager/subscription-payment", {
+        fetch("/manager/subscription-payment/order", {
             method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include",
-            body: JSON.stringify({ communityId: subscriptionInfo._id, subscriptionPlan: selectedPlan, amount: plan.price, paymentMethod: "card", planDuration: plan.duration || "monthly", paymentDate: new Date().toISOString() }),
+            body: JSON.stringify({ subscriptionPlan: selectedPlan }),
+        }).then((r) => r.json()).then(async (orderData) => {
+            if (!orderData.success) {
+                throw new Error(orderData.message || "Failed to create payment order");
+            }
+
+            const paymentResponse = await openRazorpayCheckout({
+                key: orderData.data.key,
+                orderId: orderData.data.orderId,
+                amount: orderData.data.amount,
+                currency: orderData.data.currency,
+                name: "UrbanEase",
+                description: `${plan.name} community subscription`,
+                prefill: {
+                    name: formData.name || "",
+                    email: formData.email || "",
+                    contact: formData.phone || "",
+                },
+                notes: {
+                    flow: "subscription",
+                    plan: selectedPlan,
+                },
+            });
+
+            return fetch("/manager/subscription-payment", {
+                method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include",
+                body: JSON.stringify({
+                    subscriptionPlan: selectedPlan,
+                    razorpayOrderId: paymentResponse.razorpay_order_id,
+                    razorpayPaymentId: paymentResponse.razorpay_payment_id,
+                    razorpaySignature: paymentResponse.razorpay_signature,
+                }),
+            });
         }).then((r) => r.json()).then((data) => {
             if (data.success) {
                 alert("Subscription plan updated successfully!");
                 setSubscriptionInfo((p) => p ? { ...p, subscriptionPlan: selectedPlan, subscriptionStatus: data.subscriptionStatus || p.subscriptionStatus, planEndDate: data.planEndDate || p.planEndDate } : p);
                 setShowPlanForm(false);
             } else { setPlanError(data.message || "Failed to update plan"); }
-        }).catch(() => setPlanError("Failed to update plan"))
+        }).catch((error) => setPlanError(error.message || "Failed to update plan"))
             .finally(() => setPlanSubmitting(false));
     };
 

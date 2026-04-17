@@ -1,14 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { useNavigate } from 'react-router-dom';
 import '../../assets/css/Resident/CommonSpace.css';
 import { ToastContainer, toast } from 'react-toastify';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   fetchuserBookings, cancelUserBooking,
-  ConfirmBooking, optimisticAddBooking, optimisticCancelBooking, removeOptimisticBooking,
+  ConfirmBooking, optimisticAddBooking, optimisticCancelBooking,
 } from '../../slices/CommonSpaceSlice';
 import { Loader } from '../Loader';
-import PaymentPopUp from './PaymentPopUp';
 import { Modal, Input, Select, Textarea } from '../shared';
 import { BookingCard } from './CommonSpace/BookingCard';
 import { BookingDetailsModal } from './CommonSpace/BookingDetailsModal';
@@ -22,6 +22,7 @@ const formatTime = (hour) => {
 
 export const CommonSpaceBooking = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const { Bookings: bookings, loading: bookingLoading, avalaibleSpaces } = useSelector((s) => s.CommonSpace);
   const [isBookingFormOpen, setIsBookingFormOpen] = useState(false);
   const [isDetailsPopupOpen, setIsDetailsPopupOpen] = useState(false);
@@ -31,10 +32,7 @@ export const CommonSpaceBooking = () => {
   const [isDateEnabled, setIsDateEnabled] = useState(true);
   const [isSlotEnabled, setIsSlotEnabled] = useState(false);
   const [availableSlots, setAvailableSlots] = useState([]);
-  const [onClose, setonClose] = useState(false);
-  const [paymentDetails, setpaymentDetails] = useState({});
   const [formSubmitting, setFormSubmitting] = useState(false);
-  const [newBooking, setNewBooking] = useState({});
   const [isSubscriptionBased, setIsSubscriptionBased] = useState(false);
 
   const { register, handleSubmit, setValue, watch, reset } = useForm({
@@ -60,24 +58,8 @@ export const CommonSpaceBooking = () => {
     }
     setValue('Type', selectedFacility?.Type);
   }, [selectedFacility, watch('date')]);
-
-  useEffect(() => {
-    const latest = bookings?.filter((b) => b?.payment)?.sort((a, b) => new Date(b.createdAt || '1970/01/01') - new Date(a.createdAt || '1970/01/01'))?.[0];
-    if (latest && latest.payment.amount > 0 && latest.payment.status !== 'Completed') {
-      setpaymentDetails(latest.payment);
-    } else { setpaymentDetails({}); }
-  }, [bookings]);
-
-  useEffect(() => {
-    if (formSubmitting && !bookingLoading) {
-      setFormSubmitting(false); setIsBookingFormOpen(false); setonClose(true); reset();
-      setSelectedFacility(null); setSelectedSlots([]); setAvailableSlots([]);
-      setIsDateEnabled(false); setIsSlotEnabled(false); setIsSubscriptionBased(false);
-    }
-  }, [bookingLoading]);
-
   const clearBookingFormState = () => {
-    setNewBooking({}); reset(); setSelectedFacility(null); setSelectedSlots([]);
+    reset(); setSelectedFacility(null); setSelectedSlots([]);
     setAvailableSlots([]); setIsSlotEnabled(false); setIsBookingFormOpen(false); setIsSubscriptionBased(false);
   };
 
@@ -137,7 +119,37 @@ export const CommonSpaceBooking = () => {
     }
   };
 
-  const onSubmit = (data) => {
+  const createBookingWithPendingPayment = async (bookingPayload, paymentMeta) => {
+    const requestId = new Date().getTime();
+    dispatch(optimisticAddBooking({ bookingData: bookingPayload, requestId }));
+
+    return dispatch(ConfirmBooking({
+      data: {
+        bill: paymentMeta?.belongTo || 'Common Space Booking',
+        amount: paymentMeta?.amount || 0,
+        paymentMethod: 'None',
+      },
+      newBooking: bookingPayload,
+      requestId,
+    })).unwrap();
+  };
+
+  const createBookingAndRedirectToPayments = async ({ bookingPayload, paymentMeta }) => {
+    try {
+      setFormSubmitting(true);
+      await createBookingWithPendingPayment(bookingPayload, paymentMeta);
+      await dispatch(fetchuserBookings());
+      toast.info('Booking created. Complete the payment from the Payments tab.');
+      clearBookingFormState();
+      navigate('/resident/payments');
+    } catch (error) {
+      toast.error(error?.message || 'Failed to create booking.');
+    } finally {
+      setFormSubmitting(false);
+    }
+  };
+
+  const onSubmit = async (data) => {
     if (selectedFacility.Type === 'Slot' && selectedSlots.length === 0) { toast.error('Please select at least one time slot.'); return; }
     let fromTime = 'N/A', toTime = 'N/A', amount = selectedFacility.rent, timeSlots = [];
     if (selectedFacility.Type === 'Slot') {
@@ -151,9 +163,13 @@ export const CommonSpaceBooking = () => {
       submitBookingWithoutPayment(newBookingData, Number(amount) || 0);
       return;
     }
-    setNewBooking(newBookingData);
-    setpaymentDetails({ belongTo: selectedFacility.Type === 'Slot' ? "Common Space Booking" : "Common Space Subscription", amount });
-    setIsBookingFormOpen(false); setonClose(true);
+    await createBookingAndRedirectToPayments({
+      bookingPayload: newBookingData,
+      paymentMeta: {
+        belongTo: selectedFacility.Type === 'Slot' ? 'Common Space Booking' : 'Common Space Subscription',
+        amount,
+      },
+    });
   };
 
   const cancelBooking = (data) => {
@@ -263,12 +279,12 @@ export const CommonSpaceBooking = () => {
         booking={selectedBooking}
         isOpen={isDetailsPopupOpen}
         onClose={() => setIsDetailsPopupOpen(false)}
-        onPayment={() => { setIsDetailsPopupOpen(false); setonClose(true); }}
+        onPayment={() => {
+          setIsDetailsPopupOpen(false);
+          toast.info('Complete this booking payment from the Payments tab.');
+          navigate('/resident/payments');
+        }}
       />
-
-      {onClose && Object.keys(paymentDetails).length > 0 && (
-        <PaymentPopUp paymentDetails={paymentDetails} setonClose={setonClose} newBooking={newBooking} clearBookingFormState={clearBookingFormState} />
-      )}
     </>
   );
 };

@@ -86,7 +86,7 @@ export const createBooking = async (req, res) => {
       Type,
     } = req.body.newBooking;
 
-    const { amount, paymentMethod } = req.body.data;
+    const { amount } = req.body.data;
 
     const Space = await Amenity.findById(fid);
     if (!Space) return sendError(res, 404, "Selected amenity not found");
@@ -160,8 +160,8 @@ export const createBooking = async (req, res) => {
         receiverId,
         amount: bookingAmount,
         communityId: req.user.community,
-        paymentMethod: paymentMethod || "None",
-        status: "Completed",
+        paymentMethod: "None",
+        status: "Pending",
         belongTo: "CommonSpaces",
         belongToId: b._id,
       });

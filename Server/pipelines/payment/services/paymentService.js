@@ -141,6 +141,13 @@ export async function markPaymentPaid(paymentId, residentId, { paymentMethod, pa
         }
     }
 
+    if (payment.belongTo === "CommonSpaces" && payment.belongToId) {
+        const { default: CommonSpaces } = await import("../../../models/commonSpaces.js");
+        await CommonSpaces.findByIdAndUpdate(payment.belongToId, {
+            paymentStatus: "Success",
+        });
+    }
+
     await payment.save();
     await payment.populate("sender", "residentFirstname flatNo");
     await payment.populate("receiver", "name");

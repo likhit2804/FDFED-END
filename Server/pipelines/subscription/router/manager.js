@@ -1,6 +1,7 @@
 import express from "express";
 import {
     getCommunityDetails,
+    createSubscriptionPaymentOrder,
     processSubscriptionPayment,
     getSubscriptionHistory,
     getSubscriptionStatus,
@@ -12,6 +13,7 @@ import {
 const subscriptionManagerRouter = express.Router();
 
 subscriptionManagerRouter.get("/community-details", getCommunityDetails);
+subscriptionManagerRouter.post("/subscription-payment/order", createSubscriptionPaymentOrder);
 subscriptionManagerRouter.post("/subscription-payment", processSubscriptionPayment);
 subscriptionManagerRouter.get("/subscription-history", getSubscriptionHistory);
 subscriptionManagerRouter.get("/subscription-status", getSubscriptionStatus);

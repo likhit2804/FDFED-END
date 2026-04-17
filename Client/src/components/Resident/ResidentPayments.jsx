@@ -5,15 +5,12 @@ import {
     AlertCircle,
     BarChart3
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 
-import { Loader } from '../Loader.jsx';
-import { StatCard, SearchBar, Dropdown, StatusBadge, EmptyState, Select, Modal } from '../shared';
+import { Loader } from "../Loader.jsx";
+import { StatCard, SearchBar, Dropdown, StatusBadge, Modal } from "../shared";
+import { openRazorpayCheckout } from "../../services/razorpay";
 
-
-/* -------------------------------
-   Payments Overview Cards
--------------------------------- */
 const PaymentsOverview = ({ stats }) => (
     <div className="ue-stat-grid" style={{ marginBottom: 4 }}>
         <StatCard label="Total Transactions" value={stats?.totalTransactions ?? "-"} icon={<DollarSign size={22} />} iconColor="#16a34a" iconBg="#dcfce7" />
@@ -23,10 +20,6 @@ const PaymentsOverview = ({ stats }) => (
     </div>
 );
 
-
-/* -------------------------------
-   Receipt Popup
--------------------------------- */
 const formatDate = (iso) => {
     if (!iso) return "-";
     try {
@@ -39,7 +32,7 @@ const formatDate = (iso) => {
 
 const PaymentsDetailsPopUp = ({ show, close, details }) => {
     if (!details) return null;
-    const txnId = details.ID || details.transactionId || details._id || "-";
+    const txnId = details.ID || details.transactionId || details.gatewayPaymentId || details._id || "-";
     const amount = details.amount ?? details.amt ?? "-";
     const penalty = details.penalty || {};
 
@@ -47,7 +40,7 @@ const PaymentsDetailsPopUp = ({ show, close, details }) => {
         <Modal isOpen={show} onClose={close} title="Payment Receipt" size="sm">
             <p><strong>Title:</strong> {details.title || "-"}</p>
             <p><strong>Payment ID:</strong> {txnId}</p>
-            <p><strong>Amount:</strong> {amount !== "-" ? `₹${amount}` : "-"}</p>
+            <p><strong>Amount:</strong> {amount !== "-" ? `\u20B9${amount}` : "-"}</p>
             <p><strong>Payment Date:</strong> {formatDate(details.paymentDate)}</p>
             <p><strong>Deadline:</strong> {formatDate(details.paymentDeadline)}</p>
             <p><strong>Payment Method:</strong> {details.paymentMethod || "-"}</p>
@@ -59,24 +52,20 @@ const PaymentsDetailsPopUp = ({ show, close, details }) => {
     );
 };
 
-
-/* -------------------------------
-   Payment Cards List
--------------------------------- */
 const PaymentsHistory = ({ onStats, filters = {} }) => {
     const [payments, setPayments] = useState([]);
     const [showPopup, setShowPopup] = useState(false);
     const [selected, setSelected] = useState(null);
     const [error, setError] = useState(null);
+    const [notice, setNotice] = useState(null);
     const [loading, setLoading] = useState(true);
     const [showPayModal, setShowPayModal] = useState(false);
     const [paying, setPaying] = useState(false);
-    const [payMethod, setPayMethod] = useState("UPI");
 
     const computeStats = (list) => {
-        const overduePayments = list.filter(p => (p.status || "").toLowerCase() === "overdue");
-        const pendingPayments = list.filter(p => (p.status || "").toLowerCase() === "pending");
-        const completedPayments = list.filter(p => (p.status || "").toLowerCase() === "completed");
+        const overduePayments = list.filter((p) => (p.status || "").toLowerCase() === "overdue");
+        const pendingPayments = list.filter((p) => (p.status || "").toLowerCase() === "pending");
+        const completedPayments = list.filter((p) => (p.status || "").toLowerCase() === "completed");
 
         return {
             overdueCount: overduePayments.length,
@@ -104,7 +93,6 @@ const PaymentsHistory = ({ onStats, filters = {} }) => {
                 return res.json();
             })
             .then((data) => {
-                console.log("Resident payments data received:", data);
                 const list = data.payments || [];
                 setPayments(list);
                 if (onStats) onStats(data.stats || computeStats(list));
@@ -118,8 +106,9 @@ const PaymentsHistory = ({ onStats, filters = {} }) => {
     }, [onStats]);
 
     const openPayModal = (payment) => {
+        setError(null);
+        setNotice(null);
         setSelected(payment);
-        setPayMethod(payment?.paymentMethod || "UPI");
         setShowPayModal(true);
     };
 
@@ -131,37 +120,74 @@ const PaymentsHistory = ({ onStats, filters = {} }) => {
     const handlePayNow = async () => {
         if (!selected?._id) return;
         setPaying(true);
+        setError(null);
+        setNotice(null);
         try {
-            const res = await fetch(`/resident/payment/${selected._id}`, {
-                method: "PATCH",
+            const orderRes = await fetch(`/resident/payment/${selected._id}/order`, {
+                method: "POST",
                 headers: { "Content-Type": "application/json" },
                 credentials: "include",
-                body: JSON.stringify({ status: "Completed", paymentMethod: payMethod })
             });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data?.message || "Payment failed");
+            const orderData = await orderRes.json();
+            if (!orderRes.ok) throw new Error(orderData?.message || "Failed to create payment order");
+
+            const paymentResponse = await openRazorpayCheckout({
+                key: orderData.data.key,
+                orderId: orderData.data.orderId,
+                amount: orderData.data.amount,
+                currency: orderData.data.currency,
+                name: "UrbanEase",
+                description: selected?.title || "Resident Payment",
+                notes: {
+                    flow: "resident_payment",
+                    paymentId: selected._id,
+                },
+            });
+
+            const verifyRes = await fetch(`/resident/payment/${selected._id}/verify`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify({
+                    razorpayOrderId: paymentResponse.razorpay_order_id,
+                    razorpayPaymentId: paymentResponse.razorpay_payment_id,
+                    razorpaySignature: paymentResponse.razorpay_signature,
+                }),
+            });
+            const verifyData = await verifyRes.json();
+            if (!verifyRes.ok) throw new Error(verifyData?.message || "Payment failed");
 
             const updated = payments.map((p) =>
                 p._id === selected._id
-                    ? { ...p, status: "Completed", paymentMethod: payMethod, paymentDate: new Date().toISOString() }
+                    ? {
+                        ...p,
+                        ...verifyData.payment,
+                        status: "Completed",
+                        paymentMethod: verifyData.payment?.paymentMethod || "Razorpay",
+                        paymentDate: verifyData.payment?.paymentDate || new Date().toISOString(),
+                    }
                     : p
             );
+
             setPayments(updated);
             if (onStats) onStats(computeStats(updated));
             setShowPayModal(false);
         } catch (err) {
             console.error("Payment update failed", err);
-            setError(err.message || "Payment update failed");
+            if (err?.message === "Payment was cancelled.") {
+                setNotice("Payment was cancelled.");
+                setShowPayModal(false);
+            } else {
+                setError(err.message || "Payment update failed");
+            }
         } finally {
             setPaying(false);
         }
     };
 
-    // apply client-side filters
     const { search = "", status = "all", type = "all" } = filters;
 
     const filteredPayments = payments.filter((p) => {
-        // Search text match against common fields
         const s = search.trim().toLowerCase();
         if (s) {
             const matchesSearch = [
@@ -169,6 +195,7 @@ const PaymentsHistory = ({ onStats, filters = {} }) => {
                 p.paymentType,
                 p.type,
                 p.transactionId,
+                p.gatewayPaymentId,
                 p.ID,
                 p._id,
                 p.paymentMethod,
@@ -178,13 +205,11 @@ const PaymentsHistory = ({ onStats, filters = {} }) => {
             if (!matchesSearch) return false;
         }
 
-        // Status filter
         if (status && status !== "all") {
             const st = (p.status || "").toString().toLowerCase();
             if (st !== status.toLowerCase()) return false;
         }
 
-        // Type filter
         if (type && type !== "all") {
             const tp = (p.paymentType || p.type || "").toString().toLowerCase();
             if (tp !== type.toLowerCase()) return false;
@@ -195,14 +220,16 @@ const PaymentsHistory = ({ onStats, filters = {} }) => {
 
     return (
         <div className="p-0">
-
+            {notice && !loading && (
+                <div className="text-center text-muted p-3">{notice}</div>
+            )}
             {loading ? (
                 <div className="text-center p-4"><Loader /></div>
             ) : error ? (
                 <div className="text-center text-danger p-4">{error}</div>
             ) : payments.length === 0 ? (
                 <div className="shadow-sm text-center text-muted p-4">
-                    <i className="bi bi-wallet2 me-1"></i>  No payments found.
+                    <i className="bi bi-wallet2 me-1"></i> No payments found.
                 </div>
             ) : (
                 <div className="row g-4 payments-grid mt-2">
@@ -220,19 +247,18 @@ const PaymentsHistory = ({ onStats, filters = {} }) => {
                                         <h6 className="fw-semibold">{p.title || p.paymentType || "Payment"}</h6>
                                         <small className="text-muted">{p.paymentMethod || "Online"}</small>
                                     </div>
-                                    <StatusBadge status={p.status || 'Unknown'} />
-
+                                    <StatusBadge status={p.status || "Unknown"} />
                                 </div>
 
                                 <hr />
 
-                                <p><strong>Amount:</strong> ₹{p.amount || 0}</p>
+                                <p><strong>Amount:</strong> {"\u20B9"}{p.amount || 0}</p>
                                 <p><strong>Date:</strong> {formatDate(p.paymentDate)}</p>
                                 <p><strong>Type:</strong> {p.paymentType || p.type || "-"}</p>
-                                <p><strong>Payment ID:</strong> {p.ID || p.transactionId || p._id || "-"}</p>
+                                <p><strong>Payment ID:</strong> {p.gatewayPaymentId || p.ID || p.transactionId || p._id || "-"}</p>
 
                                 <div className="d-flex gap-2 mt-2">
-                                    {['pending', 'overdue'].includes((p.status || '').toLowerCase()) && (
+                                    {["pending", "overdue"].includes((p.status || "").toLowerCase()) && (
                                         <button
                                             className="btn btn-success w-100"
                                             onClick={() => openPayModal(p)}
@@ -270,33 +296,22 @@ const PaymentsHistory = ({ onStats, filters = {} }) => {
                 footer={
                     <>
                         <button className="btn btn-secondary w-50" onClick={closePayModal} disabled={paying}>Cancel</button>
-                        <button className="btn btn-success w-50" onClick={handlePayNow} disabled={paying}>{paying ? "Processing..." : "Pay Now"}</button>
+                        <button className="btn btn-success w-50" onClick={handlePayNow} disabled={paying}>
+                            {paying ? "Opening Razorpay..." : "Pay with Razorpay"}
+                        </button>
                     </>
                 }
             >
                 <p className="mb-2"><strong>Title:</strong> {selected?.title || "Payment"}</p>
-                <p className="mb-2"><strong>Amount:</strong> ₹{selected?.amount || 0}</p>
-                <Select
-                    label="Payment Method"
-                    value={payMethod}
-                    onChange={(e) => setPayMethod(e.target.value)}
-                    options={[
-                        { label: 'UPI', value: 'UPI' },
-                        { label: 'Debit Card', value: 'Debit' },
-                        { label: 'Credit Card', value: 'Credit' },
-                        { label: 'Net Banking', value: 'Netbanking' },
-                        { label: 'Cash', value: 'Cash' },
-                    ]}
-                />
+                <p className="mb-2"><strong>Amount:</strong> {"\u20B9"}{selected?.amount || 0}</p>
+                <p className="mb-0 text-muted small">
+                    You&apos;ll finish this payment in Razorpay and we&apos;ll mark it completed only after the server verifies the payment signature.
+                </p>
             </Modal>
-
         </div>
     );
 };
 
-/* -------------------------------
-   Main Component
--------------------------------- */
 export const ResidentPayments = () => {
     const [stats, setStats] = useState(null);
     const [search, setSearch] = useState("");
@@ -307,16 +322,16 @@ export const ResidentPayments = () => {
         <div>
             <PaymentsOverview stats={stats} />
 
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', marginBottom: 4 }}>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginBottom: 4 }}>
                 <div style={{ flex: 1, minWidth: 200 }}>
                     <SearchBar placeholder="Search by title or payment ID..." value={search} onChange={setSearch} />
                 </div>
                 <Dropdown
                     options={[
-                        { label: 'All Status', value: 'all' },
-                        { label: 'Completed', value: 'completed' },
-                        { label: 'Pending', value: 'pending' },
-                        { label: 'Overdue', value: 'overdue' },
+                        { label: "All Status", value: "all" },
+                        { label: "Completed", value: "completed" },
+                        { label: "Pending", value: "pending" },
+                        { label: "Overdue", value: "overdue" },
                     ]}
                     selected={status}
                     onChange={setStatus}
@@ -324,10 +339,10 @@ export const ResidentPayments = () => {
                 />
                 <Dropdown
                     options={[
-                        { label: 'All Types', value: 'all' },
-                        { label: 'Maintenance', value: 'maintenance' },
-                        { label: 'Subscription', value: 'subscription' },
-                        { label: 'Booking', value: 'booking' },
+                        { label: "All Types", value: "all" },
+                        { label: "Maintenance", value: "maintenance" },
+                        { label: "Subscription", value: "subscription" },
+                        { label: "Booking", value: "booking" },
                     ]}
                     selected={type}
                     onChange={setType}

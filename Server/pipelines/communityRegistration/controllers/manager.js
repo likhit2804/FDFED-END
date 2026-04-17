@@ -35,6 +35,7 @@ export {
     submitInterestForm,
     uploadPhoto,
     getOnboardingDetails,
+    createOnboardingPaymentOrder,
     completeOnboardingPayment,
     interestUploadRouter,
 } from "../../../controllers/admin/interestForm.js";

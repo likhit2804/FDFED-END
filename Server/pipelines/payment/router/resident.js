@@ -3,6 +3,8 @@ import {
     getResidentPayments,
     createResidentPayment,
     updateResidentPayment,
+    createResidentPaymentOrder,
+    verifyResidentPayment,
     getSinglePayment,
     getCommunityPaymentInfo,
 } from "../controllers/index.js";
@@ -17,6 +19,12 @@ paymentResidentRouter.post("/payment", createResidentPayment);
 
 // PATCH /resident/payment/:id — mark payment complete
 paymentResidentRouter.patch("/payment/:id", updateResidentPayment);
+
+// POST /resident/payment/:id/order — create Razorpay order
+paymentResidentRouter.post("/payment/:id/order", createResidentPaymentOrder);
+
+// POST /resident/payment/:id/verify — verify Razorpay payment
+paymentResidentRouter.post("/payment/:id/verify", verifyResidentPayment);
 
 // GET /resident/payment/receipt/:id
 paymentResidentRouter.get("/payment/receipt/:id", getSinglePayment);

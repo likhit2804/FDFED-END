@@ -6,6 +6,11 @@ import { sendError, sendSuccess } from "../../shared/helpers.js";
 import { createCommunitySubscription } from "../../../crud/index.js";
 import { generateTransactionId } from "../../../utils/idGenerator.js";
 import { calculatePlanEndDate } from "../utils/helpers.js";
+import {
+    createRazorpayOrder,
+    getRazorpayPublicConfig,
+    verifyRazorpaySignature,
+} from "../../../services/razorpayService.js";
 
 export const getCommunityDetails = async (req, res) => {
     try {
@@ -24,21 +29,83 @@ export const getCommunityDetails = async (req, res) => {
     }
 };
 
+export const createSubscriptionPaymentOrder = async (req, res) => {
+    try {
+        const { subscriptionPlan } = req.body;
+
+        if (!subscriptionPlan) {
+            return sendError(res, 400, "Subscription plan is required");
+        }
+
+        const community = req.community;
+        const planDoc = await SubscriptionPlan.findOne({
+            planKey: subscriptionPlan,
+            isActive: true,
+        }).lean();
+
+        if (!planDoc) {
+            return sendError(res, 400, "Invalid or inactive subscription plan");
+        }
+
+        const capacity = planDoc.maxResidents;
+        if (capacity !== null && typeof capacity === "number") {
+            if (community.totalMembers && community.totalMembers > capacity) {
+                return res.status(400).json({
+                    success: false,
+                    message:
+                        "Selected plan cannot support current number of residents. Please choose a higher plan.",
+                    code: "PLAN_CAPACITY_EXCEEDED",
+                    currentResidents: community.totalMembers,
+                    maxAllowed: capacity,
+                });
+            }
+        }
+
+        const order = await createRazorpayOrder({
+            amountInPaise: Math.round(planDoc.price * 100),
+            receipt: `sub_${community._id}_${Date.now()}`.slice(0, 40),
+            notes: {
+                flow: "subscription",
+                communityId: String(community._id),
+                planKey: planDoc.planKey,
+                communityName: community.name || "",
+            },
+        });
+
+        const { keyId } = getRazorpayPublicConfig();
+
+        return res.json({
+            success: true,
+            data: {
+                key: keyId,
+                orderId: order.id,
+                amount: order.amount,
+                currency: order.currency,
+                plan: {
+                    key: planDoc.planKey,
+                    name: planDoc.name,
+                    price: planDoc.price,
+                    duration: planDoc.duration,
+                },
+            },
+        });
+    } catch (error) {
+        console.error("Subscription order error:", error);
+        return sendError(res, 500, "Failed to create subscription order", error);
+    }
+};
+
 export const processSubscriptionPayment = async (req, res) => {
     try {
         const {
-            communityId,
             subscriptionPlan,
-            amount,
-            paymentMethod,
-            planDuration,
-            transactionId,
-            paymentDate,
+            razorpayOrderId,
+            razorpayPaymentId,
+            razorpaySignature,
             isRenewal,
-            cardMeta,
         } = req.body;
 
-        if (!subscriptionPlan || !amount || !paymentMethod) {
+        if (!subscriptionPlan || !razorpayOrderId || !razorpayPaymentId || !razorpaySignature) {
             return sendError(res, 400, "Missing required payment information");
         }
 
@@ -69,20 +136,31 @@ export const processSubscriptionPayment = async (req, res) => {
             }
         }
 
+        const isSignatureValid = verifyRazorpaySignature({
+            orderId: razorpayOrderId,
+            paymentId: razorpayPaymentId,
+            signature: razorpaySignature,
+        });
+
+        if (!isSignatureValid) {
+            return sendError(res, 400, "Payment signature verification failed");
+        }
+
         // Calculate plan end date based on plan duration
-        const startDate = new Date(paymentDate);
+        const startDate = new Date();
         const endDate = calculatePlanEndDate(startDate, planDoc.duration);
 
         // Create subscription payment record
         const subscriptionPayment = {
-            transactionId:
-                transactionId ||
-                generateTransactionId("TXN"),
+            transactionId: razorpayPaymentId || generateTransactionId("TXN"),
             planName: planDoc.name,
             planType: planDoc.planKey,
-            amount: amount,
-            paymentMethod: paymentMethod,
-            paymentDate: new Date(paymentDate),
+            amount: planDoc.price,
+            paymentMethod: "razorpay",
+            gateway: "razorpay",
+            gatewayOrderId: razorpayOrderId,
+            gatewayPaymentId: razorpayPaymentId,
+            paymentDate: startDate,
             planStartDate: startDate,
             planEndDate: endDate,
             duration: planDoc.duration,
@@ -92,12 +170,7 @@ export const processSubscriptionPayment = async (req, res) => {
             metadata: {
                 userAgent: req.get("User-Agent"),
                 ipAddress: req.ip || req.connection.remoteAddress,
-                card: paymentMethod === "card" && cardMeta ? {
-                    brand: cardMeta.brand,
-                    last4: cardMeta.last4,
-                    expiry: cardMeta.expiry,
-                    name: cardMeta.name,
-                } : undefined,
+                receipt: `sub_${community._id}`,
             },
         };
 
