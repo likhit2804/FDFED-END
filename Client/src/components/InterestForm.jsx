@@ -74,7 +74,7 @@ export const InterestForm = () => {
         try {
             // Create FormData object to send all data including photos
             const submitData = new FormData();
-            
+
             // Add all form fields
             Object.keys(formData).forEach(key => {
                 if (key === 'otherCity' && formData.location !== 'Other') return;
@@ -91,8 +91,8 @@ export const InterestForm = () => {
                 submitData.append('photos', photo);
             });
 
-            const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-            
+            const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+
             const response = await fetch(`${API_BASE_URL}/interest/submit`, {
                 method: 'POST',
                 body: submitData
@@ -128,7 +128,7 @@ export const InterestForm = () => {
         } catch (error) {
             console.error('Submit error:', error);
             let errorMessage = '';
-            
+
             if (error.message.includes('Failed to fetch')) {
                 errorMessage = 'Connection failed - server not running on port 3000';
             } else if (error.message.includes('HTTP 400')) {
@@ -142,7 +142,7 @@ export const InterestForm = () => {
             } else {
                 errorMessage = `Error: ${error.message} - please contact support`;
             }
-            
+
             showAlert(errorMessage, 'error');
         } finally {
             setLoading(false);
@@ -152,9 +152,9 @@ export const InterestForm = () => {
         <div className='interestFormCon'>
             {/* Add CSS for spinner animation */}
             <style>{spinnerStyle}</style>
-            
+
             {alert.show && (
-                <div 
+                <div
                     style={{
                         position: 'fixed',
                         top: '20px',
@@ -176,21 +176,21 @@ export const InterestForm = () => {
                         animation: 'slideInDown 0.3s ease-out'
                     }}
                 >
-                    <div style={{ 
-                        marginRight: '10px', 
+                    <div style={{
+                        marginRight: '10px',
                         fontSize: '20px',
                         minWidth: '24px'
                     }}>
                         {alert.type === 'success' ? '' : ''}
                     </div>
-                    <div style={{ 
+                    <div style={{
                         flex: 1,
                         overflow: 'hidden',
                         lineHeight: '1.2'
                     }}>
                         {alert.type === 'success' ? 'Application submitted successfully!' : alert.message}
                     </div>
-                    <button 
+                    <button
                         onClick={() => setAlert({ show: false, message: '', type: '' })}
                         style={{
                             background: 'rgba(255,255,255,0.2)',
@@ -210,7 +210,7 @@ export const InterestForm = () => {
                             transition: 'background-color 0.2s ease'
                         }}
                         onMouseEnter={(e) => e.target.style.backgroundColor = 'rgba(255,255,255,0.3)'}
-                        onMouseLeave={(e) => e.target.style.backgroundColor = 'rgba(255,255,255,0.2)'}  
+                        onMouseLeave={(e) => e.target.style.backgroundColor = 'rgba(255,255,255,0.2)'}
                     >
                         ×
                     </button>
@@ -230,48 +230,48 @@ export const InterestForm = () => {
                             <div className="form-row">
                                 <div className="form-group">
                                     <label htmlFor="firstName">First Name *</label>
-                                    <input 
-                                        type="text" 
-                                        id="firstName" 
-                                        name="firstName" 
+                                    <input
+                                        type="text"
+                                        id="firstName"
+                                        name="firstName"
                                         value={formData.firstName}
                                         onChange={handleInputChange}
-                                        required 
+                                        required
                                     />
                                 </div>
                                 <div className="form-group">
                                     <label htmlFor="lastName">Last Name *</label>
-                                    <input 
-                                        type="text" 
-                                        id="lastName" 
-                                        name="lastName" 
+                                    <input
+                                        type="text"
+                                        id="lastName"
+                                        name="lastName"
                                         value={formData.lastName}
                                         onChange={handleInputChange}
-                                        required 
+                                        required
                                     />
                                 </div>
                             </div>
                             <div className="form-row">
                                 <div className="form-group">
                                     <label htmlFor="email">Email Address *</label>
-                                    <input 
-                                        type="email" 
-                                        id="email" 
-                                        name="email" 
+                                    <input
+                                        type="email"
+                                        id="email"
+                                        name="email"
                                         value={formData.email}
                                         onChange={handleInputChange}
-                                        required 
+                                        required
                                     />
                                 </div>
                                 <div className="form-group">
                                     <label htmlFor="phone">Phone Number *</label>
-                                    <input 
-                                        type="tel" 
-                                        id="phone" 
-                                        name="phone" 
+                                    <input
+                                        type="tel"
+                                        id="phone"
+                                        name="phone"
                                         value={formData.phone}
                                         onChange={handleInputChange}
-                                        required 
+                                        required
                                     />
                                 </div>
                             </div>
@@ -282,24 +282,24 @@ export const InterestForm = () => {
                             <div className="form-row">
                                 <div className="form-group">
                                     <label htmlFor="communityName">Community Name *</label>
-                                    <input 
-                                        type="text" 
-                                        id="communityName" 
-                                        name="communityName" 
+                                    <input
+                                        type="text"
+                                        id="communityName"
+                                        name="communityName"
                                         value={formData.communityName}
                                         onChange={handleInputChange}
-                                        required 
+                                        required
                                     />
                                 </div>
 
                                 <div className="form-group">
                                     <label htmlFor="location">City *</label>
-                                    <select 
-                                        id="location" 
-                                        name="location" 
+                                    <select
+                                        id="location"
+                                        name="location"
                                         value={formData.location}
                                         onChange={handleLocationChange}
-                                        required 
+                                        required
                                     >
                                         <option value="">-- Select a City --</option>
                                         <option value="Bangalore">Bangalore</option>
@@ -313,17 +313,17 @@ export const InterestForm = () => {
                                     </select>
                                 </div>
                             </div>
-                            
+
                             {formData.location === 'Other' && (
                                 <div className="form-group" id="otherCityGroup">
                                     <label htmlFor="otherCity">Enter Your City *</label>
-                                    <input 
-                                        type="text" 
-                                        id="otherCity" 
-                                        name="otherCity" 
+                                    <input
+                                        type="text"
+                                        id="otherCity"
+                                        name="otherCity"
                                         value={formData.otherCity}
                                         onChange={handleInputChange}
-                                        placeholder="Type your city name" 
+                                        placeholder="Type your city name"
                                         required={formData.location === 'Other'}
                                     />
                                 </div>
@@ -331,12 +331,12 @@ export const InterestForm = () => {
 
                             <div className="form-group">
                                 <label htmlFor="description">Community Description *</label>
-                                <textarea 
-                                    id="description" 
-                                    name="description" 
+                                <textarea
+                                    id="description"
+                                    name="description"
                                     value={formData.description}
                                     onChange={handleInputChange}
-                                    placeholder="A brief description of your community..." 
+                                    placeholder="A brief description of your community..."
                                     required
                                 />
                             </div>
@@ -346,15 +346,15 @@ export const InterestForm = () => {
                                 <div className="photo-upload-area" onClick={() => document.getElementById('photoInput').click()}>
                                     <div>📷</div>
                                     <p>Click to upload photos</p>
-                                    <p style={{fontSize: '0.8em', color: '#666'}}>Upload up to 5 photos of your community</p>
+                                    <p style={{ fontSize: '0.8em', color: '#666' }}>Upload up to 5 photos of your community</p>
                                 </div>
-                                <input 
-                                    type="file" 
-                                    id="photoInput" 
-                                    name="photos" 
-                                    multiple 
-                                    accept="image/*" 
-                                    style={{display: 'none'}} 
+                                <input
+                                    type="file"
+                                    id="photoInput"
+                                    name="photos"
+                                    multiple
+                                    accept="image/*"
+                                    style={{ display: 'none' }}
                                     onChange={handlePhotoChange}
                                 />
                                 {photos.length > 0 && (
@@ -381,7 +381,7 @@ export const InterestForm = () => {
                                 borderRadius: '8px',
                                 border: '1px solid #2196f3'
                             }}>
-                                <div style={{ 
+                                <div style={{
                                     display: 'inline-block',
                                     width: '20px',
                                     height: '20px',
@@ -396,10 +396,10 @@ export const InterestForm = () => {
                                 </span>
                             </div>
                         )}
-                        
-                        <button 
-                            type="submit" 
-                            className="submit-btn" 
+
+                        <button
+                            type="submit"
+                            className="submit-btn"
                             disabled={loading}
                             style={{
                                 opacity: loading ? 0.6 : 1,
@@ -408,7 +408,7 @@ export const InterestForm = () => {
                         >
                             {loading ? (
                                 <>
-                                    <span style={{ marginRight: '8px' }}>⏳</span>
+                                    <span style={{ marginRight: '8px' }}></span>
                                     Submitting Application...
                                 </>
                             ) : (

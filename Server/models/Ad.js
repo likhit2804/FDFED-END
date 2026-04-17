@@ -62,6 +62,10 @@ advertisementSchema.methods.updateStatus = function () {
     this.status = "Expired";
   }
 };
+advertisementSchema.index({ community: 1, status: 1 });
+advertisementSchema.index({ community: 1, startDate: 1, endDate: 1 });
+advertisementSchema.index({ community: 1, createdAt: -1 });
+advertisementSchema.index({ title: 'text' });
 
 const Ad = mongoose.model("Ad", advertisementSchema);
 export default Ad;

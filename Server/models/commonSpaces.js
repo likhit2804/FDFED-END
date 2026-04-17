@@ -24,9 +24,9 @@ const commonSpacesSchema = new mongoose.Schema({
     required: true,
   },
 
-  Type:{
-    type:String,
-    required : true
+  Type: {
+    type: String,
+    required: true
   },
 
   to: {
@@ -75,7 +75,7 @@ const commonSpacesSchema = new mongoose.Schema({
     type: Number,
     default: 0,
   },
-  
+
   availability: {
     type: String,
   },
@@ -90,15 +90,6 @@ const commonSpacesSchema = new mongoose.Schema({
     },
   ],
 
-  createdAt: {
-    type: Date,
-    default: Date.now,
-  },
-
-  updatedAt: {
-    type: Date,
-    default: Date.now,
-  },
 
   bookedBy: {
     type: mongoose.Schema.Types.ObjectId,
@@ -129,7 +120,12 @@ const commonSpacesSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
-});
+}, { timestamps: true });
+commonSpacesSchema.index({ community: 1, status: 1 });
+commonSpacesSchema.index({ community: 1, createdAt: -1 });
+commonSpacesSchema.index({ bookedBy: 1 });
+commonSpacesSchema.index({ Date: -1 });
+commonSpacesSchema.index({ name: 'text', description: 'text' });
 
 const CommonSpaces = mongoose.model("CommonSpaces", commonSpacesSchema);
 export default CommonSpaces;

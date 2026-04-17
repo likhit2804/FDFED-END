@@ -3,11 +3,13 @@ import { useForm } from 'react-hook-form';
 import { useSelector, useDispatch } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import '../../assets/css/Manager/commonSpace.css';
-import { optimisticDeleteSpace, AddSpace, DeleteSpace, EditSpace, fetchDataforManager } from '../../Slices/CommonSpaceSlice';
+import { optimisticDeleteSpace, AddSpace, DeleteSpace, EditSpace, fetchDataforManager } from '../../slices/CommonSpaceSlice';
 import { ToastContainer, toast } from 'react-toastify';
 import { BarChart3, Building2, Calendar, CheckCircle } from 'lucide-react';
-
 import { io } from 'socket.io-client';
+import { StatCard, SearchBar, Button, StatusBadge, EmptyState, ConfirmModal, SectionHeader, Modal, Input, Select, Textarea, FormSection } from '../shared';
+
+
 
 export const CommonSpace = () => {
   const dispatch = useDispatch();
@@ -144,74 +146,75 @@ export const CommonSpace = () => {
                 </button>
               </div>
 
-              <AnimatePresence>
-                {isSpaceFormOpen && (
-                  <motion.div className="popup" id="spaceFormPopup" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                    <motion.div
-                      className="popup-content"
-                      id="spaceForm"
-                      initial={{ scale: 0.8, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      exit={{ scale: 0.8, opacity: 0 }}
-                    >
-                      <div className="d-flex justify-content-center align-items-start">
-                        <h4 id="formTitle">{isEditing ? 'Edit Common Space' : 'Add New Common Space'}</h4>
-                        <i className="bi bi-x rounded-circle" id="closeSpaceForm" onClick={() => setIsSpaceFormOpen(false)}></i>
-                      </div>
-                      <form onSubmit={handleSubmit(onSubmit)} id="spaceFormElement">
-                        <div className="form-row">
-                          <input className="d-none" type="hidden" {...register('id')} />
-                          <div className="form-group">
-                            <label htmlFor="spaceType">Space Type</label>
-                            <select className="form-control" id="spaceType" {...register('spaceType', { required: true })}>
-                              <option value="">Select Type</option>
-                              <option value="Clubhouse">Clubhouse</option>
-                              <option value="Banquet Hall">Banquet Hall</option>
-                              <option value="Swimming Pool">Swimming Pool</option>
-                              <option value="Guest Room">Guest Room</option>
-                              <option value="Gym">Gym</option>
-                              <option value="Other">Other</option>
-                            </select>
-                          </div>
-                          <div className="form-group">
-                            <label htmlFor="spaceName">Space Name</label>
-                            <input type="text" className="form-control" id="spaceName" {...register('spaceName', { required: true })} />
-                          </div>
-                        </div>
-                        <div className="form-group">
-                          <label htmlFor="Type">Space booking Type</label>
-                          <select className="form-control" id="Type" {...register('Type', { required: true })}>
-                            <option value="">Select Type</option>
-                            <option value="Slot">Slots based</option>
-                            <option value="Subscription">Subscription based</option>
-                          </select>
-                        </div>
-                        <div className="form-row">
-                          <div className="form-group">
-                            <label htmlFor="bookable">Bookable</label>
-                            <select className="form-control" id="bookable" {...register('bookable', { required: true })}>
-                              <option value="true">Yes</option>
-                              <option value="false">No</option>
-                            </select>
-                          </div>
-                          <div className="form-group">
-                            <label htmlFor="bookingRent">{toggleRent ? 'Subscription Fee :' : 'Rent (per hour)'}</label>
-                            <input type="text" className="form-control" id="bookingRent" {...register('bookingRent')} />
-                          </div>
-                        </div>
-                        <div className="form-group">
-                          <label htmlFor="bookingRules">Booking Rules</label>
-                          <textarea className="form-control" id="bookingRules" {...register('bookingRules')} rows="3"></textarea>
-                        </div>
-                        <div className="form-actions">
-                          <button type="button" className="btn btn-secondary" onClick={() => setIsSpaceFormOpen(false)}>Cancel</button>
-                          <button type="submit" className="btn btn-primary">{isEditing ? 'Update Space' : 'Save Space'}</button>
-                        </div>
-                      </form>
-                    </motion.div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+              <Modal
+                isOpen={isSpaceFormOpen}
+                onClose={() => setIsSpaceFormOpen(false)}
+                title={isEditing ? 'Edit Common Space' : 'Add New Common Space'}
+                size="md"
+                footer={
+                  <>
+                    <button type="button" onClick={() => setIsSpaceFormOpen(false)} style={{ padding: '9px 18px', borderRadius: 8, border: '1px solid #e5e7eb', background: '#f9fafb', color: '#374151', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
+                    <button type="button" onClick={handleSubmit(onSubmit)} style={{ padding: '9px 20px', borderRadius: 8, border: 'none', background: '#2563eb', color: '#fff', fontWeight: 600, cursor: 'pointer' }}>
+                      {isEditing ? 'Update Space' : 'Save Space'}
+                    </button>
+                  </>
+                }
+              >
+                <input className="d-none" type="hidden" {...register('id')} />
+                <FormSection columns={2}>
+                  <Select
+                    label="Space Type"
+                    required
+                    id="spaceType"
+                    placeholder="Select Type"
+                    options={[
+                      { label: 'Clubhouse', value: 'Clubhouse' },
+                      { label: 'Banquet Hall', value: 'Banquet Hall' },
+                      { label: 'Swimming Pool', value: 'Swimming Pool' },
+                      { label: 'Guest Room', value: 'Guest Room' },
+                      { label: 'Gym', value: 'Gym' },
+                      { label: 'Other', value: 'Other' },
+                    ]}
+                    {...register('spaceType', { required: true })}
+                  />
+                  <Input label="Space Name" required id="spaceName" {...register('spaceName', { required: true })} />
+                </FormSection>
+                <Select
+                  label="Booking Type"
+                  required
+                  id="Type"
+                  placeholder="Select Type"
+                  options={[
+                    { label: 'Slots based', value: 'Slot' },
+                    { label: 'Subscription based', value: 'Subscription' },
+                  ]}
+                  {...register('Type', { required: true })}
+                />
+                <FormSection columns={2}>
+                  <Select
+                    label="Bookable"
+                    required
+                    id="bookable"
+                    options={[
+                      { label: 'Yes', value: 'true' },
+                      { label: 'No', value: 'false' },
+                    ]}
+                    {...register('bookable', { required: true })}
+                  />
+                  <Input
+                    label={toggleRent ? 'Subscription Fee' : 'Rent (per hour)'}
+                    id="bookingRent"
+                    {...register('bookingRent')}
+                  />
+                </FormSection>
+                <Textarea
+                  label="Booking Rules"
+                  id="bookingRules"
+                  rows={3}
+                  {...register('bookingRules')}
+                />
+              </Modal>
+
 
               <motion.div
                 className="space-list"
@@ -247,38 +250,20 @@ export const CommonSpace = () => {
         </AnimatePresence>
       </div>
 
-      <motion.div className="stats-container" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-        <div className="stat-card border-0">
-          <Calendar size={24} className="text-primary" />
-          <h3>Total Bookings Today</h3>
-          <span className="stat-number text-primary">{Bookings.length}</span>
-        </div>
-        <div className="stat-card border-0">
-          <BarChart3 size={24} className="text-warning" />
-          <h3>Occupancy Rate</h3>
-          <span className="stat-number text-warning">{occupancyRate}%</span>
-        </div>
-        <div className="stat-card border-0">
-          <CheckCircle size={24} className="text-success" />
-          <h3>Approved</h3>
-          <span className="stat-number text-success">{Bookings.filter((c) => c.status === 'Approved').length}</span>
-        </div>
-        <div className="stat-card border-0">
-          <Building2 size={24} className="text-info" />
-          <h3>Total Amenities</h3>
-          <span className="stat-number text-info">{avalaibleSpaces.length}</span>
-        </div>
-      </motion.div>
-
-      <div className="search-bar">
-        <input
-          type="text"
-          placeholder="Search by space, date or status..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
-        <button className="approve-all" onClick={() => setSearchQuery('')}>Clear</button>
+      <div className="ue-stat-grid" style={{ marginBottom: 20 }}>
+        <StatCard label="Total Bookings Today" value={Bookings.length} icon={<Calendar size={22} />} iconColor="#2563eb" iconBg="#dbeafe" />
+        <StatCard label="Occupancy Rate" value={`${occupancyRate}%`} icon={<BarChart3 size={22} />} iconColor="#d97706" iconBg="#fef3c7" />
+        <StatCard label="Approved" value={Bookings.filter(c => c.status === 'Approved').length} icon={<CheckCircle size={22} />} iconColor="#16a34a" iconBg="#dcfce7" />
+        <StatCard label="Total Amenities" value={avalaibleSpaces.length} icon={<Building2 size={22} />} iconColor="#0891b2" iconBg="#e0f2fe" />
       </div>
+
+      <div style={{ display: 'flex', gap: 10, marginBottom: 16, alignItems: 'center' }}>
+        <div style={{ flex: 1 }}>
+          <SearchBar placeholder="Search by space, date or status..." value={searchQuery} onChange={setSearchQuery} />
+        </div>
+        <Button variant="secondary" onClick={() => setSearchQuery('')}>Clear</Button>
+      </div>
+
 
       <motion.div className="bookings-container" id="bookingsContainer" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
         {filteredBookings.length > 0 ? (
@@ -310,35 +295,33 @@ export const CommonSpace = () => {
             </motion.div>
           ))
         ) : (
-          <div className="empty-state w-100">
-            <i className="bi bi-calendar-x"></i>
-            <h3>No Bookings Found</h3>
-            <p>There are currently no common space bookings to display.</p>
-          </div>
+          <EmptyState
+            icon={<Calendar size={48} />}
+            title="No Bookings Found"
+            sub="There are currently no common space bookings to display."
+          />
         )}
+
       </motion.div>
 
-      <AnimatePresence>
-        {isRejectionPopupOpen && (
-          <motion.div id="cancellationReasonPopup" className="popup" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <motion.div className="popup-content" initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.8, opacity: 0 }}>
-              <h3>Rejection Reason</h3>
-              <textarea
-                id="rejectionReason"
-                rows="4"
-                style={{ width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '5px' }}
-                placeholder="Enter reason for rejection..."
-                value={rejectionReason}
-                onChange={(e) => setRejectionReason(e.target.value)}
-              ></textarea>
-              <div style={{ marginTop: '15px', textAlign: 'right' }}>
-                <button onClick={() => setIsRejectionPopupOpen(false)} className="btn btn-secondary me-2">Cancel</button>
-                <button id="submitRejection" onClick={handleRejectionSubmit} className="btn btn-danger">Submit</button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <ConfirmModal
+        isOpen={isRejectionPopupOpen}
+        onClose={() => setIsRejectionPopupOpen(false)}
+        onConfirm={handleRejectionSubmit}
+        title="Reject Booking"
+        variant="danger"
+        confirmText="Submit Rejection"
+        message={
+          <textarea
+            rows={4}
+            style={{ width: '100%', padding: '10px', border: '1px solid #e5e7eb', borderRadius: 8, marginTop: 8, fontSize: 14 }}
+            placeholder="Enter reason for rejection..."
+            value={rejectionReason}
+            onChange={(e) => setRejectionReason(e.target.value)}
+          />
+        }
+      />
+
 
       <AnimatePresence>
         {BookingDetailsopen && (

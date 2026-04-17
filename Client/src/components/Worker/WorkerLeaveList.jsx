@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchLeaves } from '../../Slices/leaveSlice';
+import { fetchLeaves } from '../../slices/leaveSlice';
 import LeaveApplyForm from '../LeaveApplyForm';
 import '../../assets/css/Leave.css';
 

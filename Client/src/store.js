@@ -1,11 +1,11 @@
 import { configureStore } from "@reduxjs/toolkit";
-import CommonSpace from './Slices/CommonSpaceSlice.js';
-import auth from './Slices/authSlice.js'
-import IssueSlice from './Slices/IssueSlice.js';
-import ManagerIssuesSlice from './Slices/ManagerIssuesSlice.js';
-import WorkerTasksSlice from './Slices/WorkerTasksSlice.js';
-import worker from './Slices/workerSlice.js';
-import leave from './Slices/leaveSlice.js';
+import CommonSpace from './slices/CommonSpaceSlice.js';
+import auth from './slices/authSlice.js'
+import IssueSlice from './slices/IssueSlice.js';
+import ManagerIssuesSlice from './slices/ManagerIssuesSlice.js';
+import WorkerTasksSlice from './slices/WorkerTasksSlice.js';
+import worker from './slices/workerSlice.js';
+import leave from './slices/leaveSlice.js';
 
 
 export const store = configureStore({

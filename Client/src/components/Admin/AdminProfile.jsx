@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import Header from "./Header";
-import { getSystemSettings, updateSystemSettings } from "../../Services/adminService";
+import { getSystemSettings, updateSystemSettings } from "../../services/adminService";
 
 export default function AdminProfile() {
   const [formData, setFormData] = useState({
@@ -32,7 +32,7 @@ export default function AdminProfile() {
   const API_BASE_URL =
     process.env.NODE_ENV === "production"
       ? `${window.location.origin}/admin/api`
-      : "http://localhost:3000/admin/api";
+      : "/admin/api";
 
   // ===== Fetch Admin Profile =====
   useEffect(() => {
@@ -44,7 +44,7 @@ export default function AdminProfile() {
           credentials: "include",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("adminToken") || ""}`,
+            Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
           },
         });
 
@@ -154,7 +154,7 @@ export default function AdminProfile() {
         method: "POST",
         credentials: "include",
         headers: {
-          Authorization: `Bearer ${localStorage.getItem("adminToken") || ""}`,
+          Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
         },
         body: formDataToSend,
       });
@@ -198,7 +198,7 @@ export default function AdminProfile() {
         credentials: "include",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("adminToken") || ""}`,
+          Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
         },
         body: JSON.stringify({
           currentPassword: passwordData.current,

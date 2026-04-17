@@ -17,59 +17,66 @@ import { SignUp } from "./components/SignUp";
 import { InterestForm } from "./components/InterestForm";
 import { Landingpage } from "./components/LandingPage";
 
-import { ManagerDashboard } from './components/Manager/Dashboard';
-import { CommonSpace } from './components/Manager/CommonSpace';
-import { ManagerProfile } from './components/Manager/Profile';
-import { IssueResolving } from './components/Manager/IssueResolving';
-import { Advertisement } from './components/Manager/Advertisement';
-import { Payments } from './components/Manager/Payments';
-import UserManagement from './components/Manager/UserManagement.jsx';
-import Subscription from './components/Manager/Subscription.jsx';
-import ManagerSetup from './components/Manager/ManagerSetup.jsx';
-import ManagerLeaveList from './components/ManagerLeaveList';
-
-import { CommonSpaceBooking } from './components/Resident/CommonSpace';
-import { IssueRaising } from './components/Resident/IssueRaising';
-import { ResidentDashboard } from './components/Resident/Dashboard';
-import { PreApproval } from './components/Resident/PreApproval';
-import { ResidentProfile } from './components/Resident/Profile';
-import { ResidentPayments } from './components/Resident/ResidentPayments.jsx';
-import { ResidentRegister } from './components/Resident/ResidentRegister.jsx';
-
-import { WorkerDashboard } from "./components/Worker/Dashboard";
-import { Tasks } from "./components/Worker/Tasks";
-import { History } from "./components/Worker/History";
-import { WorkerProfile } from "./components/Worker/Profile";
-
-import { SecurityDashboard } from "./components/security/Dashboard.jsx"
-import { VisitorManagement } from "./components/security/visitorManagement.jsx";
-import { SecurityPreApproval } from "./components/security/preapproval.jsx";
-import { SecurityProfile } from "./components/security/profile.jsx";
-import SubscriptionExpired from "./components/SubscriptionExpired.jsx";
-
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { ProtectedRoute } from "./components/ProtectedRout.jsx";
 
 import AdminLogin from './components/AdminLogin';
-
 import AdminLayout from './components/Admin/AdminLayout';
 import { adminRoutes } from "./routes/adminRoutes";
 
 import { AdminAuthProvider } from "./context/AdminAuthContext";
 import ProtectedAdminRoute from "./components/Admin/ProtectedAdminRoute";
 
-import React, { useEffect } from "react";
+import React, { useEffect, Suspense, lazy } from "react";
 import { useDispatch } from "react-redux";
-import { setUser } from "./Slices/authSlice";
+import { setUser } from "./slices/authSlice";
 
 import OnboardingPayment from "./components/Onboarding/OnboardingPayment";
+import { Loader } from "./components/Loader";
+
+// --> LAZY LOADED ROUTE CHUNKS <--
+
+// Manager Routes
+const ManagerDashboard = lazy(() => import('./components/Manager/Dashboard').then(m => ({ default: m.ManagerDashboard })));
+const CommonSpace = lazy(() => import('./components/Manager/CommonSpace').then(m => ({ default: m.CommonSpace })));
+const ManagerProfile = lazy(() => import('./components/Manager/Profile').then(m => ({ default: m.ManagerProfile })));
+const IssueResolving = lazy(() => import('./components/Manager/IssueResolving').then(m => ({ default: m.IssueResolving })));
+const Advertisement = lazy(() => import('./components/Manager/Advertisement').then(m => ({ default: m.Advertisement })));
+const Payments = lazy(() => import('./components/Manager/Payments').then(m => ({ default: m.Payments })));
+const UserManagement = lazy(() => import('./components/Manager/UserManagement.jsx'));
+const Subscription = lazy(() => import('./components/Manager/Subscription.jsx'));
+const ManagerSetup = lazy(() => import('./components/Manager/ManagerSetup.jsx'));
+const ManagerLeaveList = lazy(() => import('./components/ManagerLeaveList'));
+
+// Resident Routes
+const CommonSpaceBooking = lazy(() => import('./components/Resident/CommonSpace').then(m => ({ default: m.CommonSpaceBooking })));
+const IssueRaising = lazy(() => import('./components/Resident/IssueRaising').then(m => ({ default: m.IssueRaising })));
+const ResidentDashboard = lazy(() => import('./components/Resident/Dashboard').then(m => ({ default: m.ResidentDashboard })));
+const PreApproval = lazy(() => import('./components/Resident/PreApproval').then(m => ({ default: m.PreApproval })));
+const ResidentProfile = lazy(() => import('./components/Resident/Profile').then(m => ({ default: m.ResidentProfile })));
+const ResidentPayments = lazy(() => import('./components/Resident/ResidentPayments.jsx').then(m => ({ default: m.ResidentPayments })));
+const ResidentRegister = lazy(() => import('./components/Resident/ResidentRegister.jsx').then(m => ({ default: m.ResidentRegister })));
+
+// Worker Routes
+const WorkerDashboard = lazy(() => import("./components/Worker/Dashboard").then(m => ({ default: m.WorkerDashboard })));
+const Tasks = lazy(() => import("./components/Worker/Tasks").then(m => ({ default: m.Tasks })));
+const History = lazy(() => import("./components/Worker/History").then(m => ({ default: m.History })));
+const WorkerProfile = lazy(() => import("./components/Worker/Profile").then(m => ({ default: m.WorkerProfile })));
+
+// Security Routes
+const SecurityDashboard = lazy(() => import("./components/security/Dashboard.jsx").then(m => ({ default: m.SecurityDashboard })));
+const VisitorManagement = lazy(() => import("./components/security/visitorManagement.jsx").then(m => ({ default: m.VisitorManagement })));
+const SecurityPreApproval = lazy(() => import("./components/security/preapproval.jsx").then(m => ({ default: m.SecurityPreApproval })));
+const SecurityProfile = lazy(() => import("./components/security/profile.jsx").then(m => ({ default: m.SecurityProfile })));
+
+const SubscriptionExpired = lazy(() => import("./components/SubscriptionExpired.jsx"));
 
 function App() {
   const dispatch = useDispatch();
 
   useEffect(() => {
-    fetch("http://localhost:3000/api/auth/getUser", {
+    fetch("/api/auth/getUser", {
       credentials: "include",
     })
       .then(res => res.json())
@@ -169,7 +176,9 @@ function App() {
     <AdminAuthProvider>
       <ErrorBoundary>
         <ToastContainer />
-        <RouterProvider router={router} />
+        <Suspense fallback={<Loader />}>
+          <RouterProvider router={router} />
+        </Suspense>
       </ErrorBoundary>
     </AdminAuthProvider>
   );

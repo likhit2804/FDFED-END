@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchLeaves } from '../../Slices/leaveSlice';
+import { fetchLeaves } from '../../slices/leaveSlice';
 
 export default function WorkerLeaveModal({ isOpen, onClose }) {
   const dispatch = useDispatch();

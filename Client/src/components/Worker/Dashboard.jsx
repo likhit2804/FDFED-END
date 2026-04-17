@@ -8,20 +8,18 @@ import '../../assets/css/Worker/Dashboard.css';
 import {CircularProgressbar, buildStyles} from 'react-circular-progressbar';
 import 'react-circular-progressbar/dist/styles.css';
 import {motion} from 'framer-motion';
-import {setDashboardData, setIssues} from '../../Slices/workerSlice';
+import {setDashboardData, setIssues} from '../../slices/workerSlice';
 import {use, useEffect, useState} from 'react';
 import {useSelector, useDispatch} from 'react-redux';
 import LeaveApplyForm from '../LeaveApplyForm';
-import WorkerLeaveModal from './WorkerLeaveModal';
 
 export const WorkerDashboard = () => {
     const dispatch = useDispatch();
     const [showLeaveModal, setShowLeaveModal] = useState(false);
-    const [showLeaveListModal, setShowLeaveListModal] = useState(false);
 
     useEffect(() => {
         const fetchData = async () => {
-            const response = await fetch("http://localhost:3000/worker/getDashboardData", {
+            const response = await fetch("/worker/getDashboardData", {
                 method: "GET",
                 headers: {
                     "Content-Type": "application/json"
@@ -73,7 +71,6 @@ export const WorkerDashboard = () => {
     return (
         <>
         <LeaveApplyForm isOpen={showLeaveModal} onClose={() => setShowLeaveModal(false)} />
-        <WorkerLeaveModal isOpen={showLeaveListModal} onClose={() => setShowLeaveListModal(false)} />
         <div className="container-fluid px-4 py-4 worker-dashboard">
             {/* HEADER SECTION */}
             <div className="row mb-4">
@@ -83,14 +80,9 @@ export const WorkerDashboard = () => {
                             <h2 className="fw-bold mb-1" style={{color: '#1a3a52'}}>Dashboard</h2>
                             <p className="text-muted small mb-0">Welcome back! Here's your work summary.</p>
                         </div>
-                        <div className="d-flex gap-2">
-                            <button className="btn btn-outline-primary btn-lg" onClick={() => setShowLeaveListModal(true)} style={{borderRadius: '8px'}}>
-                                <i className="bi bi-list-ul me-2"></i> View Leaves
-                            </button>
-                            <button className="btn btn-success btn-lg px-4" onClick={() => setShowLeaveModal(true)} style={{borderRadius: '8px'}}>
-                                <i className="bi bi-calendar-check me-2"></i> Apply for Leave
-                            </button>
-                        </div>
+                        <button className="btn btn-success btn-lg px-4" onClick={() => setShowLeaveModal(true)} style={{borderRadius: '8px'}}>
+                            <i className="bi bi-calendar-check me-2"></i> Apply for Leave
+                        </button>
                     </div>
                     <hr style={{marginTop: '1rem', marginBottom: '1rem', opacity: 0.2}} />
                 </div>

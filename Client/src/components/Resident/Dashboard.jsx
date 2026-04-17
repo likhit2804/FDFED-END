@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap-icons/font/bootstrap-icons.css";
-import "../../assets/css/Resident/Dashboard.css";
+
 
 export const ResidentDashboard = () => {
 
@@ -14,30 +14,30 @@ export const ResidentDashboard = () => {
   // Fetch Dashboard Data
   // -------------------------
   useEffect(() => {
-  async function load() {
-    try {
-      const res = await fetch("http://localhost:3000/resident/api/dashboard", {
-        method: "GET",
-        credentials: "include",
-      });
+    async function load() {
+      try {
+        const res = await fetch("/resident/api/dashboard", {
+          method: "GET",
+          credentials: "include",
+        });
 
-      const data = await res.json();
-      console.log("Dashboard Data:", data);
+        const data = await res.json();
+        console.log("Dashboard Data:", data);
 
-      if (data.success) {
-        setAds(data.ads || []);
-        setRecents(data.recents || []);
-        setNotifications(data.notifications || []);
+        if (data.success) {
+          setAds(data.ads || []);
+          setRecents(data.recents || []);
+          setNotifications(data.notifications || []);
+        }
+      } catch (err) {
+        console.error("Fetch Error:", err);
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      console.error("Fetch Error:", err);
-    } finally {
-      setLoading(false);   
     }
-  }
 
-  load();
-}, []);
+    load();
+  }, []);
 
 
   // -------------------------
@@ -107,10 +107,10 @@ export const ResidentDashboard = () => {
                         r.type === "Payment"
                           ? "badge badge-payment float-end"
                           : r.type === "Issue"
-                          ? "badge badge-issue float-end"
-                          : r.type === "PreApproval"
-                          ? "badge badge-pre float-end"
-                          : "badge badge-default float-end"
+                            ? "badge badge-issue float-end"
+                            : r.type === "PreApproval"
+                              ? "badge badge-pre float-end"
+                              : "badge badge-default float-end"
                       }
                     >
                       {r.type}

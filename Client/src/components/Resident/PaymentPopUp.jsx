@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import "../../assets/css/Resident/PaymentPopUp.css";
-import { ConfirmBooking, optimisticAddBooking } from "../../Slices/CommonSpaceSlice";
+import { ConfirmBooking, optimisticAddBooking } from "../../slices/CommonSpaceSlice";
 import { useDispatch } from "react-redux";
 import { toast } from "react-toastify";
 

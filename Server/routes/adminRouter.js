@@ -1,15 +1,9 @@
 import express from "express";
 import path from 'path';
-import multer from 'multer';
+import { memoryUpload } from '../configs/multer.js';
 import { requirePermission } from '../middleware/rbac.js';
 import { validateCommunity, validateObjectId, validatePasswordChange } from '../middleware/validation.js';
-import {
-  getAllApplications,
-  getAllApplicationsJSON,
-  approveApplication,
-  rejectApplication,
-  resendPaymentLink
-} from '../controllers/interestForm.js';
+
 import {
   getDashboard,
   getCommunitiesOverview,
@@ -31,74 +25,189 @@ import {
   getCommunityDetail,
   getAdminActivity,
   getFailedLogins,
-} from '../controllers/adminController.js';
-import {
-  getAllPlans,
-  getPlanById,
-  createPlan,
-  updatePlan,
-  deletePlan,
-} from '../controllers/subscriptionPlanController.js';
+} from '../controllers/admin/index.js';
+import communityRegistrationRouter from '../pipelines/communityRegistration/router/manager.js';
 import { getSettings, updateSettings } from "../controllers/admin/settingsController.js";
 
 const AdminRouter = express.Router();
 
-// Multer config for admin image uploads (Cloudinary handled in controller)
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 },
-});
 
-// Interest routes (kept as-is)
-AdminRouter.get('/api/interests', getAllApplications);
-AdminRouter.get('/interests', getAllApplications);
-AdminRouter.post('/interests/:id/approve', approveApplication);
-AdminRouter.post('/interests/:id/reject', rejectApplication);
-AdminRouter.post('/interests/:id/resend-link', resendPaymentLink);
 
-// Admin dashboard & overview routes (delegated to controller)
+/**
+ * @swagger
+ * /admin/api/dashboard:
+ *   get:
+ *     summary: Get admin dashboard summary
+ *     tags: [Admin - Dashboard]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Dashboard stats (users, communities, payments, recent activity)
+ */
 AdminRouter.get('/api/dashboard', getDashboard);
+
+/**
+ * @swagger
+ * /admin/api/communities/overview:
+ *   get:
+ *     summary: Get communities overview stats
+ *     tags: [Admin - Dashboard]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Communities count, distribution, status breakdown
+ */
 AdminRouter.get('/api/communities/overview', getCommunitiesOverview);
-// Communities CRUD with RBAC
-AdminRouter.get('/api/communities', requirePermission('read:communities'), getAllCommunities);
-AdminRouter.get('/api/communities/stats', requirePermission('read:communities'), getCommunityStats);
-AdminRouter.get('/api/communities/:id/detail', requirePermission('read:communities'), getCommunityDetail);
-AdminRouter.get('/api/communities/:id/delete-preview', requirePermission('write:communities'), getDeletePreview);
-AdminRouter.get('/api/communities/:id', requirePermission('read:communities'), getCommunityById);
-AdminRouter.post('/api/communities', requirePermission('write:communities'), createCommunity);
-AdminRouter.put('/api/communities/:id', requirePermission('write:communities'), updateCommunity);
-AdminRouter.delete('/api/communities/:id', requirePermission('write:communities'), deleteCommunity);
 
-// Community restore
-AdminRouter.post('/api/communities/:backupId/restore', requirePermission('delete:critical'), restoreCommunity);
+// Community registration + subscription plans (delegated to pipeline)
+AdminRouter.use('/', communityRegistrationRouter);
 
-AdminRouter.get('/api/community-managers', requirePermission('read:users'), getCommunityManagers);
-AdminRouter.get('/api/payments', requirePermission('read:payments'), getPayments);
-
-// Subscription Plans
-AdminRouter.get('/api/subscription-plans', getAllPlans);
-AdminRouter.get('/api/subscription-plans/:id', getPlanById);
-AdminRouter.post('/api/subscription-plans', createPlan);
-AdminRouter.put('/api/subscription-plans/:id', updatePlan);
-AdminRouter.delete('/api/subscription-plans/:id', deletePlan);
-
-// Managers list (lightweight)
-AdminRouter.get('/api/managers', requirePermission('read:users'), getManagersList);
-
-// Bulk operations
-AdminRouter.post('/api/communities/bulk-update', requirePermission('write:communities'), bulkUpdateStatus);
-
-// Admin activity & security monitoring
+/**
+ * @swagger
+ * /admin/api/admin/activity:
+ *   get:
+ *     summary: Get admin activity log
+ *     tags: [Admin - Dashboard]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 5
+ *     responses:
+ *       200:
+ *         description: List of recent admin actions
+ *       403:
+ *         description: Insufficient permissions
+ */
 AdminRouter.get('/api/admin/activity', requirePermission('read:analytics'), getAdminActivity);
+
+/**
+ * @swagger
+ * /admin/api/admin/security/failed-logins:
+ *   get:
+ *     summary: Get failed login attempts
+ *     tags: [Admin - Dashboard]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: hours
+ *         schema:
+ *           type: integer
+ *           default: 24
+ *     responses:
+ *       200:
+ *         description: List of failed login attempts
+ */
 AdminRouter.get('/api/admin/security/failed-logins', requirePermission('read:analytics'), getFailedLogins);
 
-// Profile routes
+/**
+ * @swagger
+ * /admin/api/profile:
+ *   get:
+ *     summary: Get admin profile
+ *     tags: [Admin - Profile]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Admin profile data
+ */
 AdminRouter.get('/api/profile', getProfile);
-AdminRouter.post('/api/profile/update', upload.single('image'), updateProfile);
+
+/**
+ * @swagger
+ * /admin/api/profile/update:
+ *   post:
+ *     summary: Update admin profile
+ *     tags: [Admin - Profile]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *               image:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       200:
+ *         description: Profile updated
+ */
+AdminRouter.post('/api/profile/update', memoryUpload.single('image'), updateProfile);
+
+/**
+ * @swagger
+ * /admin/api/profile/change-password:
+ *   post:
+ *     summary: Change admin password
+ *     tags: [Admin - Profile]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [currentPassword, newPassword]
+ *             properties:
+ *               currentPassword:
+ *                 type: string
+ *               newPassword:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Password changed
+ *       401:
+ *         description: Current password incorrect
+ */
 AdminRouter.post('/api/profile/change-password', validatePasswordChange, changePassword);
 
-// System Settings
+/**
+ * @swagger
+ * /admin/api/settings:
+ *   get:
+ *     summary: Get system settings
+ *     tags: [Admin - Profile]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Current system settings
+ */
 AdminRouter.get('/api/settings', getSettings);
+
+/**
+ * @swagger
+ * /admin/api/settings/update:
+ *   post:
+ *     summary: Update system settings
+ *     tags: [Admin - Profile]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *     responses:
+ *       200:
+ *         description: Settings updated
+ */
 AdminRouter.post('/api/settings/update', updateSettings);
+
 
 export default AdminRouter;

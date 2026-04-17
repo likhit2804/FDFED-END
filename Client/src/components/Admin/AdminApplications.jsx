@@ -68,7 +68,7 @@ export default function ManagerApplications() {
   const API_BASE_URL =
     process.env.NODE_ENV === "production"
       ? window.location.origin
-      : "http://localhost:3000";
+      : "";
 
   // ===== Fetch Applications =====
   useEffect(() => {
@@ -81,12 +81,12 @@ export default function ManagerApplications() {
           credentials: "include",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("adminToken") || ""}`,
+            Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
           },
         });
 
         if (res.status === 401) {
-          localStorage.removeItem("adminToken");
+          localStorage.removeItem("token");
           window.location.href = "/adminLogin";
           return;
         }
@@ -135,12 +135,12 @@ export default function ManagerApplications() {
     try {
       setActionLoading(appId);
       setActionType('approve');
-      const res = await fetch(`${API_BASE_URL}/admin/interests/${appId}/approve`, {
+      const res = await fetch(`${API_BASE_URL}/admin/api/interests/${appId}/approve`, {
         method: "POST",
         credentials: "include",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("adminToken") || ""}`,
+          Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
         },
       });
 
@@ -182,12 +182,12 @@ export default function ManagerApplications() {
     try {
       setActionLoading(appId);
       setActionType('reject');
-      const res = await fetch(`${API_BASE_URL}/admin/interests/${appId}/reject`, {
+      const res = await fetch(`${API_BASE_URL}/admin/api/interests/${appId}/reject`, {
         method: "POST",
         credentials: "include",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("adminToken") || ""}`,
+          Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
         },
         body: JSON.stringify({ reason: rejectionReason }),
       });
@@ -604,10 +604,10 @@ export default function ManagerApplications() {
                   try {
                     setActionLoading(selectedApp.id);
                     setActionType('resend');
-                    const res = await fetch(`${API_BASE_URL}/admin/interests/${selectedApp.id}/resend-link`, {
+                    const res = await fetch(`${API_BASE_URL}/admin/api/interests/${selectedApp.id}/resend-link`, {
                       method: "POST",
                       headers: {
-                        Authorization: `Bearer ${localStorage.getItem("adminToken") || ""}`,
+                        Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
                       },
                     });
                     if (res.ok) {

@@ -35,21 +35,21 @@ communityManagerSchema.pre("findOneAndDelete", async function (next) {
     const manager = await this.model.findOne(this.getFilter());
     if (!manager) return next();
 
-    // Find all communities created by this manager
-    const communities = await Community.find({ managerId: manager._id });
+    // Find all communities managed by this manager
+    const communities = await Community.find({ communityManager: manager._id });
     const communityIds = communities.map((c) => c._id);
 
     if (communityIds.length > 0) {
       await CommonSpaces.deleteMany({ community: { $in: communityIds } });
       await Issue.deleteMany({ community: { $in: communityIds } });
-      await Payment.deleteMany({ communityId: { $in: communityIds } });
+      await Payment.deleteMany({ community: { $in: communityIds } });
       await Resident.deleteMany({ community: { $in: communityIds } });
-      await Security.deleteMany({ communityAssigned: { $in: communityIds } });
-      await Worker.deleteMany({ communityAssigned: { $in: communityIds } });
+      await Security.deleteMany({ community: { $in: communityIds } });
+      await Worker.deleteMany({ community: { $in: communityIds } });
       await VisitorPreApproval.deleteMany({ community: { $in: communityIds } });
 
       // Finally delete communities
-      await Community.deleteMany({ managerId: manager._id });
+      await Community.deleteMany({ communityManager: manager._id });
     }
 
     next();
@@ -57,6 +57,9 @@ communityManagerSchema.pre("findOneAndDelete", async function (next) {
     next(err);
   }
 });
+
+communityManagerSchema.index({ name: 'text', email: 'text', contact: 'text' });
+communityManagerSchema.index({ assignedCommunity: 1 });
 
 const CommunityManager = mongoose.model(
   "CommunityManager",

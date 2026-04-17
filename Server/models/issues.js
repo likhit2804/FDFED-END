@@ -179,6 +179,12 @@ issueSchema.pre("save", async function (next) {
   next();
 });
 
+issueSchema.index({ community: 1, status: 1 });
+issueSchema.index({ community: 1, createdAt: -1 });
+issueSchema.index({ resident: 1 });
+issueSchema.index({ workerAssigned: 1, status: 1 });
+issueSchema.index({ title: 'text', description: 'text' }); // enables $text search
+
 const Issue = mongoose.model("Issue", issueSchema);
 
 export default Issue;

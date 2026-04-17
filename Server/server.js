@@ -20,14 +20,14 @@ import { setIO } from "./utils/socket.js";
 
 
 
-import auth from "./controllers/auth.js";
+import auth from "./controllers/shared/auth.js";
 import {
   authorizeR,
   authorizeS,
   authorizeW,
   authorizeC,
   authorizeA,
-} from "./controllers/authorization.js";
+} from "./controllers/shared/authorization.js";
 
 import {
   VerifyA,
@@ -35,7 +35,7 @@ import {
   VerifyR,
   VerifyS,
   VerifyW,
-} from "./controllers/loginController.js";
+} from "./controllers/shared/loginController.js";
 
 import {
   sendLoginOtp,
@@ -53,13 +53,21 @@ import workerRouter from "./routes/workerRouter.js";
 import managerRouter from "./routes/managerRouter.js";
 import interestRouter from "./routes/InterestRouter.js";
 import leaveRouter from "./routes/leaveRouter.js";
+import searchRouter from "./routes/searchRouter.js";
+import b2bRouter from "./routes/b2bRouter.js";
 
 
-import { interestUploadRouter } from "./controllers/interestForm.js";
-import { initializeDefaultPlans } from "./controllers/subscriptionPlanController.js";
+import { interestUploadRouter } from "./controllers/admin/interestForm.js";
+import { initializeDefaultPlans } from "./pipelines/communityRegistration/controllers/manager.js";
+import { apiKeyAuth } from "./middleware/apiKeyAuth.js";
+
+import swaggerUi from 'swagger-ui-express';
+import swaggerSpec from './configs/swaggerConfig.js';
 
 import Resident from "./models/resident.js";
 import Community from "./models/communities.js";
+import Block from "./models/blocks.js";
+import Flat from "./models/flats.js";
 import SystemSettings from "./models/systemSettings.js";
 
 dotenv.config();
@@ -98,7 +106,7 @@ mongoose
   });
 
 const app = express();
-const PORT = 3000;
+const PORT = Number(process.env.PORT) || 3000;
 
 // SOCKET SERVER CREATION
 const server = http.createServer(app);
@@ -283,16 +291,27 @@ app.use((req, res, next) => {
   next();
 });
 
+import { attachCommunity } from "./middleware/attachCommunity.js";
+
+// SWAGGER API DOCS (mounted before auth routes so it's publicly accessible)
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'UrbanEase API Docs',
+}));
+app.get('/api-docs.json', (req, res) => res.json(swaggerSpec));
+
 // ROUTES
 app.use("/admin", auth, authorizeA, AdminRouter);
-app.use("/resident", auth, authorizeR, residentRouter);
-app.use("/security", auth, authorizeS, securityRouter);
-app.use("/worker", auth, authorizeW, workerRouter);
-app.use("/manager", auth, authorizeC, managerRouter);
+app.use("/resident", auth, authorizeR, attachCommunity, residentRouter);
+app.use("/security", auth, authorizeS, attachCommunity, securityRouter);
+app.use("/worker", auth, authorizeW, attachCommunity, workerRouter);
+app.use("/manager", auth, authorizeC, attachCommunity, managerRouter);
 app.use("/leaves", leaveRouter);
 
 app.use("/interest", interestRouter);
 app.use("/interest", interestUploadRouter);
+app.use("/api/search", auth, searchRouter); // full-text search across issues, communities, residents
+app.use("/api/v1", apiKeyAuth, b2bRouter);
 
 // ---------------- RATE LIMITERS FOR AUTH ENDPOINTS ----------------
 
@@ -331,8 +350,31 @@ const otpLimiter = rateLimit({
 
 // ---------------- PUBLIC RESIDENT REGISTRATION (CODE-BASED) ----------------
 
-// POST /resident-register/validate-code
-// Resident enters their physical registration code → returns flat + community info
+/**
+ * @swagger
+ * /resident-register/validate-code:
+ *   post:
+ *     summary: Validate a resident registration code
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [code]
+ *             properties:
+ *               code:
+ *                 type: string
+ *                 example: "abc123"
+ *     responses:
+ *       200:
+ *         description: Valid code — returns community and flat info
+ *       404:
+ *         description: Invalid or already-used code
+ *       400:
+ *         description: Flat already occupied
+ */
 app.post("/resident-register/validate-code", async (req, res) => {
   try {
     const { code: rawCode } = req.body;
@@ -341,30 +383,23 @@ app.post("/resident-register/validate-code", async (req, res) => {
 
     const code = rawCode.trim().toLowerCase();
 
-    // Find the community + flat that owns this code (case-insensitive)
-    const community = await Community.findOne({
-      "blocks.flats.registrationCode": { $regex: new RegExp(`^${code}$`, 'i') }
-    }).select("name blocks");
+    // Find the flat that owns this code (case-insensitive) and populate related info
+    const foundFlat = await Flat.findOne({
+      registrationCode: new RegExp(`^${code}$`, 'i')
+    }).populate("community block");
 
-    if (!community)
+    if (!foundFlat)
       return res.status(404).json({ success: false, message: "Invalid or already-used registration code" });
 
-    let foundFlat = null;
-    let foundBlock = null;
-    for (const block of community.blocks) {
-      const flat = block.flats.find(f => f.registrationCode && f.registrationCode.toLowerCase() === code);
-      if (flat) { foundFlat = flat; foundBlock = block; break; }
-    }
-
-    if (!foundFlat || foundFlat.status !== "Vacant")
+    if (foundFlat.status !== "Vacant")
       return res.status(400).json({ success: false, message: "This code is no longer valid (flat already occupied)" });
 
     return res.json({
       success: true,
       data: {
-        communityId: community._id,
-        communityName: community.name,
-        block: foundBlock.name,
+        communityId: foundFlat.community._id,
+        communityName: foundFlat.community.name,
+        block: foundFlat.block.name,
         flatNumber: foundFlat.flatNumber,
         floor: foundFlat.floor,
         registrationCode: code
@@ -376,8 +411,39 @@ app.post("/resident-register/validate-code", async (req, res) => {
   }
 });
 
-// POST /resident-register/complete
-// Accepts code + personal details → creates resident, links to flat, marks Occupied
+/**
+ * @swagger
+ * /resident-register/complete:
+ *   post:
+ *     summary: Complete resident registration with code + personal details
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [residentFirstname, residentLastname, email, registrationCode]
+ *             properties:
+ *               residentFirstname:
+ *                 type: string
+ *               residentLastname:
+ *                 type: string
+ *               contact:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               registrationCode:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Registration complete, temporary password emailed
+ *       404:
+ *         description: Invalid registration code
+ *       409:
+ *         description: Email already exists
+ */
 app.post("/resident-register/complete", async (req, res) => {
   try {
     const { residentFirstname, residentLastname, contact, email, registrationCode: rawCode } = req.body;
@@ -387,21 +453,18 @@ app.post("/resident-register/complete", async (req, res) => {
 
     const registrationCode = rawCode.trim().toLowerCase();
 
-    // Re-validate the code (case-insensitive)
-    const community = await Community.findOne({
-      "blocks.flats.registrationCode": { $regex: new RegExp(`^${registrationCode}$`, 'i') }
-    });
-    if (!community)
+    // Re-validate the code (case-insensitive) against the Flat model
+    const foundFlat = await Flat.findOne({
+      registrationCode: new RegExp(`^${registrationCode}$`, 'i')
+    }).populate("community");
+
+    if (!foundFlat)
       return res.status(404).json({ success: false, message: "Invalid or already-used registration code" });
 
-    let foundFlat = null;
-    let foundBlock = null;
-    for (const block of community.blocks) {
-      const flat = block.flats.find(f => f.registrationCode && f.registrationCode.toLowerCase() === registrationCode);
-      if (flat) { foundFlat = flat; foundBlock = block; break; }
-    }
-    if (!foundFlat || foundFlat.status !== "Vacant")
+    if (foundFlat.status !== "Vacant")
       return res.status(400).json({ success: false, message: "Code is no longer valid" });
+
+    const community = foundFlat.community;
 
     // Check email uniqueness
     const existing = await Resident.findOne({ email });
@@ -427,7 +490,9 @@ app.post("/resident-register/complete", async (req, res) => {
     foundFlat.residentId = resident._id;
     foundFlat.status = "Occupied";
     foundFlat.registrationCode = undefined;
-    await community.save();
+
+    // Save the flat directly
+    await foundFlat.save();
 
     await sendTemporaryPassword(email, tempPassword);
 
@@ -442,7 +507,16 @@ app.post("/resident-register/complete", async (req, res) => {
   }
 });
 
-// --- Logout route for all users (clears auth cookie) ---
+/**
+ * @swagger
+ * /logout:
+ *   post:
+ *     summary: Logout (clears auth cookie)
+ *     tags: [Auth]
+ *     responses:
+ *       200:
+ *         description: Successfully logged out
+ */
 app.post("/logout", (req, res) => {
   try {
     res.clearCookie("token", {
@@ -457,11 +531,40 @@ app.post("/logout", (req, res) => {
   }
 });
 
-// ---------------- ADMIN LOGIN (2FA) ----------------
-app.post("/AdminLogin", authLimiter, async (req, res) => {
+/**
+ * @swagger
+ * /api/AdminLogin:
+ *   post:
+ *     summary: Admin login (triggers 2FA OTP)
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, password]
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: OTP sent, returns tempToken for verification
+ *       401:
+ *         description: Invalid credentials
+ *       429:
+ *         description: Rate limited
+ */
+app.post("/api/AdminLogin", authLimiter, async (req, res) => {
+  console.log("HIT /api/AdminLogin route", req.body);
   try {
     const { email, password } = req.body;
     const verified = await VerifyA(email, password);
+    console.log("VerifyA result:", !!verified);
+    
     if (!verified) {
       console.log('Admin login failed for', email, { ip: req.ip });
       return res.status(401).json({
@@ -471,7 +574,9 @@ app.post("/AdminLogin", authLimiter, async (req, res) => {
     }
 
     // Send OTP for 2FA
+    console.log("Sending OTP to:", email);
     await sendLoginOtp(email);
+    console.log("OTP sent successfully");
 
     // Create a temp token for OTP verification
     const tempToken = jwt.sign(
@@ -480,6 +585,7 @@ app.post("/AdminLogin", authLimiter, async (req, res) => {
       { expiresIn: "1d" }
     );
 
+    console.log("Returning requiresOtp: true");
     return res.json({ requiresOtp: true, user: verified.userPayload, tempToken });
   } catch (error) {
     console.error("Admin login error:", error);
@@ -491,8 +597,36 @@ app.post("/AdminLogin", authLimiter, async (req, res) => {
 });
 
 
-// ---------------- USER LOGIN (2FA) ----------------
-
+/**
+ * @swagger
+ * /login:
+ *   post:
+ *     summary: User login (all roles, 2FA)
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, password, userType]
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               password:
+ *                 type: string
+ *               userType:
+ *                 type: string
+ *                 enum: [Resident, Security, Worker, communityManager, Admin]
+ *     responses:
+ *       200:
+ *         description: Returns requiresOtp flag, user payload, and tempToken
+ *       401:
+ *         description: Invalid email or password
+ *       429:
+ *         description: Rate limited
+ */
 app.post("/login", authLimiter, async (req, res) => {
   try {
     const { email, password, userType } = req.body;
@@ -560,9 +694,31 @@ app.post("/login", authLimiter, async (req, res) => {
   }
 });
 
-// ---------------- OTP VERIFY ----------------
-
-app.post("/verify-otp", async (req, res) => {
+/**
+ * @swagger
+ * /api/verify-otp:
+ *   post:
+ *     summary: Verify OTP and get final JWT token
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [otp, tempToken]
+ *             properties:
+ *               otp:
+ *                 type: string
+ *               tempToken:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Returns final JWT token and user data
+ *       401:
+ *         description: Invalid OTP or expired session
+ */
+app.post("/api/verify-otp", async (req, res) => {
   try {
     const { otp, tempToken } = req.body;
 
@@ -629,9 +785,29 @@ app.post("/verify-otp", async (req, res) => {
   }
 });
 
-// ---------------- RESEND OTP ----------------
-
-app.post("/resend-otp", async (req, res) => {
+/**
+ * @swagger
+ * /api/resend-otp:
+ *   post:
+ *     summary: Resend OTP for 2FA verification
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [tempToken]
+ *             properties:
+ *               tempToken:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: OTP resent successfully
+ *       401:
+ *         description: Invalid or expired session
+ */
+app.post("/api/resend-otp", async (req, res) => {
   try {
     const { tempToken } = req.body;
 
@@ -675,6 +851,34 @@ const forgotPasswordLimiter = rateLimit({
   }
 });
 
+/**
+ * @swagger
+ * /forgot-password:
+ *   post:
+ *     summary: Request password reset (sends new temp password via email)
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, userType]
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               userType:
+ *                 type: string
+ *                 enum: [Resident, Security, Worker, communityManager]
+ *     responses:
+ *       200:
+ *         description: If email exists, a new password is sent
+ *       400:
+ *         description: Missing fields or invalid email
+ *       429:
+ *         description: Rate limited
+ */
 app.post("/forgot-password", forgotPasswordLimiter, async (req, res) => {
   try {
     const { email, userType } = req.body;
@@ -761,6 +965,20 @@ app.post("/forgot-password", forgotPasswordLimiter, async (req, res) => {
 
 // ---------------- AUTH CHECK ----------------
 
+/**
+ * @swagger
+ * /api/auth/getUser:
+ *   get:
+ *     summary: Get currently authenticated user from JWT cookie
+ *     tags: [Auth]
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: Returns user data with subscription status
+ *       401:
+ *         description: Unauthorized — no valid token
+ */
 app.get("/api/auth/getUser", auth, async (req, res) => {
   const cookie = req.cookies.token;
 
@@ -788,6 +1006,16 @@ app.get("/api/auth/getUser", auth, async (req, res) => {
   }
 });
 
+// ---------------- SERVE STATIC FRONTEND (PRODUCTION PIPELINE) ----------------
+
+// Serve the React Vite build files from the Client/dist directory
+app.use(express.static(path.join(__dirname, "../Client/dist")));
+
+// Catch-all route to serve the React index.html for unknown routes
+// This delegates routing back to React Router in the browser
+app.get(/.*/, (req, res) => {
+  res.sendFile(path.join(__dirname, "../Client/dist/index.html"));
+});
 
 // ---------------- START SERVER WITH SOCKET.IO ----------------
 

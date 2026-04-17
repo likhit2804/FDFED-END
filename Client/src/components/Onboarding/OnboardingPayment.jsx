@@ -2,10 +2,11 @@ import React, { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-toastify";
-import "../../assets/css/SignIn.css"; // Reuse SignIn styles
-import logo from '../../imgs/Logo.png'; // Correct path from components/Onboarding
+import "../../assets/css/SignIn.css";
+import logo from "../../imgs/Logo.png";
+import { openRazorpayCheckout } from "../../services/razorpay";
 
-const API_BASE = "http://localhost:3000";
+const API_BASE = "";
 
 const OnboardingPayment = () => {
     const [searchParams] = useSearchParams();
@@ -53,15 +54,36 @@ const OnboardingPayment = () => {
 
         setPaying(true);
         try {
+            const orderRes = await axios.post(`${API_BASE}/interest/onboarding/create-order`, {
+                token,
+                plan: planKey,
+            });
+
+            const paymentResponse = await openRazorpayCheckout({
+                key: orderRes.data.data.key,
+                orderId: orderRes.data.data.orderId,
+                amount: orderRes.data.data.amount,
+                currency: orderRes.data.data.currency,
+                name: "UrbanEase",
+                description: `${plan.name} plan activation`,
+                prefill: {
+                    name: `${details?.firstName || ""} ${details?.lastName || ""}`.trim(),
+                    email: details?.email || "",
+                    contact: details?.phone || "",
+                },
+                notes: {
+                    flow: "onboarding",
+                    communityName: details?.communityName || "",
+                    plan: planKey,
+                },
+            });
+
             const res = await axios.post(`${API_BASE}/interest/onboarding/complete`, {
                 token,
-                paymentDetails: {
-                    plan: planKey,
-                    amount: plan.price,
-                    duration: plan.duration,
-                    method: "card",
-                    date: new Date().toISOString()
-                }
+                plan: planKey,
+                razorpayOrderId: paymentResponse.razorpay_order_id,
+                razorpayPaymentId: paymentResponse.razorpay_payment_id,
+                razorpaySignature: paymentResponse.razorpay_signature,
             });
 
             if (res.data.success) {
@@ -70,7 +92,7 @@ const OnboardingPayment = () => {
             }
         } catch (err) {
             console.error("Payment error:", err);
-            toast.error(err.response?.data?.message || "Payment failed. Please try again.");
+            toast.error(err.response?.data?.message || err.message || "Payment failed. Please try again.");
         } finally {
             setPaying(false);
         }
@@ -89,11 +111,11 @@ const OnboardingPayment = () => {
     if (errorMsg) {
         return (
             <div className="SignInCon">
-                <div className="signin-container" style={{ height: 'auto', padding: '40px', justifyContent: 'center' }}>
+                <div className="signin-container" style={{ height: "auto", padding: "40px", justifyContent: "center" }}>
                     <div className="text-center">
                         <h4 className="text-danger mb-3">Link Error</h4>
                         <p className="text-muted mb-4">{errorMsg}</p>
-                        <button className="continue-btn" onClick={() => navigate('/')}>Go Home</button>
+                        <button className="continue-btn" onClick={() => navigate("/")}>Go Home</button>
                     </div>
                 </div>
             </div>
@@ -103,14 +125,14 @@ const OnboardingPayment = () => {
     if (success) {
         return (
             <div className="SignInCon">
-                <div className="signin-container" style={{ height: 'auto', padding: '40px', justifyContent: 'center' }}>
+                <div className="signin-container" style={{ height: "auto", padding: "40px", justifyContent: "center" }}>
                     <div className="text-center">
-                        <div className="mb-3 text-success" style={{ fontSize: "50px" }}>✅</div>
+                        <div className="mb-3 text-success" style={{ fontSize: "50px" }}>&#10003;</div>
                         <h2 className="mb-3">Onboarding Complete!</h2>
                         <p className="subtitle mb-4">
                             Your account is active. We've sent credentials to <strong>{details?.email}</strong>.
                         </p>
-                        <button className="continue-btn" onClick={() => navigate('/SignIn')}>Login Now</button>
+                        <button className="continue-btn" onClick={() => navigate("/SignIn")}>Login Now</button>
                     </div>
                 </div>
             </div>
@@ -122,47 +144,48 @@ const OnboardingPayment = () => {
             <div
                 className="signin-container"
                 style={{
-                    maxWidth: '1100px',
-                    height: 'auto',
-                    minHeight: '600px',
-                    overflow: 'visible'
+                    maxWidth: "1100px",
+                    height: "auto",
+                    minHeight: "600px",
+                    overflow: "visible",
                 }}
             >
-                {/* Left Panel - Branding */}
                 <div className="left-panel">
                     <div className="logo">
-                        <img src={logo} alt="URBAN EASE" height="30px" width="130px" />
+                        <img src={logo} alt="URBAN EASE" height="30" width="130" />
                     </div>
                     <p className="tagline">
-                        Welcome to UrbanEase. <br /> Let's set up your community workspace.
+                        Welcome to UrbanEase. <br /> Let&apos;s set up your community workspace.
                     </p>
                 </div>
 
                 <div className="div1"></div>
 
-                {/* Right Panel - Content */}
-                <div className="right-panel" style={{ overflow: 'visible' }}>
+                <div className="right-panel" style={{ overflow: "visible" }}>
                     <h2>Activate Account</h2>
                     <p className="subtitle">Welcome, {details?.firstName}. Choose a plan to start.</p>
 
-                    {/* Plans Selection - Vertical Stack for better fit */}
                     <div className="d-flex flex-column gap-3 mb-4">
                         {plans && Object.entries(plans).map(([key, plan]) => (
                             <div
                                 key={key}
-                                className={`p-3 border rounded-3 cursor-pointer d-flex justify-content-between align-items-center ${selectedPlan === key ? 'border-primary bg-light' : ''}`}
-                                style={{ cursor: 'pointer', transition: 'all 0.2s', border: selectedPlan === key ? '2px solid #3b44f0' : '1px solid #ddd' }}
+                                className={`p-3 border rounded-3 cursor-pointer d-flex justify-content-between align-items-center ${selectedPlan === key ? "border-primary bg-light" : ""}`}
+                                style={{
+                                    cursor: "pointer",
+                                    transition: "all 0.2s",
+                                    border: selectedPlan === key ? "2px solid #3b44f0" : "1px solid #ddd",
+                                }}
                                 onClick={() => setSelectedPlan(key)}
                             >
                                 <div>
-                                    <h6 className="fw-bold mb-1" style={{ color: selectedPlan === key ? '#3b44f0' : '#333' }}>{plan.name}</h6>
+                                    <h6 className="fw-bold mb-1" style={{ color: selectedPlan === key ? "#3b44f0" : "#333" }}>{plan.name}</h6>
                                     <div className="small text-muted">
                                         {plan.features?.slice(0, 2).join(", ")}
                                         {plan.features?.length > 2 && "..."}
                                     </div>
                                 </div>
                                 <div className="text-end">
-                                    <h5 className="mb-0 fw-bold">₹{plan.price.toLocaleString()}</h5>
+                                    <h5 className="mb-0 fw-bold">{"\u20B9"}{plan.price.toLocaleString()}</h5>
                                     <small className="text-muted">/{plan.duration}</small>
                                 </div>
                             </div>
@@ -173,18 +196,14 @@ const OnboardingPayment = () => {
 
                     <div className="d-flex justify-content-between mb-3 align-items-center bg-light p-3 rounded">
                         <span className="text-muted">Total Payable</span>
-                        <span className="fw-bold fs-5 text-success">₹{plans[selectedPlan]?.price.toLocaleString()}</span>
+                        <span className="fw-bold fs-5 text-success">{"\u20B9"}{plans?.[selectedPlan]?.price?.toLocaleString?.() || 0}</span>
                     </div>
 
-                    <button
-                        className="continue-btn"
-                        disabled={paying}
-                        onClick={handlePay}
-                    >
-                        {paying ? "Processing..." : "Pay & Activate"}
+                    <button className="continue-btn" disabled={paying} onClick={handlePay}>
+                        {paying ? "Opening Razorpay..." : "Pay with Razorpay"}
                     </button>
                     <p className="text-center mt-3 text-muted small">
-                        Secure connection via UrbanEase Payments
+                        Secure checkout powered by Razorpay
                     </p>
                 </div>
             </div>

@@ -31,7 +31,7 @@ export const ResidentRegister = () => {
     if (!code.trim()) return toast.error("Please enter your registration code");
     setLoading(true);
     try {
-      const res = await fetch(`${import.meta.env.VITE_URL || "http://localhost:3000"}/resident-register/validate-code`, {
+      const res = await fetch(`${import.meta.env.VITE_URL || ""}/resident-register/validate-code`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ code: code.trim() }),
@@ -56,7 +56,7 @@ export const ResidentRegister = () => {
 
     setLoading(true);
     try {
-      const res = await fetch(`${import.meta.env.VITE_URL || "http://localhost:3000"}/resident-register/complete`, {
+      const res = await fetch(`${import.meta.env.VITE_URL || ""}/resident-register/complete`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...form, registrationCode: flatInfo.registrationCode }),

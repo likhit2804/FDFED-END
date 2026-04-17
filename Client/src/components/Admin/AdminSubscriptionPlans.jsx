@@ -20,7 +20,7 @@ export default function AdminSubscriptionPlans() {
   const API_BASE_URL =
     process.env.NODE_ENV === "production"
       ? `${window.location.origin}/admin/api`
-      : "http://localhost:3000/admin/api";
+      : "/admin/api";
 
   useEffect(() => {
     fetchPlans();
@@ -34,7 +34,7 @@ export default function AdminSubscriptionPlans() {
         credentials: "include",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("adminToken") || ""}`,
+          Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
         },
       });
 
@@ -88,7 +88,7 @@ export default function AdminSubscriptionPlans() {
         credentials: "include",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("adminToken") || ""}`,
+          Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
         },
         body: JSON.stringify(payload),
       });
@@ -131,7 +131,7 @@ export default function AdminSubscriptionPlans() {
         credentials: "include",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("adminToken") || ""}`,
+          Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
         },
       });
 

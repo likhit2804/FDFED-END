@@ -1,7 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchLeaves, approveLeave, rejectLeave } from '../Slices/leaveSlice';
+import { fetchLeaves, approveLeave, rejectLeave } from '../slices/leaveSlice';
 import '../assets/css/Leave.css';
+import { FileText, Clock, CheckCircle } from 'lucide-react';
+import { StatCard, StatusBadge, EmptyState, Textarea } from './shared';
+
+
 
 export default function ManagerLeaveList() {
   const dispatch = useDispatch();
@@ -58,41 +62,20 @@ export default function ManagerLeaveList() {
         </div>
 
         {/* STATS CARDS */}
-        <div className="row g-3 mb-4">
-          <div className="col-md-4">
-            <div className="card border-0 shadow-sm">
-              <div className="card-body text-center">
-                <h6 className="text-muted small mb-2">Total Requests</h6>
-                <h3 className="fw-bold text-primary">{leaves.length}</h3>
-              </div>
-            </div>
-          </div>
-          <div className="col-md-4">
-            <div className="card border-0 shadow-sm">
-              <div className="card-body text-center">
-                <h6 className="text-muted small mb-2">Pending</h6>
-                <h3 className="fw-bold text-warning">{leaves.filter(l => l.status === 'pending').length}</h3>
-              </div>
-            </div>
-          </div>
-          <div className="col-md-4">
-            <div className="card border-0 shadow-sm">
-              <div className="card-body text-center">
-                <h6 className="text-muted small mb-2">Approved</h6>
-                <h3 className="fw-bold text-success">{leaves.filter(l => l.status === 'approved').length}</h3>
-              </div>
-            </div>
-          </div>
+        <div className="ue-stat-grid" style={{ marginBottom: 16 }}>
+          <StatCard label="Total Requests" value={leaves.length} icon={<FileText size={22} />} iconColor="#2563eb" iconBg="#dbeafe" />
+          <StatCard label="Pending" value={leaves.filter(l => l.status === 'pending').length} icon={<Clock size={22} />} iconColor="#d97706" iconBg="#fef3c7" />
+          <StatCard label="Approved" value={leaves.filter(l => l.status === 'approved').length} icon={<CheckCircle size={22} />} iconColor="#16a34a" iconBg="#dcfce7" />
         </div>
+
 
         {/* LEAVES LIST */}
         <div className="row">
           <div className="col-12">
             {leaves.length === 0 && (
-              <div className="card border-0 shadow-sm p-4 text-center">
-                <p className="text-muted">No leave requests at the moment</p>
-              </div>
+              <EmptyState icon={<FileText size={48} />} title="No Leave Requests" sub="No leave requests at the moment" />
             )}
+
 
             {leaves.map(l => (
               <div key={l._id} className="card border-0 shadow-sm mb-3" style={{ borderLeft: `4px solid ${l.status === 'pending' ? '#ffc107' : l.status === 'approved' ? '#28a745' : '#dc3545'}` }}>
@@ -104,10 +87,9 @@ export default function ManagerLeaveList() {
                       <small className="text-muted">Work ID: {l.worker?._id || 'N/A'}</small>
                     </div>
                     <div className="col-md-4 text-end">
-                      <span className={`badge fs-6 ${l.status === 'pending' ? 'bg-warning text-dark' : l.status === 'approved' ? 'bg-success' : 'bg-danger'}`}>
-                        {l.status.charAt(0).toUpperCase() + l.status.slice(1)}
-                      </span>
+                      <StatusBadge status={l.status} />
                     </div>
+
                   </div>
 
                   {/* DETAILS GRID */}
@@ -157,13 +139,14 @@ export default function ManagerLeaveList() {
                   {/* ACTIONS */}
                   {l.status === 'pending' && (
                     <div>
-                      <textarea
-                        className="form-control form-control-sm mb-2"
+                      <Textarea
                         placeholder="Add notes (optional)"
-                        rows="2"
+                        rows={2}
                         value={notes[l._id] || ''}
                         onChange={e => setNotes(prev => ({ ...prev, [l._id]: e.target.value }))}
+                        style={{ marginBottom: 8 }}
                       />
+
                       <div className="d-flex gap-2">
                         <button className="btn btn-sm btn-success" onClick={() => onApprove(l._id)} disabled={loading}>
                           <i className="bi bi-check-circle me-1"></i> Approve

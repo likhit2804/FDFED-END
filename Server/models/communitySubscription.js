@@ -14,6 +14,9 @@ const CommunitySubscriptionSchema = new mongoose.Schema({
   amount: { type: Number, required: true },
 
   paymentMethod: { type: String, required: true },
+  gateway: { type: String, default: null },
+  gatewayOrderId: { type: String, default: null },
+  gatewayPaymentId: { type: String, default: null },
   paymentDate: { type: Date, required: true },
 
   planStartDate: { type: Date, required: true },
@@ -35,7 +38,8 @@ const CommunitySubscriptionSchema = new mongoose.Schema({
 
   metadata: {
     userAgent: String,
-    ipAddress: String
+    ipAddress: String,
+    receipt: String,
   }
 }, { timestamps: true });
 

@@ -3,13 +3,14 @@ import { useSelector, useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import axios from "axios";
-import "../../assets/css/Manager/Payments.css"; // reuse basic styling
-import { setUser } from "../../Slices/authSlice";
+
+import { setUser } from "../../slices/authSlice";
+import { openRazorpayCheckout } from "../../services/razorpay";
 
 const API_BASE =
   process.env.NODE_ENV === "production"
     ? `${window.location.origin}/manager`
-    : "http://localhost:3000/manager";
+    : "/manager";
 
 export const Subscription = () => {
   const { user } = useSelector((state) => state.auth);
@@ -53,7 +54,6 @@ export const Subscription = () => {
     fetchData();
   }, []);
 
-  // If already active, don't show this page; send to dashboard
   useEffect(() => {
     const effectiveStatus =
       status?.subscriptionStatus || user?.subscriptionStatus;
@@ -63,30 +63,51 @@ export const Subscription = () => {
   }, [status, user, navigate]);
 
   const handlePay = async () => {
-    if (!plans || !user?.community) return;
+    if (!plans) return;
     const planKey = selectedPlan || "standard";
     const plan = plans[planKey];
     if (!plan) return;
 
     try {
       setPaying(true);
-      const now = new Date();
+
+      const orderRes = await axios.post(
+        `${API_BASE}/subscription-payment/order`,
+        { subscriptionPlan: planKey },
+        { withCredentials: true }
+      );
+
+      const paymentResponse = await openRazorpayCheckout({
+        key: orderRes.data.data.key,
+        orderId: orderRes.data.data.orderId,
+        amount: orderRes.data.data.amount,
+        currency: orderRes.data.data.currency,
+        name: "UrbanEase",
+        description: `${plan.name} community subscription`,
+        prefill: {
+          name: user?.name || "",
+          email: user?.email || "",
+          contact: user?.contact || "",
+        },
+        notes: {
+          flow: "subscription",
+          plan: planKey,
+        },
+      });
+
       const res = await axios.post(
         `${API_BASE}/subscription-payment`,
         {
-          communityId: user.community,
           subscriptionPlan: planKey,
-          amount: plan.price,
-          paymentMethod: "card",
-          planDuration: plan.duration || "monthly",
-          paymentDate: now.toISOString(),
+          razorpayOrderId: paymentResponse.razorpay_order_id,
+          razorpayPaymentId: paymentResponse.razorpay_payment_id,
+          razorpaySignature: paymentResponse.razorpay_signature,
         },
         { withCredentials: true }
       );
 
       toast.success("Subscription activated successfully");
 
-      // Update local user state to active subscription
       dispatch(
         setUser({
           ...user,
@@ -98,7 +119,7 @@ export const Subscription = () => {
     } catch (error) {
       console.error("Subscription payment error", error);
       toast.error(
-        error?.response?.data?.message || "Failed to process subscription"
+        error?.response?.data?.message || error?.message || "Failed to process subscription"
       );
     } finally {
       setPaying(false);
@@ -140,9 +161,8 @@ export const Subscription = () => {
             {Object.entries(plans).map(([key, plan]) => (
               <div className="col-md-4" key={key}>
                 <div
-                  className={`card h-100 p-3 shadow-sm ${
-                    selectedPlan === key ? "border-primary" : ""
-                  }`}
+                  className={`card h-100 p-3 shadow-sm ${selectedPlan === key ? "border-primary" : ""
+                    }`}
                   style={{ cursor: "pointer" }}
                   onClick={() => {
                     const max = plan.maxResidents;
@@ -161,7 +181,7 @@ export const Subscription = () => {
                   }}
                 >
                   <h6 className="fw-semibold mb-1">{plan.name}</h6>
-                  <p className="mb-1">₹{plan.price} / {plan.duration}</p>
+                  <p className="mb-1">{"\u20B9"}{plan.price} / {plan.duration}</p>
                   {plan.maxResidents && (
                     <p className="mb-1 small text-muted">
                       Up to {plan.maxResidents} residents
@@ -184,7 +204,7 @@ export const Subscription = () => {
         disabled={paying}
         onClick={handlePay}
       >
-        {paying ? "Processing..." : "Pay & Activate"}
+        {paying ? "Opening Razorpay..." : "Pay with Razorpay"}
       </button>
     </div>
   );

@@ -54,14 +54,19 @@ export const getCommunityDetail = async (req, res) => {
     const Security = (await import('../../models/security.js')).default;
     const CommunityManager = (await import('../../models/cManager.js')).default;
 
-    // Fetch all related people
-    const [residents, workers, securities, manager] = await Promise.all([
+    const Block = (await import('../../models/blocks.js')).default;
+    const Flat = (await import('../../models/flats.js')).default;
+
+    // Fetch all related people and structures concurrently
+    const [residents, workers, securities, manager, blocksCount, totalFlats] = await Promise.all([
       Resident.find({ community: id }).select('residentFirstname residentLastname email contact uCode image').lean(),
       Worker.find({ community: id }).select('name email contact jobRole isActive image').lean(),
       Security.find({ community: id }).select('name email contact Shift image').lean(),
       community.communityManager
         ? CommunityManager.findById(community.communityManager).select('name email contact image').lean()
         : Promise.resolve(null),
+      Block.countDocuments({ community: id }),
+      Flat.countDocuments({ community: id })
     ]);
 
     res.json({
@@ -80,8 +85,8 @@ export const getCommunityDetail = async (req, res) => {
           planEndDate: community.planEndDate || null,
           communityCode: community.communityCode || null,
           hasStructure: community.hasStructure || false,
-          blocksCount: community.blocks?.length || 0,
-          totalFlats: community.blocks?.reduce((sum, b) => sum + (b.flats?.length || 0), 0) || 0,
+          blocksCount: blocksCount,
+          totalFlats: totalFlats,
           profile: {
             logo: community.profile?.logo?.path || null,
             photos: (community.profile?.photos || []).map(p => p.path),
