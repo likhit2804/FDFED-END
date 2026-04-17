@@ -27,6 +27,7 @@ import {
   ManagerToolbar,
   ManagerToolbarGrow,
 } from "./ui";
+import { UE_CHART_COLORS } from "../shared/chartPalette";
 import "../../assets/css/Manager/Advertisement.css";
 
 const API_BASE_URL =
@@ -424,14 +425,14 @@ export const Advertisement = () => {
             title="Status mix"
             subtitle="Current campaign state"
             data={statusChartData}
-            colors={["#7c3aed", "#8b5cf6", "#d95d4f"]}
+            colors={[UE_CHART_COLORS.plum, UE_CHART_COLORS.emerald, UE_CHART_COLORS.slate, UE_CHART_COLORS.danger]}
           />
           <GraphBar
             title="Campaign type split"
             subtitle="Count by ad type"
             xKey="name"
             data={typeChartData}
-            bars={[{ key: "value", label: "Campaigns", color: "#7c3aed" }]}
+            bars={[{ key: "value", label: "Campaigns", color: UE_CHART_COLORS.slate }]}
           />
         </div>
         <div style={{ marginTop: 16 }}>
@@ -440,7 +441,7 @@ export const Advertisement = () => {
             subtitle="Campaigns started in the last six months"
             xKey="name"
             data={monthlyScheduleData}
-            lines={[{ key: "total", label: "Campaigns", color: "#8b5cf6" }]}
+            lines={[{ key: "total", label: "Campaigns", color: UE_CHART_COLORS.plum }]}
             showArea
           />
         </div>

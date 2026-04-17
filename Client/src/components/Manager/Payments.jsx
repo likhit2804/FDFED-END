@@ -3,6 +3,7 @@ import { AlertCircle, BarChart3, Clock, DollarSign, ReceiptText } from "lucide-r
 
 import { Loader } from "../Loader.jsx";
 import { Dropdown, EmptyState, GraphBar, GraphPie, Modal, SearchBar, StatCard, StatusBadge } from "../shared";
+import { UE_CHART_COLORS, UE_CHART_PALETTE } from "../shared/chartPalette";
 import {
   ManagerPageShell,
   ManagerRecordCard,
@@ -312,13 +313,13 @@ export const Payments = () => {
             subtitle="Total value grouped by payment status"
             xKey="name"
             data={statusAmountData}
-            bars={[{ key: "amount", label: "Amount", color: "#7c3aed" }]}
+            bars={[{ key: "amount", label: "Amount", color: UE_CHART_COLORS.emerald }]}
           />
           <GraphPie
             title="Payment type mix"
             subtitle="Count by charge category"
             data={typeSplitData}
-            colors={["#7c3aed", "#a78bfa", "#5b6472", "#d95d4f", "#16a34a"]}
+            colors={[...UE_CHART_PALETTE, UE_CHART_COLORS.danger]}
           />
         </div>
       </ManagerSection>

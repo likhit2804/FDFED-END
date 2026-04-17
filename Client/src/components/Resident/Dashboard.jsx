@@ -1,173 +1,172 @@
-import React, { useEffect, useState } from "react";
-import "bootstrap/dist/css/bootstrap.min.css";
-import "bootstrap-icons/font/bootstrap-icons.css";
-import { Loader } from "../Loader";
+import React, { useEffect, useMemo, useState } from "react";
+import { AlertCircle, Bell, CalendarCheck2, Clock3 } from "lucide-react";
 
+import { Loader } from "../Loader";
+import { EmptyState, StatCard } from "../shared";
+import {
+  ManagerPageShell,
+  ManagerRecordCard,
+  ManagerRecordGrid,
+  ManagerSection,
+} from "../Manager/ui";
+
+const formatTimestamp = (value) => {
+  if (!value) return "Just now";
+  try {
+    return new Date(value).toLocaleString("en-IN");
+  } catch (error) {
+    return "Just now";
+  }
+};
 
 export const ResidentDashboard = () => {
-
-  const [ads, setAds] = useState([]);
+  const LIST_LIMIT = 5;
   const [recents, setRecents] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // -------------------------
-  // Fetch Dashboard Data
-  // -------------------------
   useEffect(() => {
-    async function load() {
+    const load = async () => {
       try {
-        const res = await fetch("/resident/api/dashboard", {
+        const response = await fetch("/resident/api/dashboard", {
           method: "GET",
           credentials: "include",
         });
+        const data = await response.json();
+        if (!data.success) return;
 
-        const data = await res.json();
-        console.log("Dashboard Data:", data);
-
-        if (data.success) {
-          setAds(data.ads || []);
-          setRecents(data.recents || []);
-          setNotifications(data.notifications || []);
-        }
-      } catch (err) {
-        console.error("Fetch Error:", err);
+        setRecents(data.recents || []);
+        setNotifications(data.notifications || []);
+      } catch (error) {
+        console.error("Resident dashboard fetch error:", error);
       } finally {
         setLoading(false);
       }
-    }
+    };
 
     load();
   }, []);
 
+  const issueCount = useMemo(
+    () =>
+      recents.filter((item) =>
+        String(item?.type || "").toLowerCase().includes("issue")
+      ).length,
+    [recents]
+  );
 
-  // -------------------------
-  // Emergency Contacts
-  // -------------------------
-  function EmergencySection() {
-    const Contact = ({ icon, title, phone }) => (
-      <div className="col-md-4 mb-3 text-center">
-        <div className="emergency-icon mx-auto mb-2">
-          <i className={`bi ${icon}`}></i>
-        </div>
+  const paymentCount = useMemo(
+    () =>
+      recents.filter((item) =>
+        String(item?.type || "").toLowerCase().includes("payment")
+      ).length,
+    [recents]
+  );
 
-        <strong>{title}</strong>
-        <p className="text-muted m-0">{phone}</p>
-      </div>
-    );
-
-    return (
-      <div className="dashboard-card animate-card emergency-container">
-        <div className="emergency-header">Emergency Contacts</div>
-
-        <div className="row text-center py-4">
-          <Contact icon="bi-shield-lock-fill" title="Security" phone="+91 9876543210" />
-          <Contact icon="bi-truck-front-fill" title="Ambulance" phone="112" />
-          <Contact icon="bi-heart-fill" title="Police" phone="100" />
-        </div>
-      </div>
-    );
-  }
-
-  // Animation
-  useEffect(() => {
-    const cards = document.querySelectorAll(".animate-card");
-    cards.forEach((card, i) => {
-      card.style.opacity = "0";
-      card.style.transform = "translateY(20px)";
-      setTimeout(() => {
-        card.style.transition = "opacity .5s ease, transform .5s ease";
-        card.style.opacity = "1";
-        card.style.transform = "translateY(0)";
-      }, 150 + i * 100);
-    });
-  }, [recents, notifications]);
+  const preApprovalCount = useMemo(
+    () =>
+      recents.filter((item) =>
+        String(item?.type || "").toLowerCase().includes("preapproval")
+      ).length,
+    [recents]
+  );
 
   return (
-    <div className="container-fluid  dashboard-wrapper">
-      <h2 className=" mb-4">Community Dashboard</h2>
-
-      <div className="row g-4">
-
-        {/* Recent Activity */}
-        <div className="col-lg-7">
-          <div className="dashboard-card animate-card">
-            <div className="d-flex align-items-center section-title mb-3">
-              <i className="bi bi-clock-history fs-1 text-info me-2"></i>
-              Recent Activity
-            </div>
-
-            <div className="scroll-area">
-              {loading ? (
-                <div className="text-center py-3"><Loader label="Loading activity..." /></div>
-              ) : recents.length > 0 ? (
-                recents.map((r, i) => (
-                  <div key={i} className="recent-entry animate-card">
-                    <span
-                      className={
-                        r.type === "Payment"
-                          ? "badge badge-payment float-end"
-                          : r.type === "Issue"
-                            ? "badge badge-issue float-end"
-                            : r.type === "PreApproval"
-                              ? "badge badge-pre float-end"
-                              : "badge badge-default float-end"
-                      }
-                    >
-                      {r.type}
-                    </span>
-
-                    <p className="fw-bold mb-1">{r.title}</p>
-                    <div className="text-muted small">
-                      {new Date(r.date).toLocaleString()}
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p className="text-center text-muted">No recent activity</p>
-              )}
-            </div>
-          </div>
+    <ManagerPageShell
+      eyebrow="Resident Desk"
+      title="Stay updated on your community activity in one clean dashboard."
+      description="Track recent activity, notifications, and emergency contacts with the same operational layout used in manager pages."
+      chips={[`${recents.length} activity updates`, `${notifications.length} notifications`]}
+      className="resident-ui-page"
+    >
+      <ManagerSection
+        eyebrow="Snapshot"
+        title="Community dashboard"
+        description="Your latest activity and alerts at a glance."
+      >
+        <div className="ue-stat-grid">
+          <StatCard
+            label="Recent Updates"
+            value={recents.length}
+            icon={<Clock3 size={22} />}
+            iconColor="#7c3aed"
+            iconBg="#f3edff"
+          />
+          <StatCard
+            label="Payment Events"
+            value={paymentCount}
+            icon={<CalendarCheck2 size={22} />}
+            iconColor="#8b5cf6"
+            iconBg="#f5f3ff"
+          />
+          <StatCard
+            label="Issue Updates"
+            value={issueCount}
+            icon={<AlertCircle size={22} />}
+            iconColor="#d95d4f"
+            iconBg="#feefed"
+          />
+          <StatCard
+            label="Pre-Approvals"
+            value={preApprovalCount}
+            icon={<Bell size={22} />}
+            iconColor="#5b6472"
+            iconBg="#f2f4f8"
+          />
         </div>
+      </ManagerSection>
 
-        {/* Notifications */}
-        <div className="col-lg-5">
-          <div className="dashboard-card animate-card">
-            <h5 className="notification-header">
-              <i className="bi bi-bell-fill me-2"></i> Notifications
-            </h5>
-
-            <div className="scroll-area">
-              {loading ? (
-                <div className="text-center py-3"><Loader label="Loading notifications..." /></div>
-              ) : notifications.length > 0 ? (
-                notifications.map((n, i) => (
-                  <div key={i} className="notification-card animate-card">
-                    <div className="d-flex align-items-start gap-3">
-                      {n.belongs === "Issue" && <i className="bi bi-tools fs-3 text-danger"></i>}
-                      {n.belongs === "CS" && <i className="bi bi-calendar-check-fill fs-3 text-danger"></i>}
-                      {n.belongs === "Payment" && <i className="bi bi-credit-card-fill fs-3 text-danger"></i>}
-                      {n.belongs === "PA" && <i className="bi bi-clipboard-check-fill fs-3 text-danger"></i>}
-
-                      <div>
-                        <p className="fw-semibold small mb-1">{n.n}</p>
-                        <p className="small text-muted m-0">🕐 {n.timeAgo}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="text-center text-muted py-4">
-                  <i className="bi bi-bell-slash fs-1"></i>
-                  <p>No notifications yet</p>
-                </div>
-              )}
+      <div className="manager-ui-two-column">
+        <ManagerSection
+          eyebrow="Activity"
+          title="Recent activity"
+          description="Latest resident-side actions across payments, issues, and bookings."
+        >
+          {loading ? (
+            <div className="manager-ui-empty">
+              <Loader label="Loading activity..." />
             </div>
-          </div>
-        </div>
+          ) : recents.length === 0 ? (
+            <EmptyState title="No recent activity yet" sub="New updates will appear here." />
+          ) : (
+            <ManagerRecordGrid className="manager-ui-record-grid--single">
+              {recents.slice(0, LIST_LIMIT).map((item, index) => (
+                <ManagerRecordCard
+                  key={`${item?._id || item?.id || "recent"}-${index}`}
+                  title={item?.title || "Activity update"}
+                  subtitle={formatTimestamp(item?.date || item?.createdAt)}
+                  status={<span className="manager-ui-status-pill">{item?.type || "Update"}</span>}
+                />
+              ))}
+            </ManagerRecordGrid>
+          )}
+        </ManagerSection>
+
+        <ManagerSection
+          eyebrow="Live Desk"
+          title="Notifications"
+          description="Important updates delivered to your resident account."
+        >
+          {loading ? (
+            <div className="manager-ui-empty">
+              <Loader label="Loading notifications..." />
+            </div>
+          ) : notifications.length === 0 ? (
+            <EmptyState title="No notifications yet" />
+          ) : (
+            <ManagerRecordGrid>
+              {notifications.slice(0, LIST_LIMIT).map((item, index) => (
+                <ManagerRecordCard
+                  key={`${item?._id || item?.id || "note"}-${index}`}
+                  title={item?.n || item?.title || "Notification"}
+                  subtitle={item?.timeAgo || formatTimestamp(item?.createdAt)}
+                  status={<span className="manager-ui-status-pill">{item?.belongs || "Notice"}</span>}
+                />
+              ))}
+            </ManagerRecordGrid>
+          )}
+        </ManagerSection>
       </div>
-
-      {EmergencySection()}
-    </div>
+    </ManagerPageShell>
   );
 };

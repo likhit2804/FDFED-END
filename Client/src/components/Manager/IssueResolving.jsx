@@ -19,6 +19,7 @@ import { useTabFilters } from "./IssueResolving/useTabFilters";
 import { IssueCard } from "./IssueResolving/IssueCard";
 import { IssueDetailsModal } from "./IssueResolving/IssueDetailsModal";
 import { WorkerAssignModal } from "./IssueResolving/WorkerAssignModal";
+import { UE_CHART_COLORS, UE_CHART_PALETTE } from "../shared/chartPalette";
 import {
   ManagerActionButton,
   ManagerPageShell,
@@ -200,14 +201,14 @@ export const IssueResolving = () => {
               title="Status split"
               subtitle="All issues in manager scope"
               data={statusChartData}
-              colors={["#7c3aed", "#a78bfa", "#d95d4f", "#5b6472", "#8b5cf6", "#16a34a"]}
+              colors={[...UE_CHART_PALETTE, UE_CHART_COLORS.danger]}
             />
             <GraphBar
               title="Priority load"
               subtitle="Count by urgency level"
               xKey="name"
               data={priorityChartData}
-              bars={[{ key: "count", label: "Issues", color: "#7c3aed" }]}
+              bars={[{ key: "count", label: "Issues", color: UE_CHART_COLORS.slate }]}
             />
           </div>
         </ManagerSection>

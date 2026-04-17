@@ -1,15 +1,17 @@
 .bodyContainer {
   display: grid;
   grid-template-columns: 1fr;
-  padding: 15px;
-  gap: 15px;
+  width: min(100%, 1700px);
+  margin: 0 auto;
+  padding: 12px;
+  gap: 12px;
 }
 
 @media (min-width: 992px) {
   .bodyContainer {
-    grid-template-columns: 310px minmax(0, 1fr);
-    padding: 20px;
-    gap: 20px;
+    grid-template-columns: 280px minmax(0, 1fr);
+    padding: 16px 18px 20px;
+    gap: 16px;
   }
 }
 
@@ -29,11 +31,13 @@
 
 .contentCon {
   min-height: auto;
-  padding: 20px;
+  padding: 16px;
   background: #ffffff;
   border-radius: 18px;
-  border: 1px solid rgba(124, 58, 237, 0.12);
-  box-shadow: 0 12px 30px rgba(124, 58, 237, 0.08);
+  border: 1px solid rgba(100, 116, 139, 0.2);
+  box-shadow:
+    0 12px 30px rgba(71, 85, 105, 0.1),
+    0 2px 12px rgba(124, 58, 237, 0.06);
 }
 
 .advertisement {
@@ -42,9 +46,11 @@
   height: 320px;
   width: 100%;
   border-radius: 20px;
-  border: 1px solid rgba(124, 58, 237, 0.22);
-  background: linear-gradient(160deg, #eef4ff 0%, #f8f5ff 55%, #eef7ff 100%);
-  box-shadow: 0 16px 32px rgba(124, 58, 237, 0.12);
+  border: 1px solid rgba(100, 116, 139, 0.24);
+  background: linear-gradient(160deg, #e2e8f0 0%, #f3edff 52%, #eaf0ff 100%);
+  box-shadow:
+    0 16px 32px rgba(71, 85, 105, 0.14),
+    0 4px 14px rgba(124, 58, 237, 0.08);
 }
 
 @media (min-width: 992px) {
@@ -74,7 +80,7 @@
 
 .ad-empty-box__sub {
   margin: 0;
-  color: #5b6472;
+  color: #475569;
   font-size: 0.93rem;
 }
 

@@ -48,11 +48,13 @@ const TIME_FORMATTER = new Intl.DateTimeFormat("en-IN", {
 });
 
 const CHART_PALETTE = {
-  primary: "#7C3AED",
-  secondary: "#6B7280",
-  tertiary: "#E5E7EB",
+  plum: "#7C3AED",
+  emerald: "#10B981",
+  slate: "#475569",
+  slateSoft: "#94A3B8",
   danger: "#D95D4F",
 };
+const NOTIFICATION_LIMIT = 5;
 
 function formatCurrency(value = 0) {
   return `\u20B9${CURRENCY_FORMATTER.format(Number(value) || 0)}`;
@@ -423,7 +425,7 @@ const LiveDesk = memo(function LiveDesk({ data, loading, bookings, onNavigate })
           ) : notifications.length === 0 ? (
             <div className="manager-live-feed__empty">No notifications have arrived yet.</div>
           ) : (
-            notifications.slice(0, 6).map((notification, index) => (
+            notifications.slice(0, NOTIFICATION_LIMIT).map((notification, index) => (
               <article key={`${notification._id || index}-${notification.title || "note"}`} className="manager-live-feed__item">
                 <span className="manager-live-feed__marker" />
                 <div>
@@ -475,8 +477,8 @@ const LiveDesk = memo(function LiveDesk({ data, loading, bookings, onNavigate })
 const RevenuePanel = memo(function RevenuePanel({ data, loading }) {
   const payments = data?.payments || {};
   const paymentData = [
-    { name: "Paid", value: payments.amounts?.paid || 0, color: CHART_PALETTE.primary },
-    { name: "Pending", value: payments.amounts?.pending || 0, color: CHART_PALETTE.secondary },
+    { name: "Paid", value: payments.amounts?.paid || 0, color: CHART_PALETTE.emerald },
+    { name: "Pending", value: payments.amounts?.pending || 0, color: CHART_PALETTE.plum },
     { name: "Overdue", value: payments.amounts?.overdue || 0, color: CHART_PALETTE.danger },
   ].filter((item) => item.value > 0);
 
@@ -617,19 +619,19 @@ const OperationsChart = memo(function OperationsChart({ data, loading }) {
             <RechartsBarChart data={chartData} barGap={10}>
               <CartesianGrid
                 strokeDasharray="4 4"
-                stroke="#e7def9"
+                stroke="#e2e8f0"
                 vertical={false}
               />
               <XAxis
                 dataKey="name"
                 axisLine={false}
                 tickLine={false}
-                stroke="#5b6472"
+                stroke="#64748b"
               />
               <YAxis
                 axisLine={false}
                 tickLine={false}
-                stroke="#5b6472"
+                stroke="#64748b"
               />
               <Tooltip
                 content={renderTooltip}
@@ -644,13 +646,13 @@ const OperationsChart = memo(function OperationsChart({ data, loading }) {
                 dataKey="stable"
                 name="Stable / approved"
                 radius={[10, 10, 0, 0]}
-                fill={CHART_PALETTE.primary}
+                fill={CHART_PALETTE.emerald}
               />
               <Bar
                 dataKey="attention"
                 name="Needs attention"
                 radius={[10, 10, 0, 0]}
-                fill={CHART_PALETTE.secondary}
+                fill={CHART_PALETTE.slate}
               />
             </RechartsBarChart>
           </ResponsiveContainer>

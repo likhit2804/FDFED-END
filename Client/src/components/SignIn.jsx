@@ -2,8 +2,6 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, NavLink } from 'react-router-dom';
 import '../assets/css/SignIn.css';
 import logo from '../imgs/Logo.png';
-import google from '../imgs/google.ico';
-import facebook from '../imgs/facebook.png';
 import showPass from '../imgs/showPass.svg';
 import hidePass from '../imgs/hidePass.svg';
 import { useSelector, useDispatch } from 'react-redux';
@@ -154,11 +152,6 @@ export const SignIn = () => {
             <>
               <h2>Login Now!</h2>
               <p className="subtitle">Enter your information to login</p>
-              <div className="social-buttons">
-                <button className="social-btn google"><img src={google} alt="Google Icon" /> Google</button>
-                <button className="social-btn facebook"><img src={facebook} alt="Facebook Icon" /> Facebook</button>
-              </div>
-              <div className="divider">or</div>
               <form id="LoginForm" onSubmit={handleSubmit}>
                 {errors.email && <p className="error-text">{errors.email}</p>}
                 <input type="email" name="email" className={`input ${errors.email ? 'input-error' : ''}`} placeholder="Email Address" value={formData.email} onChange={handleChange} />

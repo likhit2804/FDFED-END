@@ -35,6 +35,7 @@ import {
   ManagerToolbar,
   ManagerToolbarGrow,
 } from "./ui";
+import { UE_CHART_COLORS, UE_CHART_PALETTE } from "../shared/chartPalette";
 
 const formatBookingDate = (value) =>
   new Date(value).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
@@ -297,14 +298,14 @@ export const CommonSpace = () => {
               title="Status breakdown"
               subtitle="Current booking state distribution"
               data={bookingStatusData}
-              colors={["#7c3aed", "#16a34a", "#d95d4f", "#5b6472", "#a78bfa"]}
+              colors={[...UE_CHART_PALETTE, UE_CHART_COLORS.danger]}
             />
             <GraphLine
               title="Bookings over time"
               subtitle="Last six months"
               xKey="name"
               data={bookingTrendData}
-              lines={[{ key: "bookings", label: "Bookings", color: "#7c3aed" }]}
+              lines={[{ key: "bookings", label: "Bookings", color: UE_CHART_COLORS.plum }]}
               showArea
             />
           </div>
@@ -314,7 +315,7 @@ export const CommonSpace = () => {
               subtitle="Most requested amenities"
               xKey="name"
               data={facilityUsageData}
-              bars={[{ key: "value", label: "Bookings", color: "#8b5cf6" }]}
+              bars={[{ key: "value", label: "Bookings", color: UE_CHART_COLORS.emerald }]}
             />
           </div>
         </ManagerSection>

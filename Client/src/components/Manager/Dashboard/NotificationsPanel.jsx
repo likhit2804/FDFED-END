@@ -6,11 +6,13 @@ const NOTIFICATION_STYLES = {
     Issues: { icon: AlertTriangle, colorClass: "text-warning", bg: "#fef3c7" },
     default: { icon: Bell, colorClass: "text-info", bg: "#e0f2fe" },
 };
+const NOTIFICATION_LIMIT = 5;
 
 const getStyle = (type) => NOTIFICATION_STYLES[type] || NOTIFICATION_STYLES.default;
 
 function NotificationsPanel({ data, loading, bookings = [] }) {
     const notifications = data?.notifications || [];
+    const visibleNotifications = notifications.slice(0, NOTIFICATION_LIMIT);
 
     return (
         <aside className="h-100">
@@ -35,7 +37,7 @@ function NotificationsPanel({ data, loading, bookings = [] }) {
                         </div>
                     ) : (
                         <div className="p-3">
-                            {notifications.map((n, i) => {
+                            {visibleNotifications.map((n, i) => {
                                 const { icon: Icon, colorClass, bg } = getStyle(n.referenceType);
                                 return (
                                     <div key={i} className="d-flex align-items-start p-3 mb-2"

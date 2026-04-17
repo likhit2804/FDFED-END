@@ -37,27 +37,28 @@ body {
   min-height: 100vh;
   width: 100%;
   overflow-x: hidden;
-  background-color: #f0f7ff;
+  background: linear-gradient(180deg, #eef2f7 0%, #f7f4ff 56%, #edf2f8 100%);
   color: #333;
 }
 
 .app-navbar {
   position: sticky;
-  top: 10px;
+  top: 8px;
   z-index: 1000;
-  margin: 0 12px;
+  width: min(calc(100% - 24px), 1700px);
+  margin: 0 auto;
   border-radius: 22px;
   background: rgba(255, 255, 255, 0.94);
   backdrop-filter: blur(16px);
-  border: 1px solid rgba(124, 58, 237, 0.14);
+  border: 1px solid rgba(100, 116, 139, 0.2);
   box-shadow:
-    0 14px 34px rgba(15, 23, 42, 0.1),
-    0 2px 10px rgba(124, 58, 237, 0.08);
+    0 14px 34px rgba(15, 23, 42, 0.09),
+    0 2px 10px rgba(124, 58, 237, 0.06);
 }
 
 .app-navbar__inner {
   width: 100%;
-  padding: 10px 20px;
+  padding: 9px 16px;
   display: flex;
   align-items: center;
   gap: 16px;
@@ -91,7 +92,7 @@ body {
 
 .app-navbar__menu-toggle,
 .app-navbar__logout {
-  border: 1px solid rgba(124, 58, 237, 0.14);
+  border: 1px solid rgba(100, 116, 139, 0.22);
   background: #fff;
   color: #334155;
   border-radius: 12px;
@@ -107,7 +108,7 @@ body {
 
 .app-navbar__menu-toggle:hover,
 .app-navbar__logout:hover {
-  border-color: rgba(124, 58, 237, 0.28);
+  border-color: rgba(124, 58, 237, 0.34);
   color: #7c3aed;
 }
 
@@ -129,20 +130,20 @@ body {
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-evenly;
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
   flex: 1 1 auto;
-  padding-inline: clamp(6px, 1.6vw, 26px);
+  padding-inline: clamp(6px, 1.2vw, 20px);
 }
 
 .app-navbar__link,
 .app-navbar__empty {
   text-decoration: none;
   color: #475569;
-  font-size: 1.08rem;
+  font-size: clamp(0.95rem, 0.86rem + 0.22vw, 1rem);
   font-weight: 600;
   line-height: 1;
-  padding: 11px 16px;
+  padding: 10px 14px;
   border-radius: 999px;
   transition: var(--transition);
   white-space: nowrap;
@@ -165,7 +166,7 @@ body {
 }
 
 .app-navbar__profile-toggle {
-  border: 1px solid rgba(124, 58, 237, 0.14);
+  border: 1px solid rgba(100, 116, 139, 0.22);
   background: #fff;
   color: #334155;
   border-radius: 16px;
@@ -179,8 +180,8 @@ body {
 }
 
 .app-navbar__profile-toggle:hover {
-  border-color: rgba(124, 58, 237, 0.28);
-  box-shadow: 0 8px 18px rgba(124, 58, 237, 0.08);
+  border-color: rgba(124, 58, 237, 0.32);
+  box-shadow: 0 8px 18px rgba(71, 85, 105, 0.12);
 }
 
 .app-navbar__avatar {
