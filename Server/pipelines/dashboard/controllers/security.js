@@ -1,6 +1,5 @@
 import Security from "../../../models/security.js";
 import visitor from "../../../models/visitors.js";
-import Ad from "../../../models/Ad.js";
 
 const getDashboardInfo = async (req, res) => {
     try {
@@ -11,7 +10,6 @@ const getDashboardInfo = async (req, res) => {
         const [
             visitors,
             sec,
-            ads,
             PendingRequests,
             VisitorToday,
             ActiveVisitors,
@@ -22,12 +20,6 @@ const getDashboardInfo = async (req, res) => {
             }).sort({ createdAt: -1 }),
 
             Security.findById(req.user.id),
-
-            Ad.find({
-                community: req.user.community,
-                startDate: { $lte: new Date() },
-                endDate: { $gte: new Date() },
-            }),
 
             visitor.countDocuments({
                 community: req.user.community,
@@ -58,7 +50,6 @@ const getDashboardInfo = async (req, res) => {
             success: true,
             stats,
             visitors,
-            ads,
             security: sec,
         });
 

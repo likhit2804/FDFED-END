@@ -4,12 +4,6 @@ import { authorizeRoles } from "../controllers/shared/authorization.js";
 
 // Import CRUD helpers for all models from the central index
 import {
-  // Ad
-  createAd,
-  listAds,
-  getAdById,
-  updateAdById,
-  deleteAdById,
   // Admin
   createAdmin,
   listAdmins,
@@ -176,14 +170,6 @@ const bindCrudRoutes = (basePath, { create, list, getById, updateById, deleteByI
 };
 
 // Bind CRUD routes for each model under /admin/api/*
-bindCrudRoutes("/ads", {
-  create: createAd,
-  list: listAds,
-  getById: getAdById,
-  updateById: updateAdById,
-  deleteById: deleteAdById,
-});
-
 bindCrudRoutes("/admins", {
   create: createAdmin,
   list: listAdmins,

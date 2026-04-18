@@ -1,5 +1,4 @@
 import Worker from "../../../models/workers.js";
-import Ad from "../../../models/Ad.js";
 import { handleProfileImageUpload, handlePasswordChange } from "../utils/profileShared.js";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -9,9 +8,8 @@ const STRONG_PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[\d!@#$%^&*]).{8,}$/;
 // GET /worker/profile
 export const getProfile = async (req, res) => {
     try {
-        const ads = await Ad.find({ community: req.user.community, startDate: { $lte: new Date() }, endDate: { $gte: new Date() } });
         const r = await Worker.findById(req.user.id);
-        return res.json({ success: true, worker: r, ads: ads });
+        return res.json({ success: true, worker: r });
     } catch (err) {
         console.error(err);
         return res.json({ success: false, message: "Server error" });

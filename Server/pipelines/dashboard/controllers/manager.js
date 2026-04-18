@@ -4,7 +4,6 @@ import Issue from "../../../models/issues.js";
 import CommonSpaces from "../../../models/commonSpaces.js";
 import Payment from "../../../models/payment.js";
 import visitor from "../../../models/visitors.js";
-import Ad from "../../../models/Ad.js";
 import CommunityManager from "../../../models/cManager.js";
 import mongoose from "mongoose";
 import { sendError } from "../../shared/helpers.js";
@@ -16,7 +15,6 @@ export const getDashboardData = async (req, res) => {
             typeof communityId === "string" && mongoose.Types.ObjectId.isValid(communityId)
                 ? new mongoose.Types.ObjectId(communityId)
                 : communityId;
-        const now = new Date();
 
         const [
             totalResidents,
@@ -25,7 +23,6 @@ export const getDashboardData = async (req, res) => {
             issueDashboardData,
             bookingDashboardData,
             paymentDashboardData,
-            adsDashboardData,
             notificationsDoc,
         ] = await Promise.all([
             Resident.countDocuments({ community: communityMatchId }),
@@ -205,39 +202,6 @@ export const getDashboardData = async (req, res) => {
                     },
                 },
             ]),
-            Ad.aggregate([
-                { $match: { community: communityMatchId } },
-                {
-                    $group: {
-                        _id: null,
-                        total: { $sum: 1 },
-                        active: {
-                            $sum: {
-                                $cond: [
-                                    {
-                                        $and: [
-                                            { $lte: ["$startDate", now] },
-                                            { $gte: ["$endDate", now] },
-                                        ],
-                                    },
-                                    1,
-                                    0,
-                                ],
-                            },
-                        },
-                        pending: {
-                            $sum: {
-                                $cond: [{ $gt: ["$startDate", now] }, 1, 0],
-                            },
-                        },
-                        expired: {
-                            $sum: {
-                                $cond: [{ $lt: ["$endDate", now] }, 1, 0],
-                            },
-                        },
-                    },
-                },
-            ]),
             CommunityManager.findById(req.user.id)
                 .select("notifications")
                 .populate({
@@ -251,7 +215,6 @@ export const getDashboardData = async (req, res) => {
         const issueCounts = issueDashboardData?.[0]?.counts?.[0] || {};
         const bookingCounts = bookingDashboardData?.[0]?.counts?.[0] || {};
         const paymentCounts = paymentDashboardData?.[0] || {};
-        const adCounts = adsDashboardData?.[0] || {};
         const recentIssuesRaw = issueDashboardData?.[0]?.recent || [];
         const recentBookingsRaw = bookingDashboardData?.[0]?.recent || [];
 
@@ -326,12 +289,6 @@ export const getDashboardData = async (req, res) => {
                         pending: pendingAmount,
                         overdue: overdueAmount,
                     },
-                },
-                advertisements: {
-                    active: adCounts.active || 0,
-                    pending: adCounts.pending || 0,
-                    expired: adCounts.expired || 0,
-                    total: adCounts.total || 0,
                 },
                 visitors: {
                     today: totalAdvisitorsCount,

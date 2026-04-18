@@ -258,7 +258,7 @@
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: Dashboard with ads, recent activity, notifications, pending payments
+ *         description: Dashboard with recent activity, notifications, and pending payments
  */
 
 // --- Issues ---
@@ -915,121 +915,6 @@
  *     responses:
  *       200:
  *         description: Notification deleted
- */
-
-// ================================================================
-// ADS / ADVERTISEMENTS
-// ================================================================
-
-/**
- * @swagger
- * /manager/api/ad:
- *   get:
- *     summary: Get all advertisements (Manager)
- *     tags: [Manager]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: List of advertisements
- *   post:
- *     summary: Create advertisement (with image upload)
- *     tags: [Manager]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       content:
- *         multipart/form-data:
- *           schema:
- *             type: object
- *             properties:
- *               title:
- *                 type: string
- *               startDate:
- *                 type: string
- *                 format: date
- *               endDate:
- *                 type: string
- *                 format: date
- *               image:
- *                 type: string
- *                 format: binary
- *     responses:
- *       201:
- *         description: Advertisement created
- */
-/**
- * @swagger
- * /manager/api/ad/{id}:
- *   put:
- *     summary: Update advertisement
- *     tags: [Manager]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Updated
- */
-/**
- * @swagger
- * /manager/ad/{id}:
- *   delete:
- *     summary: Delete advertisement
- *     tags: [Manager]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Deleted
- */
-
-/**
- * @swagger
- * /resident/ad:
- *   get:
- *     summary: Get active advertisements (Resident)
- *     tags: [Resident]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Active ads
- */
-/**
- * @swagger
- * /security/ad:
- *   get:
- *     summary: Get active advertisements (Security)
- *     tags: [Security]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Active ads
- */
-/**
- * @swagger
- * /worker/ad:
- *   get:
- *     summary: Get active advertisements (Worker)
- *     tags: [Worker]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Active ads
  */
 
 // ================================================================

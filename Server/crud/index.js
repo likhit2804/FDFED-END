@@ -2,7 +2,6 @@
 
 export { default as CrudService } from './baseCrudService.js';
 
-export * from './adCrudService.js';
 export * from './adminCrudService.js';
 export * from './amenitiesCrudService.js';
 export * from './cManagerCrudService.js';

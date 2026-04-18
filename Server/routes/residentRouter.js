@@ -5,7 +5,6 @@ import Issue from "../models/issues.js";
 import CommonSpaces from "../models/commonSpaces.js";
 import Payment from "../models/payment.js";
 import Visitor from "../models/visitors.js";
-import Ad from "../models/Ad.js";
 import { getTimeAgo, getPaymentRemainders } from "../utils/residentHelpers.js";
 import { cacheRoute } from "../middleware/cacheMiddleware.js";
 
@@ -19,9 +18,6 @@ residentRouter.use(checkSubscriptionStatus);
 // --------------------------------------------------
 import registrationResidentRouter from "../pipelines/residentRegistration/router/resident.js";
 residentRouter.use("/", registrationResidentRouter);
-
-import adsResidentRouter from "../pipelines/ads/router/resident.js";
-residentRouter.use("/", adsResidentRouter);
 
 import csbResidentRouter from "../pipelines/CSB/router/resident.js";
 residentRouter.use("/", csbResidentRouter);
@@ -49,7 +45,6 @@ residentRouter.get("/api/dashboard", cacheRoute(15), async (req, res) => {
   try {
     const now = new Date();
     const recents = [];
-    const ads = await Ad.find({ community: req.user.community, startDate: { $lte: new Date() }, endDate: { $gte: new Date() } });
     const issues = await Issue.find({ resident: req.user.id });
     const commonSpaces = await CommonSpaces.find({ bookedBy: req.user.id });
     const payments = await Payment.find({ sender: req.user.id });
@@ -90,7 +85,7 @@ residentRouter.get("/api/dashboard", cacheRoute(15), async (req, res) => {
       (n) => new Date(n.createdAt) >= oneDayAgo
     );
 
-    return res.json({ success: true, ads, recents, notifications: trimmedNotifications, pendingPayments });
+    return res.json({ success: true, recents, notifications: trimmedNotifications, pendingPayments });
   } catch (err) {
     console.error("Dashboard error:", err);
     return res.status(500).json({ success: false, message: "Server error" });

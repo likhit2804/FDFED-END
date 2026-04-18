@@ -378,7 +378,7 @@ const authLimiter = rateLimit({
 });
 
 const otpLimiter = rateLimit({
-  windowMs: 5 * 60 * 1000, // 5 minutes
+  windowMs: 10 * 60 * 1000, // 5 minutes
   max: 3, // 3 OTP requests per window
   message: {
     success: false,
@@ -604,7 +604,7 @@ app.post("/api/AdminLogin", authLimiter, async (req, res) => {
     const { email, password } = req.body;
     const verified = await VerifyA(email, password);
     console.log("VerifyA result:", !!verified);
-    
+
     if (!verified) {
       console.log('Admin login failed for', email, { ip: req.ip });
       return res.status(401).json({

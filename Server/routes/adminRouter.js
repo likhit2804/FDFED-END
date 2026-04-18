@@ -62,6 +62,20 @@ AdminRouter.get('/api/dashboard', cacheRoute(60), getDashboard);
  */
 AdminRouter.get('/api/communities/overview', getCommunitiesOverview);
 
+/**
+ * @swagger
+ * /admin/api/payments:
+ *   get:
+ *     summary: Get admin payments dashboard data
+ *     tags: [Admin - Dashboard]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Payments list, revenue stats, trends, and plan distribution
+ */
+AdminRouter.get('/api/payments', getPayments);
+
 // Community registration + subscription plans (delegated to pipeline)
 AdminRouter.use('/', communityRegistrationRouter);
 

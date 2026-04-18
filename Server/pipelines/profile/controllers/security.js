@@ -1,5 +1,4 @@
 import Security from "../../../models/security.js";
-import Ad from "../../../models/Ad.js";
 import { handleProfileImageUpload, handlePasswordChange } from "../utils/profileShared.js";
 
 /**
@@ -15,12 +14,6 @@ export const getProfile = async (req, res) => {
             return res.status(404).json({ success: false, message: "Security not found" });
         }
 
-        const ads = await Ad.find({
-            community: req.user.community,
-            startDate: { $lte: new Date() },
-            endDate: { $gte: new Date() },
-        });
-
         // Flatten community name so frontend can read s.community?.communityName
         const securityObj = security.toObject();
         securityObj.community = {
@@ -28,7 +21,7 @@ export const getProfile = async (req, res) => {
             communityName: security.community?.name || "",
         };
 
-        return res.json({ success: true, security: securityObj, ads });
+        return res.json({ success: true, security: securityObj });
     } catch (err) {
         console.error("Error loading security profile:", err);
         return res.status(500).json({ success: false, message: "Server error" });

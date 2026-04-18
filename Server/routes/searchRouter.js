@@ -27,7 +27,7 @@ const searchRouter = express.Router();
  *         name: type
  *         schema:
  *           type: string
- *           enum: [issues, communities, residents, workers, security, visitors, preapprovals, payments, bookings, leaves, ads, amenities, interest, auditlogs, managers, all]
+ *           enum: [issues, communities, residents, workers, security, visitors, preapprovals, payments, bookings, leaves, amenities, interest, auditlogs, managers, all]
  *           default: all
  *       - in: query
  *         name: limit

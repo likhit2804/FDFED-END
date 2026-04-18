@@ -1,8 +1,7 @@
 import visitor from "../../../models/visitors.js";
-import Ad from "../../../models/Ad.js";
 
 // --------------------------------------------------
-// SECURITY: Get Visitor Management page data (visitors + ads)
+// SECURITY: Get Visitor Management page data
 // --------------------------------------------------
 export const getVisitorManagementPage = async (req, res) => {
     try {
@@ -17,13 +16,7 @@ export const getVisitorManagementPage = async (req, res) => {
                 new Date(a.entryDate || a.createdAt)
         );
 
-        const ads = await Ad.find({
-            community: req.user.community,
-            startDate: { $lte: new Date() },
-            endDate: { $gte: new Date() },
-        });
-
-        return res.json({ success: true, visitors, ads });
+        return res.json({ success: true, visitors });
     } catch (err) {
         console.error("VisitorManagement error:", err);
         return res.status(500).json({

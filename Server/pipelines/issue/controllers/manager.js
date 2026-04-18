@@ -1,9 +1,6 @@
 import Issue from "../../../models/issues.js";
 import Worker from "../../../models/workers.js";
-import CommunityManager from "../../../models/cManager.js";
 import { pushNotification } from "../../notifications/services/notificationService.js";
-import Ad from "../../../models/Ad.js";
-import { flagMisassigned } from "../../../utils/issueAutomation.js";
 import { emitIssueUpdate } from "../utils/issueShared.js";
 
 // pushNotification is now imported from notifications pipeline
@@ -334,18 +331,14 @@ export const getIssueResolvingData = async (req) => {
             throw new Error("Community not found");
         }
 
-        const [ads, workers, issues] = await Promise.all([
-            Ad.find({
-                community: req.user.community,
-                status: "Active",
-            }),
+        const [workers, issues] = await Promise.all([
             Worker.find({ community }),
             Issue.find({ community })
                 .populate("resident")
                 .populate("workerAssigned")
         ]);
 
-        return { issues, workers, ads };
+        return { issues, workers };
     } catch (error) {
         console.error(error);
         throw error;

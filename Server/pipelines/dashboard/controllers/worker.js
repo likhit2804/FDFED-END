@@ -1,14 +1,12 @@
 import Worker from "../../../models/workers.js";
 import Issue from "../../../models/issues.js";
-import Ad from "../../../models/Ad.js";
 
 // GET /worker/getDashboardData
 export const getDashboardData = async (req, res) => {
     try {
         const t = await Worker.findById(req.user.id);
         const Issues = await Issue.find({ workerAssigned: req.user.id });
-        const ads = await Ad.find({ community: req.user.community, startDate: { $lte: new Date() }, endDate: { $gte: new Date() } });
-        return res.json({ success: true, worker: t, issues: Issues, ads });
+        return res.json({ success: true, worker: t, issues: Issues });
     } catch (err) {
         console.error(err);
         return res.json({ success: false, message: "Server error" });

@@ -34,9 +34,6 @@ managerRouter.use("/", userMgmtManagerRouter);
 import dashboardManagerRouter from "../pipelines/dashboard/router/manager.js";
 managerRouter.use("/", dashboardManagerRouter);
 
-import adsManagerRouter from "../pipelines/ads/router/manager.js";
-managerRouter.use("/", adsManagerRouter);
-
 import profileManagerRouter from "../pipelines/profile/router/manager.js";
 managerRouter.use("/", profileManagerRouter);
 

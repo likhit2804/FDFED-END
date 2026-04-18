@@ -8,7 +8,6 @@ import VisitorPreApproval from '../models/preapproval.js';
 import Payment from '../models/payment.js';
 import CommonSpaces from '../models/commonSpaces.js';
 import Leave from '../models/leave.js';
-import Ad from '../models/Ad.js';
 import Interest from '../models/interestForm.js';
 import AdminAuditLog from '../models/adminAuditLog.js';
 import Amenity from '../models/Amenities.js';
@@ -144,15 +143,6 @@ export class SearchService {
         .populate('worker', 'name email jobRole').lean();
     };
 
-    const fetchAds = async () => {
-      if (!want('ads') || (!isAdmin && !isManager && !isResident)) return null;
-      const filter = { $text: { $search: term } };
-      if (!isAdmin) filter.community = communityId;
-      return Ad.find(filter, { score: { $meta: 'textScore' } })
-        .sort({ score: { $meta: 'textScore' } }).limit(limit)
-        .select('title adType status startDate endDate targetAudience imagePath').lean();
-    };
-
     const fetchInterest = async () => {
       if (!want('interest') || !isAdmin) return null;
       return Interest.find({ $text: { $search: term } }, { score: { $meta: 'textScore' } })
@@ -181,7 +171,6 @@ export class SearchService {
       bookings: fetchBookings(),
       amenities: fetchAmenities(),
       leaves: fetchLeaves(),
-      ads: fetchAds(),
       interest: fetchInterest(),
       auditlogs: fetchAuditLogs()
     };

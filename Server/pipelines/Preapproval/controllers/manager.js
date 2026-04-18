@@ -4,7 +4,6 @@ import QRCode from "qrcode";
 
 import Resident from "../../../models/resident.js";
 import Visitor from "../../../models/visitors.js";
-import Ad from "../../../models/Ad.js";
 import { OTP } from "../../../controllers/shared/OTP.js";
 import { generateCustomID, formatDate } from "../../../utils/residentHelpers.js";
 
@@ -126,12 +125,6 @@ export const getPreApprovals = async (req, res) => {
                 .json({ success: false, message: "Resident not found" });
         }
 
-        const ads = await Ad.find({
-            community: req.user.community,
-            startDate: { $lte: new Date() },
-            endDate: { $gte: new Date() },
-        });
-
         const visitors = await Visitor.find({ approvedBy: resident._id }).lean();
 
         const stats = await Visitor.aggregate([
@@ -142,7 +135,7 @@ export const getPreApprovals = async (req, res) => {
         const counts = { Pending: 0, Approved: 0, Rejected: 0 };
         stats.forEach((s) => (counts[s._id] = s.count));
 
-        return res.json({ success: true, visitors, ads, counts });
+        return res.json({ success: true, visitors, counts });
     } catch (err) {
         console.error("Error loading visitor history:", err);
         return res.status(500).json({

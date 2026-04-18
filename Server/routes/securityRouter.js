@@ -14,9 +14,6 @@ securityRouter.use("/", preapprovalSecurityRouter);
 import visitorManagementSecurityRouter from "../pipelines/VistorManagement/router/manager.js";
 securityRouter.use("/", visitorManagementSecurityRouter);
 
-import adsSecurityRouter from "../pipelines/ads/router/security.js";
-securityRouter.use("/", adsSecurityRouter);
-
 import profileSecurityRouter from "../pipelines/profile/router/security.js";
 securityRouter.use("/", profileSecurityRouter);
 

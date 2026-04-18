@@ -1,7 +1,6 @@
-﻿import Resident from "../../../models/resident.js";
+import Resident from "../../../models/resident.js";
 import Worker from "../../../models/workers.js";
 import Security from "../../../models/security.js";
-import Ad from "../../../models/Ad.js";
 import bcrypt from "bcrypt";
 import { sendPassword } from "../../../controllers/shared/OTP.js";
 import { sendError, sendSuccess } from "../../shared/helpers.js";
@@ -67,16 +66,11 @@ const validateWorkerPayload = (payload) => {
 };
 
 export const getUserManagement = async (req, res) => {
-    const ads = await Ad.find({
-        community: req.user.community,
-        status: "Active",
-    });
-
     const R = await Resident.find({ community: req.user.community });
     const W = await Worker.find({ community: req.user.community });
     const S = await Security.find({ community: req.user.community });
 
-    res.json({ ads, R, W, S });
+    res.json({ R, W, S });
 };
 
 export const createResident = async (req, res) => {
@@ -302,3 +296,4 @@ export const getWorkers = async (req, res) => {
         return sendError(res, 500, "Server error", error);
     }
 };
+

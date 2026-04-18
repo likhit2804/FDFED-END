@@ -7,6 +7,13 @@
  */
 
 import multer from "multer";
+import fs from "fs";
+import path from "path";
+import { randomUUID } from "crypto";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // ─────────────────────────────────────────────────────────────
 // File filter  (images only)
@@ -51,7 +58,21 @@ export const memoryUpload = multer({
  *   import { diskUpload } from "../../../configs/multer.js";
  *   router.post("/upload", diskUpload.single("doc"), controller);
  */
+const diskStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const uploadsDir = path.resolve(__dirname, "..", "uploads");
+        fs.mkdirSync(uploadsDir, { recursive: true });
+        cb(null, uploadsDir);
+    },
+    filename: (req, file, cb) => {
+        const originalExtension = path.extname(file.originalname || "").toLowerCase();
+        const safeExtension = originalExtension || ".png";
+        cb(null, `${randomUUID()}${safeExtension}`);
+    },
+});
+
 export const diskUpload = multer({
-    dest: "uploads/",
-    limits: { fileSize: 20 * 1024 * 1024 }, // 20 MB for non-image docs
+    storage: diskStorage,
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB image limit for advertisement uploads
+    fileFilter: imageFileFilter,
 });

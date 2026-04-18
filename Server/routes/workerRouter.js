@@ -11,9 +11,6 @@ workerRouter.use(checkSubscriptionStatus);
 import issueWorkerRouter from "../pipelines/issue/router/worker.js";
 workerRouter.use("/", issueWorkerRouter);
 
-import adsWorkerRouter from "../pipelines/ads/router/worker.js";
-workerRouter.use("/", adsWorkerRouter);
-
 import profileWorkerRouter from "../pipelines/profile/router/worker.js";
 workerRouter.use("/", profileWorkerRouter);
 
