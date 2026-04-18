@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { toast, ToastContainer } from "react-toastify";
 import { AnimatePresence } from "framer-motion";
+import axios from "axios";
 import { useSocket } from "../../hooks/useSocket";
 import { ClipboardList, Play, CheckCircle, AlertTriangle } from "lucide-react";
 import { Loader } from "../Loader";
@@ -29,11 +30,10 @@ export const Tasks = () => {
   const fetchTasks = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/worker/api/tasks", { credentials: "include" });
-      if (!res.ok) throw new Error("Failed to fetch tasks");
-      const data = await res.json();
+      const res = await axios.get("/worker/api/tasks");
+      const data = res.data;
       setTasks(data.tasks || []);
-    } catch (err) { toast.error(err.message || "Error loading tasks"); }
+    } catch (err) { toast.error(err.response?.data?.message || err.message || "Error loading tasks"); }
     setLoading(false);
   };
 
@@ -85,28 +85,24 @@ export const Tasks = () => {
       if (payload && (!Number.isFinite(payload.estimatedCost) || payload.estimatedCost <= 0)) {
         setActionLoading(false); toast.error("Enter a positive estimated cost before completing."); return;
       }
-      const res = await fetch(`/worker/issue/${endpoint}/${taskId}`, {
-        method: "POST", credentials: "include",
-        headers: payload ? { "Content-Type": "application/json" } : undefined,
-        body: payload ? JSON.stringify(payload) : undefined,
-      });
-      const data = await res.json();
+      const res = await axios.post(`/worker/issue/${endpoint}/${taskId}`, payload || undefined);
+      const data = res.data;
       if (!data.success) throw new Error(data.message);
       toast.success(`Task ${newStatus === STATUS_IN_PROGRESS ? "Started" : "Completed"}`);
       setTasks((prev) => prev.map((t) => t._id === taskId ? { ...t, status: newStatus, estimatedCost: payload?.estimatedCost ?? t.estimatedCost } : t));
-    } catch (err) { toast.error(err.message || "Failed to update task"); }
+    } catch (err) { toast.error(err.response?.data?.message || err.message || "Failed to update task"); }
     setActionLoading(false);
   };
 
   const handleMisassigned = async (id) => {
     setActionLoading(true);
     try {
-      const res = await fetch(`/worker/issue/misassigned/${id}`, { method: "POST", credentials: "include" });
-      const data = await res.json();
+      const res = await axios.post(`/worker/issue/misassigned/${id}`);
+      const data = res.data;
       if (!data.success) throw new Error(data.message);
       toast.success("Flagged as misassigned");
       setTasks((prev) => prev.filter((t) => t._id !== id));
-    } catch (err) { toast.error(err.message || "Failed to flag as misassigned"); }
+    } catch (err) { toast.error(err.response?.data?.message || err.message || "Failed to flag as misassigned"); }
     setActionLoading(false);
   };
 

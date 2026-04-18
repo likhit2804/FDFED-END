@@ -13,8 +13,6 @@ import {
   ManagerSection,
 } from "./ui";
 
-const API_BASE_URL = "";
-
 const createBlock = (name) => ({
   name,
   totalFloors: 5,
@@ -33,9 +31,7 @@ const ManagerSetup = () => {
   useEffect(() => {
     const fetchStructure = async () => {
       try {
-        const res = await axios.get(`${API_BASE_URL}/manager/get-structure`, {
-          withCredentials: true,
-        });
+        const res = await axios.get("/manager/get-structure");
 
         if (res.data.success && Array.isArray(res.data.blocks) && res.data.blocks.length > 0) {
           setBlocks(res.data.blocks);
@@ -115,14 +111,7 @@ const ManagerSetup = () => {
         return { name, totalFloors, flatsPerFloor };
       });
 
-      const res = await axios.post(
-        `${API_BASE_URL}/manager/setup-structure`,
-        { blocks: payload },
-        {
-          withCredentials: true,
-          headers: { "Content-Type": "application/json" },
-        }
-      );
+      const res = await axios.post("/manager/setup-structure", { blocks: payload });
 
       if (res.data.success) {
         navigate("/manager/dashboard", { replace: true });

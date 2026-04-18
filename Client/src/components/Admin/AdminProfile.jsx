@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import axios from "axios";
 import Header from "./Header";
 import { getSystemSettings, updateSystemSettings } from "../../services/adminService";
 
@@ -29,27 +30,13 @@ export default function AdminProfile() {
   const [systemSettings, setSystemSettings] = useState({ skip2FA: false });
   const [settingsLoading, setSettingsLoading] = useState(false);
 
-  const API_BASE_URL =
-    process.env.NODE_ENV === "production"
-      ? `${window.location.origin}/admin/api`
-      : "/admin/api";
-
   // ===== Fetch Admin Profile =====
   useEffect(() => {
     const fetchProfile = async () => {
       try {
         setLoading(true);
-        const res = await fetch(`${API_BASE_URL}/profile`, {
-          method: "GET",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
-          },
-        });
-
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const json = await res.json();
+        const res = await axios.get("/admin/api/profile");
+        const json = res.data;
 
         if (json && json.admin) {
           const { name, email, image } = json.admin;
@@ -59,7 +46,7 @@ export default function AdminProfile() {
         }
       } catch (err) {
         console.error("Error fetching profile:", err);
-        setErrorMsg("Failed to load profile");
+        setErrorMsg(err.response?.data?.message || "Failed to load profile");
       } finally {
         setLoading(false);
       }
@@ -150,17 +137,8 @@ export default function AdminProfile() {
       formDataToSend.append("email", formData.email);
       if (profileImage) formDataToSend.append("image", profileImage);
 
-      const res = await fetch(`${API_BASE_URL}/profile/update`, {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
-        },
-        body: formDataToSend,
-      });
-
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.message || "Update failed");
+      const res = await axios.post("/admin/api/profile/update", formDataToSend);
+      const json = res.data;
 
       setSuccessMsg("Profile updated successfully!");
       if (json.admin.image) setPreviewUrl(json.admin.image);
@@ -174,7 +152,7 @@ export default function AdminProfile() {
       setProfileImage(null);
     } catch (err) {
       console.error("Profile update error:", err);
-      setErrorMsg(err.message);
+      setErrorMsg(err.response?.data?.message || err.message);
     } finally {
       setLoading(false);
     }
@@ -193,28 +171,18 @@ export default function AdminProfile() {
     }
 
     try {
-      const res = await fetch(`${API_BASE_URL}/profile/change-password`, {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
-        },
-        body: JSON.stringify({
-          currentPassword: passwordData.current,
-          newPassword: passwordData.new,
-          confirmPassword: passwordData.confirm,
-        }),
+      const res = await axios.post("/admin/api/profile/change-password", {
+        currentPassword: passwordData.current,
+        newPassword: passwordData.new,
+        confirmPassword: passwordData.confirm,
       });
-
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.message || "Failed to change password");
+      const json = res.data;
 
       setSuccessMsg("Password updated successfully!");
       setPasswordData({ current: "", new: "", confirm: "" });
     } catch (err) {
       console.error("Password change error:", err);
-      setErrorMsg(err.message);
+      setErrorMsg(err.response?.data?.message || err.message);
     }
   };
 

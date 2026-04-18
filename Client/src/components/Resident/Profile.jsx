@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Mail, Phone, MapPin, Building2, User } from "lucide-react";
+import axios from "axios";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { ProfileHeader, PasswordChangeForm, Input } from "../shared";
 
@@ -36,12 +37,8 @@ export const ResidentProfile = () => {
   useEffect(() => {
     async function loadProfile() {
       try {
-        const res = await fetch("/resident/profile", {
-          method: "GET",
-          credentials: "include",
-        });
-
-        const data = await res.json();
+        const res = await axios.get("/resident/profile");
+        const data = res.data;
 
         if (data.success) {
           const fetched = {
@@ -94,13 +91,8 @@ export const ResidentProfile = () => {
       // only if image upload exists later
       // form.append("image", selectedFile);
 
-      const res = await fetch("/resident/profile", {
-        method: "POST",
-        credentials: "include",
-        body: form,
-      });
-
-      const data = await res.json();
+      const res = await axios.post("/resident/profile", form);
+      const data = res.data;
 
       if (!data.success) {
         alert(data.message || "Update failed");
@@ -125,16 +117,14 @@ export const ResidentProfile = () => {
   const handlePasswordSubmitShared = async ({ cp, np, cnp }) => {
     if (np !== cnp) { alert('New password and confirm password do not match.'); return; }
     try {
-      const res = await fetch('/resident/change-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ currentPassword: cp, newPassword: np }),
+      const res = await axios.post("/resident/change-password", {
+        currentPassword: cp,
+        newPassword: np,
       });
-      const data = await res.json();
+      const data = res.data;
       if (!data.success && !data.ok) { alert(data.message || 'Password update failed.'); return; }
       alert('Password updated successfully!');
-    } catch (err) { alert('Something went wrong while updating password.'); }
+    } catch (err) { alert(err.response?.data?.message || 'Something went wrong while updating password.'); }
   };
 
   return (

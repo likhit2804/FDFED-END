@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import axios from "axios";
 
 import { EntityCard, StatCard, Modal, Input, Select, EmptyState } from "../shared";
 import { Loader } from "../Loader";
@@ -16,8 +17,8 @@ export function PreApproval() {
 
   async function loadVisitors() {
     try {
-      const res = await fetch("/resident/preApprovals", { method: "GET", credentials: "include" });
-      const data = await res.json();
+      const res = await axios.get("/resident/preApprovals");
+      const data = res.data;
       if (!data.success) return;
       setVisitors(data.visitors || []);
       setCounts(data.counts || { Approved: 0, Pending: 0, Rejected: 0 });
@@ -30,16 +31,16 @@ export function PreApproval() {
   async function cancelRequest(id) {
     if (!window.confirm("Cancel this visitor request?")) return;
     try {
-      const res = await fetch(`/resident/preapproval/cancel/${id}`, { method: "DELETE", credentials: "include" });
-      const data = await res.json();
+      const res = await axios.delete(`/resident/preapproval/cancel/${id}`);
+      const data = res.data;
       if (data.ok) loadVisitors();
     } catch (err) { console.error("Cancel error:", err); }
   }
 
   async function viewQR(id) {
     try {
-      const res = await fetch(`/resident/preapproval/qr/${id}`, { method: "GET", credentials: "include" });
-      const data = await res.json();
+      const res = await axios.get(`/resident/preapproval/qr/${id}`);
+      const data = res.data;
       setQrImage(data.qrCodeBase64);
       setShowQR(true);
     } catch (err) { console.error("QR Fetch error:", err); }
@@ -48,13 +49,8 @@ export function PreApproval() {
   async function handleSubmit(e) {
     e.preventDefault();
     try {
-      const res = await fetch("/resident/preapproval", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(form),
-      });
-      const data = await res.json();
+      const res = await axios.post("/resident/preapproval", form);
+      const data = res.data;
       if (data.success) { setShowForm(false); setForm({ visitorName: "", contactNumber: "", purpose: "", dateOfVisit: "", timeOfVisit: "" }); loadVisitors(); }
     } catch (err) { console.error("Form submit error:", err); }
   }

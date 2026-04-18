@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Briefcase, Key, Pencil, Shield, Trash2, Users } from "lucide-react";
 import { toast } from "react-toastify";
+import axios from "axios";
 
 import { Loader } from "../Loader";
 import { ConfirmModal, Input, Modal, StatCard, Tabs, Textarea } from "../shared";
@@ -13,11 +14,6 @@ import {
   ManagerSection,
   ManagerToolbar,
 } from "./ui";
-
-const makeBase = () =>
-  process.env.NODE_ENV === "production"
-    ? `${window.location.origin}/manager`
-    : "/manager";
 
 const DynamicForm = ({ fields, initial = {}, onSubmit, submitLabel = "Save" }) => {
   const [form, setForm] = useState(() =>
@@ -180,8 +176,6 @@ const ENTITY_CONFIG = {
 const TAB_TO_ENTITY = { residents: "resident", security: "security", workers: "worker" };
 
 export default function UserManagement() {
-  const baseUrl = makeBase();
-
   const [activeTab, setActiveTab] = useState("residents");
   const [lists, setLists] = useState({ resident: [], security: [], worker: [] });
   const [modalVisible, setModalVisible] = useState(false);
@@ -215,10 +209,8 @@ export default function UserManagement() {
   const fetchLists = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${baseUrl}/userManagement`, { credentials: "include" });
-      if (!response.ok) return;
-
-      const data = await response.json();
+      const response = await axios.get("/manager/userManagement");
+      const data = response.data;
       setLists({
         resident: data.R || [],
         security: data.S || [],
@@ -236,8 +228,8 @@ export default function UserManagement() {
   const fetchRegistrationCodes = async () => {
     setCodesLoading(true);
     try {
-      const response = await fetch(`${baseUrl}/registration-codes`, { credentials: "include" });
-      const data = await response.json();
+      const response = await axios.get("/manager/registration-codes");
+      const data = response.data;
       if (data.success) {
         setCodesList(data.flats || []);
         setCommunityNameForCodes(data.communityName || "");
@@ -251,13 +243,8 @@ export default function UserManagement() {
     try {
       setIsRegenerating(true);
       const payload = flatNumbers ? { flatNumbers } : { flatNumber: flatNumber ?? undefined };
-      const response = await fetch(`${baseUrl}/registration-codes/regenerate`, {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const data = await response.json();
+      const response = await axios.post("/manager/registration-codes/regenerate", payload);
+      const data = response.data;
 
       if (flatNumber && !flatNumbers) {
         if (data.success && data.newCode) {
@@ -315,10 +302,8 @@ export default function UserManagement() {
   const openEdit = async (id) => {
     try {
       setLoading(true);
-      const response = await fetch(`${baseUrl}/userManagement/${config.endpoint}/${id}`, { credentials: "include" });
-      if (!response.ok) throw new Error("Failed to load");
-
-      const data = await response.json();
+      const response = await axios.get(`/manager/userManagement/${config.endpoint}/${id}`);
+      const data = response.data;
       const payload = data.r || data[currentEntity] || data;
 
       setModalConfig({
@@ -330,7 +315,7 @@ export default function UserManagement() {
       });
       setModalVisible(true);
     } catch (error) {
-      toast.error("Failed to load data for edit");
+      toast.error(error.response?.data?.message || "Failed to load data for edit");
     } finally {
       setLoading(false);
     }
@@ -342,13 +327,8 @@ export default function UserManagement() {
       const payload = { ...values };
       if (idForUpdate) payload[config.idKey] = idForUpdate;
 
-      const response = await fetch(`${baseUrl}/userManagement/${config.endpoint}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(payload),
-      });
-      const data = await response.json();
+      const response = await axios.post(`/manager/userManagement/${config.endpoint}`, payload);
+      const data = response.data;
       if (!data?.success) {
         toast.error(data?.message || "Save failed");
         return;
@@ -377,11 +357,8 @@ export default function UserManagement() {
       setLoading(true);
       const { entity, id } = confirmPayload;
       const entityConfig = ENTITY_CONFIG[entity];
-      const response = await fetch(`${baseUrl}/userManagement/${entityConfig.endpoint}/${id}`, {
-        method: "DELETE",
-        credentials: "include",
-      });
-      const data = await response.json();
+      const response = await axios.delete(`/manager/userManagement/${entityConfig.endpoint}/${id}`);
+      const data = response.data;
       if (!data?.ok && !data?.success) {
         toast.error("Delete failed");
         return;

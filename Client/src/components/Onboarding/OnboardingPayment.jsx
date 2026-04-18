@@ -7,8 +7,6 @@ import logo from "../../imgs/Logo.png";
 import { openRazorpayCheckout } from "../../services/razorpay";
 import { Loader } from "../Loader";
 
-const API_BASE = "";
-
 const OnboardingPayment = () => {
     const [searchParams] = useSearchParams();
     const token = searchParams.get("token");
@@ -31,7 +29,7 @@ const OnboardingPayment = () => {
 
         const fetchDetails = async () => {
             try {
-                const res = await axios.get(`${API_BASE}/interest/onboarding/${token}`);
+                const res = await axios.get(`/interest/onboarding/${token}`);
                 if (res.data.success) {
                     setDetails(res.data.data);
                     setPlans(res.data.data.plans);
@@ -55,7 +53,7 @@ const OnboardingPayment = () => {
 
         setPaying(true);
         try {
-            const orderRes = await axios.post(`${API_BASE}/interest/onboarding/create-order`, {
+            const orderRes = await axios.post("/interest/onboarding/create-order", {
                 token,
                 plan: planKey,
             });
@@ -79,7 +77,7 @@ const OnboardingPayment = () => {
                 },
             });
 
-            const res = await axios.post(`${API_BASE}/interest/onboarding/complete`, {
+            const res = await axios.post("/interest/onboarding/complete", {
                 token,
                 plan: planKey,
                 razorpayOrderId: paymentResponse.razorpay_order_id,

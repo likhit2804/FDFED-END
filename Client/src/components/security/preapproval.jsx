@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Html5QrcodeScanner } from "html5-qrcode";
+import axios from "axios";
 
 import { Loader } from "../Loader";
 import { Modal, Tabs, StatusBadge, EmptyState } from "../shared";
@@ -33,12 +34,8 @@ export function SecurityPreApproval() {
 
   const onScanSuccess = async (decodedText) => {
     try {
-      const res = await fetch("/security/verify-qr", {
-        method: "POST", credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token: decodedText }),
-      });
-      const data = await res.json();
+      const res = await axios.post("/security/verify-qr", { token: decodedText });
+      const data = res.data;
       if (!data.success) { alert("QR verification failed!"); return; }
       alert(`Visitor ${data.visitor.name} successfully ${data.visitor.status === "Active" ? "Checked In" : "Checked Out"}`);
       closeScanner();
@@ -50,8 +47,8 @@ export function SecurityPreApproval() {
 
   const fetchData = async () => {
     try {
-      const res = await fetch("/security/preApproval", { method: "GET", credentials: "include" });
-      const data = await res.json();
+      const res = await axios.get("/security/preApproval");
+      const data = res.data;
       if (!data.success) return;
       setList(data.preApprovalList || []);
     } catch (err) { console.error("Error loading pre-approvals:", err); }
@@ -62,12 +59,8 @@ export function SecurityPreApproval() {
 
   const handleAction = async (id, status) => {
     try {
-      const res = await fetch("/security/preApproval/action", {
-        method: "POST", credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ID: id, status }),
-      });
-      const data = await res.json();
+      const res = await axios.post("/security/preApproval/action", { ID: id, status });
+      const data = res.data;
       if (data.success) fetchData();
     } catch (err) { console.error("Action error:", err); }
   };

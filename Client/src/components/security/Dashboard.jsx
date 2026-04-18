@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Clock, UserCheck, Users } from "lucide-react";
+import axios from "axios";
 
 import { Loader } from "../Loader";
 import { GraphBar, GraphPie, StatCard } from "../shared";
@@ -13,11 +14,8 @@ export const SecurityDashboard = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch("/security/dashboard/api", {
-          method: "GET",
-          credentials: "include",
-        });
-        const data = await response.json();
+        const response = await axios.get("/security/dashboard/api");
+        const data = response.data;
         if (!data.success) return;
         setStats(data.stats || { Visitor: 0, Pending: 0, Active: 0 });
       } catch (error) {

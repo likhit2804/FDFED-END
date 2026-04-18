@@ -6,6 +6,7 @@
 
 import React, { useEffect, useState } from "react";
 import { toast } from "react-toastify";
+import axios from "axios";
 import { Loader } from "../Loader";
 import { ProfileHeader, PasswordChangeForm, Input } from "../shared";
 import { ManagerPageShell, ManagerSection } from "../Manager/ui";
@@ -23,11 +24,8 @@ export const WorkerProfile = () => {
     useEffect(() => {
         async function loadProfile() {
             try {
-                const res = await fetch("/worker/profile", {
-                    method: "GET",
-                    credentials: "include",
-                });
-                const data = await res.json();
+                const res = await axios.get("/worker/profile");
+                const data = res.data;
                 if (data.success && data.worker) {
                     const w = data.worker;
                     setFormData({
@@ -42,7 +40,7 @@ export const WorkerProfile = () => {
                 }
             } catch (err) {
                 console.error("Worker profile fetch error:", err);
-                toast.error("Failed to load profile");
+                toast.error(err.response?.data?.message || "Failed to load profile");
             } finally {
                 setIsLoading(false);
             }
@@ -73,12 +71,8 @@ export const WorkerProfile = () => {
             body.append("address", formData.address);
             if (imageFile) body.append("image", imageFile);
 
-            const res = await fetch("/worker/profile", {
-                method: "POST",
-                credentials: "include",
-                body,
-            });
-            const data = await res.json();
+            const res = await axios.post("/worker/profile", body);
+            const data = res.data;
             if (data.success) {
                 toast.success(data.message || "Profile updated successfully");
                 if (data.worker) {
@@ -98,24 +92,22 @@ export const WorkerProfile = () => {
             }
         } catch (err) {
             console.error(err);
-            toast.error("Something went wrong while updating profile");
+            toast.error(err.response?.data?.message || "Something went wrong while updating profile");
         }
     };
 
     const handlePasswordSubmit = async ({ cp, np, cnp }) => {
         if (np !== cnp) { toast.error("Passwords do not match"); return; }
         try {
-            const res = await fetch("/worker/change-password", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                credentials: "include",
-                body: JSON.stringify({ currentPassword: cp, newPassword: np }),
+            const res = await axios.post("/worker/change-password", {
+                currentPassword: cp,
+                newPassword: np,
             });
-            const data = await res.json();
+            const data = res.data;
             if (data.success) toast.success(data.message || "Password changed successfully");
             else toast.error(data.message || "Failed to change password");
         } catch (err) {
-            toast.error("Something went wrong while changing password");
+            toast.error(err.response?.data?.message || "Something went wrong while changing password");
         }
     };
 

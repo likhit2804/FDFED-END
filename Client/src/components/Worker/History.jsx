@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import axios from "axios";
 import { SearchBar, Dropdown, EmptyState } from '../shared';
 import { ClipboardList } from 'lucide-react';
 import { ManagerPageShell, ManagerSection } from '../Manager/ui';
@@ -195,11 +196,8 @@ export const History = () => {
     useEffect(() => {
         const fetchHistory = async () => {
             try {
-                const res = await fetch('/worker/history', {
-                    method: 'GET',
-                    credentials: 'include'
-                });
-                const data = await res.json();
+                const res = await axios.get("/worker/history");
+                const data = res.data;
                 if (data.success && Array.isArray(data.issues)) {
                     setIssues(data.issues);
                 } else {

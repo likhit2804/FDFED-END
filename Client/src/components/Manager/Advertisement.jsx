@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import { DollarSign, Eye, Megaphone, Plus, Timer, Trash2, UploadCloud } from "lucide-react";
 import { useForm } from "react-hook-form";
+import axios from "axios";
 
 import { Loader } from "../Loader";
 import {
@@ -29,16 +30,6 @@ import {
 } from "./ui";
 import { UE_CHART_COLORS } from "../shared/chartPalette";
 import "../../assets/css/Manager/Advertisement.css";
-
-const API_BASE_URL =
-  process.env.NODE_ENV === "production"
-    ? `${window.location.origin}/manager/api`
-    : "/manager/api";
-
-const MANAGER_BASE_URL =
-  process.env.NODE_ENV === "production"
-    ? `${window.location.origin}/manager`
-    : "/manager";
 
 const getAdImageUrl = (imagePath) => {
   if (!imagePath) return null;
@@ -125,16 +116,10 @@ const AdvertisementPopup = ({ setShowPopup, ad, setAds, setEditingAd, onAdCreate
       if (data.link) formData.append("link", data.link);
       if (fileToUpload) formData.append("image", fileToUpload);
 
-      const url = isEditing ? `${API_BASE_URL}/ad/${ad._id}` : `${API_BASE_URL}/ad`;
-      const method = isEditing ? "PUT" : "POST";
-      const response = await fetch(url, { method, credentials: "include", body: formData });
-
-      if (!response.ok) {
-        const text = await response.text();
-        throw new Error(`Failed to ${isEditing ? "update" : "create"} advertisement: ${response.status} ${text}`);
-      }
-
-      const json = await response.json();
+      const response = isEditing
+        ? await axios.put(`/manager/api/ad/${ad._id}`, formData)
+        : await axios.post("/manager/api/ad", formData);
+      const json = response.data;
       if (!json.success || !json.ad) throw new Error(json.message || "Failed to save advertisement");
 
       if (isEditing) {
@@ -150,7 +135,7 @@ const AdvertisementPopup = ({ setShowPopup, ad, setAds, setEditingAd, onAdCreate
       setEditingAd(null);
       onAdCreated?.();
     } catch (error) {
-      setSubmitError(error.message || "An error occurred. Please try again.");
+      setSubmitError(error.response?.data?.message || error.message || "An error occurred. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -350,11 +335,7 @@ export const Advertisement = () => {
     setAds((previous) => previous.filter((ad) => ad._id !== adId));
 
     try {
-      const response = await fetch(`${MANAGER_BASE_URL}/ad/${adId}`, {
-        method: "DELETE",
-        credentials: "include",
-      });
-      if (!response.ok) throw new Error("Failed to delete ad.");
+      await axios.delete(`/manager/ad/${adId}`);
     } catch (error) {
       setAds(originalAds);
       alert("Could not delete the advertisement. Please try again.");
@@ -367,24 +348,14 @@ export const Advertisement = () => {
         setLoading(true);
         setError(null);
 
-        const response = await fetch(`${API_BASE_URL}/ad`, {
-          method: "GET",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-        });
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`Failed to fetch ads: ${response.status} ${errorText}`);
-        }
-
-        const data = await response.json();
+        const response = await axios.get("/manager/api/ad");
+        const data = response.data;
         if (!data.success) throw new Error(data.message || "Failed to fetch advertisements");
 
         setAds(Array.isArray(data.ads) ? data.ads : []);
         setStatistics(data.statistics || null);
       } catch (requestError) {
-        setError(requestError.message || "An error occurred while fetching advertisements.");
+        setError(requestError.response?.data?.message || requestError.message || "An error occurred while fetching advertisements.");
         setAds([]);
       } finally {
         setLoading(false);

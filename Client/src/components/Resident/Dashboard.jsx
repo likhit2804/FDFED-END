@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { AlertCircle, Bell, CalendarCheck2, Clock3 } from "lucide-react";
+import axios from "axios";
 
 import { Loader } from "../Loader";
 import { EmptyState, StatCard } from "../shared";
@@ -28,11 +29,8 @@ export const ResidentDashboard = () => {
   useEffect(() => {
     const load = async () => {
       try {
-        const response = await fetch("/resident/api/dashboard", {
-          method: "GET",
-          credentials: "include",
-        });
-        const data = await response.json();
+        const response = await axios.get("/resident/api/dashboard");
+        const data = response.data;
         if (!data.success) return;
 
         setRecents(data.recents || []);

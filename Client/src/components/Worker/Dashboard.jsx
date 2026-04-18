@@ -7,6 +7,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { CircleAlert, CircleCheck, ClipboardList } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
+import axios from "axios";
 
 import LeaveApplyForm from "../LeaveApplyForm";
 import { Loader } from "../Loader";
@@ -30,12 +31,8 @@ export const WorkerDashboard = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch("/worker/getDashboardData", {
-          method: "GET",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-        });
-        const data = await response.json();
+        const response = await axios.get("/worker/getDashboardData");
+        const data = response.data;
         if (!data.success) return;
 
         dispatch(setDashboardData(data.worker));

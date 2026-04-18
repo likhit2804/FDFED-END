@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Tag, Plus, Save, Trash2, Edit2, X, Check, RefreshCw } from "lucide-react";
 import { toast } from "react-toastify";
+import axios from "axios";
 
 export default function AdminSubscriptionPlans() {
   const [plans, setPlans] = useState([]);
@@ -17,11 +18,6 @@ export default function AdminSubscriptionPlans() {
     isActive: true,
   });
 
-  const API_BASE_URL =
-    process.env.NODE_ENV === "production"
-      ? `${window.location.origin}/admin/api`
-      : "/admin/api";
-
   useEffect(() => {
     fetchPlans();
   }, []);
@@ -29,16 +25,8 @@ export default function AdminSubscriptionPlans() {
   const fetchPlans = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${API_BASE_URL}/subscription-plans`, {
-        method: "GET",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
-        },
-      });
-
-      const json = await res.json();
+      const res = await axios.get("/admin/api/subscription-plans");
+      const json = res.data;
       if (json.success) {
         const sorted = [...json.data].sort((a, b) => a.price - b.price);
         setPlans(sorted);
@@ -47,7 +35,7 @@ export default function AdminSubscriptionPlans() {
       }
     } catch (error) {
       console.error("Error fetching plans:", error);
-      toast.error("Error loading plans");
+      toast.error(error.response?.data?.message || "Error loading plans");
     } finally {
       setLoading(false);
     }
@@ -79,21 +67,10 @@ export default function AdminSubscriptionPlans() {
         isActive: formData.isActive,
       };
 
-      const url = editingPlan
-        ? `${API_BASE_URL}/subscription-plans/${editingPlan._id}`
-        : `${API_BASE_URL}/subscription-plans`;
-
-      const res = await fetch(url, {
-        method: editingPlan ? "PUT" : "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
-        },
-        body: JSON.stringify(payload),
-      });
-
-      const json = await res.json();
+      const res = editingPlan
+        ? await axios.put(`/admin/api/subscription-plans/${editingPlan._id}`, payload)
+        : await axios.post("/admin/api/subscription-plans", payload);
+      const json = res.data;
       if (json.success) {
         toast.success(editingPlan ? "Plan updated successfully" : "Plan created successfully");
         fetchPlans();
@@ -103,7 +80,7 @@ export default function AdminSubscriptionPlans() {
       }
     } catch (error) {
       console.error("Error saving plan:", error);
-      toast.error("Error saving plan");
+      toast.error(error.response?.data?.message || "Error saving plan");
     }
   };
 
@@ -126,16 +103,8 @@ export default function AdminSubscriptionPlans() {
     if (!window.confirm("Are you sure you want to delete this plan?")) return;
 
     try {
-      const res = await fetch(`${API_BASE_URL}/subscription-plans/${id}`, {
-        method: "DELETE",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
-        },
-      });
-
-      const json = await res.json();
+      const res = await axios.delete(`/admin/api/subscription-plans/${id}`);
+      const json = res.data;
       if (json.success) {
         toast.success("Plan deleted successfully");
         fetchPlans();
@@ -144,7 +113,7 @@ export default function AdminSubscriptionPlans() {
       }
     } catch (error) {
       console.error("Error deleting plan:", error);
-      toast.error("Error deleting plan");
+      toast.error(error.response?.data?.message || "Error deleting plan");
     }
   };
 
