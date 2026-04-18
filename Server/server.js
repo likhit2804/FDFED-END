@@ -55,6 +55,7 @@ import interestRouter from "./routes/InterestRouter.js";
 import leaveRouter from "./routes/leaveRouter.js";
 import searchRouter from "./routes/searchRouter.js";
 import b2bRouter from "./routes/b2bRouter.js";
+import { cacheRoute } from "./middleware/cacheMiddleware.js";
 
 
 import { interestUploadRouter } from "./controllers/admin/interestForm.js";
@@ -1018,7 +1019,7 @@ app.post("/forgot-password", forgotPasswordLimiter, async (req, res) => {
  *       401:
  *         description: Unauthorized — no valid token
  */
-app.get("/api/auth/getUser", auth, async (req, res) => {
+app.get("/api/auth/getUser", auth, cacheRoute(180), async (req, res) => {
   const cookie = req.cookies.token;
 
   try {

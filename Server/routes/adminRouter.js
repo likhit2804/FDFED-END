@@ -3,6 +3,7 @@ import path from 'path';
 import { memoryUpload } from '../configs/multer.js';
 import { requirePermission } from '../middleware/rbac.js';
 import { validateCommunity, validateObjectId, validatePasswordChange } from '../middleware/validation.js';
+import { cacheRoute } from "../middleware/cacheMiddleware.js";
 
 import {
   getDashboard,
@@ -45,7 +46,7 @@ const AdminRouter = express.Router();
  *       200:
  *         description: Dashboard stats (users, communities, payments, recent activity)
  */
-AdminRouter.get('/api/dashboard', getDashboard);
+AdminRouter.get('/api/dashboard', cacheRoute(60), getDashboard);
 
 /**
  * @swagger
