@@ -1,232 +1,766 @@
-import React, { useState, useEffect, memo } from "react";
+import React, { memo, useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import {
-    Building2, LogOut, Users, Briefcase, AlertCircle, UserCheck, Calendar,
-    DollarSign, TrendingUp, Bell, Wrench, Package, Clock, AlertTriangle, Loader2,
+  AlertCircle,
+  Briefcase,
+  Calendar,
+  ChevronRight,
+  CircleDollarSign,
+  Megaphone,
+  UserCheck,
+  Users,
 } from "lucide-react";
 import {
-    Line, LineChart as RechartsLine, XAxis, YAxis, CartesianGrid,
-    Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell,
+  Bar,
+  BarChart as RechartsBarChart,
+  CartesianGrid,
+  Cell,
+  Legend,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
 } from "recharts";
+import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
+import "../../assets/css/Manager/Dashboard.css";
 
+import { Loader } from "../Loader";
 import { useSocket } from "../../hooks/useSocket";
-import { StatCard } from "../shared";
-import { ChartTooltip } from "./Dashboard/ChartTooltip";
-import { MemoizedNotificationsPanel } from "./Dashboard/NotificationsPanel";
 
-/* ── Summary Cards ── */
-const SummaryCards = memo(function SummaryCards({ data, loading }) {
-    const stats = [
-        { label: "Total Residents", value: data?.summary?.totalResidents ?? 0, icon: <Users size={22} />, iconColor: "#2563eb", iconBg: "#dbeafe" },
-        { label: "Total Workers", value: data?.summary?.totalWorkers ?? 0, icon: <Briefcase size={22} />, iconColor: "#7c3aed", iconBg: "#ede9fe" },
-        { label: "Active Issues", value: data?.issues?.pending ?? 0, icon: <AlertCircle size={22} />, iconColor: "#dc2626", iconBg: "#fee2e2" },
-        { label: "Today's Visitors", value: data?.visitors?.today ?? 0, icon: <UserCheck size={22} />, iconColor: "#16a34a", iconBg: "#dcfce7" },
-        { label: "Active Bookings", value: data?.bookings?.approved ?? 0, icon: <Calendar size={22} />, iconColor: "#d97706", iconBg: "#fef3c7" },
-        { label: "Revenue Collected", value: `\u20B9${data?.payments?.amounts?.paid || 0}`, icon: <DollarSign size={22} />, iconColor: "#0891b2", iconBg: "#e0f2fe" },
-    ];
-    return (
-        <div className="ue-stat-grid">
-            {stats.map((s, i) => <StatCard key={i} loading={loading} {...s} />)}
-        </div>
-    );
+const CURRENCY_FORMATTER = new Intl.NumberFormat("en-IN", {
+  maximumFractionDigits: 0,
 });
 
-/* ── Payments / Revenue Pie Chart ── */
-const PaymentsRevenue = memo(function PaymentsRevenue({ data, loading }) {
-    const stats = data?.payments || {};
-    const paymentData = [
-        { name: "Paid", value: stats.amounts?.paid || stats.paidAmount || 0, color: "#10b981", gradient: "url(#colorPaid)" },
-        { name: "Pending", value: stats.amounts?.pending || stats.pendingAmount || 0, color: "#f59e0b", gradient: "url(#colorPending)" },
-        { name: "Overdue", value: stats.amounts?.overdue || stats.overdueAmount || 0, color: "#ef4444", gradient: "url(#colorOverdue)" },
-    ].filter((item) => item.value > 0);
-
-    const totalAmount = paymentData.reduce((s, i) => s + i.value, 0);
-    const hasPaymentData = totalAmount > 0 && paymentData.length > 0;
-    const PieTooltip = ChartTooltip({ variant: "pie", totalAmount });
-
-    const renderCustomLabel = ({ cx, cy, midAngle, outerRadius, percent, name }) => {
-        const RADIAN = Math.PI / 180;
-        const r = outerRadius + 30;
-        const x = cx + r * Math.cos(-midAngle * RADIAN);
-        const y = cy + r * Math.sin(-midAngle * RADIAN);
-        if (percent < 0.05) return null;
-        return <text x={x} y={y} fill="#374151" textAnchor={x > cx ? "start" : "end"} dominantBaseline="central" style={{ fontSize: "14px", fontWeight: "600" }}>{`${name} ${(percent * 100).toFixed(0)}%`}</text>;
-    };
-
-    return (
-        <div className="container-fluid mt-2 p-0">
-            <div className="card shadow-lg border-0" style={{ borderRadius: "12px", overflow: "hidden" }}>
-                <div className="card-header bg-gradient fw-semibold d-flex align-items-center justify-content-between px-4 py-3" style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", color: "white" }}>
-                    <div className="d-flex align-items-center gap-2"><DollarSign size={24} /><span style={{ fontSize: "16px" }}>Revenue Summary</span></div>
-                    <span style={{ fontSize: "13px", opacity: 0.9 }}>This Month</span>
-                </div>
-                <div className="card-body p-4" style={{ background: "linear-gradient(to bottom, #ffffff 0%, #f9fafb 100%)" }}>
-                    {loading ? (
-                        <div className="d-flex justify-content-center align-items-center" style={{ height: "360px" }}><Loader2 className="text-primary" size={40} style={{ animation: "spin 1s linear infinite" }} /></div>
-                    ) : !hasPaymentData ? (
-                        <div className="d-flex flex-column justify-content-center align-items-center" style={{ height: "360px" }}>
-                            <DollarSign size={64} className="text-muted mb-3" style={{ opacity: 0.3 }} />
-                            <h5 className="text-muted mb-2" style={{ fontWeight: "600" }}>No Payment Data</h5>
-                            <p className="text-muted mb-0" style={{ fontSize: "14px" }}>No revenue data available for this month yet.</p>
-                        </div>
-                    ) : (
-                        <>
-                            <div className="mb-3 text-center">
-                                <h3 className="mb-1" style={{ color: "#1f2937", fontWeight: "700" }}>₹{(totalAmount / 1000).toFixed(1)}K</h3>
-                                <p className="text-muted mb-0" style={{ fontSize: "14px" }}>Total Revenue</p>
-                            </div>
-                            <div className="chart-container">
-                                <ResponsiveContainer width="100%" height={340}>
-                                    <PieChart>
-                                        <defs>
-                                            <linearGradient id="colorPaid" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#10b981" stopOpacity={1} /><stop offset="100%" stopColor="#059669" stopOpacity={1} /></linearGradient>
-                                            <linearGradient id="colorPending" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#f59e0b" stopOpacity={1} /><stop offset="100%" stopColor="#d97706" stopOpacity={1} /></linearGradient>
-                                            <linearGradient id="colorOverdue" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#ef4444" stopOpacity={1} /><stop offset="100%" stopColor="#dc2626" stopOpacity={1} /></linearGradient>
-                                        </defs>
-                                        <Pie data={paymentData} cx="50%" cy="50%" labelLine={{ stroke: "#9ca3af", strokeWidth: 1.5 }} label={renderCustomLabel} outerRadius={110} innerRadius={60} paddingAngle={3} dataKey="value" animationBegin={0} animationDuration={800}>
-                                            {paymentData.map((entry, i) => <Cell key={`cell-${i}`} fill={entry.gradient} stroke="#ffffff" strokeWidth={3} style={{ filter: "drop-shadow(0px 2px 4px rgba(0,0,0,0.1))", cursor: "pointer" }} />)}
-                                        </Pie>
-                                        <Tooltip content={<PieTooltip />} />
-                                        <Legend verticalAlign="bottom" height={36} iconType="circle" formatter={(value, entry) => <span style={{ color: "#374151", fontWeight: "500", fontSize: "14px" }}>{value}: ₹{(entry.payload.value / 1000).toFixed(1)}K</span>} />
-                                    </PieChart>
-                                </ResponsiveContainer>
-                            </div>
-                        </>
-                    )}
-                </div>
-            </div>
-        </div>
-    );
+const DATE_FORMATTER = new Intl.DateTimeFormat("en-IN", {
+  day: "2-digit",
+  month: "short",
+  year: "numeric",
 });
 
-/* ── Issue Resolution Trends Line Chart ── */
-const defaultIssueData = [
-    { week: "Week 1", resolved: 12, pending: 5, new: 8 },
-    { week: "Week 2", resolved: 15, pending: 8, new: 10 },
-    { week: "Week 3", resolved: 18, pending: 6, new: 7 },
-    { week: "Week 4", resolved: 20, pending: 4, new: 5 },
-];
-
-const LINE_SERIES = [
-    { key: "resolved", color: "#10b981", gradientId: "colorResolved" },
-    { key: "pending", color: "#f59e0b", gradientId: "colorPendingLine" },
-    { key: "new", color: "#3b82f6", gradientId: "colorNew" },
-];
-
-const ReportsAnalytics = memo(function ReportsAnalytics({ data, loading }) {
-    const issueData = data?.issues || {};
-    const hasIssueData = issueData.pending > 0 || issueData.resolved > 0 || issueData.new > 0;
-    const LineTooltip = ChartTooltip({ variant: "line" });
-
-    return (
-        <div className="container-fluid mt-2 p-0">
-            <div className="card shadow-lg border-0" style={{ borderRadius: "12px", overflow: "hidden" }}>
-                <div className="card-header bg-gradient fw-semibold d-flex align-items-center justify-content-between px-4 py-3" style={{ background: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)", color: "white" }}>
-                    <div className="d-flex align-items-center gap-2"><TrendingUp size={24} /><span style={{ fontSize: "16px" }}>Issue Resolution Trends</span></div>
-                    <span style={{ fontSize: "13px", opacity: 0.9 }}>Last 4 Weeks</span>
-                </div>
-                <div className="card-body p-4" style={{ background: "linear-gradient(to bottom, #ffffff 0%, #f9fafb 100%)" }}>
-                    {loading ? (
-                        <div className="d-flex justify-content-center align-items-center" style={{ height: "340px" }}><Loader2 className="text-primary" size={40} style={{ animation: "spin 1s linear infinite" }} /></div>
-                    ) : !hasIssueData ? (
-                        <div className="d-flex flex-column justify-content-center align-items-center" style={{ height: "340px" }}>
-                            <AlertCircle size={64} className="text-muted mb-3" style={{ opacity: 0.3 }} />
-                            <h5 className="text-muted mb-2" style={{ fontWeight: "600" }}>No Issue Data</h5>
-                            <p className="text-muted mb-0" style={{ fontSize: "14px" }}>No issue tracking data available yet.</p>
-                        </div>
-                    ) : (
-                        <div className="chart-container">
-                            <ResponsiveContainer width="100%" height={340}>
-                                <RechartsLine data={defaultIssueData}>
-                                    <defs>
-                                        {LINE_SERIES.map(({ color, gradientId }) => (
-                                            <linearGradient key={gradientId} id={gradientId} x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor={color} stopOpacity={0.8} /><stop offset="95%" stopColor={color} stopOpacity={0.1} />
-                                            </linearGradient>
-                                        ))}
-                                    </defs>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" strokeOpacity={0.5} />
-                                    <XAxis dataKey="week" stroke="#6b7280" style={{ fontSize: "13px", fontWeight: "500" }} tickLine={false} />
-                                    <YAxis stroke="#6b7280" style={{ fontSize: "13px", fontWeight: "500" }} tickLine={false} />
-                                    <Tooltip content={<LineTooltip />} />
-                                    <Legend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{ paddingBottom: "20px" }} formatter={(v) => <span style={{ color: "#374151", fontWeight: "500", fontSize: "14px" }}>{v}</span>} />
-                                    {LINE_SERIES.map(({ key, color, gradientId }) => (
-                                        <Line key={key} type="monotone" dataKey={key} stroke={color} strokeWidth={3} dot={{ r: 6, fill: color, strokeWidth: 2, stroke: "#fff" }} activeDot={{ r: 8, strokeWidth: 2, stroke: "#fff" }} fill={`url(#${gradientId})`} />
-                                    ))}
-                                </RechartsLine>
-                            </ResponsiveContainer>
-                        </div>
-                    )}
-                </div>
-            </div>
-        </div>
-    );
+const TIME_FORMATTER = new Intl.DateTimeFormat("en-IN", {
+  day: "2-digit",
+  month: "short",
+  hour: "numeric",
+  minute: "2-digit",
 });
 
-/* ── Main Dashboard ── */
-export function ManagerDashboard() {
-    const [dashboardData, setDashboardData] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [bookingNotifications, setBookingNotifications] = useState([]);
-    const socket = useSocket("");
+const CHART_PALETTE = {
+  plum: "#7C3AED",
+  emerald: "#10B981",
+  slate: "#475569",
+  slateSoft: "#94A3B8",
+  danger: "#D95D4F",
+};
+const NOTIFICATION_LIMIT = 5;
 
-    useEffect(() => {
-        if (!socket) return;
-        socket.on("booking:new", (data) => {
-            setBookingNotifications((prev) => [data, ...prev.slice(0, 9)]);
-            toast.success(data.message);
-        });
-        return () => socket.off("booking:new");
-    }, [socket]);
+function formatCurrency(value = 0) {
+  return `\u20B9${CURRENCY_FORMATTER.format(Number(value) || 0)}`;
+}
 
-    useEffect(() => {
-        (async () => {
-            try {
-                setLoading(true); setError(null);
-                const res = await fetch("/manager/api/dashboard", { method: "GET", credentials: "include", headers: { "Content-Type": "application/json" } });
-                if (res.status === 401) { setError("Unauthorized: Please log in again"); return; }
-                if (!res.ok) { const e = await res.json(); throw new Error(e.message || `Failed: ${res.status}`); }
-                const ct = res.headers.get("content-type");
-                if (!ct?.includes("application/json")) throw new Error("Invalid response format.");
-                const result = await res.json();
-                if (result.success) { setDashboardData(result.data); setBookingNotifications(result.data.notifications); }
-                else throw new Error(result.message || "Failed to fetch dashboard data");
-            } catch (err) { setError(err.message || "An error occurred while fetching dashboard data."); }
-            finally { setLoading(false); }
-        })();
-    }, []);
+function formatTimestamp(value) {
+  if (!value) return "Just now";
+  try {
+    return TIME_FORMATTER.format(new Date(value));
+  } catch (error) {
+    return "Just now";
+  }
+}
 
-    if (error) {
+function formatCompactPercent(value) {
+  if (!Number.isFinite(value)) return "0%";
+  return `${Math.round(value)}%`;
+}
+
+function getCollectionRate(payments = {}) {
+  const total = payments.paid + payments.pending + payments.overdue;
+  if (!total) return 0;
+  return (payments.paid / total) * 100;
+}
+
+function getBookingApprovalRate(bookings = {}) {
+  const total = bookings.pending + bookings.approved;
+  if (!total) return 0;
+  return (bookings.approved / total) * 100;
+}
+
+function getServiceStability(issues = {}) {
+  const total = issues.pending + issues.resolved;
+  if (!total) return 0;
+  return (issues.resolved / total) * 100;
+}
+
+function buildAttentionItems(data) {
+  const payments = data?.payments || {};
+  const issues = data?.issues || {};
+  const bookings = data?.bookings || {};
+  const advertisements = data?.advertisements || {};
+
+  return [
+    {
+      title: "Overdue collections",
+      count: payments.overdue || 0,
+      note:
+        payments.overdue > 0
+          ? `${formatCurrency(payments.amounts?.overdue || 0)} waiting to be recovered`
+          : "Collection cycle is under control",
+      action: "Review payments",
+      href: "/manager/payments",
+      tone: "danger",
+    },
+    {
+      title: "Urgent service issues",
+      count: issues.urgent || 0,
+      note:
+        issues.urgent > 0
+          ? `${issues.pending || 0} issues still open in the property`
+          : "No urgent issues need escalation",
+      action: "Open issue desk",
+      href: "/manager/issueResolving",
+      tone: "warning",
+    },
+    {
+      title: "Booking approvals",
+      count: bookings.pending || 0,
+      note:
+        bookings.pending > 0
+          ? `${bookings.approved || 0} already approved for upcoming use`
+          : "Common space requests are up to date",
+      action: "Manage bookings",
+      href: "/manager/commonSpace",
+      tone: "accent",
+    },
+    {
+      title: "Campaign visibility",
+      count: advertisements.pending || 0,
+      note:
+        advertisements.active > 0
+          ? `${advertisements.active} ads are active across the community`
+          : "No active campaigns are running right now",
+      action: "Open ads",
+      href: "/manager/advertisement",
+      tone: "success",
+    },
+  ];
+}
+
+function buildTimeline(data) {
+  const issueItems = (data?.issues?.recent || []).map((issue) => ({
+    id: `issue-${issue._id}`,
+    type: "Issue",
+    title: issue.title || "Issue raised",
+    subtitle: issue.resident || "Resident",
+    timestamp: issue.createdAt,
+    tone: issue.priority === "High" ? "danger" : "warning",
+  }));
+
+  const bookingItems = (data?.bookings?.recent || []).map((booking) => ({
+    id: `booking-${booking._id}`,
+    type: "Booking",
+    title: booking.name || "Common space booking",
+    subtitle: booking.bookedBy || "Resident",
+    timestamp: booking.createdAt,
+    tone: booking.status === "Pending" ? "accent" : "success",
+  }));
+
+  return [...issueItems, ...bookingItems]
+    .sort((left, right) => new Date(right.timestamp) - new Date(left.timestamp))
+    .slice(0, 6);
+}
+
+const HeroBanner = memo(function HeroBanner({ data, onNavigate }) {
+  const pendingActions =
+    (data?.payments?.overdue || 0) +
+    (data?.issues?.urgent || 0) +
+    (data?.bookings?.pending || 0) +
+    (data?.advertisements?.pending || 0);
+
+  return (
+    <section className="manager-hero">
+      <div className="manager-hero__content">
+        <div className="manager-hero__eyebrow">Manager Dashboard</div>
+        <h1 className="manager-hero__title">Stay ahead of daily community operations.</h1>
+        <p className="manager-hero__subtitle">
+          {pendingActions > 0
+            ? `${pendingActions} items need attention across collections, bookings, service, and announcements.`
+            : "Operations are stable right now. Use this view to monitor activity, dues, and resident demand."}
+        </p>
+        <div className="manager-hero__chips">
+          <span className="manager-chip manager-chip--solid">
+            {formatCompactPercent(getCollectionRate(data?.payments || {}))} collection health
+          </span>
+          <span className="manager-chip">
+            {formatCompactPercent(getBookingApprovalRate(data?.bookings || {}))} booking approval rate
+          </span>
+          <span className="manager-chip">{DATE_FORMATTER.format(new Date())}</span>
+        </div>
+      </div>
+
+      <div className="manager-hero__actions">
+        <button type="button" className="manager-hero__button" onClick={() => onNavigate("/manager/userManagement")}>
+          Add Resident
+        </button>
+        <button type="button" className="manager-hero__button" onClick={() => onNavigate("/manager/payments")}>
+          Create Due
+        </button>
+        <button
+          type="button"
+          className="manager-hero__button manager-hero__button--primary"
+          onClick={() => onNavigate("/manager/commonSpace")}
+        >
+          Approve Booking
+        </button>
+      </div>
+    </section>
+  );
+});
+
+const OpsStrip = memo(function OpsStrip({ data, loading }) {
+  const cards = [
+    {
+      label: "Residents",
+      value: data?.summary?.totalResidents ?? 0,
+      note: `${data?.bookings?.approved ?? 0} active facility bookings`,
+      icon: Users,
+      tone: "blue",
+    },
+    {
+      label: "Workers On Duty",
+      value: data?.summary?.totalWorkers ?? 0,
+      note: `${data?.issues?.pending ?? 0} open tasks in circulation`,
+      icon: Briefcase,
+      tone: "green",
+    },
+    {
+      label: "Open Issues",
+      value: data?.issues?.pending ?? 0,
+      note: `${data?.issues?.urgent ?? 0} marked urgent`,
+      icon: AlertCircle,
+      tone: "amber",
+    },
+    {
+      label: "Visitors Today",
+      value: data?.visitors?.today ?? 0,
+      note: `${data?.advertisements?.active ?? 0} active notices running`,
+      icon: UserCheck,
+      tone: "teal",
+    },
+    {
+      label: "Dues Pending",
+      value: formatCurrency(data?.payments?.amounts?.pending || 0),
+      note: `${data?.payments?.overdue ?? 0} overdue payment records`,
+      icon: CircleDollarSign,
+      tone: "rose",
+    },
+  ];
+
+  return (
+    <section className="manager-ops-strip">
+      {cards.map((card) => {
+        const Icon = card.icon;
         return (
-            <div className="alert alert-danger alert-dismissible fade show m-3" role="alert">
-                <AlertCircle size={20} className="me-2" />{error}
-                <button type="button" className="btn-close" onClick={() => setError(null)} aria-label="Close" />
+          <article key={card.label} className={`manager-ops-card manager-ops-card--${card.tone}`}>
+            <div className="manager-ops-card__meta">
+              <span className="manager-ops-card__label">{card.label}</span>
+              <div className="manager-ops-card__icon">
+                <Icon size={18} />
+              </div>
             </div>
+            <div className="manager-ops-card__value">{loading ? "\u2014" : card.value}</div>
+            <div className="manager-ops-card__note">{card.note}</div>
+          </article>
         );
-    }
+      })}
+    </section>
+  );
+});
 
-    return (
-        <main className="pb-5" style={{ background: "linear-gradient(to bottom, #f8f9fa 0%, #e9ecef 100%)", minHeight: "100vh" }}>
-            <div className="container-fluid px-4 pt-4">
-                <div className="mb-4">
-                    <h2 style={{ color: "#1f2937", fontWeight: "700", fontSize: "28px" }}>Dashboard Overview</h2>
-                    <p style={{ color: "#6b7280", fontSize: "14px", marginBottom: 0 }}>Welcome back! Here's what's happening in your community today.</p>
+const AttentionQueue = memo(function AttentionQueue({ data, onNavigate, loading }) {
+  const items = buildAttentionItems(data);
+
+  return (
+    <section className="manager-panel manager-panel--queue">
+      <div className="manager-panel__header">
+        <div>
+          <div className="manager-panel__eyebrow">Attention Queue</div>
+          <h2 className="manager-panel__title">What needs action now</h2>
+        </div>
+      </div>
+
+      <div className="manager-queue">
+        {items.map((item) => {
+          return (
+            <article key={item.title} className={`manager-queue-item manager-queue-item--${item.tone}`}>
+              <div className="manager-queue-item__body">
+                <div className="manager-queue-item__row">
+                  <h3>{item.title}</h3>
+                  <span className="manager-queue-item__count">{loading ? "\u2014" : item.count}</span>
                 </div>
-                <div className="mb-4"><SummaryCards data={dashboardData} loading={loading} /></div>
-                <div className="row g-4 mb-4">
-                    <div className="col-12 col-lg-8">
-                        <div className="mb-4"><PaymentsRevenue data={dashboardData} loading={loading} /></div>
-                        <div><ReportsAnalytics data={dashboardData} loading={loading} /></div>
-                    </div>
-                    <div className="col-12 col-lg-4">
-                        <div className="sticky-top" style={{ top: "70px" }}>
-                            <MemoizedNotificationsPanel data={dashboardData} loading={loading} bookings={bookingNotifications} />
-                        </div>
-                    </div>
+                <p>{item.note}</p>
+                <button type="button" className="manager-queue-item__action" onClick={() => onNavigate(item.href)}>
+                  {item.action}
+                  <ChevronRight size={15} />
+                </button>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+    </section>
+  );
+});
+
+const CommunityPulse = memo(function CommunityPulse({ data, loading }) {
+  const pulseStats = [
+    {
+      label: "Collection Health",
+      value: formatCompactPercent(getCollectionRate(data?.payments || {})),
+      progress: getCollectionRate(data?.payments || {}),
+      tone: "green",
+    },
+    {
+      label: "Service Stability",
+      value: formatCompactPercent(getServiceStability(data?.issues || {})),
+      progress: getServiceStability(data?.issues || {}),
+      tone: "blue",
+    },
+    {
+      label: "Booking Flow",
+      value: formatCompactPercent(getBookingApprovalRate(data?.bookings || {})),
+      progress: getBookingApprovalRate(data?.bookings || {}),
+      tone: "amber",
+    },
+  ];
+
+  const timeline = buildTimeline(data);
+
+  return (
+    <section className="manager-panel manager-panel--pulse">
+      <div className="manager-panel__header">
+        <div>
+          <div className="manager-panel__eyebrow">Community Pulse</div>
+          <h2 className="manager-panel__title">Live health across the campus</h2>
+        </div>
+      </div>
+
+      <div className="manager-pulse-grid">
+        <div className="manager-pulse-card">
+          <div className="manager-pulse-card__title">Operational balance</div>
+          <div className="manager-pulse-card__stats">
+            {pulseStats.map((stat) => (
+              <div key={stat.label} className="manager-progress">
+                <div className="manager-progress__row">
+                  <span>{stat.label}</span>
+                  <strong>{loading ? "\u2014" : stat.value}</strong>
                 </div>
+                <div className="manager-progress__track">
+                  <div
+                    className={`manager-progress__fill manager-progress__fill--${stat.tone}`}
+                    style={{ width: `${loading ? 0 : stat.progress}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="manager-pulse-card manager-pulse-card--timeline">
+          <div className="manager-pulse-card__title">Today&apos;s movement</div>
+          <div className="manager-timeline">
+            {loading ? (
+              <div className="manager-timeline__empty">
+                <Loader label="Loading recent activity..." size={34} />
+              </div>
+            ) : timeline.length === 0 ? (
+              <div className="manager-timeline__empty">No fresh activity has reached the desk yet.</div>
+            ) : (
+              timeline.map((entry) => (
+                <div key={entry.id} className="manager-timeline__item">
+                  <span className={`manager-timeline__dot manager-timeline__dot--${entry.tone}`} />
+                  <div className="manager-timeline__content">
+                    <div className="manager-timeline__meta">
+                      <span className="manager-timeline__type">{entry.type}</span>
+                      <span className="manager-timeline__time">{formatTimestamp(entry.timestamp)}</span>
+                    </div>
+                    <div className="manager-timeline__title">{entry.title}</div>
+                    <div className="manager-timeline__subtitle">{entry.subtitle}</div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+});
+
+const LiveDesk = memo(function LiveDesk({ data, loading, bookings, onNavigate }) {
+  const notifications = data?.notifications || [];
+  const recentBookings = bookings || [];
+
+  return (
+    <aside className="manager-panel manager-panel--desk manager-live-desk">
+      <div className="manager-panel__header">
+        <div>
+          <div className="manager-panel__eyebrow">Live Desk</div>
+          <h2 className="manager-panel__title">Updates the manager should not miss</h2>
+        </div>
+      </div>
+
+      <div className="manager-live-desk__section">
+        <div className="manager-live-desk__section-head">
+          <span>Notification rail</span>
+          <button type="button" onClick={() => onNavigate("/manager/commonSpace")}>
+            Open bookings
+          </button>
+        </div>
+        <div className="manager-live-feed">
+          {loading ? (
+            <div className="manager-live-feed__empty">
+              <Loader label="Loading notifications..." size={34} />
             </div>
-        </main>
+          ) : notifications.length === 0 ? (
+            <div className="manager-live-feed__empty">No notifications have arrived yet.</div>
+          ) : (
+            notifications.slice(0, NOTIFICATION_LIMIT).map((notification, index) => (
+              <article key={`${notification._id || index}-${notification.title || "note"}`} className="manager-live-feed__item">
+                <span className="manager-live-feed__marker" />
+                <div>
+                  <div className="manager-live-feed__title">{notification.title || "Activity update"}</div>
+                  <p>{notification.message || "A new update is available on the desk."}</p>
+                  <small>{formatTimestamp(notification.createdAt)}</small>
+                </div>
+              </article>
+            ))
+          )}
+        </div>
+      </div>
+
+      <div className="manager-live-desk__section">
+        <div className="manager-live-desk__section-head">
+          <span>Booking pulse</span>
+          <button type="button" onClick={() => onNavigate("/manager/commonSpace")}>
+            Review all
+          </button>
+        </div>
+        <div className="manager-live-bookings">
+          {loading ? (
+            <div className="manager-live-feed__empty">
+              <Loader label="Loading booking activity..." size={34} />
+            </div>
+          ) : recentBookings.length === 0 ? (
+            <div className="manager-live-feed__empty">No booking activity has been recorded yet.</div>
+          ) : (
+            recentBookings.slice(0, 4).map((booking) => (
+              <article key={booking._id} className="manager-live-bookings__item">
+                <div>
+                  <div className="manager-live-bookings__name">{booking.name || "Common space request"}</div>
+                  <div className="manager-live-bookings__meta">
+                    {booking.bookedBy || "Resident"} . {formatTimestamp(booking.createdAt)}
+                  </div>
+                </div>
+                <span className={`manager-status manager-status--${String(booking.status || "").toLowerCase()}`}>
+                  {booking.status || "Unknown"}
+                </span>
+              </article>
+            ))
+          )}
+        </div>
+      </div>
+    </aside>
+  );
+});
+
+const RevenuePanel = memo(function RevenuePanel({ data, loading }) {
+  const payments = data?.payments || {};
+  const paymentData = [
+    { name: "Paid", value: payments.amounts?.paid || 0, color: CHART_PALETTE.emerald },
+    { name: "Pending", value: payments.amounts?.pending || 0, color: CHART_PALETTE.plum },
+    { name: "Overdue", value: payments.amounts?.overdue || 0, color: CHART_PALETTE.danger },
+  ].filter((item) => item.value > 0);
+
+  const totalAmount = paymentData.reduce((sum, item) => sum + item.value, 0);
+
+  const renderTooltip = ({ active, payload }) => {
+    if (!active || !payload?.length) return null;
+    const item = payload[0];
+    return (
+      <div className="manager-chart-tooltip">
+        <strong>{item.name}</strong>
+        <span>{formatCurrency(item.value)}</span>
+      </div>
     );
+  };
+
+  return (
+    <section className="manager-panel manager-panel--chart">
+      <div className="manager-panel__header">
+        <div>
+          <div className="manager-panel__eyebrow">Finance</div>
+          <h2 className="manager-panel__title">Collections and dues mix</h2>
+        </div>
+      </div>
+
+      <div className="manager-chart-summary">
+        <div>
+          <div className="manager-chart-summary__label">Recovered</div>
+          <div className="manager-chart-summary__value">{loading ? "\u2014" : formatCurrency(payments.amounts?.paid || 0)}</div>
+        </div>
+        <div>
+          <div className="manager-chart-summary__label">Total tracked</div>
+          <div className="manager-chart-summary__value">{loading ? "\u2014" : formatCurrency(totalAmount)}</div>
+        </div>
+      </div>
+
+      <div className="manager-chart-area">
+        {loading ? (
+          <div className="manager-chart-empty">
+            <Loader label="Preparing finance snapshot..." size={34} />
+          </div>
+        ) : paymentData.length === 0 ? (
+          <div className="manager-chart-empty">No payment data is available for this community yet.</div>
+        ) : (
+          <ResponsiveContainer width="100%" height={320}>
+            <PieChart>
+              <Pie
+                data={paymentData}
+                dataKey="value"
+                innerRadius={72}
+                outerRadius={112}
+                paddingAngle={4}
+                stroke="#f8f7ff"
+                strokeWidth={6}
+              >
+                {paymentData.map((entry) => (
+                  <Cell key={entry.name} fill={entry.color} />
+                ))}
+              </Pie>
+              <Tooltip content={renderTooltip} />
+              <Legend
+                verticalAlign="bottom"
+                iconType="circle"
+                formatter={(value, entry) => (
+                  <span className="manager-legend-label">
+                    {value}: {formatCurrency(entry.payload.value)}
+                  </span>
+                )}
+              />
+            </PieChart>
+          </ResponsiveContainer>
+        )}
+      </div>
+    </section>
+  );
+});
+
+const OperationsChart = memo(function OperationsChart({ data, loading }) {
+  const chartData = [
+    {
+      name: "Issues",
+      stable: data?.issues?.resolved || 0,
+      attention: data?.issues?.pending || 0,
+    },
+    {
+      name: "Bookings",
+      stable: data?.bookings?.approved || 0,
+      attention: data?.bookings?.pending || 0,
+    },
+    {
+      name: "Ads",
+      stable: data?.advertisements?.active || 0,
+      attention: data?.advertisements?.pending || 0,
+    },
+  ];
+
+  const renderTooltip = ({ active, payload, label }) => {
+    if (!active || !payload?.length) return null;
+    return (
+      <div className="manager-chart-tooltip">
+        <strong>{label}</strong>
+        {payload.map((entry) => (
+          <span key={entry.dataKey}>
+            {entry.name}: {entry.value}
+          </span>
+        ))}
+      </div>
+    );
+  };
+
+  return (
+    <section className="manager-panel manager-panel--chart">
+      <div className="manager-panel__header">
+        <div>
+          <div className="manager-panel__eyebrow">Service Snapshot</div>
+          <h2 className="manager-panel__title">Stable load vs items needing intervention</h2>
+        </div>
+      </div>
+
+      <div className="manager-chart-summary">
+        <div>
+          <div className="manager-chart-summary__label">Urgent issues</div>
+          <div className="manager-chart-summary__value">{loading ? "\u2014" : data?.issues?.urgent || 0}</div>
+        </div>
+        <div>
+          <div className="manager-chart-summary__label">Pending bookings</div>
+          <div className="manager-chart-summary__value">{loading ? "\u2014" : data?.bookings?.pending || 0}</div>
+        </div>
+      </div>
+
+      <div className="manager-chart-area">
+        {loading ? (
+          <div className="manager-chart-empty">
+            <Loader label="Preparing service snapshot..." size={34} />
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height={320}>
+            <RechartsBarChart data={chartData} barGap={10}>
+              <CartesianGrid
+                strokeDasharray="4 4"
+                stroke="#e2e8f0"
+                vertical={false}
+              />
+              <XAxis
+                dataKey="name"
+                axisLine={false}
+                tickLine={false}
+                stroke="#64748b"
+              />
+              <YAxis
+                axisLine={false}
+                tickLine={false}
+                stroke="#64748b"
+              />
+              <Tooltip
+                content={renderTooltip}
+                cursor={{ fill: "#fbfaff" }}
+              />
+              <Legend
+                verticalAlign="bottom"
+                iconType="circle"
+                formatter={(value) => <span className="manager-legend-label">{value}</span>}
+              />
+              <Bar
+                dataKey="stable"
+                name="Stable / approved"
+                radius={[10, 10, 0, 0]}
+                fill={CHART_PALETTE.emerald}
+              />
+              <Bar
+                dataKey="attention"
+                name="Needs attention"
+                radius={[10, 10, 0, 0]}
+                fill={CHART_PALETTE.slate}
+              />
+            </RechartsBarChart>
+          </ResponsiveContainer>
+        )}
+      </div>
+    </section>
+  );
+});
+
+export function ManagerDashboard() {
+  const [dashboardData, setDashboardData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [bookingNotifications, setBookingNotifications] = useState([]);
+  const socket = useSocket("");
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!socket) return;
+
+    socket.on("booking:new", (data) => {
+      setBookingNotifications((prev) => [data, ...prev.slice(0, 9)]);
+      toast.success(data.message);
+    });
+
+    return () => socket.off("booking:new");
+  }, [socket]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const response = await fetch("/manager/api/dashboard", {
+          method: "GET",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+        });
+
+        if (response.status === 401) {
+          setError("Unauthorized: Please log in again");
+          return;
+        }
+
+        if (!response.ok) {
+          const payload = await response.json();
+          throw new Error(payload.message || `Failed: ${response.status}`);
+        }
+
+        const contentType = response.headers.get("content-type");
+        if (!contentType?.includes("application/json")) {
+          throw new Error("Invalid response format.");
+        }
+
+        const result = await response.json();
+
+        if (!result.success) {
+          throw new Error(result.message || "Failed to fetch dashboard data");
+        }
+
+        setDashboardData(result.data);
+        setBookingNotifications(result.data.bookings?.recent || []);
+      } catch (requestError) {
+        setError(requestError.message || "An error occurred while fetching dashboard data.");
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  if (error) {
+    return (
+      <div className="alert alert-danger alert-dismissible fade show m-3" role="alert">
+        <AlertCircle size={20} className="me-2" />
+        {error}
+        <button type="button" className="btn-close" onClick={() => setError(null)} aria-label="Close" />
+      </div>
+    );
+  }
+
+  return (
+    <main className="manager-dashboard-shell">
+      <div className="manager-dashboard-shell__inner">
+        <HeroBanner data={dashboardData} onNavigate={navigate} />
+        <OpsStrip data={dashboardData} loading={loading} />
+
+        <section className="manager-dashboard-grid">
+          <div className="manager-dashboard-grid__main">
+            <AttentionQueue data={dashboardData} onNavigate={navigate} loading={loading} />
+            <CommunityPulse data={dashboardData} loading={loading} />
+          </div>
+
+          <div className="manager-dashboard-grid__side">
+            <LiveDesk
+              data={dashboardData}
+              loading={loading}
+              bookings={bookingNotifications}
+              onNavigate={navigate}
+            />
+          </div>
+        </section>
+
+        <section className="manager-dashboard-charts">
+          <RevenuePanel data={dashboardData} loading={loading} />
+          <OperationsChart data={dashboardData} loading={loading} />
+        </section>
+      </div>
+    </main>
+  );
 }

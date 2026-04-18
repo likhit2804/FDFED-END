@@ -1,0 +1,272 @@
+.rcm {
+  display: grid;
+  gap: 16px;
+}
+
+.rcm__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.rcm__identity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rcm__identity-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #f3edff;
+  color: #7c3aed;
+}
+
+.rcm__eyebrow {
+  margin: 0;
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #7c3aed;
+  font-weight: 700;
+}
+
+.rcm__community {
+  margin: 2px 0 0;
+  color: #1f2937;
+  font-weight: 700;
+}
+
+.rcm__stats {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.rcm__toolbar {
+  margin-bottom: 0;
+}
+
+.rcm__table-wrap {
+  border: 1px solid #e7def9;
+  border-radius: 16px;
+  overflow: auto;
+  max-height: 52vh;
+}
+
+.rcm__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  min-width: 760px;
+}
+
+.rcm__table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  text-align: left;
+  padding: 12px 10px;
+  background: #fbfaff;
+  color: #5b6472;
+  border-bottom: 1px solid #e7def9;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.rcm__table tbody td {
+  padding: 12px 10px;
+  border-bottom: 1px solid #eee9fc;
+  vertical-align: middle;
+}
+
+.rcm__check-col {
+  width: 52px;
+  text-align: center;
+}
+
+.rcm__action-col {
+  width: 168px;
+}
+
+.rcm__row {
+  background: #fff;
+}
+
+.rcm__row:hover {
+  background: #fcfaff;
+}
+
+.rcm__row--selected {
+  background: #f8f4ff;
+}
+
+.rcm-checkbox {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.rcm-checkbox input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.rcm-checkbox__box {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  border: 2px solid #d2c2f7;
+  color: #fff;
+  background: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: 0.15s ease;
+}
+
+.rcm-checkbox input:checked + .rcm-checkbox__box {
+  background: #7c3aed;
+  border-color: #7c3aed;
+}
+
+.rcm__flat-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #1f2937;
+}
+
+.rcm__flat-secondary {
+  margin-top: 5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #5b6472;
+  font-size: 0.8rem;
+}
+
+.rcm__dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #c8b7ef;
+}
+
+.rcm__status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  border: 1px solid transparent;
+}
+
+.rcm__status--vacant {
+  color: #15803d;
+  background: #ecfdf3;
+  border-color: #bbf7d0;
+}
+
+.rcm__status--occupied {
+  color: #c2410c;
+  background: #fff7ed;
+  border-color: #fed7aa;
+}
+
+.rcm__status--neutral {
+  color: #4b5563;
+  background: #f3f4f6;
+  border-color: #d1d5db;
+}
+
+.rcm__code-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rcm__code {
+  display: inline-block;
+  border-radius: 10px;
+  border: 1px dashed #ccb8f5;
+  background: #f8f4ff;
+  padding: 7px 10px;
+  color: #5b21b6;
+  letter-spacing: 0.08em;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.rcm__icon-button {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  border: 1px solid #e0d4fb;
+  background: #fff;
+  color: #5b6472;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.rcm__icon-button:hover {
+  border-color: #cdb9f7;
+  color: #7c3aed;
+}
+
+.rcm__row-action {
+  min-height: 34px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-size: 0.8rem;
+}
+
+.rcm__footer-note {
+  color: #5b6472;
+  font-size: 0.82rem;
+}
+
+.rcm__footer-note p {
+  margin: 0;
+}
+
+.rcm__spin {
+  animation: rcm-spin 1s linear infinite;
+}
+
+.rcm__empty {
+  margin: 10px;
+}
+
+@keyframes rcm-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 900px) {
+  .rcm__header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

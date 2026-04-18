@@ -4,6 +4,7 @@ import {
     Line, Area, CartesianGrid, XAxis, YAxis, Tooltip, Legend,
 } from 'recharts';
 import Card from './Card';
+import { UE_CHART_AXIS, UE_CHART_GRID, UE_CHART_PALETTE, UE_CHART_TOOLTIP_BORDER } from './chartPalette';
 
 /**
  * GraphLine – line/area chart for user pages (mirrors Admin/GraphLine)
@@ -41,31 +42,34 @@ const GraphLine = ({
             {title && (
                 <div style={{ marginBottom: 16 }}>
                     <h4 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#1f2937' }}>{title}</h4>
-                    {subtitle && <p style={{ margin: '4px 0 0', fontSize: 12, color: '#6b7280' }}>{subtitle}</p>}
+                    {subtitle && <p style={{ margin: '4px 0 0', fontSize: 12, color: '#475569' }}>{subtitle}</p>}
                 </div>
             )}
             <ResponsiveContainer width="100%" height={height}>
                 <ChartComp data={data}>
-                    {grid && <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />}
-                    <XAxis dataKey={xKey} tick={{ fontSize: 12, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fontSize: 12, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
+                    {grid && <CartesianGrid strokeDasharray="3 3" stroke={UE_CHART_GRID} />}
+                    <XAxis dataKey={xKey} tick={{ fontSize: 12, fill: UE_CHART_AXIS }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 12, fill: UE_CHART_AXIS }} axisLine={false} tickLine={false} />
                     <Tooltip
-                        contentStyle={{ borderRadius: 10, border: '1px solid #e5e7eb', fontSize: 13 }}
-                        cursor={{ stroke: '#e5e7eb', strokeWidth: 1 }}
+                        contentStyle={{ borderRadius: 10, border: `1px solid ${UE_CHART_TOOLTIP_BORDER}`, fontSize: 13 }}
+                        cursor={{ stroke: UE_CHART_TOOLTIP_BORDER, strokeWidth: 1 }}
                     />
                     {resolvedLines.length > 1 && <Legend wrapperStyle={{ fontSize: 13 }} />}
-                    {resolvedLines.map(({ key, label, color = '#2563eb' }) => (
+                    {resolvedLines.map(({ key, label, color }, index) => {
+                        const tone = color || UE_CHART_PALETTE[index % UE_CHART_PALETTE.length];
+                        return (
                         <SeriesComp
                             key={key}
                             type={smooth ? 'monotone' : 'linear'}
                             dataKey={key}
                             name={label || key}
-                            stroke={color}
-                            fill={showArea ? `${color}22` : undefined}
+                            stroke={tone}
+                            fill={showArea ? `${tone}22` : undefined}
                             strokeWidth={2.5}
-                            dot={{ fill: color, r: 3 }}
+                            dot={{ fill: tone, r: 3 }}
                         />
-                    ))}
+                        );
+                    })}
                 </ChartComp>
             </ResponsiveContainer>
         </Card>

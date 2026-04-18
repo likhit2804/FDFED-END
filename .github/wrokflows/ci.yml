@@ -1,0 +1,67 @@
+name: UrbanEase CI
+
+on:
+  push:
+    branches: [main, dev, dev-endreview]
+  pull_request:
+    branches: [main, dev]
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'FDFED-END/Server/package-lock.json'
+      
+      - name: Install Server dependencies
+        run: npm install
+        working-directory: FDFED-END/Server
+      
+      - name: Run tests
+        run: npm test
+        working-directory: FDFED-END/Server
+        env:
+          JWT_SECRET: ci-test-secret-key
+          NODE_ENV: test
+      
+      - name: Generate test report
+        if: always()
+        run: npm run test:report || true
+        working-directory: FDFED-END/Server
+      
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report
+          path: FDFED-END/Server/test-report.json
+
+  build:
+    name: Build Client
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'FDFED-END/Client/package-lock.json'
+      
+      - name: Install Client dependencies
+        run: npm install
+        working-directory: FDFED-END/Client
+      
+      - name: Build
+        run: npm run build
+        working-directory: FDFED-END/Client

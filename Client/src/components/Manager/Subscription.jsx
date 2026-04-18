@@ -1,11 +1,21 @@
 import React, { useEffect, useState } from "react";
-import { useSelector, useDispatch } from "react-redux";
+import { BadgeIndianRupee, Building2, CheckCircle2, Crown, Users } from "lucide-react";
+import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import axios from "axios";
 
 import { setUser } from "../../slices/authSlice";
 import { openRazorpayCheckout } from "../../services/razorpay";
+import { Loader } from "../Loader";
+import { StatCard } from "../shared";
+import {
+  ManagerActionButton,
+  ManagerPageShell,
+  ManagerRecordCard,
+  ManagerRecordGrid,
+  ManagerSection,
+} from "./ui";
 
 const API_BASE =
   process.env.NODE_ENV === "production"
@@ -27,25 +37,14 @@ export const Subscription = () => {
     const fetchData = async () => {
       try {
         const [statusRes, plansRes] = await Promise.all([
-          axios.get(`${API_BASE}/subscription-status`, {
-            withCredentials: true,
-          }),
-          axios.get(`${API_BASE}/subscription-plans`, {
-            withCredentials: true,
-          }),
+          axios.get(`${API_BASE}/subscription-status`, { withCredentials: true }),
+          axios.get(`${API_BASE}/subscription-plans`, { withCredentials: true }),
         ]);
 
-        if (statusRes.data?.community) {
-          setStatus(statusRes.data.community);
-        }
-        if (plansRes.data?.plans) {
-          setPlans(plansRes.data.plans);
-        }
+        if (statusRes.data?.community) setStatus(statusRes.data.community);
+        if (plansRes.data?.plans) setPlans(plansRes.data.plans);
       } catch (error) {
-        console.error("Failed to load subscription data", error);
-        toast.error(
-          error?.response?.data?.message || "Failed to load subscription info"
-        );
+        toast.error(error?.response?.data?.message || "Failed to load subscription info");
       } finally {
         setLoading(false);
       }
@@ -55,12 +54,11 @@ export const Subscription = () => {
   }, []);
 
   useEffect(() => {
-    const effectiveStatus =
-      status?.subscriptionStatus || user?.subscriptionStatus;
+    const effectiveStatus = status?.subscriptionStatus || user?.subscriptionStatus;
     if (effectiveStatus === "active") {
       navigate("/manager/dashboard", { replace: true });
     }
-  }, [status, user, navigate]);
+  }, [navigate, status, user]);
 
   const handlePay = async () => {
     if (!plans) return;
@@ -95,7 +93,7 @@ export const Subscription = () => {
         },
       });
 
-      const res = await axios.post(
+      const response = await axios.post(
         `${API_BASE}/subscription-payment`,
         {
           subscriptionPlan: planKey,
@@ -107,20 +105,15 @@ export const Subscription = () => {
       );
 
       toast.success("Subscription activated successfully");
-
       dispatch(
         setUser({
           ...user,
-          subscriptionStatus: res.data.subscriptionStatus || "active",
+          subscriptionStatus: response.data.subscriptionStatus || "active",
         })
       );
-
       navigate("/manager/dashboard", { replace: true });
     } catch (error) {
-      console.error("Subscription payment error", error);
-      toast.error(
-        error?.response?.data?.message || error?.message || "Failed to process subscription"
-      );
+      toast.error(error?.response?.data?.message || error?.message || "Failed to process subscription");
     } finally {
       setPaying(false);
     }
@@ -128,85 +121,141 @@ export const Subscription = () => {
 
   if (loading) {
     return (
-      <div className="p-4 text-center">
-        <span className="spinner-border" role="status" />
-      </div>
+      <ManagerPageShell
+        eyebrow="Subscription"
+        title="Preparing your community plan options."
+        description="Fetching your current status and available plans."
+      >
+        <div className="manager-ui-empty">
+          <Loader />
+        </div>
+      </ManagerPageShell>
     );
   }
 
-  const currentStatus = status?.subscriptionStatus || user?.subscriptionStatus;
-  const totalResidents = status?.totalMembers;
+  const currentStatus = status?.subscriptionStatus || user?.subscriptionStatus || "pending";
+  const totalResidents = status?.totalMembers ?? 0;
 
   return (
-    <div className="container py-4">
-      <h3 className="mb-3">Community Subscription</h3>
-      <p className="text-muted mb-4">
-        Complete your subscription to unlock all manager features.
-      </p>
-
-      <div className="mb-4">
-        <h5>Current Status</h5>
-        <p>
-          Plan: <strong>{status?.subscriptionPlan || "Not subscribed"}</strong>
-        </p>
-        <p>
-          Status: <strong>{currentStatus || "pending"}</strong>
-        </p>
+    <ManagerPageShell
+      eyebrow="Subscription"
+      title="Activate the right UrbanEase plan for your community."
+      description="Choose the plan that matches resident volume, then complete the Razorpay payment flow without leaving the manager workspace."
+      chips={[`Status: ${currentStatus}`, `${totalResidents} residents in the current setup`]}
+      actions={
+        <ManagerActionButton variant="primary" onClick={handlePay} disabled={paying || !plans}>
+          {paying ? "Opening Razorpay..." : "Pay with Razorpay"}
+        </ManagerActionButton>
+      }
+    >
+      <div className="ue-stat-grid">
+        <StatCard label="Current Plan" value={status?.subscriptionPlan || "Not subscribed"} icon={<Crown size={22} />} iconColor="#7c3aed" iconBg="#f3edff" />
+        <StatCard label="Community Status" value={currentStatus} icon={<CheckCircle2 size={22} />} iconColor="#8b5cf6" iconBg="#f5f3ff" />
+        <StatCard label="Residents" value={totalResidents} icon={<Users size={22} />} iconColor="#5b6472" iconBg="#f2f4f8" />
+        <StatCard label="Billing" value={status?.planPrice ? `₹${status.planPrice}` : "Pending"} icon={<BadgeIndianRupee size={22} />} iconColor="#d95d4f" iconBg="#feefed" />
       </div>
 
-      {plans && (
-        <>
-          <h5 className="mb-3">Choose a Plan</h5>
-          <div className="row g-3 mb-4">
-            {Object.entries(plans).map(([key, plan]) => (
-              <div className="col-md-4" key={key}>
-                <div
-                  className={`card h-100 p-3 shadow-sm ${selectedPlan === key ? "border-primary" : ""
-                    }`}
-                  style={{ cursor: "pointer" }}
-                  onClick={() => {
-                    const max = plan.maxResidents;
-                    if (
-                      max &&
-                      typeof max === "number" &&
-                      typeof totalResidents === "number" &&
-                      totalResidents > max
-                    ) {
-                      toast.warn(
-                        `Cannot select ${plan.name}: community has ${totalResidents} residents, but this plan allows up to ${max}.`
-                      );
-                      return;
-                    }
-                    setSelectedPlan(key);
-                  }}
-                >
-                  <h6 className="fw-semibold mb-1">{plan.name}</h6>
-                  <p className="mb-1">{"\u20B9"}{plan.price} / {plan.duration}</p>
-                  {plan.maxResidents && (
-                    <p className="mb-1 small text-muted">
-                      Up to {plan.maxResidents} residents
-                    </p>
-                  )}
-                  <ul className="small mb-0">
-                    {plan.features?.map((f) => (
-                      <li key={f}>{f}</li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
-
-      <button
-        className="btn btn-primary"
-        disabled={paying}
-        onClick={handlePay}
+      <ManagerSection
+        eyebrow="Plans"
+        title="Choose a community subscription"
+        description="Select the plan that fits your current resident count and the level of operations support you need."
       >
-        {paying ? "Opening Razorpay..." : "Pay with Razorpay"}
-      </button>
-    </div>
+        {plans ? (
+          <ManagerRecordGrid>
+            {Object.entries(plans).map(([key, plan]) => {
+              const maxResidents = plan.maxResidents;
+              const blocked =
+                maxResidents &&
+                typeof maxResidents === "number" &&
+                typeof totalResidents === "number" &&
+                totalResidents > maxResidents;
+
+              return (
+                <ManagerRecordCard
+                  key={key}
+                  className={selectedPlan === key ? "manager-ui-record-card--selected" : ""}
+                  title={plan.name}
+                  subtitle={`${plan.duration} billing cycle`}
+                  status={
+                    <span className="manager-ui-status-pill">
+                      {selectedPlan === key ? "Selected" : "Available"}
+                    </span>
+                  }
+                  meta={[
+                    { label: "Price", value: `₹${plan.price}` },
+                    { label: "Resident cap", value: maxResidents || "Unlimited" },
+                    { label: "Modules", value: plan.features?.length || 0 },
+                  ]}
+                  footer={
+                    <div className="manager-ui-stack">
+                      {plan.features?.map((feature) => (
+                        <p key={feature} className="manager-ui-note">
+                          {feature}
+                        </p>
+                      ))}
+                      {blocked ? (
+                        <p className="manager-ui-note text-danger">
+                          This plan supports up to {maxResidents} residents, but the community currently has {totalResidents}.
+                        </p>
+                      ) : null}
+                    </div>
+                  }
+                  actions={
+                    <ManagerActionButton
+                      variant={selectedPlan === key ? "primary" : "secondary"}
+                      disabled={blocked}
+                      onClick={() => {
+                        if (blocked) return;
+                        setSelectedPlan(key);
+                      }}
+                    >
+                      {selectedPlan === key ? "Plan selected" : "Select plan"}
+                    </ManagerActionButton>
+                  }
+                />
+              );
+            })}
+          </ManagerRecordGrid>
+        ) : (
+          <div className="manager-ui-empty">No plans are available right now.</div>
+        )}
+      </ManagerSection>
+
+      <ManagerSection eyebrow="Community" title="Current subscription snapshot" description="Use this summary to confirm the present plan before collecting the next payment.">
+        <div className="manager-ui-two-column">
+          <div className="manager-ui-split-metrics">
+            <div className="manager-ui-metric">
+              <span>Plan</span>
+              <strong>{status?.subscriptionPlan || "Not subscribed"}</strong>
+            </div>
+            <div className="manager-ui-metric">
+              <span>Status</span>
+              <strong>{currentStatus}</strong>
+            </div>
+            <div className="manager-ui-metric">
+              <span>Residents</span>
+              <strong>{totalResidents}</strong>
+            </div>
+            <div className="manager-ui-metric">
+              <span>Community</span>
+              <strong>{status?.name || "UrbanEase community"}</strong>
+            </div>
+          </div>
+
+          <ManagerRecordCard
+            title="Payment handoff"
+            subtitle="External API integration"
+            status={<span className="manager-ui-status-pill">Razorpay</span>}
+            meta={[
+              { label: "Gateway", value: "Razorpay order + verification" },
+              { label: "Flow", value: "Manager subscription payment" },
+              { label: "Target", value: "Activate community access" },
+            ]}
+            footer={<p className="manager-ui-note">Once the order is created, the checkout opens in-place and returns signed payment details back to the manager service.</p>}
+          />
+        </div>
+      </ManagerSection>
+    </ManagerPageShell>
   );
 };
 

@@ -7,6 +7,65 @@ import { sendPassword } from "../../../controllers/shared/OTP.js";
 import { sendError, sendSuccess } from "../../shared/helpers.js";
 import { handleMongooseError } from "../../../controllers/shared/errorHandler.js";
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PHONE_REGEX = /^[0-9]{10}$/;
+
+const toSafeText = (value, max = 120) => String(value || "").trim().slice(0, max);
+
+const validateResidentPayload = (payload) => {
+    const firstName = toSafeText(payload.residentFirstname, 60);
+    const lastName = toSafeText(payload.residentLastname, 60);
+    const email = toSafeText(payload.email, 120).toLowerCase();
+    const uCode = toSafeText(payload.uCode, 32).toUpperCase();
+    const contact = toSafeText(payload.contact, 20);
+
+    if (!firstName || !lastName || !email || !uCode) {
+        return { error: "First name, last name, email, and UCode are required" };
+    }
+    if (!EMAIL_REGEX.test(email)) {
+        return { error: "Invalid email address" };
+    }
+    if (contact && !PHONE_REGEX.test(contact)) {
+        return { error: "Contact number must be a 10-digit value" };
+    }
+
+    return { value: { firstName, lastName, email, uCode, contact } };
+};
+
+const validateWorkerPayload = (payload) => {
+    const name = toSafeText(payload.workerName, 80);
+    const email = toSafeText(payload.workerEmail, 120).toLowerCase();
+    const jobRole = toSafeText(payload.workerJobRole, 80);
+    const contact = toSafeText(payload.workerContact, 20);
+    const address = toSafeText(payload.workerAddress, 200);
+    const salaryRaw = payload.workerSalary;
+    const salary = Number(salaryRaw);
+
+    if (!name || !email || !jobRole) {
+        return { error: "Name, email, and job role are required" };
+    }
+    if (!EMAIL_REGEX.test(email)) {
+        return { error: "Invalid worker email address" };
+    }
+    if (contact && !PHONE_REGEX.test(contact)) {
+        return { error: "Worker contact must be a 10-digit value" };
+    }
+    if (salaryRaw !== undefined && salaryRaw !== "" && (!Number.isFinite(salary) || salary < 0)) {
+        return { error: "Worker salary must be a non-negative number" };
+    }
+
+    return {
+        value: {
+            name,
+            email,
+            jobRole,
+            contact,
+            address,
+            salary: salaryRaw === undefined || salaryRaw === "" ? undefined : salary,
+        }
+    };
+};
+
 export const getUserManagement = async (req, res) => {
     const ads = await Ad.find({
         community: req.user.community,
@@ -24,32 +83,43 @@ export const createResident = async (req, res) => {
     try {
         const { Rid, residentFirstname, residentLastname, email, uCode, contact } =
             req.body;
+        const parsed = validateResidentPayload({
+            residentFirstname,
+            residentLastname,
+            email,
+            uCode,
+            contact,
+        });
+        if (parsed.error) {
+            return sendError(res, 400, parsed.error);
+        }
+        const { firstName, lastName, email: safeEmail, uCode: safeUCode, contact: safeContact } = parsed.value;
 
         if (Rid) {
-            const r = await Resident.findById(Rid);
+            const r = await Resident.findOne({ _id: Rid, community: req.user.community });
             if (!r) {
                 return sendError(res, 404, `Resident with ID ${Rid} not found`);
             }
 
-            r.residentFirstname = residentFirstname;
-            r.residentLastname = residentLastname;
-            r.email = email;
-            r.uCode = uCode;
-            r.contact = contact;
+            r.residentFirstname = firstName;
+            r.residentLastname = lastName;
+            r.email = safeEmail;
+            r.uCode = safeUCode;
+            r.contact = safeContact;
 
             await r.save();
             res.json({ success: true, resident: r, isUpdate: true });
         } else {
             const r = await Resident.create({
-                residentFirstname,
-                residentLastname,
-                email,
-                contact,
-                uCode,
+                residentFirstname: firstName,
+                residentLastname: lastName,
+                email: safeEmail,
+                contact: safeContact,
+                uCode: safeUCode,
                 community: req.user.community,
             });
 
-            const password = await sendPassword({ email, userType: "Resident" });
+            const password = await sendPassword({ email: safeEmail, userType: "Resident" });
             const hashedPassword = await bcrypt.hash(password, 10);
             r.password = hashedPassword;
             await r.save();
@@ -151,34 +221,48 @@ export const createWorker = async (req, res) => {
             workerAddress,
             workerSalary,
         } = req.body;
+        const parsed = validateWorkerPayload({
+            workerName,
+            workerEmail,
+            workerJobRole,
+            workerContact,
+            workerAddress,
+            workerSalary,
+        });
+        if (parsed.error) {
+            return sendError(res, 400, parsed.error);
+        }
+        const { name, email, jobRole, contact, address, salary } = parsed.value;
 
         if (Wid) {
-            const w = await Worker.findById(Wid);
+            const w = await Worker.findOne({ _id: Wid, community: req.user.community });
             if (!w) {
                 return sendError(res, 404, `Worker with ID ${Wid} not found`);
             }
 
-            w.name = workerName;
-            w.email = workerEmail;
-            w.jobRole = workerJobRole;
-            w.contact = workerContact;
-            w.address = workerAddress;
-            w.salary = workerSalary;
+            w.name = name;
+            w.email = email;
+            w.jobRole = jobRole;
+            w.contact = contact;
+            w.address = address;
+            if (salary !== undefined) {
+                w.salary = salary;
+            }
             await w.save();
             return res.json({ success: true, worker: w, isUpdate: true });
         } else {
             const w = await Worker.create({
-                name: workerName,
-                email: workerEmail,
-                jobRole: workerJobRole,
-                contact: workerContact,
-                address: workerAddress,
-                salary: workerSalary,
+                name,
+                email,
+                jobRole,
+                contact,
+                address,
+                salary,
                 community: req.user.community,
             });
 
             const password = await sendPassword({
-                email: workerEmail,
+                email,
                 userType: "Worker",
             });
 

@@ -10,18 +10,27 @@ const DETAIL_ROWS = [
 const workerDisplay = (w) =>
     w ? w.name || w.email || w._id?.slice(-4) : "Unassigned";
 
-export const IssueCard = ({ issue, onView, onAssign, onReassign, onClose, canAssign, canReassign }) => (
+const formatIssueDate = (value) => {
+    if (!value) return "-";
+    return new Date(value).toLocaleDateString("en-IN", {
+        day: "numeric",
+        month: "short",
+    });
+};
+
+export const IssueCard = ({ issue, onView, onAssign, onReassign, onClose, canAssign, canReassign, index = 0 }) => (
     <EntityCard
         id={issue.issueID || issue._id.slice(-6)}
         status={issue.status}
         title={issue.title || issue.category || "Untitled Issue"}
         className="issue-card"
+        index={index}
         onClick={() => onView(issue)}
         details={[
             ...DETAIL_ROWS.map(({ label, key, fallback }) => ({ label, value: issue[key] || fallback })),
             { label: "Worker", value: workerDisplay(issue.workerAssigned) },
-            { label: "Auto-Assigned", value: issue.autoAssigned ? "Yes" : "No" },
-            { label: "Created", value: new Date(issue.createdAt).toLocaleDateString() },
+            { label: "Assignment", value: issue.autoAssigned ? "Auto" : "Manual" },
+            { label: "Date", value: formatIssueDate(issue.createdAt) },
         ]}
         actions={[
             { label: "Assign", onClick: () => onAssign(issue), variant: "primary", show: canAssign(issue) },

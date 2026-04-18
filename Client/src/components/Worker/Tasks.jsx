@@ -3,7 +3,9 @@ import { toast, ToastContainer } from "react-toastify";
 import { AnimatePresence } from "framer-motion";
 import { useSocket } from "../../hooks/useSocket";
 import { ClipboardList, Play, CheckCircle, AlertTriangle } from "lucide-react";
+import { Loader } from "../Loader";
 import { StatCard, SearchBar, Dropdown, EmptyState } from "../shared";
+import { ManagerPageShell, ManagerSection } from "../Manager/ui";
 import { STATUS_ASSIGNED, STATUS_IN_PROGRESS, STATUS_RESOLVED } from "./Tasks/taskUtils";
 import { TaskCard } from "./Tasks/TaskCard";
 import { TaskDetailsModal } from "./Tasks/TaskDetailsModal";
@@ -111,48 +113,54 @@ export const Tasks = () => {
   return (
     <>
       <ToastContainer position="top-center" autoClose={1500} />
-      <div className="management-section">
-        <div style={{ marginBottom: "24px" }}>
-          <h3 style={{ color: "rgba(0,0,0,0.7)", margin: 0 }}>My Assigned Tasks</h3>
-          <p style={{ color: "#6b7280", margin: "8px 0 0 0", fontSize: "14px" }}>Manage and complete your assigned maintenance tasks</p>
-        </div>
-
-        <div className="ue-stat-grid" style={{ marginBottom: 20 }}>
-          <StatCard label="Total Tasks" value={taskStats.total} icon={<ClipboardList size={22} />} iconColor="#2563eb" iconBg="#dbeafe" />
-          <StatCard label="Assigned" value={taskStats.assigned} icon={<Play size={22} />} iconColor="#d97706" iconBg="#fef3c7" />
-          <StatCard label="In Progress" value={taskStats.inProgress} icon={<CheckCircle size={22} />} iconColor="#16a34a" iconBg="#dcfce7" />
-          <StatCard label="Urgent" value={taskStats.urgent} icon={<AlertTriangle size={22} />} iconColor="#dc2626" iconBg="#fee2e2" />
-        </div>
-
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginBottom: 16 }}>
-          <div style={{ flex: 1, minWidth: 200 }}>
-            <SearchBar placeholder="Search tasks by title, location, or category..." value={searchTerm} onChange={setSearchTerm} />
+      <ManagerPageShell
+        eyebrow="Worker Desk"
+        title="Execute assigned tasks with clean status control."
+        description="Filter tasks, update status quickly, and keep progress visible from one task workbench."
+      >
+        <ManagerSection
+          eyebrow="Queue"
+          title="My assigned tasks"
+          description="Manage and complete assigned maintenance tasks."
+          className="worker-tasks-section"
+        >
+          <div className="ue-stat-grid" style={{ marginBottom: 14 }}>
+            <StatCard label="Total Tasks" value={taskStats.total} icon={<ClipboardList size={22} />} iconColor="#2563eb" iconBg="#dbeafe" />
+            <StatCard label="Assigned" value={taskStats.assigned} icon={<Play size={22} />} iconColor="#d97706" iconBg="#fef3c7" />
+            <StatCard label="In Progress" value={taskStats.inProgress} icon={<CheckCircle size={22} />} iconColor="#16a34a" iconBg="#dcfce7" />
+            <StatCard label="Urgent" value={taskStats.urgent} icon={<AlertTriangle size={22} />} iconColor="#dc2626" iconBg="#fee2e2" />
           </div>
-          <Dropdown options={[{ label: "All Status", value: "All" }, { label: "Assigned", value: "Assigned" }, { label: "In Progress", value: "In Progress" }, { label: "Resolved", value: "Resolved (Awaiting Confirmation)" }]} selected={statusFilter} onChange={setStatusFilter} width="160px" />
-          <Dropdown options={[{ label: "All Priority", value: "All" }, { label: "Urgent", value: "Urgent" }, { label: "High", value: "High" }, { label: "Normal", value: "Normal" }]} selected={priorityFilter} onChange={setPriorityFilter} width="150px" />
-          <Dropdown options={[{ label: "Sort: Priority", value: "priority" }, { label: "Sort: Date", value: "date" }, { label: "Sort: Status", value: "status" }]} selected={sortBy} onChange={setSortBy} width="150px" />
-          <div style={{ display: "flex", background: "#f3f4f6", borderRadius: 8, padding: 2 }}>
-            <button onClick={() => setViewMode("grid")} style={{ padding: "6px 12px", border: "none", borderRadius: 6, background: viewMode === "grid" ? "#0b1220" : "transparent", color: viewMode === "grid" ? "#fff" : "#374151", cursor: "pointer" }}>Grid</button>
-            <button onClick={() => setViewMode("list")} style={{ padding: "6px 12px", border: "none", borderRadius: 6, background: viewMode === "list" ? "#0b1220" : "transparent", color: viewMode === "list" ? "#fff" : "#374151", cursor: "pointer" }}>List</button>
-          </div>
-        </div>
 
-        {loading ? (
-          <div className="loading-spinner"><div>Loading your tasks...</div></div>
-        ) : filteredTasks.length === 0 ? (
-          <EmptyState icon={<ClipboardList size={48} />} title="No Tasks Found" sub={tasks.length === 0 ? "You don't have any assigned tasks yet." : "No tasks match your current filters."} />
-        ) : (
-          <div className={viewMode === "grid" ? "tasks-grid" : "tasks-list"}>
-            <AnimatePresence>
-              {filteredTasks.map((task, index) => (
-                <TaskCard key={task._id} task={task} index={index} viewMode={viewMode} onOpenModal={openTaskModal} onUpdateStatus={updateTaskStatus} />
-              ))}
-            </AnimatePresence>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginBottom: 12 }}>
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <SearchBar placeholder="Search tasks by title, location, or category..." value={searchTerm} onChange={setSearchTerm} />
+            </div>
+            <Dropdown options={[{ label: "All Status", value: "All" }, { label: "Assigned", value: "Assigned" }, { label: "In Progress", value: "In Progress" }, { label: "Resolved", value: "Resolved (Awaiting Confirmation)" }]} selected={statusFilter} onChange={setStatusFilter} width="160px" />
+            <Dropdown options={[{ label: "All Priority", value: "All" }, { label: "Urgent", value: "Urgent" }, { label: "High", value: "High" }, { label: "Normal", value: "Normal" }]} selected={priorityFilter} onChange={setPriorityFilter} width="150px" />
+            <Dropdown options={[{ label: "Sort: Priority", value: "priority" }, { label: "Sort: Date", value: "date" }, { label: "Sort: Status", value: "status" }]} selected={sortBy} onChange={setSortBy} width="150px" />
+            <div style={{ display: "flex", background: "#f3f4f6", borderRadius: 8, padding: 2 }}>
+              <button onClick={() => setViewMode("grid")} style={{ padding: "6px 12px", border: "none", borderRadius: 6, background: viewMode === "grid" ? "#0b1220" : "transparent", color: viewMode === "grid" ? "#fff" : "#374151", cursor: "pointer" }}>Grid</button>
+              <button onClick={() => setViewMode("list")} style={{ padding: "6px 12px", border: "none", borderRadius: 6, background: viewMode === "list" ? "#0b1220" : "transparent", color: viewMode === "list" ? "#fff" : "#374151", cursor: "pointer" }}>List</button>
+            </div>
           </div>
-        )}
+
+          {loading ? (
+            <div className="manager-ui-empty"><Loader label="Loading your tasks..." /></div>
+          ) : filteredTasks.length === 0 ? (
+            <EmptyState icon={<ClipboardList size={48} />} title="No Tasks Found" sub={tasks.length === 0 ? "You don't have any assigned tasks yet." : "No tasks match your current filters."} />
+          ) : (
+            <div className={viewMode === "grid" ? "tasks-grid" : "tasks-list"}>
+              <AnimatePresence>
+                {filteredTasks.map((task, index) => (
+                  <TaskCard key={task._id} task={task} index={index} viewMode={viewMode} onOpenModal={openTaskModal} onUpdateStatus={updateTaskStatus} />
+                ))}
+              </AnimatePresence>
+            </div>
+          )}
+        </ManagerSection>
 
         <TaskDetailsModal task={selectedTask} isOpen={isDetailModalOpen} onClose={closeTaskModal} estimatedCost={estimatedCost} setEstimatedCost={setEstimatedCost} actionLoading={actionLoading} onUpdateStatus={updateTaskStatus} onMisassigned={handleMisassigned} />
-      </div>
+      </ManagerPageShell>
     </>
   );
 };

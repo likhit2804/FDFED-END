@@ -1,6 +1,7 @@
 import React from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import Card from './Card';
+import { UE_CHART_PALETTE, UE_CHART_TOOLTIP_BORDER } from './chartPalette';
 
 /**
  * GraphPie – donut/pie chart for user pages (mirrors Admin/GraphPie)
@@ -16,7 +17,7 @@ import Card from './Card';
  *   dataKey     {string}  default 'value'
  *   nameKey     {string}  default 'name'
  */
-const DEFAULT_COLORS = ['#2563eb', '#16a34a', '#d97706', '#dc2626', '#7c3aed', '#0891b2'];
+const DEFAULT_COLORS = UE_CHART_PALETTE;
 
 const GraphPie = ({
     data = [],
@@ -33,7 +34,7 @@ const GraphPie = ({
         {title && (
             <div style={{ marginBottom: 16 }}>
                 <h4 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#1f2937' }}>{title}</h4>
-                {subtitle && <p style={{ margin: '4px 0 0', fontSize: 12, color: '#6b7280' }}>{subtitle}</p>}
+                {subtitle && <p style={{ margin: '4px 0 0', fontSize: 12, color: '#475569' }}>{subtitle}</p>}
             </div>
         )}
         <ResponsiveContainer width="100%" height={height}>
@@ -52,7 +53,7 @@ const GraphPie = ({
                     ))}
                 </Pie>
                 <Tooltip
-                    contentStyle={{ borderRadius: 10, border: '1px solid #e5e7eb', fontSize: 13 }}
+                    contentStyle={{ borderRadius: 10, border: `1px solid ${UE_CHART_TOOLTIP_BORDER}`, fontSize: 13 }}
                 />
                 <Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: 13 }} />
             </PieChart>

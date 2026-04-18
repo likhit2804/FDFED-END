@@ -1,9 +1,10 @@
 import React from 'react';
 import {
     ResponsiveContainer, BarChart, Bar, CartesianGrid,
-    XAxis, YAxis, Tooltip, Legend, Cell,
+    XAxis, YAxis, Tooltip, Legend,
 } from 'recharts';
 import Card from './Card';
+import { UE_CHART_AXIS, UE_CHART_CURSOR, UE_CHART_GRID, UE_CHART_PALETTE, UE_CHART_TOOLTIP_BORDER } from './chartPalette';
 
 /**
  * GraphBar – bar chart for user pages (no Admin equivalent — new component)
@@ -32,21 +33,27 @@ const GraphBar = ({
         {title && (
             <div style={{ marginBottom: 16 }}>
                 <h4 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#1f2937' }}>{title}</h4>
-                {subtitle && <p style={{ margin: '4px 0 0', fontSize: 12, color: '#6b7280' }}>{subtitle}</p>}
+                {subtitle && <p style={{ margin: '4px 0 0', fontSize: 12, color: '#475569' }}>{subtitle}</p>}
             </div>
         )}
         <ResponsiveContainer width="100%" height={height}>
             <BarChart data={data} barGap={4}>
-                {grid && <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />}
-                <XAxis dataKey={xKey} tick={{ fontSize: 12, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 12, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
+                {grid && <CartesianGrid strokeDasharray="3 3" stroke={UE_CHART_GRID} vertical={false} />}
+                <XAxis dataKey={xKey} tick={{ fontSize: 12, fill: UE_CHART_AXIS }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 12, fill: UE_CHART_AXIS }} axisLine={false} tickLine={false} />
                 <Tooltip
-                    contentStyle={{ borderRadius: 10, border: '1px solid #e5e7eb', fontSize: 13 }}
-                    cursor={{ fill: '#f9fafb' }}
+                    contentStyle={{ borderRadius: 10, border: `1px solid ${UE_CHART_TOOLTIP_BORDER}`, fontSize: 13 }}
+                    cursor={{ fill: UE_CHART_CURSOR }}
                 />
                 {bars.length > 1 && <Legend wrapperStyle={{ fontSize: 13 }} />}
-                {bars.map(({ key, label, color = '#2563eb' }) => (
-                    <Bar key={key} dataKey={key} name={label || key} fill={color} radius={[radius, radius, 0, 0]} />
+                {bars.map(({ key, label, color }, index) => (
+                    <Bar
+                        key={key}
+                        dataKey={key}
+                        name={label || key}
+                        fill={color || UE_CHART_PALETTE[index % UE_CHART_PALETTE.length]}
+                        radius={[radius, radius, 0, 0]}
+                    />
                 ))}
             </BarChart>
         </ResponsiveContainer>

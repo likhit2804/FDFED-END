@@ -1,5 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
+import { getCardFieldPresentation } from "./cardFieldUtils";
 
 /**
  * EntityCard — unified card component used across all pages.
@@ -65,12 +66,28 @@ export const EntityCard = ({
             {/* Detail rows — data-driven */}
             {details.length > 0 && (
                 <div className="ue-entity-card__details">
-                    {details.map(({ label, value, render }, i) => (
-                        <div className="ue-entity-card__detail" key={label || i}>
-                            <span className="ue-entity-card__label">{label}:</span>
-                            <span className="ue-entity-card__value">{render ? render() : value}</span>
-                        </div>
-                    ))}
+                    {details.map(({ label, value, render }, i) => {
+                        const resolvedValue = render ? render() : value;
+                        const field = getCardFieldPresentation(label, resolvedValue);
+
+                        return (
+                            <div
+                                className={`ue-entity-card__detail ue-entity-card__detail--${field.tone}${field.wide ? " ue-entity-card__detail--wide" : ""}`}
+                                key={label || i}
+                            >
+                                <span className="ue-entity-card__label">{label}</span>
+                                <div className="ue-entity-card__value-wrap">
+                                    {field.showIndicator ? (
+                                        <span
+                                            className={`ue-entity-card__indicator ue-entity-card__indicator--${field.tone}`}
+                                            aria-hidden="true"
+                                        />
+                                    ) : null}
+                                    <span className="ue-entity-card__value">{field.displayValue}</span>
+                                </div>
+                            </div>
+                        );
+                    })}
                 </div>
             )}
 

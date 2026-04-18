@@ -252,3 +252,24 @@
     margin-bottom: 6px;
   }
 }
+
+/* Resident issue page overrides to align with manager shell UI */
+.resident-ui-page .ir-details-grid {
+  background: var(--manager-panel-muted);
+  border: 1px solid var(--manager-border);
+}
+
+.resident-ui-page .tracker-progress {
+  background: linear-gradient(90deg, #7c3aed, #8b5cf6);
+}
+
+.resident-ui-page .tracker-step.active .tracker-icon-wrapper,
+.resident-ui-page .tracker-step.completed .tracker-icon-wrapper {
+  border-color: #7c3aed;
+  background: #7c3aed;
+}
+
+.resident-ui-page .tracker-step.active .tracker-label,
+.resident-ui-page .tracker-step.completed .tracker-label {
+  color: #6d28d9;
+}

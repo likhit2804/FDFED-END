@@ -8,7 +8,7 @@ export const ResidentIssueCard = ({ issue, onViewDetails }) => (
     <EntityCard
         id={`#${issue?._id?.slice(-6)}`}
         status={issue?.status}
-        statusClass={`status-badge status-${issue?.status || ""}`}
+        statusClass={`status-badge status-${(issue?.status || "").toLowerCase().replace(/\s+/g, "-")}`}
         className={`ir-issue-card ${issue?.status || ""}`}
         details={[
             { label: "Title", value: issue?.title || "-" },
@@ -30,7 +30,7 @@ export const ResidentIssueCard = ({ issue, onViewDetails }) => (
             },
         ]}
         actions={[
-            { label: "View Details", onClick: () => onViewDetails(issue), variant: "view", icon: <i className="bi bi-eye" /> },
+            { label: "View Details", onClick: () => onViewDetails(issue), variant: "secondary", icon: <i className="bi bi-eye" /> },
         ]}
     />
 );

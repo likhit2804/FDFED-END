@@ -33,6 +33,7 @@ const Textarea = forwardRef(({
         <textarea
             ref={ref}
             rows={rows}
+            required={required}
             disabled={disabled}
             style={{
                 width: '100%',

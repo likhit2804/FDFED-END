@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from "react";
 
-import { StatCard, Modal, Input, Select, StatusBadge, EmptyState } from "../shared";
-import { Users, Clock, XCircle } from "lucide-react";
+import { EntityCard, StatCard, Modal, Input, Select, EmptyState } from "../shared";
+import { Loader } from "../Loader";
+import { Calendar, Clock, QrCode, Users, XCircle } from "lucide-react";
+import { ManagerActionButton, ManagerPageShell, ManagerSection } from "../Manager/ui";
 
 export function PreApproval() {
   const [visitors, setVisitors] = useState([]);
@@ -58,76 +60,81 @@ export function PreApproval() {
   }
 
   const handleChange = (e) => setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
+  const formatDate = (value) => value ? new Date(value).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "N/A";
+  const formatTime = (value) => value ? new Date(value).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }) : "N/A";
 
   return (
-    <div>
+    <ManagerPageShell
+      eyebrow="Pre Approval"
+      title="Pre-approve visitors from one unified entry desk."
+      description="Use the same shell, buttons, and cards as manager pages for cleaner cross-role consistency."
+      chips={[`${visitors.length} requests`, `${counts.Pending} pending`]}
+      className="resident-ui-page"
+    >
       {/* Header */}
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <h4 className="section-title">Pre Approvals</h4>
-        <button className="btn btn-primary" onClick={() => setShowForm(true)}>
-          <i className="bi bi-plus-lg me-2"></i> Pre Approve
-        </button>
-      </div>
+      <ManagerSection
+        eyebrow="Requests"
+        title="Pre approvals"
+        description="Create visitor approvals and manage active QR passes."
+        actions={
+          <ManagerActionButton variant="primary" onClick={() => setShowForm(true)}>
+            <i className="bi bi-plus-lg me-1" />
+            Pre Approve
+          </ManagerActionButton>
+        }
+      >
 
       {/* Stats */}
-      <div className="stats-grid mb-4">
-        <StatCard title="Approved Requests" value={counts.Approved} icon={<Users size={22} />} color="var(--success)" />
-        <StatCard title="Pending Requests" value={counts.Pending} icon={<Clock size={22} />} color="var(--warning)" />
-        <StatCard title="Rejected Requests" value={counts.Rejected} icon={<XCircle size={22} />} color="var(--danger)" />
+      <div className="ue-stat-grid mb-4">
+        <StatCard label="Approved Requests" value={counts.Approved} icon={<Users size={22} />} iconColor="#7c3aed" iconBg="#f3edff" />
+        <StatCard label="Pending Requests" value={counts.Pending} icon={<Clock size={22} />} iconColor="#8b5cf6" iconBg="#f5f3ff" />
+        <StatCard label="Rejected Requests" value={counts.Rejected} icon={<XCircle size={22} />} iconColor="#d95d4f" iconBg="#feefed" />
       </div>
 
       {/* Visitor Cards */}
-      <div className="table-container">
-        <div className="section-header">Your Visitor Requests</div>
-        <div className="requests-container">
+      <div className="table-container manager-ui-section--muted" style={{ borderRadius: 18, padding: 16, border: "1px solid var(--manager-border)" }}>
+        <div className="section-header">Your visitor requests</div>
+        <div className="ue-entity-grid requests-container">
           {loading ? (
-            <div className="no-bookings">Loading...</div>
+            <div className="no-bookings"><Loader label="Loading requests..." /></div>
           ) : visitors.length === 0 ? (
-            <EmptyState message="No visitor requests found" />
+            <EmptyState icon={<Calendar size={48} />} title="No visitor requests found" sub="Pre-approve a visitor to generate a QR entry pass." />
           ) : (
             visitors.map((v) => (
-              <div key={v._id} className="request-card">
-                <div className="request-card-header">
-                  <div className="visitor-info">
-                    <div className="visitor-avatar"><i className="bi bi-person-circle"></i></div>
-                    <div>
-                      <h5 className="visitor-name">{v.name}</h5>
-                      <p className="visitor-phone"><i className="bi bi-telephone"></i> {v.contactNumber}</p>
-                    </div>
-                  </div>
-                  <StatusBadge status={v.status} />
-                </div>
-
-                <div className="request-card-body">
-                  <div className="request-detail">
-                    <i className="bi bi-calendar"></i>
-                    <div><span className="detail-label">Visit Date: </span><span className="detail-value">{v.scheduledAt ? new Date(v.scheduledAt).toLocaleDateString("en-IN") : "N/A"}</span></div>
-                  </div>
-                  <div className="request-detail">
-                    <i className="bi bi-clock"></i>
-                    <div><span className="detail-label">Visit Time: </span><span className="detail-value">{v.scheduledAt ? new Date(v.scheduledAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }) : "N/A"}</span></div>
-                  </div>
-                  <div className="request-detail">
-                    <i className="bi bi-card-text"></i>
-                    <div><span className="detail-label">Purpose: </span><span className="detail-value">{v.purpose}</span></div>
-                  </div>
-                </div>
-
-                {v.status === "Pending" && (
-                  <div className="request-card-footer">
-                    <button className="btn btn-sm btn-outline-danger cancel-btn" onClick={() => cancelRequest(v._id)}>
-                      <i className="bi bi-x-circle"></i> Cancel
-                    </button>
-                    <button className="btn btn-sm btn-outline-primary view-qr-btn" onClick={() => viewQR(v._id)}>
-                      <i className="bi bi-qr-code"></i> View QR
-                    </button>
-                  </div>
-                )}
-              </div>
+              <EntityCard
+                key={v._id}
+                id={`#${String(v._id).slice(-6)}`}
+                status={v.status}
+                statusClass={`status-badge status-${v.status || ""}`}
+                title={v.name || "Visitor"}
+                details={[
+                  { label: "Phone", value: v.contactNumber || "-" },
+                  { label: "Date", value: formatDate(v.scheduledAt) },
+                  { label: "Time", value: formatTime(v.scheduledAt) },
+                  { label: "Purpose", value: v.purpose || "-" },
+                ]}
+                actions={[
+                  {
+                    label: "Cancel",
+                    onClick: () => cancelRequest(v._id),
+                    variant: "cancel",
+                    icon: <i className="bi bi-x-circle" />,
+                    show: v.status === "Pending",
+                  },
+                  {
+                    label: "View QR",
+                    onClick: () => viewQR(v._id),
+                    variant: "view",
+                    icon: <QrCode size={16} />,
+                    show: v.status === "Pending",
+                  },
+                ]}
+              />
             ))
           )}
         </div>
       </div>
+      </ManagerSection>
 
       {/* Pre-Approve Form Modal */}
       <Modal
@@ -183,6 +190,6 @@ export function PreApproval() {
           <img src={qrImage} alt="QR Code" style={{ width: "200px" }} />
         </div>
       </Modal>
-    </div>
+    </ManagerPageShell>
   );
 }
