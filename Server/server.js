@@ -224,10 +224,12 @@ app.use(helmet({
   crossOriginResourcePolicy: false
 }));
 
-// Create a write stream for access logs (append mode)
+// Create access log directory/stream safely for fresh environments.
+const accessLogDir = path.join(__dirname, "logs");
+fs.mkdirSync(accessLogDir, { recursive: true });
 const accessLogStream = fs.createWriteStream(
-  path.join(path.dirname(fileURLToPath(import.meta.url)), 'logs', 'access.log'),
-  { flags: 'a' }
+  path.join(accessLogDir, "access.log"),
+  { flags: "a" }
 );
 
 // Morgan: Log to console (dev format - colored, concise)
