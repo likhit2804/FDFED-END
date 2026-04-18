@@ -8,8 +8,6 @@ import './assets/css/shared.css'
 import './assets/css/global.css'
 import './assets/css/Resident/residentUnified.css'
 
-axios.defaults.baseURL = import.meta.env.VITE_API_URL || '';
-axios.defaults.withCredentials = true;
 
 createRoot(document.getElementById('root')).render(
   <Provider store={store} >
