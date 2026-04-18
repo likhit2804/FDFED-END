@@ -50,15 +50,29 @@ export const updatePayment = async (req, res) => {
     try {
         const { id } = req.params;
         const { status, remarks, paymentMethod, amount } = req.body;
+        const allowedStatuses = new Set(["Pending", "Completed", "Failed", "Overdue"]);
         const payment = await Payment.findOne({ _id: id, community: req.user.community });
         if (!payment) return res.status(404).json({ message: "Payment not found or access denied" });
+
+        if (status && !allowedStatuses.has(status)) {
+            return res.status(400).json({ message: "Invalid payment status" });
+        }
         if (status) {
             payment.status = status;
             if (status === "Completed" && !payment.paymentDate) payment.paymentDate = new Date();
         }
-        if (paymentMethod) payment.paymentMethod = paymentMethod;
-        if (remarks !== undefined) payment.remarks = remarks;
-        if (amount !== undefined) payment.amount = parseFloat(amount);
+        if (paymentMethod !== undefined) {
+            const normalizedMethod = String(paymentMethod || "").trim();
+            payment.paymentMethod = normalizedMethod || "None";
+        }
+        if (remarks !== undefined) payment.remarks = String(remarks || "").trim();
+        if (amount !== undefined) {
+            const parsedAmount = Number(amount);
+            if (!Number.isFinite(parsedAmount) || parsedAmount < 0) {
+                return res.status(400).json({ message: "Amount must be a non-negative number" });
+            }
+            payment.amount = parsedAmount;
+        }
         await payment.save();
         await payment.populate("sender", "residentFirstname flatNo name");
         await payment.populate("receiver", "name");

@@ -147,8 +147,36 @@ export const validateIssue = [
     .escape(),
   body('category')
     .trim()
-    .isIn(['Plumbing', 'Electrical', 'Maintenance', 'Security', 'Cleaning', 'Other'])
+    .isIn([
+      'Plumbing',
+      'Electrical',
+      'Maintenance',
+      'Security',
+      'Cleaning',
+      'Pest Control',
+      'Waste Management',
+      'Streetlight',
+      'Elevator',
+      'Garden',
+      'Common Area',
+      'Other',
+    ])
     .withMessage('Invalid category'),
+  body('categoryType')
+    .trim()
+    .isIn(['Resident', 'Community'])
+    .withMessage('Invalid issue category type'),
+  body('location')
+    .optional()
+    .trim()
+    .isLength({ max: 120 })
+    .withMessage('Location must not exceed 120 characters')
+    .custom((value, { req }) => {
+      if (req.body?.categoryType === 'Community' && (!value || !String(value).trim())) {
+        throw new Error('Location is required for Community issues');
+      }
+      return true;
+    }),
   handleValidationErrors
 ];
 
