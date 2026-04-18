@@ -113,7 +113,7 @@ export const SignIn = () => {
 
   const resend = async () => {
     if (!pending2fa?.tempToken) return;
-    try { setIsResending(true); await axios.post('/resend-otp', { tempToken: pending2fa.tempToken }, { withCredentials: true }); toast.success('OTP resent'); setSecondsLeft(initialTimer); }
+    try { setIsResending(true); await axios.post('/api/resend-otp', { tempToken: pending2fa.tempToken }, { withCredentials: true }); toast.success('OTP resent'); setSecondsLeft(initialTimer); }
     catch (e) { toast.error(e?.response?.data?.message || 'Failed to resend OTP'); }
     finally { setIsResending(false); }
   };
