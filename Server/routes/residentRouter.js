@@ -6,7 +6,8 @@ import CommonSpaces from "../models/commonSpaces.js";
 import Payment from "../models/payment.js";
 import Visitor from "../models/visitors.js";
 import Ad from "../models/Ad.js";
-import { getTimeAgo, getPaymentRemainders, setPenalties } from "../utils/residentHelpers.js";
+import { getTimeAgo, getPaymentRemainders } from "../utils/residentHelpers.js";
+import { cacheRoute } from "../middleware/cacheMiddleware.js";
 
 const residentRouter = express.Router();
 
@@ -44,8 +45,9 @@ residentRouter.use("/", notificationResidentRouter);
 // --------------------------------------------------
 // Dashboard
 // --------------------------------------------------
-residentRouter.get("/api/dashboard", async (req, res) => {
+residentRouter.get("/api/dashboard", cacheRoute(15), async (req, res) => {
   try {
+    const now = new Date();
     const recents = [];
     const ads = await Ad.find({ community: req.user.community, startDate: { $lte: new Date() }, endDate: { $gte: new Date() } });
     const issues = await Issue.find({ resident: req.user.id });
@@ -62,19 +64,31 @@ residentRouter.get("/api/dashboard", async (req, res) => {
     );
     recents.sort((a, b) => new Date(b.date) - new Date(a.date));
 
-    const pendingPayments = await Payment.find({ sender: req.user.id, status: { $in: ["Pending", "Overdue"] } });
-    for (const p of pendingPayments) {
-      if (new Date(p.paymentDeadline) < new Date()) { p.status = "Overdue"; await p.save(); }
-    }
-    setPenalties(pendingPayments.filter((p) => p.status === "Overdue"));
-    getPaymentRemainders(pendingPayments, resident.notifications);
+    const pendingPaymentsRaw = await Payment.find({
+      sender: req.user.id,
+      status: { $in: ["Pending", "Overdue"] },
+    }).lean();
+    const pendingPayments = pendingPaymentsRaw.map((p) => {
+      const effectiveStatus =
+        p.status === "Pending" && new Date(p.paymentDeadline) < now
+          ? "Overdue"
+          : p.status;
+      return { ...p, status: effectiveStatus };
+    });
 
-    resident.notifications.forEach((n) => { n.timeAgo = getTimeAgo(n.createdAt); });
-    resident.notifications.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    const notificationFeed = (resident?.notifications || []).map((n) =>
+      typeof n?.toObject === "function" ? n.toObject() : { ...n }
+    );
+    getPaymentRemainders(pendingPayments, notificationFeed);
+
+    notificationFeed.forEach((n) => {
+      n.timeAgo = getTimeAgo(n.createdAt);
+    });
+    notificationFeed.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    const trimmedNotifications = resident.notifications.filter((n) => new Date(n.createdAt) >= oneDayAgo);
-    resident.notifications = trimmedNotifications;
-    await resident.save();
+    const trimmedNotifications = notificationFeed.filter(
+      (n) => new Date(n.createdAt) >= oneDayAgo
+    );
 
     return res.json({ success: true, ads, recents, notifications: trimmedNotifications, pendingPayments });
   } catch (err) {
