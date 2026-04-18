@@ -3,8 +3,10 @@ import Amenity from "../../../models/Amenities.js";
 import Community from "../../../models/communities.js";
 import CommunityManager from "../../../models/cManager.js";
 import Payment from "../../../models/payment.js";
+import Resident from "../../../models/resident.js";
 import mongoose from "mongoose";
 import { generateRefundId } from "../../../utils/idGenerator.js";
+import { pushNotification } from "../../notifications/services/notificationService.js";
 
 export const sendSuccess = (res, message, data = {}, statusCode = 200) =>
   res.status(statusCode).json({ success: true, message, ...data });
@@ -484,13 +486,14 @@ export const rejectBooking = async (req, res) => {
       notes: `Reason: ${reason.trim()} | Refund: ${normalizedRefundType} (₹${computedRefundAmount})`,
     });
 
-    if (booking.bookedBy?.notifications) {
-      booking.bookedBy.notifications.push({
-        belongs: "CS",
-        n: `Your common space booking ${booking.ID || booking.name} was cancelled by manager. Refund: ₹${computedRefundAmount}`,
-        createdAt: new Date(),
+    if (booking.bookedBy) {
+      await pushNotification(Resident, booking.bookedBy._id || booking.bookedBy, {
+        type: "CommonSpace",
+        title: "Booking Cancelled By Manager",
+        message: `Your common space booking ${booking.ID || booking.name} was cancelled by manager. Refund: INR ${computedRefundAmount}.`,
+        referenceId: booking._id,
+        referenceType: "CommonSpace",
       });
-      await booking.bookedBy.save();
     }
 
     await booking.save();
