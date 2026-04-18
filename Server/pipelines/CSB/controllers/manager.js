@@ -338,8 +338,8 @@ export const rejectBooking = async (req, res) => {
       return sendError(res, 400, "Cancellation reason is required");
     }
 
-    const normalizedRefundType = String(refundType).toLowerCase();
-    if (!["none", "full", "partial"].includes(normalizedRefundType)) {
+    const requestedRefundType = String(refundType).toLowerCase();
+    if (!["none", "full", "partial"].includes(requestedRefundType)) {
       return sendError(res, 400, "Invalid refund type");
     }
 
@@ -370,6 +370,20 @@ export const rejectBooking = async (req, res) => {
         `Booking is already in terminal state: ${booking.status}`,
       );
     }
+
+    let linkedPayment = null;
+    if (booking.payment) {
+      linkedPayment = await Payment.findById(booking.payment);
+    }
+
+    const paymentMarkedCompleted =
+      String(linkedPayment?.status || "").toLowerCase() === "completed";
+    const bookingMarkedPaid =
+      String(booking.paymentStatus || "").toLowerCase() === "success";
+    const isPaidBooking = paymentMarkedCompleted || bookingMarkedPaid;
+
+    // Guard rail: unpaid bookings cannot be refunded.
+    const normalizedRefundType = isPaidBooking ? requestedRefundType : "none";
 
     const totalAmount = Number(booking.amount) || 0;
     let computedRefundAmount = 0;
@@ -430,29 +444,25 @@ export const rejectBooking = async (req, res) => {
         Math.round(Number(computedRefundPercentage) * 100) / 100;
     }
 
-    let linkedPayment = null;
-    if (booking.payment) {
-      linkedPayment = await Payment.findById(booking.payment);
-      if (linkedPayment) {
-        if (computedRefundAmount > 0) {
-          linkedPayment.status = "Refunded";
-          linkedPayment.remarks = [
-            linkedPayment.remarks,
-            `Manager cancellation: ${reason.trim()}. Refund ₹${computedRefundAmount}.`,
-          ]
-            .filter(Boolean)
-            .join(" | ");
-        } else if (linkedPayment.status === "Pending") {
-          linkedPayment.status = "Failed";
-          linkedPayment.remarks = [
-            linkedPayment.remarks,
-            `Manager cancellation: ${reason.trim()}. No refund.`,
-          ]
-            .filter(Boolean)
-            .join(" | ");
-        }
-        await linkedPayment.save();
+    if (linkedPayment) {
+      if (computedRefundAmount > 0) {
+        linkedPayment.status = "Refunded";
+        linkedPayment.remarks = [
+          linkedPayment.remarks,
+          `Manager cancellation: ${reason.trim()}. Refund ₹${computedRefundAmount}.`,
+        ]
+          .filter(Boolean)
+          .join(" | ");
+      } else if (linkedPayment.status === "Pending") {
+        linkedPayment.status = "Failed";
+        linkedPayment.remarks = [
+          linkedPayment.remarks,
+          `Manager cancellation: ${reason.trim()}. No refund.`,
+        ]
+          .filter(Boolean)
+          .join(" | ");
       }
+      await linkedPayment.save();
     }
 
     await releaseBookedSlotsForManagerCancellation(booking);
