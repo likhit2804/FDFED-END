@@ -1,16 +1,19 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import '../../assets/css/Resident/CommonSpace.css';
+import 'react-day-picker/dist/style.css';
 import { ToastContainer, toast } from 'react-toastify';
 import { useDispatch, useSelector } from 'react-redux';
 import { Building2, Calendar, Clock } from "lucide-react";
+import { DayPicker } from 'react-day-picker';
 import {
   fetchuserBookings, cancelUserBooking,
   ConfirmBooking, optimisticAddBooking, optimisticCancelBooking,
 } from '../../slices/CommonSpaceSlice';
 import { Loader } from '../Loader';
-import { EmptyState, Modal, Input, Select, StatCard, Textarea } from '../shared';
+import { EmptyState, Modal, Select, StatCard, Textarea } from '../shared';
 import { BookingCard } from './CommonSpace/BookingCard';
 import { BookingDetailsModal } from './CommonSpace/BookingDetailsModal';
 import { ManagerActionButton, ManagerPageShell, ManagerSection } from '../Manager/ui';
@@ -21,6 +24,16 @@ const formatTime = (hour) => {
   if (hour === 12) return '12:00 PM';
   return `${hour - 12}:00 PM`;
 };
+
+const toIsoDate = (dateObj) => {
+  const y = dateObj.getFullYear();
+  const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+  const d = String(dateObj.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
+
+const formatDisplayDate = (dateObj) =>
+  dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
 export const CommonSpaceBooking = () => {
   const dispatch = useDispatch();
@@ -36,12 +49,19 @@ export const CommonSpaceBooking = () => {
   const [availableSlots, setAvailableSlots] = useState([]);
   const [formSubmitting, setFormSubmitting] = useState(false);
   const [isSubscriptionBased, setIsSubscriptionBased] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [calendarPlacement, setCalendarPlacement] = useState('bottom');
+  const [calendarPosition, setCalendarPosition] = useState({ top: 0, left: 0 });
+  const dateTriggerRef = useRef(null);
 
   const { register, handleSubmit, setValue, watch, reset } = useForm({
     defaultValues: { facility: '', date: new Date().toISOString().split('T')[0], purpose: '', Type: '' },
   });
 
   const today = new Date().toISOString().split('T')[0];
+  const todayDate = new Date();
+  todayDate.setHours(0, 0, 0, 0);
   const pendingBookingsCount = bookings?.filter((b) => b?.status === 'Pending' && !b.isOptimistic)?.length || 0;
 
   useEffect(() => { dispatch(fetchuserBookings()); }, [dispatch]);
@@ -61,8 +81,10 @@ export const CommonSpaceBooking = () => {
     setValue('Type', selectedFacility?.Type);
   }, [selectedFacility, watch('date')]);
   const clearBookingFormState = () => {
-    reset(); setSelectedFacility(null); setSelectedSlots([]);
+    reset({ facility: '', date: today, purpose: '', Type: '' }); setSelectedFacility(null); setSelectedSlots([]);
     setAvailableSlots([]); setIsSlotEnabled(false); setIsBookingFormOpen(false); setIsSubscriptionBased(false);
+    setSelectedDate(todayDate);
+    setIsCalendarOpen(false);
   };
 
   const handleFacilityChange = (e) => {
@@ -83,6 +105,65 @@ export const CommonSpaceBooking = () => {
       setSelectedSlots([...selectedSlots, value].sort((a, b) => parseInt(a) - parseInt(b)));
     } else { toast.warning('Please select adjacent time slots only.'); }
   };
+
+  const handleDatePick = (pickedDate) => {
+    if (!pickedDate) return;
+    const normalized = new Date(pickedDate);
+    normalized.setHours(0, 0, 0, 0);
+    setSelectedDate(normalized);
+    setValue('date', toIsoDate(normalized), { shouldValidate: true, shouldDirty: true });
+    setIsCalendarOpen(false);
+  };
+
+  const updateCalendarPosition = () => {
+    if (!dateTriggerRef.current) return;
+    const triggerRect = dateTriggerRef.current.getBoundingClientRect();
+    const requiredHeight = 360;
+    const popoverWidth = 340;
+    const spaceBelow = window.innerHeight - triggerRect.bottom;
+    const placeTop = spaceBelow < requiredHeight;
+    const top = placeTop
+      ? Math.max(8, triggerRect.top - requiredHeight - 8)
+      : Math.min(window.innerHeight - requiredHeight - 8, triggerRect.bottom + 8);
+    const left = Math.max(8, Math.min(triggerRect.left, window.innerWidth - popoverWidth - 8));
+
+    setCalendarPlacement(placeTop ? 'top' : 'bottom');
+    setCalendarPosition({ top, left });
+  };
+
+  const toggleCalendar = () => {
+    if (!isCalendarOpen) {
+      updateCalendarPosition();
+    }
+    setIsCalendarOpen((prev) => !prev);
+  };
+
+  useEffect(() => {
+    if (!isCalendarOpen) return;
+
+    const handleReposition = () => updateCalendarPosition();
+    const handleOutsideClick = (event) => {
+      if (!dateTriggerRef.current) return;
+      const popover = document.getElementById('cs-booking-day-picker');
+      if (
+        !dateTriggerRef.current.contains(event.target) &&
+        popover &&
+        !popover.contains(event.target)
+      ) {
+        setIsCalendarOpen(false);
+      }
+    };
+
+    window.addEventListener('resize', handleReposition);
+    window.addEventListener('scroll', handleReposition, true);
+    document.addEventListener('mousedown', handleOutsideClick);
+
+    return () => {
+      window.removeEventListener('resize', handleReposition);
+      window.removeEventListener('scroll', handleReposition, true);
+      document.removeEventListener('mousedown', handleOutsideClick);
+    };
+  }, [isCalendarOpen]);
 
   const formatSelectedTime = () => {
     if (selectedSlots.length === 0) return <span className="no-selection">No time slots selected</span>;
@@ -263,12 +344,49 @@ export const CommonSpaceBooking = () => {
         <div className="booking-form-grid A">
           <div className="form-column w-50">
             <input className="d-none" {...register('Type', { required: true })} readOnly />
+            <input className="d-none" {...register('date', { required: true })} readOnly />
             <Select label="Select Facility *" id="facility" {...register('facility', { required: true })} onChange={handleFacilityChange}>
               <option value="">Choose a facility...</option>
               {avalaibleSpaces?.map((s) => <option key={s.name} value={s.name}>{s.name}</option>)}
             </Select>
             {selectedFacility && <Textarea label="Booking Rules" rows={4} readOnly value={selectedFacility.bookingRules} placeholder="Select a facility to view booking rules..." />}
-            <Input type="date" label="Select Date *" id="bookingDate" {...register('date', { required: true })} min={today} disabled={!isDateEnabled} />
+            <div className="form-group form-group--date">
+              <label htmlFor="bookingDatePicker">Select Date *</label>
+              <button
+                id="bookingDatePicker"
+                ref={dateTriggerRef}
+                type="button"
+                className="cs-date-trigger"
+                disabled={!isDateEnabled}
+                onClick={toggleCalendar}
+                aria-expanded={isCalendarOpen}
+                aria-controls="cs-booking-day-picker"
+              >
+                <span>{formatDisplayDate(selectedDate)}</span>
+                <i className="bi bi-calendar3" aria-hidden="true" />
+              </button>
+              {isCalendarOpen
+                ? createPortal(
+                    <div
+                      className={`cs-date-popover ${calendarPlacement === 'top' ? 'cs-date-popover--top' : ''}`}
+                      id="cs-booking-day-picker"
+                      style={{ top: `${calendarPosition.top}px`, left: `${calendarPosition.left}px` }}
+                    >
+                      <DayPicker
+                        mode="single"
+                        selected={selectedDate}
+                        onSelect={handleDatePick}
+                        disabled={{ before: todayDate }}
+                        showOutsideDays
+                        captionLayout="dropdown"
+                        startMonth={todayDate}
+                        endMonth={new Date(todayDate.getFullYear() + 1, 11, 31)}
+                      />
+                    </div>,
+                    document.body
+                  )
+                : null}
+            </div>
             <Textarea label="Purpose (Optional)" id="purpose" rows={3} {...register('purpose')} placeholder="Brief description of the purpose..." />
           </div>
           <div className="slot-subscription-column w-50">

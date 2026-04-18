@@ -10,23 +10,30 @@
 }
 
 .manager-ui-page.resident-ui-page .ue-entity-card__detail {
-  flex-direction: column;
-  align-items: stretch;
-  justify-content: flex-start;
-  gap: 4px;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
   text-align: left;
 }
 
 .manager-ui-page.resident-ui-page .ue-entity-card__label,
 .manager-ui-page.resident-ui-page .ue-entity-card__value {
-  width: 100%;
+  width: auto;
   text-align: left;
+  white-space: nowrap;
 }
 
 .manager-ui-page.resident-ui-page .ue-entity-card__value-wrap {
-  justify-content: flex-start;
-  align-items: flex-start;
-  width: 100%;
+  justify-content: flex-end;
+  align-items: center;
+  width: auto;
+  min-width: 0;
+}
+
+.manager-ui-page.resident-ui-page .ue-entity-card__value {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Normalize old legacy action variants into manager palette */

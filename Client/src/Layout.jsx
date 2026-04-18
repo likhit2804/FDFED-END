@@ -53,6 +53,7 @@ export const Layout = ({ userType, ads }) => {
 
   const slides = adsState && adsState.length > 0 ? adsState : ads || [];
   const canNavigate = slides.length > 1;
+  const isUnifiedShellRoute = /^\/(manager|resident|worker|security)\//.test(location.pathname);
 
   const prev = () => setCurrent((previous) => (previous - 1 + slides.length) % slides.length);
   const next = () => setCurrent((previous) => (previous + 1) % slides.length);
@@ -61,7 +62,7 @@ export const Layout = ({ userType, ads }) => {
     <>
       <Navbar userType={userType} />
 
-      <div className="bodyContainer">
+      <div className={`bodyContainer ${isUnifiedShellRoute ? "bodyContainer--shell" : ""}`}>
         <div className="adCon d-flex justify-content-center align-items-center">
           <div className="advertisement" id="ad-slider">
             {!slides || slides.length === 0 ? (
@@ -119,7 +120,7 @@ export const Layout = ({ userType, ads }) => {
           </div>
         </div>
 
-        <div className="contentCon">
+        <div className={`contentCon ${isUnifiedShellRoute ? "contentCon--shell" : ""}`}>
           <Outlet context={{ onAdCreated: refetchAds }} />
         </div>
       </div>

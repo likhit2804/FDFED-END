@@ -1190,8 +1190,8 @@
    §13  PRE-APPROVAL  (Resident)
    ──────────────────────────────────────────────────────────── */
 .contentCon {
-    padding: 16px;
-    background: #f8f9ff;
+    padding: 0;
+    background: transparent;
     font-family: "Inter", sans-serif;
 }
 

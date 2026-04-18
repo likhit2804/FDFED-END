@@ -9,6 +9,12 @@ export const ProtectedRoute = ({ allowedUserType }) => {
 
   useEffect(() => {
     if (!token || !user) {
+      const wasIntentionalLogout =
+        sessionStorage.getItem("ue:intentionalLogout") === "1";
+      if (wasIntentionalLogout) {
+        sessionStorage.removeItem("ue:intentionalLogout");
+        return;
+      }
       toast.error("Please login to access this page");
     } else if (user.userType !== allowedUserType) {
       toast.warning("Unauthorized access — redirecting to your dashboard");

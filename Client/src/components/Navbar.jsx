@@ -91,6 +91,7 @@ export const Navbar = ({ userType }) => {
   }, []);
 
   const handleLogout = () => {
+    sessionStorage.setItem("ue:intentionalLogout", "1");
     dispatch(logout());
     navigate("/SignIn");
   };
