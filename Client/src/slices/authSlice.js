@@ -1,6 +1,20 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
 
+// FIX 1: The Safety Net
+// We safely try to parse the user. If it's corrupted or "undefined", we wipe it clean.
+const rawUserData = localStorage.getItem("user");
+let parsedUser = null;
+
+if (rawUserData && rawUserData !== "undefined") {
+  try {
+    parsedUser = JSON.parse(rawUserData);
+  } catch (error) {
+    console.error("Corrupted local storage data. Clearing it out.");
+    localStorage.removeItem("user");
+  }
+}
+
 export const loginUser = createAsyncThunk(
   "auth/loginUser",
   async ({ email, password, userType }, { rejectWithValue }) => {
@@ -10,8 +24,11 @@ export const loginUser = createAsyncThunk(
         { email, password, userType },
         { withCredentials: true }
       );
-      localStorage.setItem("token", response.data.tempToken);
-      localStorage.setItem("user", JSON.stringify({ email, userType }));
+      
+      // FIX 2: REMOVED the premature localStorage.setItem calls from here!
+      // You should only save to localStorage AFTER checking if they need 2FA/OTP.
+      // We handle saving to localStorage down in the extraReducers instead.
+      
       return { ...response.data, email, userType };
     } catch (err) {
       console.log(err);
@@ -55,9 +72,7 @@ export const registerUser = createAsyncThunk(
 const authSlice = createSlice({
   name: "auth",
   initialState: {
-    user: localStorage.getItem("user")
-      ? JSON.parse(localStorage.getItem("user"))
-      : null,
+    user: parsedUser, //  FIX 1: Using our safe variable from the top!
     token: localStorage.getItem("token") || null,
     loading: false,
     error: null,
@@ -67,6 +82,8 @@ const authSlice = createSlice({
     logout: (state) => {
       state.user = null;
       state.token = null;
+      localStorage.removeItem("user");  // Make sure to clean up on logout!
+      localStorage.removeItem("token"); // Make sure to clean up on logout!
     },
     setUser: (state, action) => {
       state.user = action.payload;
@@ -80,6 +97,7 @@ const authSlice = createSlice({
       })
       .addCase(loginUser.fulfilled, (state, action) => {
         state.loading = false;
+        
         // If server indicates 2FA is required, store temp and wait
         if (action.payload?.requiresOtp) {
           state.pending2fa = {
@@ -90,13 +108,20 @@ const authSlice = createSlice({
           state.user = null;
           state.token = null;
         } else {
-          state.user = action.payload.user;
-          state.token = action.payload.token;
+          //  FIX 3: Mismatched Backend payload check!
+          // Based on your earlier tests, your backend sends 'userPayload', not 'user'.
+          // Using action.payload.userPayload prevents JSON.stringify() from saving "undefined".
+          
+          const actualUser = action.payload.userPayload || action.payload.user; 
+          const actualToken = action.payload.token || action.payload.tempToken;
+
+          state.user = actualUser;
+          state.token = actualToken;
           state.pending2fa = null;
-          // persist full user + token when there is no 2FA
+          
           try {
-            localStorage.setItem("token", action.payload.token);
-            localStorage.setItem("user", JSON.stringify(action.payload.user));
+            if (actualToken) localStorage.setItem("token", actualToken);
+            if (actualUser) localStorage.setItem("user", JSON.stringify(actualUser));
           } catch (e) {
             console.warn("Failed to persist auth to localStorage", e);
           }
@@ -108,13 +133,18 @@ const authSlice = createSlice({
       })
       .addCase(verifyOtp.fulfilled, (state, action) => {
         state.loading = false;
-        state.user = action.payload.user;
-        state.token = action.payload.token;
+        
+        //  Same fix applied here: check for userPayload just in case!
+        const actualUser = action.payload.userPayload || action.payload.user;
+        const actualToken = action.payload.token;
+
+        state.user = actualUser;
+        state.token = actualToken;
         state.pending2fa = null;
-        // persist full user + token after successful OTP
+        
         try {
-          localStorage.setItem("token", action.payload.token);
-          localStorage.setItem("user", JSON.stringify(action.payload.user));
+          if (actualToken) localStorage.setItem("token", actualToken);
+          if (actualUser) localStorage.setItem("user", JSON.stringify(actualUser));
         } catch (e) {
           console.warn("Failed to persist auth to localStorage", e);
         }
