@@ -1190,7 +1190,7 @@
    §13  PRE-APPROVAL  (Resident)
    ──────────────────────────────────────────────────────────── */
 .contentCon {
-    padding: 20px;
+    padding: 16px;
     background: #f8f9ff;
     font-family: "Inter", sans-serif;
 }
@@ -1296,28 +1296,28 @@
    §14  SECURITY / PRE-APPROVAL  (Guard view)
    ──────────────────────────────────────────────────────────── */
 .pre-container {
-    padding: 40px;
+    padding: 24px;
     width: 100%;
 }
 
 .page-title {
     font-size: 26px;
     font-weight: 700;
-    margin-bottom: 20px;
+    margin-bottom: 12px;
 }
 
 .pre-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
+    margin-bottom: 12px;
 }
 
 .pre-list {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 25px;
-    margin-top: 10px;
+    gap: 16px;
+    margin-top: 0;
 }
 
 .pre-card {
@@ -1325,7 +1325,7 @@
     background: white;
     border-radius: 12px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.10);
-    margin-bottom: 25px;
+    margin-bottom: 0;
     overflow: hidden;
 }
 
@@ -2246,8 +2246,8 @@
     background: white;
     border-radius: var(--border-radius);
     box-shadow: var(--shadow);
-    padding: 25px;
-    margin-bottom: 30px;
+    padding: 20px;
+    margin-bottom: 16px;
 }
 
 .management-header {

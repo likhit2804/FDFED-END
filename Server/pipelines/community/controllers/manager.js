@@ -56,6 +56,37 @@ export const setupCommunityStructure = async (req, res) => {
             return sendError(res, 400, "Invalid blocks configuration");
         }
 
+        const MAX_BLOCKS = 26;
+        const MAX_FLOORS = 120;
+        const MAX_FLATS_PER_FLOOR = 200;
+        if (blocks.length > MAX_BLOCKS) {
+            return sendError(res, 400, `Maximum ${MAX_BLOCKS} blocks are allowed`);
+        }
+
+        const normalizedBlocks = [];
+        const blockNames = new Set();
+        for (const rawBlock of blocks) {
+            const name = String(rawBlock?.name || "").trim().toUpperCase();
+            const totalFloors = Number(rawBlock?.totalFloors);
+            const flatsPerFloor = Number(rawBlock?.flatsPerFloor);
+
+            if (!name || !/^[A-Z0-9-]{1,12}$/.test(name)) {
+                return sendError(res, 400, "Each block name must be 1-12 chars (A-Z, 0-9, -)");
+            }
+            if (blockNames.has(name)) {
+                return sendError(res, 400, `Duplicate block name found: ${name}`);
+            }
+            if (!Number.isInteger(totalFloors) || totalFloors < 1 || totalFloors > MAX_FLOORS) {
+                return sendError(res, 400, `Total floors for block ${name} must be between 1 and ${MAX_FLOORS}`);
+            }
+            if (!Number.isInteger(flatsPerFloor) || flatsPerFloor < 1 || flatsPerFloor > MAX_FLATS_PER_FLOOR) {
+                return sendError(res, 400, `Units per floor for block ${name} must be between 1 and ${MAX_FLATS_PER_FLOOR}`);
+            }
+
+            blockNames.add(name);
+            normalizedBlocks.push({ name, totalFloors, flatsPerFloor });
+        }
+
         const managerId = req.user.id;
         console.log('👤 Manager ID:', managerId);
         const manager = await CommunityManager.findById(managerId);
@@ -86,7 +117,7 @@ export const setupCommunityStructure = async (req, res) => {
         const blockDocsToInsert = [];
         let totalBlocksGenerated = 0;
 
-        for (const block of blocks) {
+        for (const block of normalizedBlocks) {
             const { name, totalFloors, flatsPerFloor } = block;
 
             // Generate Block

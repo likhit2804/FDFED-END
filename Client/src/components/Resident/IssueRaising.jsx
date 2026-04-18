@@ -3,11 +3,13 @@ import { useForm } from "react-hook-form";
 import { toast, ToastContainer } from "react-toastify";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchIssues, raiseIssue, submitFeedback } from "../../slices/IssueSlice";
+import { AlertCircle, CheckCircle, ListChecks } from "lucide-react";
 import { Loader } from "../Loader";
 import { useSocket } from "../../hooks/useSocket";
-import { Modal, Input, Select, Textarea, Tabs } from "../shared";
+import { EmptyState, Modal, Input, Select, StatCard, Textarea, Tabs } from "../shared";
 import { ResidentIssueCard } from "./IssueRaising/ResidentIssueCard";
 import { ResidentIssueDetailsModal } from "./IssueRaising/ResidentIssueDetailsModal";
+import { ManagerActionButton, ManagerPageShell, ManagerSection } from "../Manager/ui";
 import "../../assets/css/Resident/IssueRaising.css";
 
 const R_CATEGORIES = ["Plumbing", "Electrical", "Security", "Maintenance", "Pest Control", "Waste Management"];
@@ -87,15 +89,26 @@ export const IssueRaising = () => {
   const resolvedCount = issues?.filter((i) => i?.status === "Resolved")?.length || 0;
 
   return (
-    <div>
+    <ManagerPageShell
+      eyebrow="Issues"
+      title="Raise and track issues with a unified resident desk."
+      description="Same shell and control language as manager pages so status, cards, and actions stay predictable."
+      chips={[`${issues?.length || 0} issues tracked`, `${pendingCount} pending`]}
+      className="resident-ui-page resident-issues-page"
+    >
       <ToastContainer position="top-center" />
 
-      <div className="d-flex justify-content-between align-items-center mb-3">
-        <h4 className="section-title">Issue Management</h4>
-        <button id="raiseIssueBtn" className="btn btn-success" onClick={() => setIsIssueFormOpen(true)}>
-          <i className="bi bi-plus-lg me-2" />Raise an Issue
-        </button>
-      </div>
+      <ManagerSection
+        eyebrow="Issue Desk"
+        title="Issue management"
+        description="Create issues and monitor progress by resident/community category."
+        actions={
+          <ManagerActionButton variant="primary" onClick={() => setIsIssueFormOpen(true)}>
+            <i className="bi bi-plus-lg me-1" />
+            Raise an Issue
+          </ManagerActionButton>
+        }
+      >
 
       {/* Tabs */}
       <Tabs
@@ -108,24 +121,15 @@ export const IssueRaising = () => {
       />
 
       {/* Stats */}
-      <div className="ir-stats-grid mb-4">
-        <div className="ir-stat-card" style={{ borderLeftColor: "green" }}>
-          <p className="card-label">Total Issues (this month)</p>
-          <h2 className="card-value text-success">{issues?.length || 0}</h2>
-        </div>
-        <div className="ir-stat-card" style={{ borderLeftColor: "var(--warning)" }}>
-          <p className="card-label">Pending Issues</p>
-          <h2 className="card-value text-warning">{pendingCount}</h2>
-        </div>
-        <div className="ir-stat-card" style={{ borderLeftColor: "blue" }}>
-          <p className="card-label">Resolved Issues</p>
-          <h2 className="card-value text-primary">{resolvedCount}</h2>
-        </div>
+      <div className="ue-stat-grid mb-4">
+        <StatCard label="Total Issues" value={issues?.length || 0} icon={<ListChecks size={22} />} iconColor="#7c3aed" iconBg="#f3edff" />
+        <StatCard label="Pending Issues" value={pendingCount} icon={<AlertCircle size={22} />} iconColor="#d95d4f" iconBg="#feefed" />
+        <StatCard label="Resolved Issues" value={resolvedCount} icon={<CheckCircle size={22} />} iconColor="#8b5cf6" iconBg="#f5f3ff" />
       </div>
 
       {/* Issues List */}
-      <h4 className="table-title">{activeTab} Issues</h4>
-      <div className="row ir-issues-grid">
+      <h4 className="table-title">{activeTab} issues</h4>
+      <div className="ue-entity-grid ir-issues-grid">
         {loading && (
           <div className="col-12 d-flex justify-content-center py-5"><Loader /></div>
         )}
@@ -134,26 +138,28 @@ export const IssueRaising = () => {
             <ResidentIssueCard key={issue._id} issue={issue} onViewDetails={showDetails} />
           ))
           : !loading && (
-            <div className="col-12 shadow-sm rounded-2 no-bookings d-flex gap-3 justify-content-center align-items-center text-muted">
-              <i className="bi bi-exclamation-triangle fs-3" />
-              <h4 className="m-0">No issues found</h4>
-            </div>
+            <EmptyState icon={<AlertCircle size={42} />} title="No issues found" sub="Raise an issue to begin tracking updates." />
           )}
       </div>
+      </ManagerSection>
 
       {/* Raise Issue Modal */}
       <Modal isOpen={isIssueFormOpen} onClose={closeIssueForm} title="Raise an Issue" size="md"
         footer={
           <>
-            <button type="button" onClick={closeIssueForm} disabled={formSubmitting} style={{ padding: "9px 18px", borderRadius: 8, border: "1px solid #e5e7eb", background: "#f9fafb", color: "#374151", fontWeight: 600, cursor: "pointer" }}>Cancel</button>
-            <button type="button" onClick={handleSubmit(onSubmit)} disabled={formSubmitting} style={{ padding: "9px 20px", borderRadius: 8, border: "none", background: "#16a34a", color: "#fff", fontWeight: 600, cursor: formSubmitting ? "not-allowed" : "pointer", opacity: formSubmitting ? 0.7 : 1 }}>
+            <button type="button" className="manager-ui-button manager-ui-button--secondary" onClick={closeIssueForm} disabled={formSubmitting}>Cancel</button>
+            <button type="button" className="manager-ui-button manager-ui-button--primary" onClick={handleSubmit(onSubmit)} disabled={formSubmitting}>
               {formSubmitting ? "Submitting..." : "Submit Issue"}
             </button>
           </>
         }
       >
-        {formSubmitting && <div style={{ textAlign: "center", padding: 20 }}><div className="spinner-border text-primary" role="status" /></div>}
-        <div style={{ background: activeTab === "Resident" ? "#e8f5e8" : "#fff3e0", color: activeTab === "Resident" ? "#2e7d32" : "#ef6c00", padding: "8px 12px", borderRadius: 6, fontSize: 13, fontWeight: 500, marginBottom: 16 }}>
+        {formSubmitting && (
+          <div style={{ textAlign: "center", padding: 20 }}>
+            <Loader label="Submitting issue..." size={34} />
+          </div>
+        )}
+        <div style={{ background: activeTab === "Resident" ? "#f3edff" : "#f5f3ff", color: "#6d28d9", padding: "8px 12px", borderRadius: 10, fontSize: 13, fontWeight: 600, marginBottom: 16 }}>
           <i className={`bi ${activeTab === "Resident" ? "bi-house-door" : "bi-building"}`} style={{ marginRight: 6 }} />{activeTab} Issue
         </div>
         <Input label="Issue Title" required id="title" placeholder="Brief title of the issue..." disabled={formSubmitting} {...register("title", { required: true })} />
@@ -163,7 +169,7 @@ export const IssueRaising = () => {
           <option value="Other">Other</option>
         </Select>
         {category === "Other" && <Input label="Specify Category" required id="otherCategory" placeholder="Enter custom category" disabled={formSubmitting} {...register("otherCategory", { required: true })} />}
-        <div style={{ background: "#e3f2fd", padding: "10px 14px", borderRadius: 6, marginBottom: 16, fontSize: 13, color: "#1565c0" }}>
+        <div style={{ background: "#f5f3ff", padding: "10px 14px", borderRadius: 10, marginBottom: 16, fontSize: 13, color: "#5b21b6" }}>
           <i className="bi bi-info-circle" style={{ marginRight: 8 }} />Priority is automatically determined based on issue type, timing, and urgency keywords
         </div>
         <Input label={`Location${activeTab === "Community" ? " *" : " (Optional)"}`} id="location" placeholder="e.g., Block A, Floor 3, Apt 302" disabled={formSubmitting} {...register("location", { required: activeTab === "Community" })} />
@@ -184,6 +190,6 @@ export const IssueRaising = () => {
         feedbackSubmitting={feedbackSubmitting}
         onFeedbackSubmit={handleFeedbackSubmit}
       />
-    </div>
+    </ManagerPageShell>
   );
 };

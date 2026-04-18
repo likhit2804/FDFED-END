@@ -212,6 +212,9 @@ io.on("connection", (socket) => {
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const IS_PRODUCTION = process.env.NODE_ENV === "production";
+const CLIENT_DIST_PATH = path.join(__dirname, "../Client/dist");
+const CLIENT_INDEX_PATH = path.join(CLIENT_DIST_PATH, "index.html");
 
 // --- Security & Performance Middleware ---
 // Helmet for security headers
@@ -267,10 +270,15 @@ app.use('/uploads', (req, res, next) => {
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-  // Disable caching for development to avoid CORS issues with cached responses
-  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-  res.setHeader('Pragma', 'no-cache');
-  res.setHeader('Expires', '0');
+  if (!IS_PRODUCTION) {
+    // Disable caching in development to avoid stale local file issues.
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+  } else {
+    // Allow short-lived caching in production for uploaded assets.
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+  }
 
   // Handle preflight requests
   if (req.method === 'OPTIONS') {
@@ -281,13 +289,33 @@ app.use('/uploads', (req, res, next) => {
 }, express.static(path.join(__dirname, 'uploads')));
 app.use(express.static(path.join(__dirname, "Public")));
 
+const NO_STORE_PATH_PREFIXES = [
+  "/api",
+  "/admin",
+  "/resident",
+  "/security",
+  "/worker",
+  "/manager",
+  "/leaves",
+  "/interest",
+  "/resident-register",
+];
+
+function shouldDisableResponseCache(req) {
+  if (req.method !== "GET") return true;
+  const pathname = req.path || "";
+  if (pathname === "/login" || pathname === "/logout" || pathname === "/forgot-password") {
+    return true;
+  }
+  return NO_STORE_PATH_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+}
+
 app.use((req, res, next) => {
-  res.setHeader(
-    "Cache-Control",
-    "no-store, no-cache, must-revalidate, private"
-  );
-  res.setHeader("Pragma", "no-cache");
-  res.setHeader("Expires", "0");
+  if (shouldDisableResponseCache(req)) {
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, private");
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
+  }
   next();
 });
 
@@ -575,7 +603,10 @@ app.post("/api/AdminLogin", authLimiter, async (req, res) => {
 
     // Send OTP for 2FA
     console.log("Sending OTP to:", email);
-    await sendLoginOtp(email);
+    await sendLoginOtp(email, {
+      username: email,
+      userType: "Admin",
+    });
     console.log("OTP sent successfully");
 
     // Create a temp token for OTP verification
@@ -679,7 +710,10 @@ app.post("/login", authLimiter, async (req, res) => {
       });
     }
 
-    await sendLoginOtp(email);
+    await sendLoginOtp(email, {
+      username: email,
+      userType: verified.userPayload.userType || userType,
+    });
 
     const tempToken = jwt.sign(
       { ...verified.userPayload, purpose: "2fa" },
@@ -821,7 +855,10 @@ app.post("/api/resend-otp", async (req, res) => {
     if (payload.purpose !== "2fa")
       return res.status(400).json({ message: "Invalid token purpose" });
 
-    await resendOtp(payload.email);
+    await resendOtp(payload.email, {
+      username: payload.email,
+      userType: payload.userType,
+    });
     return res.json({ success: true });
   } catch (err) {
     console.error("/resend-otp error", err);
@@ -1009,12 +1046,24 @@ app.get("/api/auth/getUser", auth, async (req, res) => {
 // ---------------- SERVE STATIC FRONTEND (PRODUCTION PIPELINE) ----------------
 
 // Serve the React Vite build files from the Client/dist directory
-app.use(express.static(path.join(__dirname, "../Client/dist")));
+app.use(
+  express.static(CLIENT_DIST_PATH, {
+    etag: true,
+    maxAge: IS_PRODUCTION ? "1y" : 0,
+    immutable: IS_PRODUCTION,
+    setHeaders: (res, filePath) => {
+      if (filePath.endsWith("index.html")) {
+        res.setHeader("Cache-Control", "no-cache");
+      }
+    },
+  })
+);
 
 // Catch-all route to serve the React index.html for unknown routes
 // This delegates routing back to React Router in the browser
 app.get(/.*/, (req, res) => {
-  res.sendFile(path.join(__dirname, "../Client/dist/index.html"));
+  res.setHeader("Cache-Control", "no-cache");
+  res.sendFile(CLIENT_INDEX_PATH);
 });
 
 // ---------------- START SERVER WITH SOCKET.IO ----------------

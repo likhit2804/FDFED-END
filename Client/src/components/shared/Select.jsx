@@ -37,6 +37,7 @@ const Select = forwardRef(({
         <div style={{ position: 'relative' }}>
             <select
                 ref={ref}
+                required={required}
                 disabled={disabled}
                 style={{
                     width: '100%',

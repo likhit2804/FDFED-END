@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SearchBar, Dropdown, EmptyState } from '../shared';
 import { ClipboardList } from 'lucide-react';
+import { ManagerPageShell, ManagerSection } from '../Manager/ui';
 
 
 const TaskCard = ({ task, onClick, isSelected }) => {
@@ -200,8 +201,6 @@ export const History = () => {
                 });
                 const data = await res.json();
                 if (data.success && Array.isArray(data.issues)) {
-                    console.log(data);
-
                     setIssues(data.issues);
                 } else {
                     console.error('Failed to fetch history:', data.message);
@@ -266,12 +265,16 @@ export const History = () => {
     const rightColClasses = selectedTask ? 'col-lg-5 col-md-12' : 'col-0';
 
     return (
-        <div className="container-fluid p-4"
-            style={
-                {
-                    width: '100%'
-                }
-            }>
+        <ManagerPageShell
+            eyebrow="Worker Desk"
+            title="Review resolved task history and feedback."
+            description="Search completed issues, inspect details, and check resident ratings."
+        >
+            <ManagerSection
+                eyebrow="History"
+                title="Resolved tasks"
+                description="Browse completed tasks with status timeline and feedback."
+            >
             <div className="row w-100 h-100 flex-nowrap">
                 <div className={
                     `${leftColClasses} d-flex flex-column transition`
@@ -279,7 +282,7 @@ export const History = () => {
                     style={
                         { transition: 'all 0.5s ease-in-out' }
                     }>
-                    <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 16, flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 12, flexWrap: 'wrap' }}>
                         <div style={{ flex: 1, minWidth: 200 }}>
                             <SearchBar placeholder="Search by title, resident or rating..." value={search} onChange={setSearch} />
                         </div>
@@ -366,8 +369,8 @@ export const History = () => {
                     )
                 } </AnimatePresence>
             </div>
-
-        </div>
+            </ManagerSection>
+        </ManagerPageShell>
     );
 };
 

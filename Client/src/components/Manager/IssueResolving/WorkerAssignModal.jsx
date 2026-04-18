@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { Loader } from "../../Loader";
 import { Modal, Select, Input, Textarea } from "../../shared";
 
 /**
@@ -145,7 +146,11 @@ export const WorkerAssignModal = ({
                         placeholder="Choose a worker..."
                         options={buildWorkerOptions(issue, workers, mode)}
                     />
-                    {workersLoading && <small className="text-muted">Loading workers...</small>}
+                    {workersLoading ? (
+                        <div style={{ paddingTop: 8 }}>
+                            <Loader label="Loading workers..." size={24} />
+                        </div>
+                    ) : null}
 
                     {/* Shared fields */}
                     <Input type="date" label="Deadline (optional)" value={deadline} onChange={(e) => setDeadline(e.target.value)} />
