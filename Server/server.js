@@ -55,7 +55,7 @@ import interestRouter from "./routes/InterestRouter.js";
 import leaveRouter from "./routes/leaveRouter.js";
 import searchRouter from "./routes/searchRouter.js";
 import b2bRouter from "./routes/b2bRouter.js";
-import { cacheRoute } from "./middleware/cacheMiddleware.js";
+import { cacheRoute, clearAllCache, getCacheStats } from "./middleware/cacheMiddleware.js";
 
 
 import { interestUploadRouter } from "./controllers/admin/interestForm.js";
@@ -64,6 +64,7 @@ import { apiKeyAuth } from "./middleware/apiKeyAuth.js";
 
 import swaggerUi from 'swagger-ui-express';
 import swaggerSpec from './configs/swaggerConfig.js';
+import { isRedisReady } from "./configs/redisClient.js";
 
 import Resident from "./models/resident.js";
 import Community from "./models/communities.js";
@@ -339,6 +340,49 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
   customSiteTitle: 'UrbanEase API Docs',
 }));
 app.get('/api-docs.json', (req, res) => res.json(swaggerSpec));
+
+// Redis cache diagnostics for end-review validation.
+/**
+ * @swagger
+ * /api/cache/stats:
+ *   get:
+ *     summary: Get Redis cache diagnostics
+ *     tags: [Admin - Dashboard]
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: Cache stats with redis readiness and hit rate
+ */
+app.get("/api/cache/stats", auth, authorizeA, (req, res) => {
+  return res.json({
+    success: true,
+    redisReady: isRedisReady(),
+    stats: getCacheStats(),
+  });
+});
+
+/**
+ * @swagger
+ * /api/cache/clear:
+ *   post:
+ *     summary: Clear all Redis response-cache keys
+ *     tags: [Admin - Dashboard]
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: Cache cleared and metrics reset
+ */
+app.post("/api/cache/clear", auth, authorizeA, async (req, res) => {
+  const deletedKeys = await clearAllCache();
+  return res.json({
+    success: true,
+    redisReady: isRedisReady(),
+    deletedKeys,
+    message: "Cache cleared successfully",
+  });
+});
 
 // ROUTES
 app.use("/admin", auth, authorizeA, AdminRouter);

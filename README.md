@@ -16,6 +16,7 @@ UrbanEase is a full-stack community management platform for gated communities an
 | Frontend | React 19, Vite 7, Redux Toolkit, Bootstrap, Framer Motion, Recharts, Socket.IO Client |
 | Backend | Express 5, Mongoose, JWT auth, Swagger, Socket.IO |
 | Database | MongoDB |
+| Cache | Redis (ioredis) |
 | Storage | Cloudinary |
 | Payments | Razorpay |
 | Email | Nodemailer |
@@ -73,6 +74,7 @@ Create `Server/.env` with the required values for your environment.
 | `RAZORPAY_KEY_ID` | Razorpay public key id |
 | `RAZORPAY_KEY_SECRET` | Razorpay secret key |
 | `API_KEYS` | Comma-separated B2B API keys |
+| `REDIS_URL` | Redis connection URL (default: `redis://127.0.0.1:6379`) |
 
 If `API_KEYS` is not set, the B2B middleware falls back to the demo key `ue-demo-api-key-2024`.
 
@@ -129,6 +131,22 @@ UrbanEase consumes Razorpay in two places:
 - Resident payment flow via `/resident/payment/:id/order` and `/resident/payment/:id/verify`
 
 The server creates Razorpay orders over HTTPS and verifies the payment signature before marking records as completed.
+
+## Redis Caching And Benchmark
+
+UrbanEase includes Redis-backed response caching for dashboard and profile bootstrap APIs. Cache behavior is exposed with `X-Cache` response headers (`HIT`, `MISS`, `BYPASS`) and admin diagnostics APIs:
+
+- `GET /api/cache/stats`
+- `POST /api/cache/clear`
+
+Run benchmark evidence script:
+
+```bash
+cd Server
+npm run benchmark:redis
+```
+
+The script writes a report to `project_docs/redis_benchmark_report.json`.
 
 ## Notes for Evaluation
 

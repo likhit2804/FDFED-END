@@ -251,3 +251,84 @@ The issue query plan change means MongoDB now uses the `LIMIT` stage to short-ci
 - [x] Refactor dashboard controller to `$facet` aggregation — 46% faster avg
 - [x] Refactor payments controller to parallel `$group` aggregate — 9.5% faster avg
 - [x] Benchmark proof: `node Server/scripts/phase23-proof.js` — all improvements verified on live DB
+
+---
+
+## 7. Redis Caching Optimization (End Review Requirement)
+
+### What Was Implemented
+
+- Added centralized Redis cache middleware with:
+  - per-user scoped keys (`cache:<userId>:<communityId>:<url>`)
+  - TTL-based response caching for hot GET APIs
+  - cache diagnostics via `X-Cache` response header (`HIT`, `MISS`, `BYPASS`)
+  - internal metrics (hits, misses, hit-rate, read/write errors)
+- Added admin diagnostics APIs:
+  - `GET /api/cache/stats` (Redis readiness + cache metrics)
+  - `POST /api/cache/clear` (clear cache + reset metrics)
+- Added benchmark automation script:
+  - `Server/scripts/redisBenchmark.js`
+  - compares latency across:
+    - DB only (no cache)
+    - Redis cold miss
+    - Redis warm hit
+  - writes reproducible JSON evidence to:
+    - `project_docs/redis_benchmark_report.json`
+
+### Cached Endpoints (Current)
+
+- `GET /admin/api/dashboard` (TTL 60s)
+- `GET /manager/api/dashboard` (TTL 30s)
+- `GET /resident/api/dashboard` (TTL 15s)
+- `GET /security/dashboard/api` (TTL 30s)
+- `GET /worker/getDashboardData` (TTL 30s)
+- `GET /worker/history` (TTL 30s)
+- `GET /api/auth/getUser` (TTL 180s)
+
+### How To Run Redis Benchmark
+
+1. Start Redis (default URL: `redis://127.0.0.1:6379`)
+2. Ensure server `.env` has valid `MONGO_URI1`
+3. Run:
+
+```bash
+cd Server
+npm run benchmark:redis
+```
+
+4. Open generated report:
+   - `project_docs/redis_benchmark_report.json`
+
+If warm-hit latency is slower than DB-only latency, it indicates Redis network/region overhead (for example, app in India with Redis in US-East). For evaluation, run Redis in the same region/VPC (or local Redis in lab) and rerun benchmark.
+
+### Demo Evidence Flow (During Review)
+
+1. Call `POST /api/cache/clear` as admin
+2. Hit dashboard endpoint once and verify `X-Cache: MISS`
+3. Hit the same endpoint again and verify `X-Cache: HIT`
+4. Show `GET /api/cache/stats` to display hit-rate growth
+5. Show `redis_benchmark_report.json` with latency improvements
+
+### Latest Benchmark (After Region Alignment)
+
+Run context: Redis region aligned with app/DB path (same-near region), using `npm run benchmark:redis`.
+
+| Scenario | avg | p50 | p95 | min | max |
+|---|---|---|---|---|---|
+| DB only (no cache) | 49.37ms | 39.01ms | 161.25ms | 37.71ms | 161.25ms |
+| Redis cold miss | 123.74ms | 123.16ms | 126.19ms | 122.68ms | 126.19ms |
+| Redis warm hit | **28.81ms** | **28.58ms** | **31.41ms** | **26.75ms** | **31.41ms** |
+
+Improvement summary:
+- Warm-hit avg improvement: **41.65%** (49.37ms -> 28.81ms, saved 20.57ms)
+- Warm-hit p95 improvement: **80.52%** (161.25ms -> 31.41ms, saved 129.84ms)
+- Cold-miss avg is slower than DB-only (expected): first request pays DB + Redis write cost; subsequent requests are significantly faster via warm-hit.
+
+### Redis Checklist
+
+- [x] Implement Redis client and graceful fallback
+- [x] Implement reusable cache middleware
+- [x] Add cache hit/miss diagnostics (`X-Cache`)
+- [x] Add cache metrics endpoint for review proof
+- [x] Add benchmark script for Redis vs no-cache comparison
+- [x] Run benchmark in review-ready environment and include final numbers in report

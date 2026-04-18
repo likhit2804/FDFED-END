@@ -5,7 +5,8 @@
     "start": "node server.js",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "test:report": "node --experimental-vm-modules node_modules/jest/bin/jest.js --json --outputFile=test-report.json",
-    "test:verbose": "node --experimental-vm-modules node_modules/jest/bin/jest.js --verbose"
+    "test:verbose": "node --experimental-vm-modules node_modules/jest/bin/jest.js --verbose",
+    "benchmark:redis": "node scripts/redisBenchmark.js"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",
