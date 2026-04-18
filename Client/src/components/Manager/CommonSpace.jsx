@@ -3,13 +3,17 @@ import { useForm } from "react-hook-form";
 import { useDispatch, useSelector } from "react-redux";
 import { ToastContainer, toast } from "react-toastify";
 import { BarChart3, Building2, Calendar, CheckCircle, Eye, Plus, Trash2 } from "lucide-react";
+import { DayPicker } from "react-day-picker";
+import "react-day-picker/dist/style.css";
 
 import {
   AddSpace,
+  cancelBookingByManager,
   DeleteSpace,
   EditSpace,
   fetchDataforManager,
   optimisticDeleteSpace,
+  updateSpaceAvailabilityControls,
 } from "../../slices/CommonSpaceSlice";
 import {
   Button,
@@ -50,8 +54,25 @@ export const CommonSpace = () => {
   const [isRejectionPopupOpen, setIsRejectionPopupOpen] = useState(false);
   const [bookingToReject, setBookingToReject] = useState(null);
   const [rejectionReason, setRejectionReason] = useState("");
+  const [refundType, setRefundType] = useState("none");
+  const [refundPercentage, setRefundPercentage] = useState("");
+  const [refundAmount, setRefundAmount] = useState("");
+  const [managerCancelLoading, setManagerCancelLoading] = useState(false);
   const [bookingDetailsOpen, setBookingDetailsOpen] = useState(false);
   const [currentBooking, setCurrentBooking] = useState({});
+  const [isAvailabilityModalOpen, setIsAvailabilityModalOpen] = useState(false);
+  const [availabilitySpace, setAvailabilitySpace] = useState(null);
+  const [availabilityControlsDraft, setAvailabilityControlsDraft] = useState(null);
+  const [selectedControlDate, setSelectedControlDate] = useState(new Date());
+  const [controlMonth, setControlMonth] = useState(new Date());
+  const [dayControlDraft, setDayControlDraft] = useState({
+    isBlackout: false,
+    blackoutReason: "",
+    closedAllDay: false,
+    closedSlots: "",
+    overrideReason: "",
+  });
+  const [availabilitySaving, setAvailabilitySaving] = useState(false);
   const [toggleRent, setToggleRent] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -151,6 +172,293 @@ export const CommonSpace = () => {
     );
   });
 
+  const terminalBookingStatuses = new Set([
+    "Rejected",
+    "Cancelled",
+    "Cancelled By Resident",
+    "Cancelled By Manager",
+    "Completed",
+    "Expired",
+  ]);
+
+  const canManagerCancel = (booking) =>
+    booking && !terminalBookingStatuses.has(booking.status);
+
+  const toDateInputValue = (value) => {
+    if (!value) return "";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    return date.toISOString().split("T")[0];
+  };
+  const toDateFromIso = (isoDate) => {
+    if (!isoDate) return null;
+    const parsed = new Date(`${isoDate}T00:00:00`);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  };
+
+  const getSelectedControlDateKey = () => toDateInputValue(selectedControlDate);
+
+  const getDraftControls = (space) => {
+    const controls = space?.availabilityControls || {};
+    const slotConfig = controls.slotConfig || {};
+    const bookingPolicy = controls.bookingPolicy || {};
+
+    return {
+      slotConfig: {
+        startTime: slotConfig.startTime || "06:00",
+        endTime: slotConfig.endTime || "22:00",
+      },
+      bookingPolicy: {
+        minAdvanceHours: String(bookingPolicy.minAdvanceHours ?? 0),
+        maxAdvanceDays: String(bookingPolicy.maxAdvanceDays ?? 90),
+        sameDayCutoffTime: bookingPolicy.sameDayCutoffTime || "22:00",
+      },
+      blackoutDates: Array.isArray(controls.blackoutDates)
+        ? controls.blackoutDates.map((entry) => ({
+            date: toDateInputValue(entry.date),
+            reason: entry.reason || "",
+          }))
+        : [],
+      dateSlotOverrides: Array.isArray(controls.dateSlotOverrides)
+        ? controls.dateSlotOverrides.map((entry) => ({
+            date: toDateInputValue(entry.date),
+            closedAllDay: Boolean(entry.closedAllDay),
+            closedSlots: Array.isArray(entry.closedSlots) ? entry.closedSlots : [],
+            reason: entry.reason || "",
+          }))
+        : [],
+    };
+  };
+
+  const getDayControlDraft = (controls, dateKey) => {
+    const blackout = (controls?.blackoutDates || []).find((entry) => entry.date === dateKey);
+    const override = (controls?.dateSlotOverrides || []).find((entry) => entry.date === dateKey);
+
+    return {
+      isBlackout: Boolean(blackout),
+      blackoutReason: blackout?.reason || "",
+      closedAllDay: Boolean(override?.closedAllDay),
+      closedSlots: Array.isArray(override?.closedSlots)
+        ? override.closedSlots.join(", ")
+        : "",
+      overrideReason: override?.reason || "",
+    };
+  };
+
+  const blackoutModifierDays = useMemo(
+    () =>
+      (availabilityControlsDraft?.blackoutDates || [])
+        .map((entry) => toDateFromIso(entry.date))
+        .filter(Boolean),
+    [availabilityControlsDraft],
+  );
+
+  const overrideModifierDays = useMemo(
+    () =>
+      (availabilityControlsDraft?.dateSlotOverrides || [])
+        .map((entry) => toDateFromIso(entry.date))
+        .filter(Boolean),
+    [availabilityControlsDraft],
+  );
+
+  const openAvailabilityModal = (space) => {
+    const today = new Date();
+    const todayKey = toDateInputValue(today);
+    const controls = getDraftControls(space);
+
+    setAvailabilitySpace(space);
+    setAvailabilityControlsDraft(controls);
+    setSelectedControlDate(today);
+    setControlMonth(today);
+    setDayControlDraft(getDayControlDraft(controls, todayKey));
+    setIsAvailabilityModalOpen(true);
+  };
+
+  const updateSlotConfigDraft = (field, value) => {
+    setAvailabilityControlsDraft((previous) => ({
+      ...previous,
+      slotConfig: {
+        ...previous.slotConfig,
+        [field]: value,
+      },
+    }));
+  };
+
+  const updatePolicyDraft = (field, value) => {
+    setAvailabilityControlsDraft((previous) => ({
+      ...previous,
+      bookingPolicy: {
+        ...previous.bookingPolicy,
+        [field]: value,
+      },
+    }));
+  };
+
+  const parseClosedSlotsInput = (value) => {
+    const tokens = String(value || "")
+      .split(",")
+      .map((token) => token.trim())
+      .filter(Boolean);
+
+    const invalid = tokens.filter(
+      (token) => !/^([0-1]?\d|2[0-3]):[0-5]\d$/.test(token),
+    );
+    if (invalid.length > 0) {
+      return {
+        valid: false,
+        message: `Invalid slot format: ${invalid.join(", ")}. Use HH:mm.`,
+      };
+    }
+
+    return {
+      valid: true,
+      slots: [...new Set(tokens)].sort(),
+    };
+  };
+
+  useEffect(() => {
+    if (!isAvailabilityModalOpen || !availabilityControlsDraft) return;
+    const selectedDateKey = getSelectedControlDateKey();
+    if (!selectedDateKey) return;
+
+    setDayControlDraft(getDayControlDraft(availabilityControlsDraft, selectedDateKey));
+  }, [
+    isAvailabilityModalOpen,
+    availabilityControlsDraft,
+    selectedControlDate,
+  ]);
+
+  const applySelectedDayControls = () => {
+    const selectedDateKey = getSelectedControlDateKey();
+    if (!selectedDateKey) {
+      toast.error("Select a valid date on calendar.");
+      return;
+    }
+
+    const parsedSlots = parseClosedSlotsInput(dayControlDraft.closedSlots);
+    if (!parsedSlots.valid) {
+      toast.error(parsedSlots.message);
+      return;
+    }
+
+    const normalizedSlots = dayControlDraft.closedAllDay ? [] : parsedSlots.slots;
+    const shouldPersistOverride =
+      dayControlDraft.closedAllDay || normalizedSlots.length > 0;
+
+    setAvailabilityControlsDraft((previous) => {
+      const blackoutByDate = new Map(
+        (previous.blackoutDates || []).map((entry) => [entry.date, entry]),
+      );
+      if (dayControlDraft.isBlackout) {
+        blackoutByDate.set(selectedDateKey, {
+          date: selectedDateKey,
+          reason: dayControlDraft.blackoutReason.trim(),
+        });
+      } else {
+        blackoutByDate.delete(selectedDateKey);
+      }
+
+      const overrideByDate = new Map(
+        (previous.dateSlotOverrides || []).map((entry) => [entry.date, entry]),
+      );
+      if (shouldPersistOverride) {
+        overrideByDate.set(selectedDateKey, {
+          date: selectedDateKey,
+          closedAllDay: Boolean(dayControlDraft.closedAllDay),
+          closedSlots: normalizedSlots,
+          reason: dayControlDraft.overrideReason.trim(),
+        });
+      } else {
+        overrideByDate.delete(selectedDateKey);
+      }
+
+      return {
+        ...previous,
+        blackoutDates: [...blackoutByDate.values()].sort((a, b) =>
+          a.date.localeCompare(b.date),
+        ),
+        dateSlotOverrides: [...overrideByDate.values()].sort((a, b) =>
+          a.date.localeCompare(b.date),
+        ),
+      };
+    });
+    toast.success(`Updated controls for ${selectedDateKey}`);
+  };
+
+  const clearSelectedDayControls = () => {
+    const selectedDateKey = getSelectedControlDateKey();
+    if (!selectedDateKey) return;
+
+    setAvailabilityControlsDraft((previous) => ({
+      ...previous,
+      blackoutDates: (previous.blackoutDates || []).filter(
+        (entry) => entry.date !== selectedDateKey,
+      ),
+      dateSlotOverrides: (previous.dateSlotOverrides || []).filter(
+        (entry) => entry.date !== selectedDateKey,
+      ),
+    }));
+
+    setDayControlDraft({
+      isBlackout: false,
+      blackoutReason: "",
+      closedAllDay: false,
+      closedSlots: "",
+      overrideReason: "",
+    });
+
+    toast.success(`Cleared controls for ${selectedDateKey}`);
+  };
+
+  const saveAvailabilityControls = async () => {
+    if (!availabilitySpace?._id || !availabilityControlsDraft) return;
+
+    const payload = {
+      slotConfig: {
+        startTime: availabilityControlsDraft.slotConfig.startTime,
+        endTime: availabilityControlsDraft.slotConfig.endTime,
+      },
+      bookingPolicy: {
+        minAdvanceHours: Number(availabilityControlsDraft.bookingPolicy.minAdvanceHours || 0),
+        maxAdvanceDays: Number(availabilityControlsDraft.bookingPolicy.maxAdvanceDays || 90),
+        sameDayCutoffTime: availabilityControlsDraft.bookingPolicy.sameDayCutoffTime,
+      },
+      blackoutDates: (availabilityControlsDraft.blackoutDates || []).map((entry) => ({
+        date: entry.date,
+        reason: entry.reason || "",
+      })),
+      dateSlotOverrides: (availabilityControlsDraft.dateSlotOverrides || []).map((entry) => ({
+        date: entry.date,
+        closedAllDay: Boolean(entry.closedAllDay),
+        closedSlots: Array.isArray(entry.closedSlots) ? entry.closedSlots : [],
+        reason: entry.reason || "",
+      })),
+    };
+
+    if (payload.bookingPolicy.maxAdvanceDays < 1) {
+      toast.error("Max advance days should be at least 1.");
+      return;
+    }
+
+    try {
+      setAvailabilitySaving(true);
+      const result = await dispatch(
+        updateSpaceAvailabilityControls({
+          id: availabilitySpace._id,
+          availabilityControls: payload,
+        }),
+      ).unwrap();
+      toast.success(result?.message || "Availability controls updated.");
+      setIsAvailabilityModalOpen(false);
+      setAvailabilitySpace(null);
+      setAvailabilityControlsDraft(null);
+    } catch (error) {
+      toast.error(error?.message || "Failed to update availability controls.");
+    } finally {
+      setAvailabilitySaving(false);
+    }
+  };
+
   const onSubmit = (data) => {
     const payload = { ...data, bookable: data.bookable === "true" };
     if (isEditing) {
@@ -191,22 +499,73 @@ export const CommonSpace = () => {
     console.log("Approving booking:", bookingId);
   };
 
-  const openRejectPopup = (bookingId) => {
-    setBookingToReject(bookingId);
+  const openRejectPopup = (booking) => {
+    setBookingToReject(booking);
+    setRejectionReason("");
+    setRefundType("none");
+    setRefundPercentage("");
+    setRefundAmount("");
     setIsRejectionPopupOpen(true);
   };
 
-  const handleRejectionSubmit = () => {
+  const handleRejectionSubmit = async () => {
     if (!rejectionReason.trim()) {
-      alert("Please provide a reason for rejection.");
+      toast.error("Please provide a cancellation reason.");
       return;
     }
 
-    console.log("Rejected booking:", bookingToReject, rejectionReason);
-    setIsRejectionPopupOpen(false);
-    setRejectionReason("");
-    setBookingToReject(null);
+    if (refundType === "partial") {
+      const parsedPercentage =
+        refundPercentage !== "" ? Number(refundPercentage) : NaN;
+      const parsedAmount = refundAmount !== "" ? Number(refundAmount) : NaN;
+      const hasValidPercentage =
+        Number.isFinite(parsedPercentage) &&
+        parsedPercentage >= 0 &&
+        parsedPercentage <= 100;
+      const hasValidAmount = Number.isFinite(parsedAmount) && parsedAmount >= 0;
+
+      if (!hasValidPercentage && !hasValidAmount) {
+        toast.error(
+          "For partial refund, provide valid refund % (0-100) or refund amount.",
+        );
+        return;
+      }
+    }
+
+    try {
+      setManagerCancelLoading(true);
+      const result = await dispatch(
+        cancelBookingByManager({
+          bookingId: bookingToReject?._id,
+          reason: rejectionReason.trim(),
+          refundType,
+          refundPercentage: refundType === "partial" ? refundPercentage : undefined,
+          refundAmount: refundType === "partial" ? refundAmount : undefined,
+        }),
+      ).unwrap();
+
+      toast.success(
+        result?.message ||
+          "Booking cancelled successfully with manager decision.",
+      );
+      setIsRejectionPopupOpen(false);
+      setBookingToReject(null);
+      setRejectionReason("");
+      setRefundType("none");
+      setRefundPercentage("");
+      setRefundAmount("");
+    } catch (error) {
+      toast.error(error?.message || error || "Failed to cancel booking.");
+    } finally {
+      setManagerCancelLoading(false);
+    }
   };
+
+  const selectedControlDateKey = getSelectedControlDateKey();
+  const minControlDate = new Date();
+  minControlDate.setHours(0, 0, 0, 0);
+  const maxControlDate = new Date(minControlDate);
+  maxControlDate.setDate(maxControlDate.getDate() + 365);
 
   return (
     <>
@@ -259,6 +618,9 @@ export const CommonSpace = () => {
                     }
                     actions={
                       <>
+                        <ManagerActionButton variant="secondary" onClick={() => openAvailabilityModal(space)}>
+                          Availability
+                        </ManagerActionButton>
                         <ManagerActionButton variant="secondary" onClick={() => handleEditSpace(space)}>
                           Edit
                         </ManagerActionButton>
@@ -349,29 +711,41 @@ export const CommonSpace = () => {
                   ]}
                   actions={
                     booking.status === "Pending" ? (
-                      <ManagerActionButton variant="secondary" onClick={() => console.log("Checking availability for", booking._id)}>
-                        Check Availability
-                      </ManagerActionButton>
-                    ) : booking.status === "Avalaible" ? (
+                      <>
+                        <ManagerActionButton variant="secondary" onClick={() => console.log("Checking availability for", booking._id)}>
+                          Check Availability
+                        </ManagerActionButton>
+                        <ManagerActionButton variant="danger" onClick={() => openRejectPopup(booking)}>
+                          Cancel / Refund
+                        </ManagerActionButton>
+                      </>
+                    ) : booking.status === "Avalaible" || booking.status === "Available" ? (
                       <>
                         <ManagerActionButton variant="primary" onClick={() => handleApprove(booking._id)}>
                           Approve
                         </ManagerActionButton>
-                        <ManagerActionButton variant="danger" onClick={() => openRejectPopup(booking._id)}>
+                        <ManagerActionButton variant="danger" onClick={() => openRejectPopup(booking)}>
                           Reject
                         </ManagerActionButton>
                       </>
                     ) : (
-                      <ManagerActionButton
-                        variant="secondary"
-                        onClick={() => {
-                          setCurrentBooking(booking);
-                          setBookingDetailsOpen(true);
-                        }}
-                      >
-                        <Eye size={16} />
-                        View Details
-                      </ManagerActionButton>
+                      <>
+                        <ManagerActionButton
+                          variant="secondary"
+                          onClick={() => {
+                            setCurrentBooking(booking);
+                            setBookingDetailsOpen(true);
+                          }}
+                        >
+                          <Eye size={16} />
+                          View Details
+                        </ManagerActionButton>
+                        {canManagerCancel(booking) ? (
+                          <ManagerActionButton variant="danger" onClick={() => openRejectPopup(booking)}>
+                            Cancel / Refund
+                          </ManagerActionButton>
+                        ) : null}
+                      </>
                     )
                   }
                 />
@@ -445,21 +819,277 @@ export const CommonSpace = () => {
           <Textarea label="Booking Rules" rows={3} {...register("bookingRules")} />
         </Modal>
 
+        <Modal
+          isOpen={isAvailabilityModalOpen}
+          onClose={() => setIsAvailabilityModalOpen(false)}
+          title={`Availability Controls${availabilitySpace?.name ? ` · ${availabilitySpace.name}` : ""}`}
+          size="lg"
+          footer={
+            <>
+              <button
+                type="button"
+                className="manager-ui-button manager-ui-button--secondary"
+                onClick={() => setIsAvailabilityModalOpen(false)}
+                disabled={availabilitySaving}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="manager-ui-button manager-ui-button--primary"
+                onClick={saveAvailabilityControls}
+                disabled={availabilitySaving}
+              >
+                {availabilitySaving ? "Saving..." : "Save controls"}
+              </button>
+            </>
+          }
+        >
+          {availabilityControlsDraft ? (
+            <div style={{ display: "grid", gap: 14 }}>
+              <FormSection columns={2}>
+                <Input
+                  label="Slot start time"
+                  type="time"
+                  value={availabilityControlsDraft.slotConfig.startTime}
+                  onChange={(event) =>
+                    updateSlotConfigDraft("startTime", event.target.value)
+                  }
+                />
+                <Input
+                  label="Slot end time"
+                  type="time"
+                  value={availabilityControlsDraft.slotConfig.endTime}
+                  onChange={(event) =>
+                    updateSlotConfigDraft("endTime", event.target.value)
+                  }
+                />
+              </FormSection>
+              <FormSection columns={3}>
+                <Input
+                  label="Min advance (hours)"
+                  type="number"
+                  min="0"
+                  max="720"
+                  value={availabilityControlsDraft.bookingPolicy.minAdvanceHours}
+                  onChange={(event) =>
+                    updatePolicyDraft("minAdvanceHours", event.target.value)
+                  }
+                />
+                <Input
+                  label="Max advance (days)"
+                  type="number"
+                  min="1"
+                  max="365"
+                  value={availabilityControlsDraft.bookingPolicy.maxAdvanceDays}
+                  onChange={(event) =>
+                    updatePolicyDraft("maxAdvanceDays", event.target.value)
+                  }
+                />
+                <Input
+                  label="Same-day cutoff"
+                  type="time"
+                  value={availabilityControlsDraft.bookingPolicy.sameDayCutoffTime}
+                  onChange={(event) =>
+                    updatePolicyDraft("sameDayCutoffTime", event.target.value)
+                  }
+                />
+              </FormSection>
+              <div className="manager-ui-two-column">
+                <div className="manager-ui-surface">
+                  <h4 className="manager-ui-title-sm">Calendar Controls</h4>
+                  <p className="manager-ui-note">
+                    Pick a date from calendar. Red = blackout, Blue = slot override.
+                  </p>
+                  <DayPicker
+                    mode="single"
+                    month={controlMonth}
+                    onMonthChange={setControlMonth}
+                    selected={selectedControlDate}
+                    onSelect={(date) => {
+                      if (!date) return;
+                      setSelectedControlDate(date);
+                    }}
+                    showOutsideDays
+                    startMonth={minControlDate}
+                    endMonth={maxControlDate}
+                    disabled={{ before: minControlDate, after: maxControlDate }}
+                    modifiers={{
+                      blackout: blackoutModifierDays,
+                      override: overrideModifierDays,
+                    }}
+                    modifiersStyles={{
+                      blackout: {
+                        backgroundColor: "#fee2e2",
+                        color: "#b91c1c",
+                        fontWeight: 700,
+                      },
+                      override: {
+                        backgroundColor: "#dbeafe",
+                        color: "#1d4ed8",
+                        fontWeight: 700,
+                      },
+                    }}
+                  />
+                </div>
+
+                <div className="manager-ui-surface">
+                  <h4 className="manager-ui-title-sm">
+                    Selected Date: {selectedControlDateKey || "-"}
+                  </h4>
+                  <p className="manager-ui-note">
+                    Edit rules only for this selected date. Old history is hidden unless you click that date.
+                  </p>
+                  <div style={{ display: "grid", gap: 10 }}>
+                    <label
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        fontSize: 14,
+                        color: "#374151",
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={dayControlDraft.isBlackout}
+                        onChange={(event) =>
+                          setDayControlDraft((previous) => ({
+                            ...previous,
+                            isBlackout: event.target.checked,
+                          }))
+                        }
+                      />
+                      Blackout this date
+                    </label>
+                    <Input
+                      label="Blackout reason"
+                      value={dayControlDraft.blackoutReason}
+                      onChange={(event) =>
+                        setDayControlDraft((previous) => ({
+                          ...previous,
+                          blackoutReason: event.target.value,
+                        }))
+                      }
+                      placeholder="Optional reason"
+                      disabled={!dayControlDraft.isBlackout}
+                    />
+
+                    <label
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        fontSize: 14,
+                        color: "#374151",
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={dayControlDraft.closedAllDay}
+                        onChange={(event) =>
+                          setDayControlDraft((previous) => ({
+                            ...previous,
+                            closedAllDay: event.target.checked,
+                          }))
+                        }
+                      />
+                      Close all slots for this date
+                    </label>
+                    <Input
+                      label="Closed slots (comma separated HH:mm)"
+                      value={dayControlDraft.closedSlots}
+                      onChange={(event) =>
+                        setDayControlDraft((previous) => ({
+                          ...previous,
+                          closedSlots: event.target.value,
+                        }))
+                      }
+                      placeholder="09:00,10:00,11:00"
+                      disabled={dayControlDraft.closedAllDay}
+                    />
+                    <Input
+                      label="Override reason"
+                      value={dayControlDraft.overrideReason}
+                      onChange={(event) =>
+                        setDayControlDraft((previous) => ({
+                          ...previous,
+                          overrideReason: event.target.value,
+                        }))
+                      }
+                      placeholder="Optional reason"
+                    />
+                  </div>
+                  <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+                    <ManagerActionButton
+                      variant="secondary"
+                      onClick={applySelectedDayControls}
+                    >
+                      Apply for date
+                    </ManagerActionButton>
+                    <ManagerActionButton
+                      variant="danger"
+                      onClick={clearSelectedDayControls}
+                    >
+                      Clear date config
+                    </ManagerActionButton>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : null}
+        </Modal>
+
         <ConfirmModal
           isOpen={isRejectionPopupOpen}
           onClose={() => setIsRejectionPopupOpen(false)}
           onConfirm={handleRejectionSubmit}
-          title="Reject Booking"
+          title="Cancel Booking"
           variant="danger"
-          confirmText="Submit Rejection"
+          confirmText="Confirm Cancellation"
+          loading={managerCancelLoading}
           message={
-            <textarea
-              rows={4}
-              style={{ width: "100%", padding: "10px", border: "1px solid #d6c6f4", borderRadius: 12, marginTop: 8, fontSize: 14 }}
-              placeholder="Enter reason for rejection..."
-              value={rejectionReason}
-              onChange={(event) => setRejectionReason(event.target.value)}
-            />
+            <div style={{ display: "grid", gap: 10, marginTop: 8 }}>
+              <textarea
+                rows={4}
+                style={{ width: "100%", padding: "10px", border: "1px solid #d6c6f4", borderRadius: 12, fontSize: 14 }}
+                placeholder="Enter cancellation reason..."
+                value={rejectionReason}
+                onChange={(event) => setRejectionReason(event.target.value)}
+              />
+              <select
+                value={refundType}
+                onChange={(event) => setRefundType(event.target.value)}
+                style={{ width: "100%", padding: "10px", border: "1px solid #d6c6f4", borderRadius: 12, fontSize: 14 }}
+              >
+                <option value="none">No refund</option>
+                <option value="full">Full refund</option>
+                <option value="partial">Partial refund</option>
+              </select>
+              {refundType === "partial" ? (
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    placeholder="Refund % (0-100)"
+                    value={refundPercentage}
+                    onChange={(event) => setRefundPercentage(event.target.value)}
+                    style={{ width: "100%", padding: "10px", border: "1px solid #d6c6f4", borderRadius: 12, fontSize: 14 }}
+                  />
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="Refund amount"
+                    value={refundAmount}
+                    onChange={(event) => setRefundAmount(event.target.value)}
+                    style={{ width: "100%", padding: "10px", border: "1px solid #d6c6f4", borderRadius: 12, fontSize: 14 }}
+                  />
+                </div>
+              ) : null}
+            </div>
           }
         />
 
@@ -504,7 +1134,7 @@ export const CommonSpace = () => {
               <span className="detail-label">Purpose</span>
               <span className="detail-value">{currentBooking?.description}</span>
             </div>
-            {currentBooking?.payment && currentBooking.status !== "Cancelled" ? (
+            {currentBooking?.payment && !String(currentBooking?.status || "").startsWith("Cancelled") ? (
               <div className="detail-item full">
                 <span className="detail-label">Payment</span>
                 <span className="detail-value">
@@ -512,10 +1142,19 @@ export const CommonSpace = () => {
                 </span>
               </div>
             ) : null}
-            {currentBooking?.status === "Cancelled" ? (
+            {String(currentBooking?.status || "").startsWith("Cancelled") ? (
               <div className="detail-item full">
                 <span className="detail-label">Cancellation Reason</span>
                 <span className="detail-value">{currentBooking?.cancellationReason || "N/A"}</span>
+              </div>
+            ) : null}
+            {String(currentBooking?.status || "").startsWith("Cancelled") ? (
+              <div className="detail-item full">
+                <span className="detail-label">Refund Details</span>
+                <span className="detail-value">
+                  {(currentBooking?.managerCancellation?.refundType || "none").toUpperCase()} • ₹
+                  {currentBooking?.managerCancellation?.refundAmount ?? currentBooking?.refundAmount ?? 0}
+                </span>
               </div>
             ) : null}
           </div>

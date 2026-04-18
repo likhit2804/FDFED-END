@@ -6,6 +6,7 @@ import {
     rejectBooking,
     createSpace,
     updateSpace,
+    updateSpaceAvailabilityControls,
     deleteSpace,
     updateBookingRules,
     getSpaces,
@@ -20,6 +21,7 @@ csbManagerRouter.post("/commonSpace/reject/:id", rejectBooking);
 
 csbManagerRouter.post("/spaces", createSpace);
 csbManagerRouter.put("/spaces/:id", updateSpace);
+csbManagerRouter.put("/spaces/:id/availability-controls", updateSpaceAvailabilityControls);
 csbManagerRouter.delete("/spaces/:id", deleteSpace);
 
 csbManagerRouter.post("/api/community/booking-rules", updateBookingRules);

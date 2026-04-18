@@ -168,6 +168,33 @@ export const AddSpace = createAsyncThunk(
   }
 );
 
+export const updateSpaceAvailabilityControls = createAsyncThunk(
+  "commonSpace/updateSpaceAvailabilityControls",
+  async ({ id, availabilityControls }, { rejectWithValue }) => {
+    try {
+      const response = await fetch(
+        `/manager/spaces/${id}/availability-controls`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify({ availabilityControls }),
+        },
+      );
+      const data = await response.json();
+      if (!response.ok) {
+        return rejectWithValue(data);
+      }
+      return data;
+    } catch (error) {
+      return rejectWithValue(error.message);
+    }
+  },
+);
+
 export const ProceedPayment = createAsyncThunk("commonSpace/ProceedPayment",
   async ({ paymentData, bookingId }, { rejectWithValue }) => {
     console.log("Data in slice :", paymentData);
@@ -219,6 +246,56 @@ export const cancelUserBooking = createAsyncThunk(
       return rejectWithValue(error.message);
     }
   }
+);
+
+export const cancelBookingByManager = createAsyncThunk(
+  "commonSpace/cancelBookingByManager",
+  async (
+    { bookingId, reason, refundType = "none", refundPercentage, refundAmount },
+    { rejectWithValue },
+  ) => {
+    try {
+      const payload = { reason, refundType };
+      if (
+        refundPercentage !== undefined &&
+        refundPercentage !== null &&
+        refundPercentage !== ""
+      ) {
+        payload.refundPercentage = Number(refundPercentage);
+      }
+      if (
+        refundAmount !== undefined &&
+        refundAmount !== null &&
+        refundAmount !== ""
+      ) {
+        payload.refundAmount = Number(refundAmount);
+      }
+
+      const response = await fetch(`/manager/commonSpace/reject/${bookingId}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        return rejectWithValue(data);
+      }
+
+      return {
+        bookingId,
+        booking: data.booking,
+        message: data.message,
+        refund: data.refund,
+      };
+    } catch (error) {
+      return rejectWithValue(error.message);
+    }
+  },
 );
 
 
@@ -368,6 +445,25 @@ const CommonSpaceSlice = createSlice({
         state.loading = false;
         state.error = action.payload;
       })
+      .addCase(updateSpaceAvailabilityControls.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(updateSpaceAvailabilityControls.fulfilled, (state, action) => {
+        state.loading = false;
+        const updatedSpace = action.payload?.space;
+        if (!updatedSpace) return;
+
+        const index = state.avalaibleSpaces.findIndex(
+          (space) => space._id === updatedSpace._id,
+        );
+        if (index !== -1) {
+          state.avalaibleSpaces[index] = updatedSpace;
+        }
+      })
+      .addCase(updateSpaceAvailabilityControls.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
 
       .addCase(cancelUserBooking.fulfilled, (state, action) => {
         const idToCancel = action.payload.id;
@@ -407,6 +503,24 @@ const CommonSpaceSlice = createSlice({
         if (bookingToRevert && bookingToRevert.payment) {
           bookingToRevert.payment.status = 'Failed';
         }
+        state.loading = false;
+        state.error = action.payload;
+      })
+      .addCase(cancelBookingByManager.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(cancelBookingByManager.fulfilled, (state, action) => {
+        const { bookingId, booking } = action.payload;
+        const index = state.Bookings.findIndex((entry) => entry._id === bookingId);
+        if (index !== -1) {
+          state.Bookings[index] = booking || {
+            ...state.Bookings[index],
+            status: "Cancelled By Manager",
+          };
+        }
+        state.loading = false;
+      })
+      .addCase(cancelBookingByManager.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       });

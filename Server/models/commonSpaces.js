@@ -116,6 +116,33 @@ const commonSpacesSchema = new mongoose.Schema({
     type: String,
   },
 
+  managerCancellation: {
+    reason: { type: String },
+    refundType: {
+      type: String,
+      enum: ["none", "full", "partial"],
+      default: "none",
+    },
+    refundPercentage: {
+      type: Number,
+      min: 0,
+      max: 100,
+      default: null,
+    },
+    refundAmount: {
+      type: Number,
+      min: 0,
+      default: 0,
+    },
+    cancelledBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "CommunityManager",
+    },
+    cancelledAt: {
+      type: Date,
+    },
+  },
+
   notificationsSent: {
     type: Boolean,
     default: false,

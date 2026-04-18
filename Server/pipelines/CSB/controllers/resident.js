@@ -22,6 +22,187 @@ import { getIO } from "../../../utils/socket.js";
 import { sendSuccess, sendError } from "./manager.js";
 import { validateBookingPayload } from "../utils/csbValidation.js";
 
+const DEFAULT_SLOT_START_TIME = "06:00";
+const DEFAULT_SLOT_END_TIME = "22:00";
+const DEFAULT_MAX_ADVANCE_DAYS = 90;
+
+const normalizeDateOnly = (value) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toISOString().split("T")[0];
+};
+
+const parseTimeToMinutes = (value) => {
+  const match = /^([0-1]?\d|2[0-3]):([0-5]\d)$/.exec(String(value || ""));
+  if (!match) return null;
+  return Number(match[1]) * 60 + Number(match[2]);
+};
+
+const buildHourlySlots = (startTime, endTime) => {
+  const startMinutes = parseTimeToMinutes(startTime);
+  const endMinutes = parseTimeToMinutes(endTime);
+  if (startMinutes === null || endMinutes === null || endMinutes <= startMinutes) {
+    return [];
+  }
+
+  const slots = [];
+  for (let minutes = startMinutes; minutes < endMinutes; minutes += 60) {
+    const hour = String(Math.floor(minutes / 60)).padStart(2, "0");
+    slots.push(`${hour}:00`);
+  }
+  return slots;
+};
+
+const getAvailabilityControls = (space) => {
+  const controls = space?.availabilityControls || {};
+  const slotConfig = controls.slotConfig || {};
+  const bookingPolicy = controls.bookingPolicy || {};
+
+  return {
+    slotConfig: {
+      startTime: slotConfig.startTime || DEFAULT_SLOT_START_TIME,
+      endTime: slotConfig.endTime || DEFAULT_SLOT_END_TIME,
+    },
+    bookingPolicy: {
+      minAdvanceHours: Number(bookingPolicy.minAdvanceHours || 0),
+      maxAdvanceDays: Number(bookingPolicy.maxAdvanceDays || DEFAULT_MAX_ADVANCE_DAYS),
+      sameDayCutoffTime: bookingPolicy.sameDayCutoffTime || DEFAULT_SLOT_END_TIME,
+    },
+    blackoutDates: Array.isArray(controls.blackoutDates) ? controls.blackoutDates : [],
+    dateSlotOverrides: Array.isArray(controls.dateSlotOverrides)
+      ? controls.dateSlotOverrides
+      : [],
+  };
+};
+
+const findDateConfigEntry = (entries, dateKey) =>
+  entries.find((entry) => normalizeDateOnly(entry?.date) === dateKey);
+
+const validateBookingAgainstAvailability = ({
+  space,
+  bookingDate,
+  bookingType,
+  timeSlots = [],
+  from,
+}) => {
+  const dateKey = normalizeDateOnly(bookingDate);
+  if (!dateKey) {
+    return { valid: false, status: 400, message: "Invalid booking date." };
+  }
+
+  const now = new Date();
+  const todayKey = normalizeDateOnly(now);
+  const controls = getAvailabilityControls(space);
+  const { slotConfig, bookingPolicy, blackoutDates, dateSlotOverrides } = controls;
+
+  const blackout = findDateConfigEntry(blackoutDates, dateKey);
+  if (blackout) {
+    return {
+      valid: false,
+      status: 400,
+      message: blackout.reason
+        ? `This facility is closed on ${dateKey}: ${blackout.reason}`
+        : `This facility is closed on ${dateKey}.`,
+    };
+  }
+
+  if (Number.isFinite(bookingPolicy.maxAdvanceDays) && bookingPolicy.maxAdvanceDays > 0) {
+    const maxAllowedDate = new Date(now);
+    maxAllowedDate.setHours(0, 0, 0, 0);
+    maxAllowedDate.setDate(maxAllowedDate.getDate() + bookingPolicy.maxAdvanceDays);
+    const maxAllowedKey = normalizeDateOnly(maxAllowedDate);
+    if (dateKey > maxAllowedKey) {
+      return {
+        valid: false,
+        status: 400,
+        message: `Bookings are open for only next ${bookingPolicy.maxAdvanceDays} days.`,
+      };
+    }
+  }
+
+  if (dateKey === todayKey) {
+    const cutoffMinutes = parseTimeToMinutes(bookingPolicy.sameDayCutoffTime);
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+    if (cutoffMinutes !== null && nowMinutes > cutoffMinutes) {
+      return {
+        valid: false,
+        status: 400,
+        message: `Same-day booking cutoff (${bookingPolicy.sameDayCutoffTime}) has passed.`,
+      };
+    }
+  }
+
+  const override = findDateConfigEntry(dateSlotOverrides, dateKey);
+
+  if (bookingType === "Slot") {
+    const slotRange = buildHourlySlots(slotConfig.startTime, slotConfig.endTime);
+    if (!slotRange.length) {
+      return {
+        valid: false,
+        status: 400,
+        message: "Facility slot configuration is invalid. Contact manager.",
+      };
+    }
+
+    if (override?.closedAllDay) {
+      return {
+        valid: false,
+        status: 400,
+        message: override.reason
+          ? `Facility is closed for the selected date: ${override.reason}`
+          : "Facility is closed for the selected date.",
+      };
+    }
+
+    const slotSet = new Set(slotRange);
+    const invalidSlots = timeSlots.filter((slot) => !slotSet.has(slot));
+    if (invalidSlots.length > 0) {
+      return {
+        valid: false,
+        status: 400,
+        message: "Selected slot range is outside allowed booking hours.",
+      };
+    }
+
+    const blockedSlots = new Set((override?.closedSlots || []).map((slot) => String(slot)));
+    const blockedSelectedSlots = timeSlots.filter((slot) => blockedSlots.has(slot));
+    if (blockedSelectedSlots.length > 0) {
+      return {
+        valid: false,
+        status: 400,
+        message: `Selected slots are unavailable on this date: ${blockedSelectedSlots.join(", ")}`,
+      };
+    }
+
+    if (Number.isFinite(bookingPolicy.minAdvanceHours) && bookingPolicy.minAdvanceHours > 0) {
+      const startTimeMinutes = parseTimeToMinutes(from || timeSlots[0]);
+      if (startTimeMinutes === null) {
+        return { valid: false, status: 400, message: "Invalid start time." };
+      }
+
+      const bookingStart = new Date(bookingDate);
+      bookingStart.setHours(
+        Math.floor(startTimeMinutes / 60),
+        startTimeMinutes % 60,
+        0,
+        0,
+      );
+      const minAllowed = new Date(
+        now.getTime() + bookingPolicy.minAdvanceHours * 60 * 60 * 1000,
+      );
+      if (bookingStart < minAllowed) {
+        return {
+          valid: false,
+          status: 400,
+          message: `This facility requires at least ${bookingPolicy.minAdvanceHours} hour(s) advance booking.`,
+        };
+      }
+    }
+  }
+
+  return { valid: true, dateKey, controls, override };
+};
+
 
 
 // --------------------------------------------------
@@ -91,12 +272,52 @@ export const createBooking = async (req, res) => {
     const Space = await Amenity.findById(fid);
     if (!Space) return sendError(res, 404, "Selected amenity not found");
     if (!Space.bookable) return sendError(res, 400, "This amenity is not bookable");
+    if (Type && Space.Type && Type !== Space.Type) {
+      return sendError(res, 400, "Booking type mismatch for selected amenity");
+    }
+    const bookingType = Space.Type || Type;
+    if (!bookingType) {
+      return sendError(res, 400, "Booking type is required for this amenity");
+    }
 
-    const validation = validateBookingPayload(req.body.newBooking);
+    const validation = validateBookingPayload({
+      ...req.body.newBooking,
+      Type: bookingType,
+    });
     if (!validation.valid)
       return sendError(res, validation.status, validation.message);
     const bookingDate = validation.bookingDate;
     const bookingAmount = Number(amount) || 0;
+    const requestedSlots = validation.timeSlots || [];
+
+    const policyCheck = validateBookingAgainstAvailability({
+      space: Space,
+      bookingDate,
+      bookingType,
+      timeSlots: requestedSlots,
+      from,
+    });
+    if (!policyCheck.valid) {
+      return sendError(res, policyCheck.status, policyCheck.message);
+    }
+
+    if (bookingType === "Slot") {
+      const bookingDateStr = policyCheck.dateKey;
+      const bookedForDate = Space.bookedSlots?.find(
+        (entry) => normalizeDateOnly(entry.date) === bookingDateStr,
+      );
+      const alreadyBooked = new Set(bookedForDate?.slots || []);
+      const overlappingSlots = requestedSlots.filter((slot) =>
+        alreadyBooked.has(slot),
+      );
+      if (overlappingSlots.length > 0) {
+        return sendError(
+          res,
+          409,
+          `Selected slots are already booked: ${overlappingSlots.join(", ")}`,
+        );
+      }
+    }
 
     const b = await CommonSpaces.create({
       name: facility || Space.name,
@@ -104,9 +325,9 @@ export const createBooking = async (req, res) => {
       Date: new Date(dateString),
       from,
       to,
-      Type,
+      Type: bookingType,
       amount: bookingAmount,
-      status: Type === "Slot" ? "Booked" : "Active",
+      status: bookingType === "Slot" ? "Booked" : "Active",
       paymentStatus: bookingAmount > 0 ? "Pending" : "Success",
       availability: null,
       bookedBy: uid,
@@ -117,13 +338,13 @@ export const createBooking = async (req, res) => {
     b.ID = uniqueId;
     await b.save();
 
-    if (Type === "Slot") {
-      const bookingDateStr = bookingDate.toISOString().split("T")[0];
+    if (bookingType === "Slot") {
+      const bookingDateStr = normalizeDateOnly(bookingDate);
       const requestTimeSlots = validation.timeSlots;
 
       const spaceDoc = await Amenity.findById(Space._id);
       let existingBookingIndex = spaceDoc.bookedSlots.findIndex(
-        (b) => new Date(b.date).toISOString().split("T")[0] === bookingDateStr,
+        (b) => normalizeDateOnly(b.date) === bookingDateStr,
       );
 
       if (existingBookingIndex !== -1) {

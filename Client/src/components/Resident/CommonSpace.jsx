@@ -35,6 +35,61 @@ const toIsoDate = (dateObj) => {
 const formatDisplayDate = (dateObj) =>
   dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
+const parseTimeToMinutes = (value) => {
+  const match = /^([0-1]?\d|2[0-3]):([0-5]\d)$/.exec(String(value || ''));
+  if (!match) return null;
+  return Number(match[1]) * 60 + Number(match[2]);
+};
+
+const getAvailabilityControls = (facility) => {
+  const controls = facility?.availabilityControls || {};
+  const slotConfig = controls.slotConfig || {};
+  const bookingPolicy = controls.bookingPolicy || {};
+
+  return {
+    slotConfig: {
+      startTime: slotConfig.startTime || '06:00',
+      endTime: slotConfig.endTime || '22:00',
+    },
+    bookingPolicy: {
+      minAdvanceHours: Number(bookingPolicy.minAdvanceHours || 0),
+      maxAdvanceDays: Number(bookingPolicy.maxAdvanceDays || 90),
+      sameDayCutoffTime: bookingPolicy.sameDayCutoffTime || '22:00',
+    },
+    blackoutDates: Array.isArray(controls.blackoutDates) ? controls.blackoutDates : [],
+    dateSlotOverrides: Array.isArray(controls.dateSlotOverrides) ? controls.dateSlotOverrides : [],
+  };
+};
+
+const findDateEntry = (entries, isoDate) =>
+  entries.find((entry) => toIsoDate(new Date(entry?.date)) === isoDate);
+
+const buildSlotsFromFacilityConfig = (facility) => {
+  const { slotConfig } = getAvailabilityControls(facility);
+  const startMinutes = parseTimeToMinutes(slotConfig.startTime);
+  const endMinutes = parseTimeToMinutes(slotConfig.endTime);
+  if (startMinutes === null || endMinutes === null || endMinutes <= startMinutes) {
+    return [];
+  }
+
+  const slots = [];
+  for (let minutes = startMinutes; minutes < endMinutes; minutes += 60) {
+    const hour = String(Math.floor(minutes / 60)).padStart(2, '0');
+    slots.push(`${hour}:00`);
+  }
+  return slots;
+};
+
+const formatSlotWindow = (facility) => {
+  const controls = getAvailabilityControls(facility);
+  const startHour = Number(String(controls.slotConfig.startTime || "06:00").split(":")[0]);
+  const endHour = Number(String(controls.slotConfig.endTime || "22:00").split(":")[0]);
+  if (!Number.isFinite(startHour) || !Number.isFinite(endHour)) {
+    return "6:00 AM - 10:00 PM";
+  }
+  return `${formatTime(startHour)} - ${formatTime(endHour)}`;
+};
+
 export const CommonSpaceBooking = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -47,6 +102,7 @@ export const CommonSpaceBooking = () => {
   const [isDateEnabled, setIsDateEnabled] = useState(true);
   const [isSlotEnabled, setIsSlotEnabled] = useState(false);
   const [availableSlots, setAvailableSlots] = useState([]);
+  const [dateRestrictionMessage, setDateRestrictionMessage] = useState('');
   const [formSubmitting, setFormSubmitting] = useState(false);
   const [isSubscriptionBased, setIsSubscriptionBased] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -58,32 +114,89 @@ export const CommonSpaceBooking = () => {
   const { register, handleSubmit, setValue, watch, reset } = useForm({
     defaultValues: { facility: '', date: new Date().toISOString().split('T')[0], purpose: '', Type: '' },
   });
+  const selectedDateValue = watch('date');
 
   const today = new Date().toISOString().split('T')[0];
   const todayDate = new Date();
   todayDate.setHours(0, 0, 0, 0);
   const pendingBookingsCount = bookings?.filter((b) => b?.status === 'Pending' && !b.isOptimistic)?.length || 0;
+  const selectedFacilityControls = selectedFacility ? getAvailabilityControls(selectedFacility) : null;
+  const maxAdvanceDays = selectedFacilityControls?.bookingPolicy?.maxAdvanceDays || 90;
+  const maxBookableDate = new Date(todayDate);
+  maxBookableDate.setDate(maxBookableDate.getDate() + maxAdvanceDays);
+  const isBlackoutDay = (day) => {
+    if (!selectedFacilityControls) return false;
+    const dayIso = toIsoDate(day);
+    return Boolean(findDateEntry(selectedFacilityControls.blackoutDates, dayIso));
+  };
 
   useEffect(() => { dispatch(fetchuserBookings()); }, [dispatch]);
 
   useEffect(() => {
-    const date = watch('date');
-    if (selectedFacility && date && selectedFacility.Type === 'Slot') {
-      const bookedForDate = selectedFacility.bookedSlots?.find((b) => new Date(b.date).toISOString().split('T')[0] === date);
-      const bookedSlots = bookedForDate?.slots || [];
-      const allSlots = Array.from({ length: 22 - 6 }, (_, i) => String(i + 6).padStart(2, '0') + ':00');
-      setAvailableSlots(allSlots.filter((slot) => !bookedSlots.includes(slot)));
+    if (!selectedFacility || !selectedDateValue) {
+      setAvailableSlots([]);
       setSelectedSlots([]);
-      setIsSlotEnabled(true);
-    } else {
-      setAvailableSlots([]); setSelectedSlots([]); setIsSlotEnabled(false);
+      setIsSlotEnabled(false);
+      setDateRestrictionMessage('');
+      setValue('Type', selectedFacility?.Type || '');
+      return;
     }
-    setValue('Type', selectedFacility?.Type);
-  }, [selectedFacility, watch('date')]);
+
+    const controls = getAvailabilityControls(selectedFacility);
+    const blackout = findDateEntry(controls.blackoutDates, selectedDateValue);
+    const override = findDateEntry(controls.dateSlotOverrides, selectedDateValue);
+
+    if (blackout) {
+      const reason = blackout.reason ? `: ${blackout.reason}` : '.';
+      setDateRestrictionMessage(`This facility is closed on selected date${reason}`);
+      setAvailableSlots([]);
+      setSelectedSlots([]);
+      setIsSlotEnabled(false);
+      setValue('Type', selectedFacility?.Type || '');
+      return;
+    }
+
+    if (selectedFacility.Type === 'Slot') {
+      if (override?.closedAllDay) {
+        const reason = override.reason ? `: ${override.reason}` : '.';
+        setDateRestrictionMessage(`Facility is closed all day for selected date${reason}`);
+        setAvailableSlots([]);
+        setSelectedSlots([]);
+        setIsSlotEnabled(false);
+        setValue('Type', selectedFacility?.Type || '');
+        return;
+      }
+
+      const bookedForDate = selectedFacility.bookedSlots?.find(
+        (entry) => toIsoDate(new Date(entry.date)) === selectedDateValue,
+      );
+      const bookedSlots = bookedForDate?.slots || [];
+      const blockedSlots = new Set(override?.closedSlots || []);
+      const allSlots = buildSlotsFromFacilityConfig(selectedFacility);
+      const filteredSlots = allSlots.filter(
+        (slot) => !bookedSlots.includes(slot) && !blockedSlots.has(slot),
+      );
+
+      setAvailableSlots(filteredSlots);
+      setSelectedSlots([]);
+      setIsSlotEnabled(filteredSlots.length > 0);
+      setDateRestrictionMessage(
+        filteredSlots.length ? '' : 'No slots are available for this date.',
+      );
+    } else {
+      setAvailableSlots([]);
+      setSelectedSlots([]);
+      setIsSlotEnabled(false);
+      setDateRestrictionMessage('');
+    }
+
+    setValue('Type', selectedFacility?.Type || '');
+  }, [selectedFacility, selectedDateValue, setValue]);
   const clearBookingFormState = () => {
     reset({ facility: '', date: today, purpose: '', Type: '' }); setSelectedFacility(null); setSelectedSlots([]);
     setAvailableSlots([]); setIsSlotEnabled(false); setIsBookingFormOpen(false); setIsSubscriptionBased(false);
     setSelectedDate(todayDate);
+    setDateRestrictionMessage('');
     setIsCalendarOpen(false);
   };
 
@@ -93,6 +206,7 @@ export const CommonSpaceBooking = () => {
     if (selected) { setIsSubscriptionBased(selected.Type !== 'Slot'); setIsDateEnabled(true); }
     else { setIsSubscriptionBased(false); setIsDateEnabled(false); }
     setSelectedSlots([]); setAvailableSlots([]); setIsSlotEnabled(false);
+    setDateRestrictionMessage('');
   };
 
   const handleTimeSlotChange = (e) => {
@@ -232,6 +346,68 @@ export const CommonSpaceBooking = () => {
     }
   };
 
+  const validateBookingPolicyClientSide = ({ bookingType, fromTime, selectedTimeSlots }) => {
+    if (!selectedFacility || !selectedDateValue) return null;
+
+    const controls = getAvailabilityControls(selectedFacility);
+    const blackout = findDateEntry(controls.blackoutDates, selectedDateValue);
+    if (blackout) {
+      return blackout.reason
+        ? `This facility is closed on selected date: ${blackout.reason}`
+        : 'This facility is closed on selected date.';
+    }
+
+    const selectedDateObj = new Date(selectedDateValue);
+    if (Number.isNaN(selectedDateObj.getTime())) {
+      return 'Invalid booking date.';
+    }
+
+    const maxAllowedDate = new Date(todayDate);
+    maxAllowedDate.setDate(maxAllowedDate.getDate() + controls.bookingPolicy.maxAdvanceDays);
+    if (selectedDateObj > maxAllowedDate) {
+      return `Bookings are allowed only for next ${controls.bookingPolicy.maxAdvanceDays} days.`;
+    }
+
+    const now = new Date();
+    const isSameDay = toIsoDate(now) === selectedDateValue;
+    if (isSameDay) {
+      const cutoffMinutes = parseTimeToMinutes(controls.bookingPolicy.sameDayCutoffTime);
+      const nowMinutes = now.getHours() * 60 + now.getMinutes();
+      if (cutoffMinutes !== null && nowMinutes > cutoffMinutes) {
+        return `Same-day booking cutoff (${controls.bookingPolicy.sameDayCutoffTime}) has passed.`;
+      }
+    }
+
+    if (bookingType !== 'Slot') return null;
+
+    const override = findDateEntry(controls.dateSlotOverrides, selectedDateValue);
+    if (override?.closedAllDay) {
+      return override.reason
+        ? `Facility is closed all day: ${override.reason}`
+        : 'Facility is closed all day for selected date.';
+    }
+
+    const blockedSlots = new Set(override?.closedSlots || []);
+    const blockedSelectedSlots = selectedTimeSlots.filter((slot) => blockedSlots.has(slot));
+    if (blockedSelectedSlots.length) {
+      return `Selected slots are unavailable: ${blockedSelectedSlots.join(', ')}`;
+    }
+
+    if (controls.bookingPolicy.minAdvanceHours > 0) {
+      const startMinutes = parseTimeToMinutes(fromTime);
+      if (startMinutes !== null) {
+        const bookingStart = new Date(selectedDateValue);
+        bookingStart.setHours(Math.floor(startMinutes / 60), startMinutes % 60, 0, 0);
+        const minAllowedTime = new Date(now.getTime() + controls.bookingPolicy.minAdvanceHours * 60 * 60 * 1000);
+        if (bookingStart < minAllowedTime) {
+          return `This facility requires at least ${controls.bookingPolicy.minAdvanceHours} hour(s) advance booking.`;
+        }
+      }
+    }
+
+    return null;
+  };
+
   const onSubmit = async (data) => {
     if (selectedFacility.Type === 'Slot' && selectedSlots.length === 0) { toast.error('Please select at least one time slot.'); return; }
     let fromTime = 'N/A', toTime = 'N/A', amount = selectedFacility.rent, timeSlots = [];
@@ -241,6 +417,17 @@ export const CommonSpaceBooking = () => {
       timeSlots = selectedSlots;
       amount = selectedSlots.length * selectedFacility.rent;
     }
+
+    const policyError = validateBookingPolicyClientSide({
+      bookingType: selectedFacility.Type,
+      fromTime,
+      selectedTimeSlots: timeSlots,
+    });
+    if (policyError) {
+      toast.error(policyError);
+      return;
+    }
+
     const newBookingData = { ...data, fid: selectedFacility._id, name: selectedFacility.name, Type: selectedFacility.Type, from: fromTime, to: toTime, timeSlots, Date: data.date };
     if ((Number(amount) || 0) <= 0) {
       submitBookingWithoutPayment(newBookingData, Number(amount) || 0);
@@ -330,7 +517,7 @@ export const CommonSpaceBooking = () => {
             <button type="button" className="manager-ui-button manager-ui-button--secondary" onClick={() => setIsBookingFormOpen(false)}>
               Cancel
             </button>
-            <button type="button" className="manager-ui-button manager-ui-button--primary" onClick={handleSubmit(onSubmit)} disabled={formSubmitting}>
+            <button type="button" className="manager-ui-button manager-ui-button--primary" onClick={handleSubmit(onSubmit)} disabled={formSubmitting || Boolean(dateRestrictionMessage)}>
               {formSubmitting ? 'Submitting...' : 'Submit Booking'}
             </button>
           </>
@@ -365,6 +552,11 @@ export const CommonSpaceBooking = () => {
                 <span>{formatDisplayDate(selectedDate)}</span>
                 <i className="bi bi-calendar3" aria-hidden="true" />
               </button>
+              {dateRestrictionMessage ? (
+                <p className="manager-ui-note" style={{ marginTop: 6, color: "#b91c1c" }}>
+                  {dateRestrictionMessage}
+                </p>
+              ) : null}
               {isCalendarOpen
                 ? createPortal(
                     <div
@@ -376,11 +568,15 @@ export const CommonSpaceBooking = () => {
                         mode="single"
                         selected={selectedDate}
                         onSelect={handleDatePick}
-                        disabled={{ before: todayDate }}
+                        disabled={[
+                          { before: todayDate },
+                          { after: maxBookableDate },
+                          isBlackoutDay,
+                        ]}
                         showOutsideDays
                         captionLayout="dropdown"
                         startMonth={todayDate}
-                        endMonth={new Date(todayDate.getFullYear() + 1, 11, 31)}
+                        endMonth={maxBookableDate}
                       />
                     </div>,
                     document.body
@@ -403,7 +599,7 @@ export const CommonSpaceBooking = () => {
                 <div className="form-group">
                   <label>Select Time Slots *</label>
                   <div className="time-slots-container">
-                    <div className="time-slots-header"><h4 className="time-slots-title"><i className="bi bi-clock" /> Available Time Slots</h4><div className="time-period-info">6:00 AM - 10:00 PM</div></div>
+                    <div className="time-slots-header"><h4 className="time-slots-title"><i className="bi bi-clock" /> Available Time Slots</h4><div className="time-period-info">{formatSlotWindow(selectedFacility)}</div></div>
                     <div className="time-slots-grid">
                       {availableSlots.map((hour) => {
                         const isChecked = selectedSlots.includes(hour);
