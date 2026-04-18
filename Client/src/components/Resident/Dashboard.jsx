@@ -8,7 +8,7 @@ import {
   ManagerRecordCard,
   ManagerRecordGrid,
   ManagerSection,
-} from "../Manager/ui";
+} from "../shared/roleUI";
 
 const formatTimestamp = (value) => {
   if (!value) return "Just now";
@@ -89,29 +89,29 @@ export const ResidentDashboard = () => {
             label="Recent Updates"
             value={recents.length}
             icon={<Clock3 size={22} />}
-            iconColor="#7c3aed"
-            iconBg="#f3edff"
+            iconColor="var(--brand-500)"
+            iconBg="var(--info-soft)"
           />
           <StatCard
             label="Payment Events"
             value={paymentCount}
             icon={<CalendarCheck2 size={22} />}
-            iconColor="#8b5cf6"
-            iconBg="#f5f3ff"
+            iconColor="var(--info-600)"
+            iconBg="var(--surface-2)"
           />
           <StatCard
             label="Issue Updates"
             value={issueCount}
             icon={<AlertCircle size={22} />}
-            iconColor="#d95d4f"
-            iconBg="#feefed"
+            iconColor="var(--danger-500)"
+            iconBg="var(--danger-soft)"
           />
           <StatCard
             label="Pre-Approvals"
             value={preApprovalCount}
             icon={<Bell size={22} />}
-            iconColor="#5b6472"
-            iconBg="#f2f4f8"
+            iconColor="var(--text-subtle)"
+            iconBg="var(--surface-2)"
           />
         </div>
       </ManagerSection>
@@ -170,3 +170,5 @@ export const ResidentDashboard = () => {
     </ManagerPageShell>
   );
 };
+
+

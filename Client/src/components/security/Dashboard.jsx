@@ -3,7 +3,7 @@ import { Clock, UserCheck, Users } from "lucide-react";
 
 import { Loader } from "../Loader";
 import { GraphBar, GraphPie, StatCard } from "../shared";
-import { ManagerPageShell, ManagerSection } from "../Manager/ui";
+import { ManagerPageShell, ManagerSection } from "../shared/roleUI";
 import { UE_CHART_COLORS } from "../shared/chartPalette";
 
 export const SecurityDashboard = () => {
@@ -66,9 +66,9 @@ export const SecurityDashboard = () => {
         description="Current status of visitors at the community gate."
       >
         <div className="ue-stat-grid">
-          <StatCard label="Total Visitors" value={stats?.Visitor || 0} icon={<Users size={22} />} iconColor="#16a34a" iconBg="#dcfce7" />
-          <StatCard label="Pending Approvals" value={stats?.Pending || 0} icon={<Clock size={22} />} iconColor="#d97706" iconBg="#fef3c7" />
-          <StatCard label="Active Visitors" value={stats?.Active || 0} icon={<UserCheck size={22} />} iconColor="#2563eb" iconBg="#dbeafe" />
+          <StatCard label="Total Visitors" value={stats?.Visitor || 0} icon={<Users size={22} />} iconColor="var(--success-500)" iconBg="var(--success-soft)" />
+          <StatCard label="Pending Approvals" value={stats?.Pending || 0} icon={<Clock size={22} />} iconColor="var(--warning-700)" iconBg="var(--warning-soft)" />
+          <StatCard label="Active Visitors" value={stats?.Active || 0} icon={<UserCheck size={22} />} iconColor="var(--info-600)" iconBg="var(--info-soft)" />
         </div>
       </ManagerSection>
 
@@ -102,3 +102,5 @@ export const SecurityDashboard = () => {
     </ManagerPageShell>
   );
 };
+
+

@@ -1,12 +1,12 @@
 .worker-profile-container {
-  background: #f8f9fc;
+  background: var(--surface-1);
   border-radius: 12px;
   padding: 0;
   width: 100%;
 }
 
 .profile-header {
-  background: linear-gradient(90deg, #0044a9, #06dde4);
+  background: linear-gradient(90deg, var(--brand-700), var(--info-500));
   color: white;
   padding: 20px;
   border-radius: 12px;
@@ -38,11 +38,11 @@
 }
 
 .cam-btn {
-  color: rgb(73, 73, 73);
+  color: var(--text-subtle);
 }
 
 .edit-btn {
-  color: rgb(73, 73, 73);
+  color: var(--text-subtle);
 }
 
 .cam-btn:hover,
@@ -57,13 +57,13 @@
 .info-card {
   border: none;
   border-radius: 12px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 10px var(--shadow-alpha-2);
 }
 
 .toggle-switch {
   width: 45px;
   height: 22px;
-  background: #ccc;
+  background: var(--border-strong);
   border-radius: 15px;
   position: relative;
   cursor: pointer;
@@ -71,7 +71,7 @@
 }
 
 .toggle-switch.active {
-  background: #0d6efd;
+  background: var(--brand-500);
 }
 
 .switch-circle {
@@ -93,12 +93,12 @@
   position: absolute;
   right: 12px;
   top: 10px;
-  color: #6c757d;
+  color: var(--text-muted);
   cursor: pointer;
 }
 
 .status-text {
-  color: #0d6efd;
+  color: var(--brand-500);
   font-weight: 500;
 }
 
@@ -115,7 +115,9 @@
   gap: 0.5rem;
   margin-bottom: 0.25rem;
   font-size: 0.875rem;
-  color: #666;
+  color: var(--text-muted);
 }
+
+
 
 

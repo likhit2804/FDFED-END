@@ -1,24 +1,24 @@
 .manager-dashboard-shell {
-  --manager-bg: #f8f7ff;
-  --manager-text: #1f2937;
-  --manager-subtext: #5b6472;
-  --manager-panel: #ffffff;
-  --manager-panel-muted: #fbfaff;
-  --manager-border: #e7def9;
-  --manager-border-strong: #d6c6f4;
-  --manager-shadow: rgba(124, 58, 237, 0.10);
-  --manager-primary: #7c3aed;
-  --manager-primary-soft: #f3edff;
-  --manager-primary-border: #ddcef9;
-  --manager-accent: #1f2937;
-  --manager-accent-soft: #edf0f4;
-  --manager-warning: #a78bfa;
-  --manager-warning-soft: #f3edff;
-  --manager-danger: #d95d4f;
-  --manager-danger-soft: #feefed;
-  --manager-info: #c4b5fd;
-  --manager-info-soft: #f5f3ff;
-  --manager-chip-bg: #fbfaff;
+  --manager-bg: var(--page-bg);
+  --manager-text: var(--text-main);
+  --manager-subtext: var(--text-muted);
+  --manager-panel: var(--surface-0);
+  --manager-panel-muted: var(--surface-2);
+  --manager-border: var(--border-subtle);
+  --manager-border-strong: var(--border-strong);
+  --manager-shadow: var(--shadow-alpha-3);
+  --manager-primary: var(--brand-500);
+  --manager-primary-soft: var(--success-soft);
+  --manager-primary-border: var(--success-border);
+  --manager-accent: var(--text-subtle);
+  --manager-accent-soft: var(--surface-2);
+  --manager-warning: var(--warning-700);
+  --manager-warning-soft: var(--warning-soft);
+  --manager-danger: var(--danger-500);
+  --manager-danger-soft: var(--danger-soft);
+  --manager-info: var(--info-600);
+  --manager-info-soft: var(--info-soft);
+  --manager-chip-bg: var(--surface-2);
   min-height: 100vh;
   background: var(--manager-bg);
   color: var(--manager-text);
@@ -148,7 +148,7 @@
 
 .manager-hero__button--primary {
   background: var(--manager-primary);
-  color: #fff;
+  color: var(--surface-0);
   border-color: var(--manager-primary);
 }
 
@@ -714,3 +714,4 @@
     grid-template-columns: 1fr;
   }
 }
+

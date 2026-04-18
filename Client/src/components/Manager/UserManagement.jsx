@@ -83,7 +83,7 @@ const DynamicForm = ({ fields, initial = {}, onSubmit, submitLabel = "Save" }) =
             />
           )}
           {field.type === "textarea" && errors[field.key] ? (
-            <p style={{ margin: "6px 0 0", fontSize: 12, color: "#dc2626" }}>{errors[field.key]}</p>
+            <p style={{ margin: "6px 0 0", fontSize: 12, color: "var(--danger-500)" }}>{errors[field.key]}</p>
           ) : null}
         </div>
       ))}
@@ -405,10 +405,10 @@ export default function UserManagement() {
       chips={[`${stats.total} total people records`, `${config.label} tab in focus`]}
     >
       <div className="ue-stat-grid">
-        <StatCard label="Residents" value={stats.residents} icon={<Users size={22} />} iconColor="#7c3aed" iconBg="#f3edff" />
-        <StatCard label="Security" value={stats.security} icon={<Shield size={22} />} iconColor="#8b5cf6" iconBg="#f5f3ff" />
-        <StatCard label="Workers" value={stats.workers} icon={<Briefcase size={22} />} iconColor="#5b6472" iconBg="#f2f4f8" />
-        <StatCard label="Total Records" value={stats.total} icon={<Users size={22} />} iconColor="#d95d4f" iconBg="#feefed" />
+        <StatCard label="Residents" value={stats.residents} icon={<Users size={22} />} iconColor="var(--brand-500)" iconBg="var(--info-soft)" />
+        <StatCard label="Security" value={stats.security} icon={<Shield size={22} />} iconColor="var(--info-600)" iconBg="var(--surface-2)" />
+        <StatCard label="Workers" value={stats.workers} icon={<Briefcase size={22} />} iconColor="var(--text-subtle)" iconBg="var(--surface-2)" />
+        <StatCard label="Total Records" value={stats.total} icon={<Users size={22} />} iconColor="var(--danger-500)" iconBg="var(--danger-soft)" />
       </div>
 
       <ManagerSection
@@ -526,3 +526,4 @@ export default function UserManagement() {
     </ManagerPageShell>
   );
 }
+

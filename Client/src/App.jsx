@@ -42,7 +42,6 @@ const ManagerDashboard = lazy(() => import('./components/Manager/Dashboard').the
 const CommonSpace = lazy(() => import('./components/Manager/CommonSpace').then(m => ({ default: m.CommonSpace })));
 const ManagerProfile = lazy(() => import('./components/Manager/Profile').then(m => ({ default: m.ManagerProfile })));
 const IssueResolving = lazy(() => import('./components/Manager/IssueResolving').then(m => ({ default: m.IssueResolving })));
-const Advertisement = lazy(() => import('./components/Manager/Advertisement').then(m => ({ default: m.Advertisement })));
 const Payments = lazy(() => import('./components/Manager/Payments').then(m => ({ default: m.Payments })));
 const UserManagement = lazy(() => import('./components/Manager/UserManagement.jsx'));
 const Subscription = lazy(() => import('./components/Manager/Subscription.jsx'));
@@ -132,7 +131,6 @@ function App() {
             <Route path="dashboard" element={<ManagerDashboard />} />
             <Route path="issueResolving" element={<IssueResolving />} />
             <Route path="commonSpace" element={<CommonSpace />} />
-            <Route path="advertisement" element={<Advertisement />} />
             <Route path="payments" element={<Payments />} />
             <Route path="profile" element={<ManagerProfile />} />
             <Route path="userManagement" element={<UserManagement />} />

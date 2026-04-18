@@ -9,7 +9,7 @@ import {
   ManagerRecordCard,
   ManagerRecordGrid,
   ManagerSection,
-} from "../Manager/ui";
+} from "../shared/roleUI";
 
 const VisitorManagement = () => {
   const [showModal, setShowModal] = useState(false);
@@ -112,9 +112,9 @@ const VisitorManagement = () => {
 
   const statusBadge = (status) => {
     const map = {
-      Active: { bg: "#dcfce7", color: "#16a34a" },
-      CheckedOut: { bg: "#fee2e2", color: "#dc2626" },
-      Pending: { bg: "#fef3c7", color: "#d97706" },
+      Active: { bg: "var(--success-soft)", color: "var(--success-500)" },
+      CheckedOut: { bg: "var(--danger-soft)", color: "var(--danger-500)" },
+      Pending: { bg: "var(--warning-soft)", color: "var(--warning-700)" },
     };
     const style = map[status] || { bg: "#f3f4f6", color: "#6b7280" };
     return (
@@ -141,9 +141,9 @@ const VisitorManagement = () => {
         }
       >
         <div className="ue-stat-grid" style={{ marginBottom: 12 }}>
-          <StatCard label="Total Visitors" value={stats.total} icon={<Users size={22} />} iconColor="#16a34a" iconBg="#dcfce7" />
-          <StatCard label="Checked Out" value={stats.checkedOut} icon={<UserX size={22} />} iconColor="#d97706" iconBg="#fef3c7" />
-          <StatCard label="Active Visitors" value={stats.active} icon={<UserCheck size={22} />} iconColor="#2563eb" iconBg="#dbeafe" />
+          <StatCard label="Total Visitors" value={stats.total} icon={<Users size={22} />} iconColor="var(--success-500)" iconBg="var(--success-soft)" />
+          <StatCard label="Checked Out" value={stats.checkedOut} icon={<UserX size={22} />} iconColor="var(--warning-700)" iconBg="var(--warning-soft)" />
+          <StatCard label="Active Visitors" value={stats.active} icon={<UserCheck size={22} />} iconColor="var(--info-600)" iconBg="var(--info-soft)" />
         </div>
 
         <div style={{ marginBottom: 8 }}>
@@ -207,7 +207,7 @@ const VisitorManagement = () => {
             <button onClick={() => setShowModal(false)} disabled={submitting} style={{ padding: "9px 18px", borderRadius: 8, border: "1px solid #e5e7eb", background: "#f9fafb", color: "#374151", fontWeight: 600, cursor: "pointer" }}>
               Cancel
             </button>
-            <button onClick={handleSubmit} disabled={submitting} style={{ padding: "9px 20px", borderRadius: 8, border: "none", background: "#d97706", color: "#fff", fontWeight: 600, cursor: submitting ? "not-allowed" : "pointer", opacity: submitting ? 0.7 : 1 }}>
+            <button onClick={handleSubmit} disabled={submitting} style={{ padding: "9px 20px", borderRadius: 8, border: "none", background: "var(--warning-700)", color: "#fff", fontWeight: 600, cursor: submitting ? "not-allowed" : "pointer", opacity: submitting ? 0.7 : 1 }}>
               {submitting ? "Submitting..." : "Submit Request"}
             </button>
           </>
@@ -239,3 +239,5 @@ const VisitorManagement = () => {
 };
 
 export { VisitorManagement };
+
+

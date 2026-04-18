@@ -1,11 +1,11 @@
 export const UE_CHART_COLORS = {
-  plum: "#7c3aed",
-  plumSoft: "#a78bfa",
-  emerald: "#10b981",
-  emeraldDark: "#059669",
+  plum: "#155e75",
+  plumSoft: "#2f7f95",
+  emerald: "#0f766e",
+  emeraldDark: "#115e59",
   slate: "#475569",
   slateSoft: "#94a3b8",
-  danger: "#d95d4f",
+  danger: "#c94f45",
 };
 
 export const UE_CHART_PALETTE = [

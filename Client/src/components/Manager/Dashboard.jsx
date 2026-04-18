@@ -6,7 +6,6 @@ import {
   Calendar,
   ChevronRight,
   CircleDollarSign,
-  Megaphone,
   UserCheck,
   Users,
 } from "lucide-react";
@@ -48,11 +47,11 @@ const TIME_FORMATTER = new Intl.DateTimeFormat("en-IN", {
 });
 
 const CHART_PALETTE = {
-  plum: "#7C3AED",
-  emerald: "#10B981",
-  slate: "#475569",
+  plum: "#0F766E",
+  emerald: "#15803D",
+  slate: "#334155",
   slateSoft: "#94A3B8",
-  danger: "#D95D4F",
+  danger: "#C94F45",
 };
 const NOTIFICATION_LIMIT = 5;
 
@@ -96,7 +95,6 @@ function buildAttentionItems(data) {
   const payments = data?.payments || {};
   const issues = data?.issues || {};
   const bookings = data?.bookings || {};
-  const advertisements = data?.advertisements || {};
 
   return [
     {
@@ -132,17 +130,6 @@ function buildAttentionItems(data) {
       href: "/manager/commonSpace",
       tone: "accent",
     },
-    {
-      title: "Campaign visibility",
-      count: advertisements.pending || 0,
-      note:
-        advertisements.active > 0
-          ? `${advertisements.active} ads are active across the community`
-          : "No active campaigns are running right now",
-      action: "Open ads",
-      href: "/manager/advertisement",
-      tone: "success",
-    },
   ];
 }
 
@@ -174,8 +161,7 @@ const HeroBanner = memo(function HeroBanner({ data, onNavigate }) {
   const pendingActions =
     (data?.payments?.overdue || 0) +
     (data?.issues?.urgent || 0) +
-    (data?.bookings?.pending || 0) +
-    (data?.advertisements?.pending || 0);
+    (data?.bookings?.pending || 0);
 
   return (
     <section className="manager-hero">
@@ -184,7 +170,7 @@ const HeroBanner = memo(function HeroBanner({ data, onNavigate }) {
         <h1 className="manager-hero__title">Stay ahead of daily community operations.</h1>
         <p className="manager-hero__subtitle">
           {pendingActions > 0
-            ? `${pendingActions} items need attention across collections, bookings, service, and announcements.`
+            ? `${pendingActions} items need attention across collections, bookings, and service operations.`
             : "Operations are stable right now. Use this view to monitor activity, dues, and resident demand."}
         </p>
         <div className="manager-hero__chips">
@@ -243,7 +229,7 @@ const OpsStrip = memo(function OpsStrip({ data, loading }) {
     {
       label: "Visitors Today",
       value: data?.visitors?.today ?? 0,
-      note: `${data?.advertisements?.active ?? 0} active notices running`,
+      note: `${data?.summary?.totalVisitors ?? 0} visitor records in community`,
       icon: UserCheck,
       tone: "teal",
     },
@@ -569,9 +555,9 @@ const OperationsChart = memo(function OperationsChart({ data, loading }) {
       attention: data?.bookings?.pending || 0,
     },
     {
-      name: "Ads",
-      stable: data?.advertisements?.active || 0,
-      attention: data?.advertisements?.pending || 0,
+      name: "Payments",
+      stable: data?.payments?.paid || 0,
+      attention: data?.payments?.overdue || 0,
     },
   ];
 

@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import { EntityCard, StatCard, Modal, Input, Select, EmptyState } from "../shared";
 import { Loader } from "../Loader";
 import { Calendar, Clock, QrCode, Users, XCircle } from "lucide-react";
-import { ManagerActionButton, ManagerPageShell, ManagerSection } from "../Manager/ui";
+import { ManagerActionButton, ManagerPageShell, ManagerSection } from "../shared/roleUI";
 
 export function PreApproval() {
   const [visitors, setVisitors] = useState([]);
@@ -86,9 +86,9 @@ export function PreApproval() {
 
       {/* Stats */}
       <div className="ue-stat-grid mb-4">
-        <StatCard label="Approved Requests" value={counts.Approved} icon={<Users size={22} />} iconColor="#7c3aed" iconBg="#f3edff" />
-        <StatCard label="Pending Requests" value={counts.Pending} icon={<Clock size={22} />} iconColor="#8b5cf6" iconBg="#f5f3ff" />
-        <StatCard label="Rejected Requests" value={counts.Rejected} icon={<XCircle size={22} />} iconColor="#d95d4f" iconBg="#feefed" />
+        <StatCard label="Approved Requests" value={counts.Approved} icon={<Users size={22} />} iconColor="var(--brand-500)" iconBg="var(--info-soft)" />
+        <StatCard label="Pending Requests" value={counts.Pending} icon={<Clock size={22} />} iconColor="var(--info-600)" iconBg="var(--surface-2)" />
+        <StatCard label="Rejected Requests" value={counts.Rejected} icon={<XCircle size={22} />} iconColor="var(--danger-500)" iconBg="var(--danger-soft)" />
       </div>
 
       {/* Visitor Cards */}
@@ -193,3 +193,5 @@ export function PreApproval() {
     </ManagerPageShell>
   );
 }
+
+

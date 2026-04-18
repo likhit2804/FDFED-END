@@ -40,9 +40,19 @@ import {
   ManagerToolbarGrow,
 } from "./ui";
 import { UE_CHART_COLORS, UE_CHART_PALETTE } from "../shared/chartPalette";
-
-const formatBookingDate = (value) =>
-  new Date(value).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+import {
+  canCancelBooking,
+  formatBookingDate,
+  getAvailabilityDraftControls,
+  getBookingStatusData,
+  getBookingTrendData,
+  getDayControlDraft,
+  getFacilityUsageData,
+  getOccupancyRate,
+  parseClosedSlotsInput,
+  toDateFromIso,
+  toDateInputValue,
+} from "../shared/commonSpace/commonSpaceUtils";
 
 export const CommonSpace = () => {
   const dispatch = useDispatch();
@@ -76,64 +86,10 @@ export const CommonSpace = () => {
   const [toggleRent, setToggleRent] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
-  const occupancyRate = useMemo(() => {
-    if (!Bookings.length) return 0;
-    const approvedCount = Bookings.filter((booking) => booking.status === "Approved").length;
-    return Math.round((approvedCount / Bookings.length) * 100);
-  }, [Bookings]);
-
-  const bookingStatusData = useMemo(() => {
-    const counts = Bookings.reduce((accumulator, booking) => {
-      const status = booking?.status || "Unknown";
-      accumulator[status] = (accumulator[status] || 0) + 1;
-      return accumulator;
-    }, {});
-
-    return Object.entries(counts).map(([name, value]) => ({ name, value }));
-  }, [Bookings]);
-
-  const bookingTrendData = useMemo(() => {
-    const now = new Date();
-    const months = Array.from({ length: 6 }, (_, index) => {
-      const date = new Date(now.getFullYear(), now.getMonth() - (5 - index), 1);
-      return {
-        key: `${date.getFullYear()}-${date.getMonth()}`,
-        label: date.toLocaleDateString("en-IN", { month: "short" }),
-        count: 0,
-      };
-    });
-
-    const monthMap = months.reduce((accumulator, month) => {
-      accumulator[month.key] = month;
-      return accumulator;
-    }, {});
-
-    Bookings.forEach((booking) => {
-      const bookingDate = booking?.Date || booking?.createdAt;
-      if (!bookingDate) return;
-      const date = new Date(bookingDate);
-      if (Number.isNaN(date.getTime())) return;
-      const key = `${date.getFullYear()}-${date.getMonth()}`;
-      if (monthMap[key]) {
-        monthMap[key].count += 1;
-      }
-    });
-
-    return months.map((month) => ({ name: month.label, bookings: month.count }));
-  }, [Bookings]);
-
-  const facilityUsageData = useMemo(() => {
-    const counts = Bookings.reduce((accumulator, booking) => {
-      const name = booking?.name || "Unknown";
-      accumulator[name] = (accumulator[name] || 0) + 1;
-      return accumulator;
-    }, {});
-
-    return Object.entries(counts)
-      .map(([name, value]) => ({ name, value }))
-      .sort((left, right) => right.value - left.value)
-      .slice(0, 6);
-  }, [Bookings]);
+  const occupancyRate = useMemo(() => getOccupancyRate(Bookings), [Bookings]);
+  const bookingStatusData = useMemo(() => getBookingStatusData(Bookings), [Bookings]);
+  const bookingTrendData = useMemo(() => getBookingTrendData(Bookings), [Bookings]);
+  const facilityUsageData = useMemo(() => getFacilityUsageData(Bookings), [Bookings]);
 
 
   const { register, handleSubmit, reset, watch } = useForm({
@@ -172,78 +128,7 @@ export const CommonSpace = () => {
     );
   });
 
-  const terminalBookingStatuses = new Set([
-    "Rejected",
-    "Cancelled",
-    "Cancelled By Resident",
-    "Cancelled By Manager",
-    "Completed",
-    "Expired",
-  ]);
-
-  const canManagerCancel = (booking) =>
-    booking && !terminalBookingStatuses.has(booking.status);
-
-  const toDateInputValue = (value) => {
-    if (!value) return "";
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return "";
-    return date.toISOString().split("T")[0];
-  };
-  const toDateFromIso = (isoDate) => {
-    if (!isoDate) return null;
-    const parsed = new Date(`${isoDate}T00:00:00`);
-    return Number.isNaN(parsed.getTime()) ? null : parsed;
-  };
-
   const getSelectedControlDateKey = () => toDateInputValue(selectedControlDate);
-
-  const getDraftControls = (space) => {
-    const controls = space?.availabilityControls || {};
-    const slotConfig = controls.slotConfig || {};
-    const bookingPolicy = controls.bookingPolicy || {};
-
-    return {
-      slotConfig: {
-        startTime: slotConfig.startTime || "06:00",
-        endTime: slotConfig.endTime || "22:00",
-      },
-      bookingPolicy: {
-        minAdvanceHours: String(bookingPolicy.minAdvanceHours ?? 0),
-        maxAdvanceDays: String(bookingPolicy.maxAdvanceDays ?? 90),
-        sameDayCutoffTime: bookingPolicy.sameDayCutoffTime || "22:00",
-      },
-      blackoutDates: Array.isArray(controls.blackoutDates)
-        ? controls.blackoutDates.map((entry) => ({
-            date: toDateInputValue(entry.date),
-            reason: entry.reason || "",
-          }))
-        : [],
-      dateSlotOverrides: Array.isArray(controls.dateSlotOverrides)
-        ? controls.dateSlotOverrides.map((entry) => ({
-            date: toDateInputValue(entry.date),
-            closedAllDay: Boolean(entry.closedAllDay),
-            closedSlots: Array.isArray(entry.closedSlots) ? entry.closedSlots : [],
-            reason: entry.reason || "",
-          }))
-        : [],
-    };
-  };
-
-  const getDayControlDraft = (controls, dateKey) => {
-    const blackout = (controls?.blackoutDates || []).find((entry) => entry.date === dateKey);
-    const override = (controls?.dateSlotOverrides || []).find((entry) => entry.date === dateKey);
-
-    return {
-      isBlackout: Boolean(blackout),
-      blackoutReason: blackout?.reason || "",
-      closedAllDay: Boolean(override?.closedAllDay),
-      closedSlots: Array.isArray(override?.closedSlots)
-        ? override.closedSlots.join(", ")
-        : "",
-      overrideReason: override?.reason || "",
-    };
-  };
 
   const blackoutModifierDays = useMemo(
     () =>
@@ -264,7 +149,7 @@ export const CommonSpace = () => {
   const openAvailabilityModal = (space) => {
     const today = new Date();
     const todayKey = toDateInputValue(today);
-    const controls = getDraftControls(space);
+    const controls = getAvailabilityDraftControls(space);
 
     setAvailabilitySpace(space);
     setAvailabilityControlsDraft(controls);
@@ -294,27 +179,6 @@ export const CommonSpace = () => {
     }));
   };
 
-  const parseClosedSlotsInput = (value) => {
-    const tokens = String(value || "")
-      .split(",")
-      .map((token) => token.trim())
-      .filter(Boolean);
-
-    const invalid = tokens.filter(
-      (token) => !/^([0-1]?\d|2[0-3]):[0-5]\d$/.test(token),
-    );
-    if (invalid.length > 0) {
-      return {
-        valid: false,
-        message: `Invalid slot format: ${invalid.join(", ")}. Use HH:mm.`,
-      };
-    }
-
-    return {
-      valid: true,
-      slots: [...new Set(tokens)].sort(),
-    };
-  };
 
   useEffect(() => {
     if (!isAvailabilityModalOpen || !availabilityControlsDraft) return;
@@ -644,10 +508,10 @@ export const CommonSpace = () => {
         ) : null}
 
         <div className="ue-stat-grid">
-          <StatCard label="Total Bookings" value={Bookings.length} icon={<Calendar size={22} />} iconColor="#7c3aed" iconBg="#f3edff" />
-          <StatCard label="Occupancy Rate" value={`${occupancyRate}%`} icon={<BarChart3 size={22} />} iconColor="#8b5cf6" iconBg="#f5f3ff" />
-          <StatCard label="Approved" value={Bookings.filter((booking) => booking.status === "Approved").length} icon={<CheckCircle size={22} />} iconColor="#5b6472" iconBg="#f2f4f8" />
-          <StatCard label="Amenities" value={avalaibleSpaces.length} icon={<Building2 size={22} />} iconColor="#d95d4f" iconBg="#feefed" />
+          <StatCard label="Total Bookings" value={Bookings.length} icon={<Calendar size={22} />} iconColor="var(--brand-500)" iconBg="var(--info-soft)" />
+          <StatCard label="Occupancy Rate" value={`${occupancyRate}%`} icon={<BarChart3 size={22} />} iconColor="var(--info-600)" iconBg="var(--surface-2)" />
+          <StatCard label="Approved" value={Bookings.filter((booking) => booking.status === "Approved").length} icon={<CheckCircle size={22} />} iconColor="var(--text-subtle)" iconBg="var(--surface-2)" />
+          <StatCard label="Amenities" value={avalaibleSpaces.length} icon={<Building2 size={22} />} iconColor="var(--danger-500)" iconBg="var(--danger-soft)" />
         </div>
 
         <ManagerSection
@@ -662,6 +526,15 @@ export const CommonSpace = () => {
               data={bookingStatusData}
               colors={[...UE_CHART_PALETTE, UE_CHART_COLORS.danger]}
             />
+            <GraphBar
+              title="Top facilities"
+              subtitle="Most requested amenities"
+              xKey="name"
+              data={facilityUsageData}
+              bars={[{ key: "value", label: "Bookings", color: UE_CHART_COLORS.emerald }]}
+            />
+          </div>
+          <div style={{ marginTop: 16 }}>
             <GraphLine
               title="Bookings over time"
               subtitle="Last six months"
@@ -669,15 +542,6 @@ export const CommonSpace = () => {
               data={bookingTrendData}
               lines={[{ key: "bookings", label: "Bookings", color: UE_CHART_COLORS.plum }]}
               showArea
-            />
-          </div>
-          <div style={{ marginTop: 16 }}>
-            <GraphBar
-              title="Top facilities"
-              subtitle="Most requested amenities"
-              xKey="name"
-              data={facilityUsageData}
-              bars={[{ key: "value", label: "Bookings", color: UE_CHART_COLORS.emerald }]}
             />
           </div>
         </ManagerSection>
@@ -740,7 +604,7 @@ export const CommonSpace = () => {
                           <Eye size={16} />
                           View Details
                         </ManagerActionButton>
-                        {canManagerCancel(booking) ? (
+                        {canCancelBooking(booking) ? (
                           <ManagerActionButton variant="danger" onClick={() => openRejectPopup(booking)}>
                             Cancel / Refund
                           </ManagerActionButton>
@@ -902,6 +766,7 @@ export const CommonSpace = () => {
                     Pick a date from calendar. Red = blackout, Blue = slot override.
                   </p>
                   <DayPicker
+                    className="ue-calendar ue-calendar--inline"
                     mode="single"
                     month={controlMonth}
                     onMonthChange={setControlMonth}
@@ -920,13 +785,13 @@ export const CommonSpace = () => {
                     }}
                     modifiersStyles={{
                       blackout: {
-                        backgroundColor: "#fee2e2",
-                        color: "#b91c1c",
+                        backgroundColor: "var(--danger-soft)",
+                        color: "var(--danger-700)",
                         fontWeight: 700,
                       },
                       override: {
-                        backgroundColor: "#dbeafe",
-                        color: "#1d4ed8",
+                        backgroundColor: "var(--info-soft)",
+                        color: "var(--brand-600)",
                         fontWeight: 700,
                       },
                     }}
@@ -1163,3 +1028,5 @@ export const CommonSpace = () => {
     </>
   );
 };
+
+

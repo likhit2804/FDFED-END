@@ -661,7 +661,7 @@ export default function ManagerApplications() {
                 onClick={() => handleApprove(selectedApp.id)}
                 disabled={actionLoading === selectedApp.id}
                 style={{
-                  backgroundColor: actionLoading === selectedApp.id && actionType === 'approve' ? "#16a34a" : "#22c55e",
+                  backgroundColor: actionLoading === selectedApp.id && actionType === 'approve' ? "var(--success-500)" : "#22c55e",
                   color: "white",
                   border: "none",
                   padding: "10px 20px",
@@ -800,7 +800,7 @@ export default function ManagerApplications() {
               <div style={{
                 backgroundColor: "#fef2f2",
                 border: "1px solid #fecaca",
-                color: "#dc2626",
+                color: "var(--danger-500)",
                 padding: "12px",
                 borderRadius: "6px",
                 marginBottom: "16px",

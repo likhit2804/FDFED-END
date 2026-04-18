@@ -2,7 +2,7 @@
    Global Dashboard Wrapper
 ----------------------------------*/
 .dashboard-wrapper {
-  background: #f7f9fc;  /* subtle off-white */
+  background: var(--surface-1);  /* subtle off-white */
   min-height: 100vh;
 }
 
@@ -10,10 +10,10 @@
    Dashboard Card (White cards)
 ----------------------------------*/
 .dashboard-card {
-  background: #ffffff;
+  background: var(--surface-0);
   border-radius: 15px;
   padding: 25px;
-  box-shadow: 0px 4px 14px rgba(0, 0, 0, 0.06);
+  box-shadow: 0px 4px 14px var(--shadow-alpha-2);
 }
 
 /* ----------------------------------
@@ -22,7 +22,7 @@
 .section-title {
   font-size: 22px;
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--text-strong);
 }
 
 /* ----------------------------------
@@ -42,9 +42,9 @@
    Recent Activity Entry
 ----------------------------------*/
 .recent-entry {
-  background: #eef6ff;
+  background: var(--info-soft);
   padding: 14px;
-  border-left: 4px solid #007bff;
+  border-left: 4px solid var(--brand-500);
   border-radius: 10px;
   margin-bottom: 12px;
 }
@@ -65,12 +65,12 @@
 }
 
 .badge-payment {
-  background: #d1e7dd;
+  background: var(--success-soft);
   color: #0f5132;
 }
 
 .badge-issue {
-  background: #f8d7da;
+  background: var(--danger-soft);
   color: #842029;
 }
 
@@ -80,8 +80,8 @@
 }
 
 .badge-default {
-  background: #eaf5fe;
-  color: #0056a2;
+  background: var(--info-soft);
+  color: var(--info-700);
 }
 
 /* ----------------------------------
@@ -90,8 +90,8 @@
 .notification-header {
   font-size: 18px;
   font-weight: 600;
-  background: #dff0ff;
-  color: #0056a2;
+  background: var(--info-soft);
+  color: var(--info-700);
   padding: 12px 18px;
   border-radius: 10px;
   margin-bottom: 20px;
@@ -101,12 +101,12 @@
 
 /* Each notification card */
 .notification-card {
-  background: #ffffff;
+  background: var(--surface-0);
   border-radius: 12px;
   padding: 14px;
   margin-bottom: 15px;
-  border-left: 5px solid #dc3545;
-  box-shadow: 0px 2px 10px rgba(0, 0, 0, 0.06);
+  border-left: 5px solid var(--danger-500);
+  box-shadow: 0px 2px 10px var(--shadow-alpha-2);
 }
 
 
@@ -123,10 +123,10 @@
 }
 
 .emergency-header {
-  background: #fde8e9;
+  background: var(--danger-soft);
   padding: 15px;
   text-align: center;
-  border-bottom: 1px solid #fbdddd;
+  border-bottom: 1px solid var(--danger-soft);
   font-weight: 700;
   font-size: 20px;
   border-radius: 8px 8px 0 0;
@@ -145,5 +145,7 @@
 
 .emergency-icon i {
   font-size: 30px;
-  color: #dc3545;
+  color: var(--danger-500);
 }
+
+

@@ -10,8 +10,9 @@
 .title {
   font-size: 28px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--text-strong);
   letter-spacing: -0.5px;
   margin: 0;
   flex-shrink: 0;
 }
+

@@ -114,7 +114,7 @@ export const WorkerAssignModal = ({
                                     <br /><em>Please select a different worker for reassignment.</em>
                                 </p>
                             ) : issue.misassignedBy?.length > 0 ? (
-                                <p style={{ marginBottom: "16px", color: "#dc2626", fontSize: "12px" }}>
+                                <p style={{ marginBottom: "16px", color: "var(--danger-500)", fontSize: "12px" }}>
                                     <strong>Misassigned by:</strong> {issue.misassignedBy.map((w) => w.name).join(", ")}
                                     <br /><em>These workers reported this issue as misassigned. Please assign a different worker.</em>
                                 </p>
@@ -166,3 +166,4 @@ export const WorkerAssignModal = ({
         </Modal>
     );
 };
+

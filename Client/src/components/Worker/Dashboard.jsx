@@ -14,12 +14,18 @@ import { EmptyState, GraphPie, StatCard } from "../shared";
 import { setDashboardData, setIssues } from "../../slices/workerSlice";
 import { UE_CHART_PALETTE } from "../shared/chartPalette";
 import {
+  getAverageIssueRating,
+  getRecentIssues,
+  getStatusSplitData,
+  getWorkerTaskSummary,
+} from "../shared/nonAdmin/taskInsights";
+import {
   ManagerActionButton,
   ManagerPageShell,
   ManagerRecordCard,
   ManagerRecordGrid,
   ManagerSection,
-} from "../Manager/ui";
+} from "../shared/roleUI";
 
 export const WorkerDashboard = () => {
   const dispatch = useDispatch();
@@ -50,54 +56,10 @@ export const WorkerDashboard = () => {
     fetchData();
   }, [dispatch]);
 
-  const tasksCompleted = useMemo(
-    () => issues.filter((issue) => issue.status === "Resolved" || issue.status === "Payment Pending").length,
-    [issues]
-  );
-
-  const inProgressTasks = useMemo(
-    () => issues.filter((issue) => issue.status === "In Progress").length,
-    [issues]
-  );
-
-  const assignedTasks = useMemo(
-    () => issues.filter((issue) => issue.status === "Assigned").length,
-    [issues]
-  );
-
-  const urgentTasks = useMemo(
-    () => issues.filter((issue) => issue.priority === "Urgent").length,
-    [issues]
-  );
-
-  const workerRating = useMemo(() => {
-    if (issues.length === 0) return 0;
-    const total = issues.reduce((sum, issue) => sum + (issue.rating || 0), 0);
-    return Number((total / issues.length).toFixed(1));
-  }, [issues]);
-
-  const efficiency = useMemo(() => {
-    if (issues.length === 0) return 0;
-    return Math.round((tasksCompleted / issues.length) * 100);
-  }, [issues, tasksCompleted]);
-
-  const statusSplitData = useMemo(() => {
-    const bucket = issues.reduce((accumulator, issue) => {
-      const status = issue?.status || "Unknown";
-      accumulator[status] = (accumulator[status] || 0) + 1;
-      return accumulator;
-    }, {});
-
-    return Object.entries(bucket).map(([name, value]) => ({ name, value }));
-  }, [issues]);
-
-  const recentQueue = useMemo(
-    () =>
-      [...issues]
-        .sort((left, right) => new Date(right.updatedAt || right.createdAt || 0) - new Date(left.updatedAt || left.createdAt || 0))
-        .slice(0, 4),
-    [issues]
-  );
+  const summary = useMemo(() => getWorkerTaskSummary(issues), [issues]);
+  const workerRating = useMemo(() => getAverageIssueRating(issues), [issues]);
+  const statusSplitData = useMemo(() => getStatusSplitData(issues), [issues]);
+  const recentQueue = useMemo(() => getRecentIssues(issues, 4), [issues]);
 
   return (
     <>
@@ -107,7 +69,7 @@ export const WorkerDashboard = () => {
         eyebrow="Worker Desk"
         title="Track work progress and performance in one unified dashboard."
         description="Monitor assigned tasks, completion pace, and quality metrics using the same manager-style analytics layout."
-        chips={[`${issues.length} tasks in scope`, `${efficiency}% efficiency`]}
+        chips={[`${summary.total} tasks in scope`, `${summary.efficiency}% efficiency`]}
       >
         <ManagerSection
           eyebrow="Snapshot"
@@ -120,10 +82,10 @@ export const WorkerDashboard = () => {
           )}
         >
           <div className="ue-stat-grid">
-            <StatCard label="Total Tasks" value={issues.length} icon={<ClipboardList size={22} />} iconColor="#7c3aed" iconBg="#f3edff" />
-            <StatCard label="Assigned" value={assignedTasks} icon={<CircleAlert size={22} />} iconColor="#d97706" iconBg="#fef3c7" />
-            <StatCard label="In Progress" value={inProgressTasks} icon={<CircleAlert size={22} />} iconColor="#2563eb" iconBg="#dbeafe" />
-            <StatCard label="Completed" value={tasksCompleted} icon={<CircleCheck size={22} />} iconColor="#16a34a" iconBg="#dcfce7" />
+            <StatCard label="Total Tasks" value={summary.total} icon={<ClipboardList size={22} />} iconColor="var(--brand-500)" iconBg="var(--info-soft)" />
+            <StatCard label="Assigned" value={summary.assigned} icon={<CircleAlert size={22} />} iconColor="var(--warning-700)" iconBg="var(--warning-soft)" />
+            <StatCard label="In Progress" value={summary.inProgress} icon={<CircleAlert size={22} />} iconColor="var(--info-600)" iconBg="var(--info-soft)" />
+            <StatCard label="Completed" value={summary.completed} icon={<CircleCheck size={22} />} iconColor="var(--success-500)" iconBg="var(--success-soft)" />
           </div>
         </ManagerSection>
 
@@ -183,10 +145,10 @@ export const WorkerDashboard = () => {
               <ManagerRecordCard
                 title="Efficiency"
                 subtitle="Completion percentage"
-                status={<span className="manager-ui-status-pill">{efficiency}%</span>}
+                status={<span className="manager-ui-status-pill">{summary.efficiency}%</span>}
                 meta={[
-                  { label: "Completed", value: tasksCompleted },
-                  { label: "Total tasks", value: issues.length },
+                  { label: "Completed", value: summary.completed },
+                  { label: "Total tasks", value: summary.total },
                 ]}
               />
               <ManagerRecordCard
@@ -194,8 +156,8 @@ export const WorkerDashboard = () => {
                 subtitle="Average resident feedback"
                 status={<span className="manager-ui-status-pill">{workerRating}/5.0</span>}
                 meta={[
-                  { label: "Urgent tasks", value: urgentTasks },
-                  { label: "In progress", value: inProgressTasks },
+                  { label: "Urgent tasks", value: summary.urgent },
+                  { label: "In progress", value: summary.inProgress },
                 ]}
               />
             </ManagerRecordGrid>
@@ -205,3 +167,5 @@ export const WorkerDashboard = () => {
     </>
   );
 };
+
+

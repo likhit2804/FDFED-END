@@ -16,79 +16,17 @@ import { Loader } from '../Loader';
 import { EmptyState, Modal, Select, StatCard, Textarea } from '../shared';
 import { BookingCard } from './CommonSpace/BookingCard';
 import { BookingDetailsModal } from './CommonSpace/BookingDetailsModal';
-import { ManagerActionButton, ManagerPageShell, ManagerSection } from '../Manager/ui';
-
-const formatTime = (hour) => {
-  if (hour === 0) return '12:00 AM';
-  if (hour < 12) return `${hour}:00 AM`;
-  if (hour === 12) return '12:00 PM';
-  return `${hour - 12}:00 PM`;
-};
-
-const toIsoDate = (dateObj) => {
-  const y = dateObj.getFullYear();
-  const m = String(dateObj.getMonth() + 1).padStart(2, '0');
-  const d = String(dateObj.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
-};
-
-const formatDisplayDate = (dateObj) =>
-  dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
-
-const parseTimeToMinutes = (value) => {
-  const match = /^([0-1]?\d|2[0-3]):([0-5]\d)$/.exec(String(value || ''));
-  if (!match) return null;
-  return Number(match[1]) * 60 + Number(match[2]);
-};
-
-const getAvailabilityControls = (facility) => {
-  const controls = facility?.availabilityControls || {};
-  const slotConfig = controls.slotConfig || {};
-  const bookingPolicy = controls.bookingPolicy || {};
-
-  return {
-    slotConfig: {
-      startTime: slotConfig.startTime || '06:00',
-      endTime: slotConfig.endTime || '22:00',
-    },
-    bookingPolicy: {
-      minAdvanceHours: Number(bookingPolicy.minAdvanceHours || 0),
-      maxAdvanceDays: Number(bookingPolicy.maxAdvanceDays || 90),
-      sameDayCutoffTime: bookingPolicy.sameDayCutoffTime || '22:00',
-    },
-    blackoutDates: Array.isArray(controls.blackoutDates) ? controls.blackoutDates : [],
-    dateSlotOverrides: Array.isArray(controls.dateSlotOverrides) ? controls.dateSlotOverrides : [],
-  };
-};
-
-const findDateEntry = (entries, isoDate) =>
-  entries.find((entry) => toIsoDate(new Date(entry?.date)) === isoDate);
-
-const buildSlotsFromFacilityConfig = (facility) => {
-  const { slotConfig } = getAvailabilityControls(facility);
-  const startMinutes = parseTimeToMinutes(slotConfig.startTime);
-  const endMinutes = parseTimeToMinutes(slotConfig.endTime);
-  if (startMinutes === null || endMinutes === null || endMinutes <= startMinutes) {
-    return [];
-  }
-
-  const slots = [];
-  for (let minutes = startMinutes; minutes < endMinutes; minutes += 60) {
-    const hour = String(Math.floor(minutes / 60)).padStart(2, '0');
-    slots.push(`${hour}:00`);
-  }
-  return slots;
-};
-
-const formatSlotWindow = (facility) => {
-  const controls = getAvailabilityControls(facility);
-  const startHour = Number(String(controls.slotConfig.startTime || "06:00").split(":")[0]);
-  const endHour = Number(String(controls.slotConfig.endTime || "22:00").split(":")[0]);
-  if (!Number.isFinite(startHour) || !Number.isFinite(endHour)) {
-    return "6:00 AM - 10:00 PM";
-  }
-  return `${formatTime(startHour)} - ${formatTime(endHour)}`;
-};
+import { ManagerActionButton, ManagerPageShell, ManagerSection } from '../shared/roleUI';
+import {
+  buildSlotsFromFacilityConfig,
+  findDateEntry,
+  formatDisplayDate,
+  formatSlotWindow,
+  formatTime,
+  getAvailabilityControlsForResident as getAvailabilityControls,
+  parseTimeToMinutes,
+  toIsoDate,
+} from "../shared/commonSpace/commonSpaceUtils";
 
 export const CommonSpaceBooking = () => {
   const dispatch = useDispatch();
@@ -484,9 +422,9 @@ export const CommonSpaceBooking = () => {
           }
         >
           <div className="ue-stat-grid">
-            <StatCard label="Total Bookings" value={bookings?.length || 0} icon={<Calendar size={22} />} iconColor="#7c3aed" iconBg="#f3edff" />
-            <StatCard label="Pending Bookings" value={pendingBookingsCount} icon={<Clock size={22} />} iconColor="#8b5cf6" iconBg="#f5f3ff" />
-            <StatCard label="Facilities" value={avalaibleSpaces.length} icon={<Building2 size={22} />} iconColor="#5b6472" iconBg="#f2f4f8" />
+            <StatCard label="Total Bookings" value={bookings?.length || 0} icon={<Calendar size={22} />} iconColor="var(--brand-500)" iconBg="var(--info-soft)" />
+            <StatCard label="Pending Bookings" value={pendingBookingsCount} icon={<Clock size={22} />} iconColor="var(--info-600)" iconBg="var(--surface-2)" />
+            <StatCard label="Facilities" value={avalaibleSpaces.length} icon={<Building2 size={22} />} iconColor="var(--text-subtle)" iconBg="var(--surface-2)" />
           </div>
         </ManagerSection>
 
@@ -565,6 +503,7 @@ export const CommonSpaceBooking = () => {
                       style={{ top: `${calendarPosition.top}px`, left: `${calendarPosition.left}px` }}
                     >
                       <DayPicker
+                        className="ue-calendar ue-calendar--popover"
                         mode="single"
                         selected={selectedDate}
                         onSelect={handleDatePick}
@@ -634,3 +573,5 @@ export const CommonSpaceBooking = () => {
     </>
   );
 };
+
+

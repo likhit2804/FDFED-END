@@ -58,7 +58,7 @@ class ErrorBoundary extends React.Component {
         <div style={styles.container}>
           <div style={styles.card}>
             <div style={styles.iconContainer}>
-              <AlertTriangle size={64} color="#dc2626" />
+              <AlertTriangle size={64} color="var(--danger-500)" />
             </div>
 
             <h1 style={styles.title}>Something went wrong</h1>
@@ -241,3 +241,4 @@ const styles = {
 };
 
 export default ErrorBoundary;
+

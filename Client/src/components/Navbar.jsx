@@ -29,7 +29,6 @@ const NAV_ITEMS = {
     { to: "/manager/issueResolving", label: "Issues" },
     { to: "/manager/commonSpace", label: "Bookings" },
     { to: "/manager/payments", label: "Payments" },
-    { to: "/manager/advertisement", label: "Ads" },
     { to: "/manager/leaves", label: "Leaves" },
     { to: "/manager/setup", label: "Setup" },
   ],

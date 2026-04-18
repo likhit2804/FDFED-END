@@ -5,10 +5,18 @@ import { useSocket } from "../../hooks/useSocket";
 import { ClipboardList, Play, CheckCircle, AlertTriangle } from "lucide-react";
 import { Loader } from "../Loader";
 import { StatCard, SearchBar, Dropdown, EmptyState } from "../shared";
-import { ManagerPageShell, ManagerSection } from "../Manager/ui";
+import { ManagerPageShell, ManagerSection } from "../shared/roleUI";
 import { STATUS_ASSIGNED, STATUS_IN_PROGRESS, STATUS_RESOLVED } from "./Tasks/taskUtils";
 import { TaskCard } from "./Tasks/TaskCard";
 import { TaskDetailsModal } from "./Tasks/TaskDetailsModal";
+import {
+  filterTasks,
+  getWorkerTaskSummary,
+  sortTasks,
+  TASK_PRIORITY_FILTER_OPTIONS,
+  TASK_SORT_OPTIONS,
+  TASK_STATUS_FILTER_OPTIONS,
+} from "../shared/nonAdmin/taskInsights";
 
 export const Tasks = () => {
   const [tasks, setTasks] = useState([]);
@@ -46,32 +54,20 @@ export const Tasks = () => {
   }, [socket]);
 
   // Filter and sort
-  const filteredTasks = useMemo(() => {
-    const filtered = tasks.filter((task) => {
-      if (statusFilter !== "All" && task.status !== statusFilter) return false;
-      if (priorityFilter !== "All" && task.priority !== priorityFilter) return false;
-      if (searchTerm) {
-        const s = searchTerm.toLowerCase();
-        return task.title?.toLowerCase().includes(s) || task.location?.toLowerCase().includes(s) || task.category?.toLowerCase().includes(s);
-      }
-      return true;
-    });
-    const priorityOrder = { Urgent: 3, High: 2, Normal: 1 };
-    filtered.sort((a, b) => {
-      if (sortBy === "priority") return (priorityOrder[b.priority] || 1) - (priorityOrder[a.priority] || 1);
-      if (sortBy === "date") return new Date(b.createdAt) - new Date(a.createdAt);
-      if (sortBy === "status") return a.status.localeCompare(b.status);
-      return 0;
-    });
-    return filtered;
-  }, [tasks, statusFilter, priorityFilter, searchTerm, sortBy]);
+  const filteredTasks = useMemo(
+    () =>
+      sortTasks(
+        filterTasks(tasks, {
+          statusFilter,
+          priorityFilter,
+          searchTerm,
+        }),
+        sortBy,
+      ),
+    [tasks, statusFilter, priorityFilter, searchTerm, sortBy],
+  );
 
-  const taskStats = useMemo(() => ({
-    total: tasks.length,
-    assigned: tasks.filter((t) => t.status === "Assigned").length,
-    inProgress: tasks.filter((t) => t.status === "In Progress").length,
-    urgent: tasks.filter((t) => t.priority === "Urgent").length,
-  }), [tasks]);
+  const taskStats = useMemo(() => getWorkerTaskSummary(tasks), [tasks]);
 
   // Actions
   const openTaskModal = (task) => { setSelectedTask(task); setEstimatedCost(task?.estimatedCost ?? ""); setIsDetailModalOpen(true); };
@@ -125,19 +121,19 @@ export const Tasks = () => {
           className="worker-tasks-section"
         >
           <div className="ue-stat-grid" style={{ marginBottom: 14 }}>
-            <StatCard label="Total Tasks" value={taskStats.total} icon={<ClipboardList size={22} />} iconColor="#2563eb" iconBg="#dbeafe" />
-            <StatCard label="Assigned" value={taskStats.assigned} icon={<Play size={22} />} iconColor="#d97706" iconBg="#fef3c7" />
-            <StatCard label="In Progress" value={taskStats.inProgress} icon={<CheckCircle size={22} />} iconColor="#16a34a" iconBg="#dcfce7" />
-            <StatCard label="Urgent" value={taskStats.urgent} icon={<AlertTriangle size={22} />} iconColor="#dc2626" iconBg="#fee2e2" />
+            <StatCard label="Total Tasks" value={taskStats.total} icon={<ClipboardList size={22} />} iconColor="var(--info-600)" iconBg="var(--info-soft)" />
+            <StatCard label="Assigned" value={taskStats.assigned} icon={<Play size={22} />} iconColor="var(--warning-700)" iconBg="var(--warning-soft)" />
+            <StatCard label="In Progress" value={taskStats.inProgress} icon={<CheckCircle size={22} />} iconColor="var(--success-500)" iconBg="var(--success-soft)" />
+            <StatCard label="Urgent" value={taskStats.urgent} icon={<AlertTriangle size={22} />} iconColor="var(--danger-500)" iconBg="var(--danger-soft)" />
           </div>
 
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginBottom: 12 }}>
             <div style={{ flex: 1, minWidth: 200 }}>
               <SearchBar placeholder="Search tasks by title, location, or category..." value={searchTerm} onChange={setSearchTerm} />
             </div>
-            <Dropdown options={[{ label: "All Status", value: "All" }, { label: "Assigned", value: "Assigned" }, { label: "In Progress", value: "In Progress" }, { label: "Resolved", value: "Resolved (Awaiting Confirmation)" }]} selected={statusFilter} onChange={setStatusFilter} width="160px" />
-            <Dropdown options={[{ label: "All Priority", value: "All" }, { label: "Urgent", value: "Urgent" }, { label: "High", value: "High" }, { label: "Normal", value: "Normal" }]} selected={priorityFilter} onChange={setPriorityFilter} width="150px" />
-            <Dropdown options={[{ label: "Sort: Priority", value: "priority" }, { label: "Sort: Date", value: "date" }, { label: "Sort: Status", value: "status" }]} selected={sortBy} onChange={setSortBy} width="150px" />
+            <Dropdown options={TASK_STATUS_FILTER_OPTIONS} selected={statusFilter} onChange={setStatusFilter} width="160px" />
+            <Dropdown options={TASK_PRIORITY_FILTER_OPTIONS} selected={priorityFilter} onChange={setPriorityFilter} width="150px" />
+            <Dropdown options={TASK_SORT_OPTIONS} selected={sortBy} onChange={setSortBy} width="150px" />
             <div style={{ display: "flex", background: "#f3f4f6", borderRadius: 8, padding: 2 }}>
               <button onClick={() => setViewMode("grid")} style={{ padding: "6px 12px", border: "none", borderRadius: 6, background: viewMode === "grid" ? "#0b1220" : "transparent", color: viewMode === "grid" ? "#fff" : "#374151", cursor: "pointer" }}>Grid</button>
               <button onClick={() => setViewMode("list")} style={{ padding: "6px 12px", border: "none", borderRadius: 6, background: viewMode === "list" ? "#0b1220" : "transparent", color: viewMode === "list" ? "#fff" : "#374151", cursor: "pointer" }}>List</button>
@@ -164,3 +160,5 @@ export const Tasks = () => {
     </>
   );
 };
+
+

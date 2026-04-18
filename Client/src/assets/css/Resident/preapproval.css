@@ -1,7 +1,7 @@
 /* Global layout */
 .contentCon {
   padding: 20px;
-  background: #f8f9ff;
+  background: var(--accent-soft);
   font-family: "Inter", sans-serif;
 }
 
@@ -38,7 +38,7 @@
 
 .stat-card {
   flex: 1;
-  background: #fff;
+  background: var(--surface-0);
   border-radius: 12px;
   padding: 25px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.05);
@@ -61,8 +61,8 @@
         VISITOR REQUESTS
 ------------------------------- */
 .section-header {
-  background: #e8f2ff;
-  color: #0d6efd;
+  background: var(--info-soft);
+  color: var(--brand-500);
   font-size: 15px;
   padding: 12px;
   border-radius: 10px;
@@ -83,7 +83,7 @@
 ------------------------------- */
 .request-card {
   width: 320px;
-  background: #fffaf0;
+  background: var(--warning-soft);
   border-radius: 12px;
   border: 1px solid #ffe9b3;
   box-shadow: 0 2px 8px rgba(0,0,0,0.06);
@@ -108,8 +108,8 @@
 .visitor-avatar {
   width: 34px;
   height: 34px;
-  background: #e8f2ff;
-  color: #0d6efd;
+  background: var(--info-soft);
+  color: var(--brand-500);
   font-size: 18px;
   border-radius: 50%;
   display: flex;
@@ -125,7 +125,7 @@
 .visitor-phone {
   margin: 0;
   font-size: 12px;
-  color: #555;
+  color: var(--text-subtle);
 }
 
 /* Status Badge */
@@ -137,7 +137,7 @@
 }
 
 .status-Pending {
-  background: #fff4cc;
+  background: var(--warning-soft);
   color: #c99700;
 }
 
@@ -159,7 +159,7 @@
   grid-template-columns: 1fr 1fr;
   padding: 14px;
   gap: 10px;
-  border-top: 1px solid #f0e6ce;
+  border-top: 1px solid var(--warning-soft);
 }
 
 .request-detail {
@@ -183,7 +183,7 @@
 ------------------------------- */
 .request-card-footer {
   padding: 10px 14px;
-  border-top: 1px solid #f0e6ce;
+  border-top: 1px solid var(--warning-soft);
   display: flex;
   justify-content: flex-end;
   gap: 8px;
@@ -234,7 +234,7 @@
   top: 15px;
   font-size: 20px;
   cursor: pointer;
-  color: #666;
+  color: var(--text-muted);
   transition: 0.2s ease;
 }
 
@@ -259,7 +259,7 @@ input, select {
 .form-button {
   padding: 10px;
   border-radius: 8px;
-  background: #0d6efd;
+  background: var(--brand-500);
   color: white;
   border: none;
   font-size: 14px;
@@ -285,3 +285,4 @@ input, select {
   gap: 6px;
   margin: 0 auto;
 }
+

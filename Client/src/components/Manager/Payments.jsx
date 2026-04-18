@@ -5,6 +5,13 @@ import { Loader } from "../Loader.jsx";
 import { Dropdown, EmptyState, GraphBar, GraphPie, Modal, SearchBar, StatCard, StatusBadge } from "../shared";
 import { UE_CHART_COLORS, UE_CHART_PALETTE } from "../shared/chartPalette";
 import {
+  buildPaymentStatusAmountData,
+  buildPaymentTypeSplitData,
+  filterPaymentsByFilters,
+  PAYMENT_STATUS_OPTIONS,
+  PAYMENT_TYPE_OPTIONS,
+} from "../shared/nonAdmin/paymentInsights";
+import {
   ManagerPageShell,
   ManagerRecordCard,
   ManagerRecordGrid,
@@ -33,29 +40,29 @@ const PaymentsOverview = ({ stats }) => (
       label="Total Transactions"
       value={stats?.totalTransactions ?? "-"}
       icon={<DollarSign size={22} />}
-      iconColor="#7c3aed"
-      iconBg="#f3edff"
+      iconColor="var(--brand-500)"
+      iconBg="var(--info-soft)"
     />
     <StatCard
       label="Pending Payments"
       value={stats?.pendingAmount ? `₹${stats.pendingAmount}` : "-"}
       icon={<Clock size={22} />}
-      iconColor="#8b5cf6"
-      iconBg="#f5f3ff"
+      iconColor="var(--info-600)"
+      iconBg="var(--surface-2)"
     />
     <StatCard
       label="Overdue Payments"
       value={stats?.overdueAmount ? `₹${stats.overdueAmount}` : "-"}
       icon={<AlertCircle size={22} />}
-      iconColor="#d95d4f"
-      iconBg="#feefed"
+      iconColor="var(--danger-500)"
+      iconBg="var(--danger-soft)"
     />
     <StatCard
       label="Total Revenue"
       value={stats?.paidAmount ? `₹${stats.paidAmount}` : "-"}
       icon={<BarChart3 size={22} />}
-      iconColor="#5b6472"
-      iconBg="#f2f4f8"
+      iconColor="var(--text-subtle)"
+      iconBg="var(--surface-2)"
     />
   </div>
 );
@@ -167,42 +174,28 @@ const PaymentsHistory = ({ onStats, onRecords, filters = {} }) => {
   const { search = "", status = "all", type = "all" } = filters;
   const normalizedSearch = search.trim().toLowerCase();
 
-  const filteredPayments = payments.filter((payment) => {
-    if (normalizedSearch) {
-      const matchesSearch = [
-        payment.name,
-        payment.flat,
-        payment.email,
-        payment.transactionId,
-        payment.txn,
-        payment.planName,
-        payment.type,
-        payment.paymentType,
-        payment.ID,
-        payment._id,
-        payment.receiver,
-        payment.reciever,
-        payment.sender,
-        payment.title,
-      ]
-        .filter(Boolean)
-        .some((value) => String(value).toLowerCase().includes(normalizedSearch));
-
-      if (!matchesSearch) return false;
-    }
-
-    if (status !== "all") {
-      const currentStatus = String(payment.status || payment.paymentStatus || "").toLowerCase();
-      if (currentStatus !== status.toLowerCase()) return false;
-    }
-
-    if (type !== "all") {
-      const currentType = String(payment.planType || payment.type || payment.paymentType || "").toLowerCase();
-      if (currentType !== type.toLowerCase()) return false;
-    }
-
-    return true;
-  });
+  const filteredPayments = filterPaymentsByFilters(
+    payments,
+    { search: normalizedSearch, status, type },
+    {
+      searchFields: [
+        "name",
+        "flat",
+        "email",
+        "transactionId",
+        "txn",
+        "planName",
+        "type",
+        "paymentType",
+        "ID",
+        "_id",
+        "receiver",
+        "reciever",
+        "sender",
+        "title",
+      ],
+    },
+  );
 
   if (loading) {
     return (
@@ -269,26 +262,8 @@ export const Payments = () => {
   const [status, setStatus] = useState("all");
   const [type, setType] = useState("all");
 
-  const statusAmountData = useMemo(() => {
-    const buckets = records.reduce((accumulator, payment) => {
-      const key = String(payment?.status || "Unknown").toLowerCase();
-      const normalized = key.charAt(0).toUpperCase() + key.slice(1);
-      accumulator[normalized] = (accumulator[normalized] || 0) + Number(payment?.amount || 0);
-      return accumulator;
-    }, {});
-
-    return Object.entries(buckets).map(([name, value]) => ({ name, amount: value }));
-  }, [records]);
-
-  const typeSplitData = useMemo(() => {
-    const bucket = records.reduce((accumulator, payment) => {
-      const typeLabel = payment?.paymentType || payment?.type || "Other";
-      accumulator[typeLabel] = (accumulator[typeLabel] || 0) + 1;
-      return accumulator;
-    }, {});
-
-    return Object.entries(bucket).map(([name, value]) => ({ name, value }));
-  }, [records]);
+  const statusAmountData = useMemo(() => buildPaymentStatusAmountData(records), [records]);
+  const typeSplitData = useMemo(() => buildPaymentTypeSplitData(records), [records]);
 
   return (
     <ManagerPageShell
@@ -333,28 +308,8 @@ export const Payments = () => {
           <ManagerToolbarGrow>
             <SearchBar placeholder="Search by resident, title, or transaction ID..." value={search} onChange={setSearch} />
           </ManagerToolbarGrow>
-          <Dropdown
-            options={[
-              { label: "All Status", value: "all" },
-              { label: "Completed", value: "completed" },
-              { label: "Pending", value: "pending" },
-              { label: "Overdue", value: "overdue" },
-            ]}
-            selected={status}
-            onChange={setStatus}
-            width="180px"
-          />
-          <Dropdown
-            options={[
-              { label: "All Types", value: "all" },
-              { label: "Maintenance", value: "maintenance" },
-              { label: "Subscription", value: "subscription" },
-              { label: "Booking", value: "booking" },
-            ]}
-            selected={type}
-            onChange={setType}
-            width="180px"
-          />
+          <Dropdown options={PAYMENT_STATUS_OPTIONS} selected={status} onChange={setStatus} width="180px" />
+          <Dropdown options={PAYMENT_TYPE_OPTIONS} selected={type} onChange={setType} width="180px" />
         </ManagerToolbar>
 
         <PaymentsHistory onStats={setStats} onRecords={setRecords} filters={{ search, status, type }} />
@@ -362,3 +317,4 @@ export const Payments = () => {
     </ManagerPageShell>
   );
 };
+

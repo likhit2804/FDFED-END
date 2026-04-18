@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SearchBar, Dropdown, EmptyState } from '../shared';
 import { ClipboardList } from 'lucide-react';
-import { ManagerPageShell, ManagerSection } from '../Manager/ui';
+import { ManagerPageShell, ManagerSection } from '../shared/roleUI';
+import { getResolvedIssues, HISTORY_SORT_OPTIONS } from '../shared/nonAdmin/taskInsights';
 
 
 const TaskCard = ({ task, onClick, isSelected }) => {
@@ -221,44 +222,7 @@ export const History = () => {
         setSelectedTask(null);
     };
 
-    const normalizedSearch = search.trim().toLowerCase();
-
-    const filteredIssues = issues.filter((issue) => {
-        if (issue.status !== 'Resolved')
-            return false;
-
-
-
-        if (!normalizedSearch)
-            return true;
-
-
-
-        const titleMatch = issue.title && issue.title.toLowerCase().includes(normalizedSearch);
-        const residentNameMatch = issue.resident && issue.resident.name && issue.resident.name.toLowerCase().includes(normalizedSearch);
-        const ratingMatch = issue.rating !== undefined && issue.rating !== null && issue.rating.toString().toLowerCase().includes(normalizedSearch);
-
-        return titleMatch || residentNameMatch || ratingMatch;
-    });
-
-    const resolvedIssues = [...filteredIssues].sort((a, b) => { // Parse dates if present; fallback to createdAt
-        const dateA = new Date(a.resolvedAt || a.createdAt || 0);
-        const dateB = new Date(b.resolvedAt || b.createdAt || 0);
-        const ratingA = typeof a.rating === 'number' ? a.rating : -Infinity;
-        const ratingB = typeof b.rating === 'number' ? b.rating : -Infinity;
-
-        switch (sortBy) {
-            case 'date_asc':
-                return dateA - dateB;
-            case 'rating_desc':
-                return ratingB - ratingA;
-            case 'rating_asc':
-                return ratingA - ratingB;
-            case 'date_desc':
-            default:
-                return dateB - dateA;
-        }
-    });
+    const resolvedIssues = getResolvedIssues(issues, search, sortBy);
 
     const taskGridCols = selectedTask ? 'row-cols-md-2' : 'row-cols-md-3';
     const leftColClasses = selectedTask ? 'col-lg-7 col-md-12' : 'col-12';
@@ -287,12 +251,7 @@ export const History = () => {
                             <SearchBar placeholder="Search by title, resident or rating..." value={search} onChange={setSearch} />
                         </div>
                         <Dropdown
-                            options={[
-                                { label: 'Newest first', value: 'date_desc' },
-                                { label: 'Oldest first', value: 'date_asc' },
-                                { label: 'Rating: high to low', value: 'rating_desc' },
-                                { label: 'Rating: low to high', value: 'rating_asc' },
-                            ]}
+                            options={HISTORY_SORT_OPTIONS}
                             selected={sortBy}
                             onChange={setSortBy}
                             width="180px"
@@ -373,4 +332,5 @@ export const History = () => {
         </ManagerPageShell>
     );
 };
+
 

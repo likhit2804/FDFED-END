@@ -4,7 +4,7 @@
 }
 .payment-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 6px 16px var(--shadow-alpha-3);
 }
 .icon-box {
   background: #f5f7ff;
@@ -43,7 +43,7 @@
   width: 6px;
 }
 .payments-grid::-webkit-scrollbar-thumb {
-  background-color: #ccc;
+  background-color: var(--border-strong);
   border-radius: 6px;
 }
 

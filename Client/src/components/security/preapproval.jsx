@@ -9,7 +9,7 @@ import {
   ManagerRecordCard,
   ManagerRecordGrid,
   ManagerSection,
-} from "../Manager/ui";
+} from "../shared/roleUI";
 
 export function SecurityPreApproval() {
   const [tab, setTab] = useState("Pending");
@@ -143,3 +143,4 @@ export function SecurityPreApproval() {
     </>
   );
 }
+

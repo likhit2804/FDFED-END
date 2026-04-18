@@ -141,17 +141,11 @@ const ManagerSetup = () => {
       title="Configure the physical structure of your community."
       description="Define towers, floors, and units here so registration, resident mapping, and occupancy tools follow the real building layout."
       chips={[`${totals.totalBlocks} blocks`, `${totals.totalUnits} units planned`]}
-      actions={
-        <ManagerActionButton variant="primary" onClick={handleAddBlock}>
-          <Plus size={16} />
-          Add Block
-        </ManagerActionButton>
-      }
     >
       <div className="ue-stat-grid">
-        <StatCard label="Blocks" value={totals.totalBlocks} icon={<Building2 size={22} />} iconColor="#7c3aed" iconBg="#f3edff" />
-        <StatCard label="Total Floors" value={totals.totalFloors} icon={<Layers size={22} />} iconColor="#d97706" iconBg="#fff7ed" />
-        <StatCard label="Total Units" value={totals.totalUnits} icon={<Home size={22} />} iconColor="#059669" iconBg="#ecfdf5" />
+        <StatCard label="Blocks" value={totals.totalBlocks} icon={<Building2 size={22} />} iconColor="var(--brand-500)" iconBg="var(--info-soft)" />
+        <StatCard label="Total Floors" value={totals.totalFloors} icon={<Layers size={22} />} iconColor="var(--warning-700)" iconBg="var(--warning-soft)" />
+        <StatCard label="Total Units" value={totals.totalUnits} icon={<Home size={22} />} iconColor="var(--success-500)" iconBg="var(--success-soft)" />
       </div>
 
       <ManagerSection
@@ -258,3 +252,4 @@ const ManagerSetup = () => {
 };
 
 export default ManagerSetup;
+

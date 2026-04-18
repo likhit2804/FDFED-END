@@ -1,20 +1,24 @@
-import React, { useState, useEffect } from "react";
-import { Mail, Phone, MapPin, Building2, User } from "lucide-react";
-import "bootstrap/dist/css/bootstrap.min.css";
-import { ProfileHeader, PasswordChangeForm, Input } from "../shared";
+import React, { useEffect, useState } from "react";
+import { Building2, User } from "lucide-react";
+import { toast } from "react-toastify";
 
+import { Loader } from "../Loader";
+import { PasswordChangeForm, ProfileHeader } from "../shared";
+import { ProfileEditPanels } from "../shared/nonAdmin/ProfileEditPanels";
+import { buildDisplayName, getInitials } from "../shared/nonAdmin/profileUtils";
+import { ManagerPageShell, ManagerSection } from "../shared/roleUI";
+
+const mapResidentProfile = (resident = {}) => ({
+  firstname: resident.firstname || "",
+  lastname: resident.lastname || "",
+  email: resident.email || "",
+  contact: resident.contact || "",
+  uCode: resident.uCode || "",
+  communityName: resident.communityName || "",
+  image: resident.image || "",
+});
 
 export const ResidentProfile = () => {
-  const [displayData, setDisplayData] = useState({
-    firstname: "",
-    lastname: "",
-    email: "",
-    contact: "",
-    uCode: "",
-    communityName: "",
-    image: "",
-  });
-
   const [formData, setFormData] = useState({
     firstname: "",
     lastname: "",
@@ -24,186 +28,187 @@ export const ResidentProfile = () => {
     communityName: "",
     image: "",
   });
-
-  const [isPassword, setIspassword] = useState(false);
-
-
   const [selectedImage, setSelectedImage] = useState(null);
+  const [isPassword, setIsPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  // ------------------------------------------------
-  // Fetch Profile
-  // ------------------------------------------------
   useEffect(() => {
-    async function loadProfile() {
+    const loadProfile = async () => {
       try {
-        const res = await fetch("/resident/profile", {
+        const response = await fetch("/resident/profile", {
           method: "GET",
           credentials: "include",
         });
-
-        const data = await res.json();
-
-        if (data.success) {
-          const fetched = {
-            firstname: data.resident.firstname || "",
-            lastname: data.resident.lastname || "",
-            email: data.resident.email || "",
-            contact: data.resident.contact || "",
-            uCode: data.resident.uCode || "",
-            communityName: data.resident.communityName || "",
-            image: data.resident.image || "",
-          };
-
-          setDisplayData(fetched);
-          setFormData(fetched);
+        const data = await response.json();
+        if (!data.success || !data.resident) {
+          setError(data.message || "Failed to load profile");
+          return;
         }
-      } catch (err) {
-        console.error("Profile fetch error:", err);
+        setFormData(mapResidentProfile(data.resident));
+      } catch (requestError) {
+        console.error("Resident profile fetch error:", requestError);
+        setError("Failed to load profile");
+      } finally {
+        setIsLoading(false);
       }
-    }
+    };
 
     loadProfile();
   }, []);
 
-  // ------------------------------------------------
-  // Handle Updates
-  // ------------------------------------------------
-  const handleChange = (e) => {
-    const { id, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [id]: value,
-    }));
+  const handleChange = (event) => {
+    const { id, name, value } = event.target;
+    setFormData((previous) => ({ ...previous, [id || name]: value }));
   };
 
+  const handleImageChange = (file) => {
+    if (!file) return;
+    setSelectedImage(file);
+    const reader = new FileReader();
+    reader.onload = () => setFormData((previous) => ({ ...previous, image: reader.result }));
+    reader.readAsDataURL(file);
+  };
 
   const handleSaveProfile = async () => {
     try {
-      const form = new FormData();
+      const body = new FormData();
+      body.append("firstName", formData.firstname);
+      body.append("lastName", formData.lastname);
+      body.append("contact", formData.contact);
+      body.append("email", formData.email);
+      body.append("uCode", formData.uCode);
+      if (selectedImage) body.append("image", selectedImage);
 
-      form.append("firstName", formData.firstname);
-      form.append("lastName", formData.lastname);
-      form.append("contact", formData.contact);
-      form.append("email", formData.email);
-      form.append("uCode", formData.uCode);
-
-      if (selectedImage) {
-        form.append("image", selectedImage);
-      }
-
-      // only if image upload exists later
-      // form.append("image", selectedFile);
-
-      const res = await fetch("/resident/profile", {
+      const response = await fetch("/resident/profile", {
         method: "POST",
         credentials: "include",
-        body: form,
+        body,
       });
-
-      const data = await res.json();
-
+      const data = await response.json();
       if (!data.success) {
-        alert(data.message || "Update failed");
+        toast.error(data.message || "Update failed");
         return;
       }
-
-      setDisplayData(formData);
-      alert("Profile updated successfully!");
-    } catch (err) {
-      console.error(err);
-      alert("Error updating profile");
+      toast.success("Profile updated successfully");
+    } catch (requestError) {
+      console.error(requestError);
+      toast.error("Error updating profile");
     }
   };
 
+  const handlePasswordSubmit = async ({ cp, np, cnp }) => {
+    if (np !== cnp) {
+      toast.error("New password and confirm password do not match");
+      return;
+    }
 
-
-  const initials =
-    displayData.firstname && displayData.lastname
-      ? `${displayData.firstname[0]}${displayData.lastname[0]}`.toUpperCase()
-      : '?';
-
-  const handlePasswordSubmitShared = async ({ cp, np, cnp }) => {
-    if (np !== cnp) { alert('New password and confirm password do not match.'); return; }
     try {
-      const res = await fetch('/resident/change-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
+      const response = await fetch("/resident/change-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ currentPassword: cp, newPassword: np }),
       });
-      const data = await res.json();
-      if (!data.success && !data.ok) { alert(data.message || 'Password update failed.'); return; }
-      alert('Password updated successfully!');
-    } catch (err) { alert('Something went wrong while updating password.'); }
+      const data = await response.json();
+      if (!data.success && !data.ok) {
+        toast.error(data.message || "Password update failed");
+        return;
+      }
+      toast.success("Password updated successfully");
+    } catch (requestError) {
+      console.error(requestError);
+      toast.error("Something went wrong while updating password");
+    }
   };
 
+  const residentName = buildDisplayName(formData.firstname, formData.lastname) || "Resident";
+
+  if (isLoading) {
+    return (
+      <ManagerPageShell
+        eyebrow="Resident Desk"
+        title="Preparing resident profile."
+        description="Loading resident identity and household details."
+      >
+        <div className="manager-ui-empty">
+          <Loader />
+        </div>
+      </ManagerPageShell>
+    );
+  }
+
+  if (error) {
+    return (
+      <ManagerPageShell
+        eyebrow="Resident Desk"
+        title="Resident profile is unavailable."
+        description="The profile could not be loaded right now."
+      >
+        <div className="manager-ui-empty text-danger">{error}</div>
+      </ManagerPageShell>
+    );
+  }
+
   return (
-    <>
-      {/* ── Shared ProfileHeader ────────────────────── */}
-      <ProfileHeader
-        initials={initials}
-        imageSrc={displayData.image || ''}
-        name={`${displayData.firstname || ''} ${displayData.lastname || ''}`.trim() || 'Loading...'}
-        role={formData.communityName}
-        subtitle={`Unit Code: ${formData.uCode}`}
-        onImageChange={(file) => setSelectedImage(file)}
-        actionLabel={isPassword ? 'Edit Profile' : 'Change Password'}
-        onAction={() => setIspassword((p) => !p)}
-      />
+    <ManagerPageShell
+      eyebrow="Resident Desk"
+      title="Keep resident profile details current."
+      description="Update personal details and account access from one unified profile workspace."
+    >
+      <ManagerSection
+        eyebrow="Identity"
+        title="Resident profile"
+        description="Review and update personal and unit details."
+      >
+        <div className="ue-profile-page-stack ue-role-page">
+          <ProfileHeader
+            initials={getInitials(residentName)}
+            imageSrc={formData.image || ""}
+            name={residentName}
+            role={formData.communityName}
+            subtitle={`Unit Code: ${formData.uCode}`}
+            onImageChange={handleImageChange}
+            actionLabel={isPassword ? "Edit Profile" : "Change Password"}
+            onAction={() => setIsPassword((previous) => !previous)}
+          />
 
-      {/* PASSWORD MODE */}
-      {isPassword ? (
-        <div className="mt-3">
-          {/* ── Shared PasswordChangeForm ─────────────── */}
-          <PasswordChangeForm onSubmit={handlePasswordSubmitShared} />
-        </div>
-      ) : (
-        // PROFILE MODE
-        <div className="row g-4 mt-3">
-          {/* LEFT - Personal Info */}
-          <div className="col-md-6">
-            <div className="card border-0 shadow-sm rounded-4 p-4 h-100">
-              <h6 className="mb-3 fw-semibold d-flex align-items-center gap-2">
-                <User size={20} className="text-primary" />
-                Personal Information
-              </h6>
-
-              <div className="d-flex flex-column gap-2">
-                <div>
-                  <small className="fw-semibold text-dark mb-1 d-block">Full Name</small>
-                  <div className="d-flex gap-2">
-                    <Input id="firstname" placeholder="First Name" value={formData.firstname} onChange={handleChange} />
-                    <Input id="lastname" placeholder="Last Name" value={formData.lastname} onChange={handleChange} />
-                  </div>
-                </div>
-                <Input type="email" label="Email" id="email" value={formData.email} onChange={handleChange} />
-                <Input label="Contact" id="contact" value={formData.contact} onChange={handleChange} />
-                <Input label="Unit Code" id="uCode" value={formData.uCode} readOnly />
-                <div className="d-flex py-2 justify-content-end">
-                  <button className="btn w-50 btn-primary" onClick={handleSaveProfile}>Save Changes</button>
-                </div>
-              </div>
-
+          {isPassword ? (
+            <div className="ue-profile-block">
+              <PasswordChangeForm onSubmit={handlePasswordSubmit} />
             </div>
-          </div>
-
-          {/* RIGHT - Community Info */}
-          <div className="col-md-6">
-            <div className="card border-0 shadow-sm rounded-4 p-4 h-100">
-              <h6 className="mb-3 fw-semibold d-flex align-items-center gap-2">
-                <Building2 size={20} className="text-success" />
-                Community Details
-              </h6>
-
-              <div className="d-flex flex-column gap-2">
-                <Input label="Community Name" id="communityName" value={formData.communityName} readOnly />
-                <Input label="Unit Code" id="uCode_ro" value={formData.uCode} readOnly />
-              </div>
-
-            </div>
-          </div>
+          ) : (
+            <ProfileEditPanels
+              leftPanel={{
+                title: "Personal Information",
+                icon: <User size={18} />,
+                onChange: handleChange,
+                fields: [
+                  {
+                    key: "resident-name",
+                    group: [
+                      { label: "First Name", id: "firstname", value: formData.firstname },
+                      { label: "Last Name", id: "lastname", value: formData.lastname },
+                    ],
+                  },
+                  { label: "Email", type: "email", id: "email", value: formData.email },
+                  { label: "Contact", id: "contact", value: formData.contact },
+                  { label: "Unit Code", id: "uCode", value: formData.uCode, readOnly: true },
+                ],
+              }}
+              rightPanel={{
+                title: "Community Details",
+                icon: <Building2 size={18} />,
+                fields: [
+                  { label: "Community Name", value: formData.communityName, readOnly: true },
+                  { label: "Unit Code", value: formData.uCode, readOnly: true },
+                ],
+              }}
+              onSave={handleSaveProfile}
+            />
+          )}
         </div>
-      )}
-    </>
+      </ManagerSection>
+    </ManagerPageShell>
   );
 };

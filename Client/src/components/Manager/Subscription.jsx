@@ -149,10 +149,10 @@ export const Subscription = () => {
       }
     >
       <div className="ue-stat-grid">
-        <StatCard label="Current Plan" value={status?.subscriptionPlan || "Not subscribed"} icon={<Crown size={22} />} iconColor="#7c3aed" iconBg="#f3edff" />
-        <StatCard label="Community Status" value={currentStatus} icon={<CheckCircle2 size={22} />} iconColor="#8b5cf6" iconBg="#f5f3ff" />
-        <StatCard label="Residents" value={totalResidents} icon={<Users size={22} />} iconColor="#5b6472" iconBg="#f2f4f8" />
-        <StatCard label="Billing" value={status?.planPrice ? `₹${status.planPrice}` : "Pending"} icon={<BadgeIndianRupee size={22} />} iconColor="#d95d4f" iconBg="#feefed" />
+        <StatCard label="Current Plan" value={status?.subscriptionPlan || "Not subscribed"} icon={<Crown size={22} />} iconColor="var(--brand-500)" iconBg="var(--info-soft)" />
+        <StatCard label="Community Status" value={currentStatus} icon={<CheckCircle2 size={22} />} iconColor="var(--info-600)" iconBg="var(--surface-2)" />
+        <StatCard label="Residents" value={totalResidents} icon={<Users size={22} />} iconColor="var(--text-subtle)" iconBg="var(--surface-2)" />
+        <StatCard label="Billing" value={status?.planPrice ? `₹${status.planPrice}` : "Pending"} icon={<BadgeIndianRupee size={22} />} iconColor="var(--danger-500)" iconBg="var(--danger-soft)" />
       </div>
 
       <ManagerSection
@@ -260,3 +260,4 @@ export const Subscription = () => {
 };
 
 export default Subscription;
+

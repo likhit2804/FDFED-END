@@ -1,10 +1,10 @@
 .card {
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  background: linear-gradient(135deg, var(--surface-0) 0%, var(--surface-1) 100%);
   border-radius: 20px;
   padding: 24px 32px;
   box-shadow: 
-    0 4px 6px -1px rgba(0, 0, 0, 0.05),
-    0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    0 4px 6px -1px var(--shadow-alpha-2),
+    0 2px 4px -1px var(--shadow-alpha-1);
   min-width: 260px;
   flex: 1 1 220px;
   display: flex;
@@ -32,7 +32,7 @@
 .card:hover {
   transform: translateY(-6px);
   box-shadow: 
-    0 20px 25px -5px rgba(0, 0, 0, 0.08),
+    0 20px 25px -5px var(--shadow-alpha-3),
     0 10px 10px -5px rgba(0, 0, 0, 0.04);
 }
 
@@ -51,7 +51,7 @@
 .value {
   font-weight: 700;
   font-size: 32px;
-  color: #0f172a;
+  color: var(--text-strong);
   margin: 16px 0 6px;
   line-height: 1;
   letter-spacing: -0.5px;
@@ -59,8 +59,9 @@
 
 .label {
   font-size: 13px;
-  color: #64748b;
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.8px;
   font-weight: 600;
 }
+

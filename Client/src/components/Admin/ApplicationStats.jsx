@@ -36,7 +36,7 @@ export default function ApplicationStats({ applications }) {
         icon={<CreditCard size={22} />}
         value={stats.awaitingPayment}
         label="Awaiting Payment"
-        borderColor="#8b5cf6"
+        borderColor="var(--info-600)"
       />
       <Card
         icon={<XCircle size={22} />}
@@ -47,3 +47,4 @@ export default function ApplicationStats({ applications }) {
     </div>
   );
 }
+

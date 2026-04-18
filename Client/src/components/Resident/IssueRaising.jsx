@@ -9,7 +9,7 @@ import { useSocket } from "../../hooks/useSocket";
 import { EmptyState, Modal, Input, Select, StatCard, Textarea, Tabs } from "../shared";
 import { ResidentIssueCard } from "./IssueRaising/ResidentIssueCard";
 import { ResidentIssueDetailsModal } from "./IssueRaising/ResidentIssueDetailsModal";
-import { ManagerActionButton, ManagerPageShell, ManagerSection } from "../Manager/ui";
+import { ManagerActionButton, ManagerPageShell, ManagerSection } from "../shared/roleUI";
 import "../../assets/css/Resident/IssueRaising.css";
 
 const R_CATEGORIES = ["Plumbing", "Electrical", "Security", "Maintenance", "Pest Control", "Waste Management"];
@@ -122,9 +122,9 @@ export const IssueRaising = () => {
 
       {/* Stats */}
       <div className="ue-stat-grid mb-4">
-        <StatCard label="Total Issues" value={issues?.length || 0} icon={<ListChecks size={22} />} iconColor="#7c3aed" iconBg="#f3edff" />
-        <StatCard label="Pending Issues" value={pendingCount} icon={<AlertCircle size={22} />} iconColor="#d95d4f" iconBg="#feefed" />
-        <StatCard label="Resolved Issues" value={resolvedCount} icon={<CheckCircle size={22} />} iconColor="#8b5cf6" iconBg="#f5f3ff" />
+        <StatCard label="Total Issues" value={issues?.length || 0} icon={<ListChecks size={22} />} iconColor="var(--brand-500)" iconBg="var(--info-soft)" />
+        <StatCard label="Pending Issues" value={pendingCount} icon={<AlertCircle size={22} />} iconColor="var(--danger-500)" iconBg="var(--danger-soft)" />
+        <StatCard label="Resolved Issues" value={resolvedCount} icon={<CheckCircle size={22} />} iconColor="var(--info-600)" iconBg="var(--surface-2)" />
       </div>
 
       {/* Issues List */}
@@ -159,7 +159,7 @@ export const IssueRaising = () => {
             <Loader label="Submitting issue..." size={34} />
           </div>
         )}
-        <div style={{ background: activeTab === "Resident" ? "#f3edff" : "#f5f3ff", color: "#6d28d9", padding: "8px 12px", borderRadius: 10, fontSize: 13, fontWeight: 600, marginBottom: 16 }}>
+        <div style={{ background: activeTab === "Resident" ? "var(--info-soft)" : "var(--surface-2)", color: "var(--brand-700)", padding: "8px 12px", borderRadius: 10, fontSize: 13, fontWeight: 600, marginBottom: 16 }}>
           <i className={`bi ${activeTab === "Resident" ? "bi-house-door" : "bi-building"}`} style={{ marginRight: 6 }} />{activeTab} Issue
         </div>
         <Input label="Issue Title" required id="title" placeholder="Brief title of the issue..." disabled={formSubmitting} {...register("title", { required: true })} />
@@ -169,7 +169,7 @@ export const IssueRaising = () => {
           <option value="Other">Other</option>
         </Select>
         {category === "Other" && <Input label="Specify Category" required id="otherCategory" placeholder="Enter custom category" disabled={formSubmitting} {...register("otherCategory", { required: true })} />}
-        <div style={{ background: "#f5f3ff", padding: "10px 14px", borderRadius: 10, marginBottom: 16, fontSize: 13, color: "#5b21b6" }}>
+        <div style={{ background: "var(--surface-2)", padding: "10px 14px", borderRadius: 10, marginBottom: 16, fontSize: 13, color: "var(--brand-700)" }}>
           <i className="bi bi-info-circle" style={{ marginRight: 8 }} />Priority is automatically determined based on issue type, timing, and urgency keywords
         </div>
         <Input label={`Location${activeTab === "Community" ? " *" : " (Optional)"}`} id="location" placeholder="e.g., Block A, Floor 3, Apt 302" disabled={formSubmitting} {...register("location", { required: activeTab === "Community" })} />
@@ -193,3 +193,5 @@ export const IssueRaising = () => {
     </ManagerPageShell>
   );
 };
+
+

@@ -1,197 +1,191 @@
-/**
- * @license Proprietary
- * @fileoverview Worker Profile Component
- * @copyright All rights reserved
- */
-
 import React, { useEffect, useState } from "react";
+import { Briefcase, User } from "lucide-react";
 import { toast } from "react-toastify";
+
 import { Loader } from "../Loader";
-import { ProfileHeader, PasswordChangeForm, Input } from "../shared";
-import { ManagerPageShell, ManagerSection } from "../Manager/ui";
+import { PasswordChangeForm, ProfileHeader } from "../shared";
+import { ProfileEditPanels } from "../shared/nonAdmin/ProfileEditPanels";
+import { getInitials } from "../shared/nonAdmin/profileUtils";
+import { ManagerPageShell, ManagerSection } from "../shared/roleUI";
+
+const mapWorkerProfile = (worker = {}) => ({
+  name: worker.name || "",
+  email: worker.email || "",
+  contact: worker.contact || "",
+  address: worker.address || "",
+  department: Array.isArray(worker.jobRole) ? worker.jobRole.join(", ") : worker.jobRole || "",
+  shift: worker.shift || "",
+  image: worker.image || "",
+});
 
 export const WorkerProfile = () => {
-    const [formData, setFormData] = useState({
-        name: "", email: "", contact: "", address: "",
-        department: "", shift: "", image: ""
-    });
-    const [imageFile, setImageFile] = useState(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const [isPassword, setIsPassword] = useState(false);
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    contact: "",
+    address: "",
+    department: "",
+    shift: "",
+    image: "",
+  });
+  const [imageFile, setImageFile] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isPassword, setIsPassword] = useState(false);
 
-    // ── Fetch profile on mount ──────────────────────────────────
-    useEffect(() => {
-        async function loadProfile() {
-            try {
-                const res = await fetch("/worker/profile", {
-                    method: "GET",
-                    credentials: "include",
-                });
-                const data = await res.json();
-                if (data.success && data.worker) {
-                    const w = data.worker;
-                    setFormData({
-                        name: w.name || "",
-                        email: w.email || "",
-                        contact: w.contact || "",
-                        address: w.address || "",
-                        department: Array.isArray(w.jobRole) ? w.jobRole.join(", ") : w.jobRole || "",
-                        shift: w.shift || "",
-                        image: w.image || "",
-                    });
-                }
-            } catch (err) {
-                console.error("Worker profile fetch error:", err);
-                toast.error("Failed to load profile");
-            } finally {
-                setIsLoading(false);
-            }
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        const response = await fetch("/worker/profile", {
+          method: "GET",
+          credentials: "include",
+        });
+        const data = await response.json();
+        if (data.success && data.worker) {
+          setFormData(mapWorkerProfile(data.worker));
         }
-        loadProfile();
-    }, []);
-
-    const handleChange = (e) => {
-        const { id, name, value } = e.target;
-        setFormData((prev) => ({ ...prev, [id || name]: value }));
+      } catch (error) {
+        console.error("Worker profile fetch error:", error);
+        toast.error("Failed to load profile");
+      } finally {
+        setIsLoading(false);
+      }
     };
 
-    const handleImageChange = (file) => {
-        if (!file) return;
-        setImageFile(file);
-        const reader = new FileReader();
-        reader.onload = () => setFormData((prev) => ({ ...prev, image: reader.result }));
-        reader.readAsDataURL(file);
-    };
+    loadProfile();
+  }, []);
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        try {
-            const body = new FormData();
-            body.append("name", formData.name);
-            body.append("email", formData.email);
-            body.append("contact", formData.contact);
-            body.append("address", formData.address);
-            if (imageFile) body.append("image", imageFile);
+  const handleChange = (event) => {
+    const { id, name, value } = event.target;
+    setFormData((previous) => ({ ...previous, [id || name]: value }));
+  };
 
-            const res = await fetch("/worker/profile", {
-                method: "POST",
-                credentials: "include",
-                body,
-            });
-            const data = await res.json();
-            if (data.success) {
-                toast.success(data.message || "Profile updated successfully");
-                if (data.worker) {
-                    const w = data.worker;
-                    setFormData((prev) => ({
-                        ...prev,
-                        name: w.name || prev.name,
-                        email: w.email || prev.email,
-                        contact: w.contact || prev.contact,
-                        address: w.address || prev.address,
-                        department: Array.isArray(w.jobRole) ? w.jobRole.join(", ") : w.jobRole || prev.department,
-                        image: w.image || prev.image,
-                    }));
-                }
-            } else {
-                toast.error(data.message || "Failed to update profile");
-            }
-        } catch (err) {
-            console.error(err);
-            toast.error("Something went wrong while updating profile");
-        }
-    };
+  const handleImageChange = (file) => {
+    if (!file) return;
+    setImageFile(file);
+    const reader = new FileReader();
+    reader.onload = () => setFormData((previous) => ({ ...previous, image: reader.result }));
+    reader.readAsDataURL(file);
+  };
 
-    const handlePasswordSubmit = async ({ cp, np, cnp }) => {
-        if (np !== cnp) { toast.error("Passwords do not match"); return; }
-        try {
-            const res = await fetch("/worker/change-password", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                credentials: "include",
-                body: JSON.stringify({ currentPassword: cp, newPassword: np }),
-            });
-            const data = await res.json();
-            if (data.success) toast.success(data.message || "Password changed successfully");
-            else toast.error(data.message || "Failed to change password");
-        } catch (err) {
-            toast.error("Something went wrong while changing password");
-        }
-    };
+  const handleSubmit = async () => {
+    try {
+      const body = new FormData();
+      body.append("name", formData.name);
+      body.append("email", formData.email);
+      body.append("contact", formData.contact);
+      body.append("address", formData.address);
+      if (imageFile) body.append("image", imageFile);
 
-    if (isLoading) {
-        return (
-            <div className="d-flex h-100 justify-content-center align-items-center">
-                <Loader />
-            </div>
-        );
+      const response = await fetch("/worker/profile", {
+        method: "POST",
+        credentials: "include",
+        body,
+      });
+      const data = await response.json();
+
+      if (!data.success) {
+        toast.error(data.message || "Failed to update profile");
+        return;
+      }
+
+      toast.success(data.message || "Profile updated successfully");
+      if (data.worker) {
+        setFormData((previous) => ({ ...previous, ...mapWorkerProfile(data.worker) }));
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("Something went wrong while updating profile");
+    }
+  };
+
+  const handlePasswordSubmit = async ({ cp, np, cnp }) => {
+    if (np !== cnp) {
+      toast.error("Passwords do not match");
+      return;
     }
 
-    const workerInitials = formData.name
-        ? formData.name.split(" ").slice(0, 2).map((n) => n[0]).join("").toUpperCase()
-        : "?";
+    try {
+      const response = await fetch("/worker/change-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ currentPassword: cp, newPassword: np }),
+      });
+      const data = await response.json();
+      if (data.success) toast.success(data.message || "Password changed successfully");
+      else toast.error(data.message || "Failed to change password");
+    } catch (error) {
+      toast.error("Something went wrong while changing password");
+    }
+  };
 
+  if (isLoading) {
     return (
-        <ManagerPageShell
-            eyebrow="Worker Desk"
-            title="Manage worker profile details and account access."
-            description="Keep personal details, shift assignment, and password settings updated in one place."
-        >
-            <ManagerSection
-                eyebrow="Identity"
-                title="Worker profile"
-                description="Review profile details and work assignment information."
-            >
-        <div className="container worker-profile-container m-0 ue-profile-page-stack ue-role-page">
-            <ProfileHeader
-                initials={workerInitials}
-                imageSrc={formData.image || ""}
-                name={formData.name || "Worker"}
-                role={formData.department}
-                subtitle={formData.shift ? `Shift: ${formData.shift}` : ""}
-                onImageChange={handleImageChange}
-                actionLabel={isPassword ? "Edit Profile" : "Change Password"}
-                onAction={() => setIsPassword((p) => !p)}
-            />
-
-            {isPassword ? (
-                <div className="ue-profile-block">
-                    <PasswordChangeForm onSubmit={handlePasswordSubmit} />
-                </div>
-            ) : (
-                <form onSubmit={handleSubmit}>
-                    <div className="row g-3 ue-profile-grid">
-                        <div className="col-md-6">
-                            <div className="card border-0 shadow-sm rounded-4 p-4 h-100">
-                                <h5 className="mb-4">Profile Information</h5>
-                                <div className="d-flex flex-column gap-2">
-                                    <Input label="Full Name" id="name" value={formData.name} onChange={handleChange} />
-                                    <Input type="email" label="Email" id="email" value={formData.email} onChange={handleChange} />
-                                    <Input label="Phone Number" id="contact" value={formData.contact} onChange={handleChange} />
-                                    <Input label="Address" id="address" value={formData.address} onChange={handleChange} />
-                                </div>
-                                <div className="d-flex justify-content-end mt-3">
-                                    <button className="btn btn-primary" type="submit">
-                                        <i className="bi bi-save me-2"></i>Save Changes
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="col-md-6">
-                            <div className="card border-0 shadow-sm rounded-4 p-4 h-100">
-                                <h5 className="mb-4">Work Information</h5>
-                                <div className="d-flex flex-column gap-2">
-                                    <Input label="Department" value={formData.department} readOnly />
-                                    <Input label="Shift" value={formData.shift || "—"} readOnly />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </form>
-            )}
+      <ManagerPageShell
+        eyebrow="Worker Desk"
+        title="Preparing worker profile."
+        description="Loading worker identity, role assignment, and account settings."
+      >
+        <div className="manager-ui-empty">
+          <Loader />
         </div>
-            </ManagerSection>
-        </ManagerPageShell>
+      </ManagerPageShell>
     );
+  }
+
+  return (
+    <ManagerPageShell
+      eyebrow="Worker Desk"
+      title="Manage worker profile details and account access."
+      description="Keep personal details, shift assignment, and password settings updated in one place."
+    >
+      <ManagerSection
+        eyebrow="Identity"
+        title="Worker profile"
+        description="Review profile details and work assignment information."
+      >
+        <div className="ue-profile-page-stack ue-role-page">
+          <ProfileHeader
+            initials={getInitials(formData.name)}
+            imageSrc={formData.image || ""}
+            name={formData.name || "Worker"}
+            role={formData.department}
+            subtitle={formData.shift ? `Shift: ${formData.shift}` : ""}
+            onImageChange={handleImageChange}
+            actionLabel={isPassword ? "Edit Profile" : "Change Password"}
+            onAction={() => setIsPassword((previous) => !previous)}
+          />
+
+          {isPassword ? (
+            <div className="ue-profile-block">
+              <PasswordChangeForm onSubmit={handlePasswordSubmit} />
+            </div>
+          ) : (
+            <ProfileEditPanels
+              leftPanel={{
+                title: "Profile Information",
+                icon: <User size={18} />,
+                onChange: handleChange,
+                fields: [
+                  { label: "Full Name", id: "name", value: formData.name },
+                  { label: "Email", type: "email", id: "email", value: formData.email },
+                  { label: "Phone Number", id: "contact", value: formData.contact },
+                  { label: "Address", id: "address", value: formData.address },
+                ],
+              }}
+              rightPanel={{
+                title: "Work Information",
+                icon: <Briefcase size={18} />,
+                fields: [
+                  { label: "Department", value: formData.department, readOnly: true },
+                  { label: "Shift", value: formData.shift || "-", readOnly: true },
+                ],
+              }}
+              onSave={handleSubmit}
+            />
+          )}
+        </div>
+      </ManagerSection>
+    </ManagerPageShell>
+  );
 };

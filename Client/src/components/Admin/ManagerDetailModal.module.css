@@ -4,7 +4,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
+    background: var(--overlay-heavy);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -26,7 +26,7 @@
 .modal {
     background: white;
     border-radius: 12px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 8px 32px var(--overlay-dim);
     max-width: 420px;
     width: 100%;
     animation: slideUp 0.25s ease;
@@ -46,7 +46,7 @@
 
 .header {
     padding: 20px 24px;
-    background: #0f172a;
+    background: var(--text-strong);
     color: white;
     border-radius: 12px 12px 0 0;
     display: flex;
@@ -64,7 +64,7 @@
 
 .headerSub {
     font-size: 13px;
-    color: #94a3b8;
+    color: var(--text-faint);
     margin-top: 2px;
 }
 
@@ -74,7 +74,7 @@
     right: 24px;
     background: rgba(255, 255, 255, 0.1);
     border: none;
-    color: #94a3b8;
+    color: var(--text-faint);
     cursor: pointer;
     padding: 6px;
     display: flex;
@@ -97,7 +97,7 @@
     width: 64px;
     height: 64px;
     border-radius: 50%;
-    background: #0f172a;
+    background: var(--text-strong);
     color: white;
     display: flex;
     align-items: center;
@@ -118,13 +118,13 @@
     align-items: center;
     gap: 10px;
     padding: 10px 14px;
-    background: #f8fafc;
-    border: 1px solid #e5e7eb;
+    background: var(--surface-1);
+    border: 1px solid var(--border-subtle);
     border-radius: 8px;
 }
 
 .infoIcon {
-    color: #3b82f6;
+    color: var(--brand-500);
     flex-shrink: 0;
 }
 
@@ -136,14 +136,14 @@
 .infoLabel {
     font-size: 11px;
     font-weight: 600;
-    color: #64748b;
+    color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
 
 .infoValue {
     font-size: 14px;
-    color: #1e293b;
+    color: var(--text-main);
     font-weight: 500;
     word-break: break-word;
 }
@@ -171,27 +171,27 @@
 }
 
 .emailLink {
-    background: #3b82f6;
+    background: var(--brand-500);
     color: white;
 }
 
 .emailLink:hover {
-    background: #2563eb;
+    background: var(--brand-500);
 }
 
 .phoneLink {
-    background: #0f172a;
+    background: var(--text-strong);
     color: white;
 }
 
 .phoneLink:hover {
-    background: #1e293b;
+    background: var(--text-main);
 }
 
 .unassigned {
     text-align: center;
     padding: 32px;
-    color: #94a3b8;
+    color: var(--text-faint);
 }
 
 .unassigned p {
@@ -202,7 +202,7 @@
 /* Footer */
 .footer {
     padding: 14px 24px;
-    border-top: 1px solid #e5e7eb;
+    border-top: 1px solid var(--border-subtle);
     display: flex;
     justify-content: flex-end;
 }
@@ -214,11 +214,12 @@
     font-weight: 500;
     cursor: pointer;
     border: none;
-    background: #f3f4f6;
-    color: #374151;
+    background: var(--surface-2);
+    color: var(--text-subtle);
     transition: all 0.15s ease;
 }
 
 .footer button:hover {
-    background: #e5e7eb;
+    background: var(--border-subtle);
 }
+

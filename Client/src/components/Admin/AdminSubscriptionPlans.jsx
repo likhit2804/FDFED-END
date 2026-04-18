@@ -344,7 +344,7 @@ export default function AdminSubscriptionPlans() {
       letterSpacing: "0.3px",
     },
     badgeActive: {
-      background: "#dcfce7",
+      background: "var(--success-soft)",
       color: "#166534",
     },
     badgeInactive: {
@@ -712,7 +712,7 @@ export default function AdminSubscriptionPlans() {
                 type="submit"
                 style={styles.saveBtn}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = "#2563eb";
+                  e.currentTarget.style.background = "var(--info-600)";
                   e.currentTarget.style.transform = "translateY(-2px)";
                 }}
                 onMouseLeave={(e) => {
@@ -805,7 +805,7 @@ export default function AdminSubscriptionPlans() {
                 <button
                   style={styles.editBtn}
                   onClick={() => handleEdit(plan)}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = "#dbeafe")}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "var(--info-soft)")}
                   onMouseLeave={(e) => (e.currentTarget.style.background = "#eff6ff")}
                 >
                   <Edit2 size={16} />
@@ -814,7 +814,7 @@ export default function AdminSubscriptionPlans() {
                 <button
                   style={styles.deleteBtn}
                   onClick={() => handleDelete(plan._id)}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = "#fee2e2")}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "var(--danger-soft)")}
                   onMouseLeave={(e) => (e.currentTarget.style.background = "#fef2f2")}
                 >
                   <Trash2 size={16} />
@@ -828,3 +828,4 @@ export default function AdminSubscriptionPlans() {
     </div>
   );
 }
+

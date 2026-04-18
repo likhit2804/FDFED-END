@@ -3,8 +3,8 @@
 .leave-card .card-body { padding: 28px; background: transparent; }
 .leave-actions { display:flex; gap:12px; margin-top:18px; }
 .leave-list { max-width: 980px; margin: 18px auto; }
-.leave-item { padding:16px; border-radius:10px; border: none; background: #ffffff; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04); }
+.leave-item { padding:16px; border-radius:10px; border: none; background: var(--surface-0); box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04); }
 .leave-item + .leave-item { margin-top:14px; }
 
 /* match page background used by other profile pages */
-.leave-page-wrapper { background: #f8f9fc; padding: 24px 0; min-height: 60vh; }
+.leave-page-wrapper { background: var(--surface-1); padding: 24px 0; min-height: 60vh; }

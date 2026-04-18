@@ -184,11 +184,11 @@ export const IssueResolving = () => {
         }
       >
         <div className="ue-stat-grid">
-          <StatCard label="Total Issues" value={stats.total} icon={<BarChart3 size={22} />} iconColor="#7c3aed" iconBg="#f3edff" />
-          <StatCard label="Pending" value={stats.pending} icon={<AlertCircle size={22} />} iconColor="#d95d4f" iconBg="#feefed" />
-          <StatCard label="Payment Pending" value={stats.paymentPending} icon={<CheckCircle size={22} />} iconColor="#8b5cf6" iconBg="#f5f3ff" />
-          <StatCard label="Resident" value={stats.resident} icon={<Users size={22} />} iconColor="#5b6472" iconBg="#f2f4f8" />
-          <StatCard label="Community" value={stats.community} icon={<Building2 size={22} />} iconColor="#a78bfa" iconBg="#f3edff" />
+          <StatCard label="Total Issues" value={stats.total} icon={<BarChart3 size={22} />} iconColor="var(--brand-500)" iconBg="var(--info-soft)" />
+          <StatCard label="Pending" value={stats.pending} icon={<AlertCircle size={22} />} iconColor="var(--danger-500)" iconBg="var(--danger-soft)" />
+          <StatCard label="Payment Pending" value={stats.paymentPending} icon={<CheckCircle size={22} />} iconColor="var(--info-600)" iconBg="var(--surface-2)" />
+          <StatCard label="Resident" value={stats.resident} icon={<Users size={22} />} iconColor="var(--text-subtle)" iconBg="var(--surface-2)" />
+          <StatCard label="Community" value={stats.community} icon={<Building2 size={22} />} iconColor="var(--brand-600)" iconBg="var(--info-soft)" />
         </div>
 
         <ManagerSection
@@ -331,3 +331,4 @@ export const IssueResolving = () => {
     </>
   );
 };
+

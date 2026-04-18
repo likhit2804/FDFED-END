@@ -3,19 +3,20 @@
 }
 
 .AdActionDeleteBtn{
-    color: rgb(239, 68, 68);
+    color: var(--danger-500);
 }
 
 .AdActionEditBtn{
-    color: rgb(1, 155, 194);
+    color: var(--info-500);
 }
 
 .AdActionEditBtn:hover {
     color: white;
-    background-color: rgb(1, 155, 194);
+    background-color: var(--info-500);
 }
 
 .AdActionDeleteBtn:hover {
     color: white;
-    background-color: rgb(239, 68, 68);
+    background-color: var(--danger-500);
 }
+

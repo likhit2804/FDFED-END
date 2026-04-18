@@ -23,8 +23,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: #f3edff;
-  color: #7c3aed;
+  background: var(--accent-soft);
+  color: var(--accent-500);
 }
 
 .rcm__eyebrow {
@@ -32,13 +32,13 @@
   font-size: 0.72rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: #7c3aed;
+  color: var(--accent-500);
   font-weight: 700;
 }
 
 .rcm__community {
   margin: 2px 0 0;
-  color: #1f2937;
+  color: var(--text-main);
   font-weight: 700;
 }
 
@@ -53,7 +53,7 @@
 }
 
 .rcm__table-wrap {
-  border: 1px solid #e7def9;
+  border: 1px solid var(--border-subtle);
   border-radius: 16px;
   overflow: auto;
   max-height: 52vh;
@@ -72,9 +72,9 @@
   z-index: 1;
   text-align: left;
   padding: 12px 10px;
-  background: #fbfaff;
-  color: #5b6472;
-  border-bottom: 1px solid #e7def9;
+  background: var(--surface-1);
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-subtle);
   font-size: 0.78rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -82,7 +82,7 @@
 
 .rcm__table tbody td {
   padding: 12px 10px;
-  border-bottom: 1px solid #eee9fc;
+  border-bottom: 1px solid var(--border-subtle);
   vertical-align: middle;
 }
 
@@ -96,15 +96,15 @@
 }
 
 .rcm__row {
-  background: #fff;
+  background: var(--surface-0);
 }
 
 .rcm__row:hover {
-  background: #fcfaff;
+  background: var(--surface-1);
 }
 
 .rcm__row--selected {
-  background: #f8f4ff;
+  background: var(--surface-2);
 }
 
 .rcm-checkbox {
@@ -129,9 +129,9 @@
   width: 18px;
   height: 18px;
   border-radius: 5px;
-  border: 2px solid #d2c2f7;
-  color: #fff;
-  background: #fff;
+  border: 2px solid var(--border-strong);
+  color: var(--surface-0);
+  background: var(--surface-0);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -139,15 +139,15 @@
 }
 
 .rcm-checkbox input:checked + .rcm-checkbox__box {
-  background: #7c3aed;
-  border-color: #7c3aed;
+  background: var(--accent-500);
+  border-color: var(--accent-500);
 }
 
 .rcm__flat-primary {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  color: #1f2937;
+  color: var(--text-main);
 }
 
 .rcm__flat-secondary {
@@ -155,7 +155,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: #5b6472;
+  color: var(--text-muted);
   font-size: 0.8rem;
 }
 
@@ -163,7 +163,7 @@
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: #c8b7ef;
+  background: var(--border-strong);
 }
 
 .rcm__status {
@@ -178,21 +178,21 @@
 }
 
 .rcm__status--vacant {
-  color: #15803d;
-  background: #ecfdf3;
-  border-color: #bbf7d0;
+  color: var(--success-700);
+  background: var(--success-soft);
+  border-color: var(--success-border);
 }
 
 .rcm__status--occupied {
   color: #c2410c;
-  background: #fff7ed;
+  background: var(--warning-soft);
   border-color: #fed7aa;
 }
 
 .rcm__status--neutral {
-  color: #4b5563;
-  background: #f3f4f6;
-  border-color: #d1d5db;
+  color: var(--text-subtle);
+  background: var(--surface-2);
+  border-color: var(--border-muted);
 }
 
 .rcm__code-wrap {
@@ -204,10 +204,10 @@
 .rcm__code {
   display: inline-block;
   border-radius: 10px;
-  border: 1px dashed #ccb8f5;
-  background: #f8f4ff;
+  border: 1px dashed var(--border-strong);
+  background: var(--surface-2);
   padding: 7px 10px;
-  color: #5b21b6;
+  color: var(--brand-700);
   letter-spacing: 0.08em;
   font-size: 0.8rem;
   font-weight: 700;
@@ -217,9 +217,9 @@
   width: 30px;
   height: 30px;
   border-radius: 9px;
-  border: 1px solid #e0d4fb;
-  background: #fff;
-  color: #5b6472;
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-0);
+  color: var(--text-muted);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -227,8 +227,8 @@
 }
 
 .rcm__icon-button:hover {
-  border-color: #cdb9f7;
-  color: #7c3aed;
+  border-color: var(--border-strong);
+  color: var(--accent-500);
 }
 
 .rcm__row-action {
@@ -239,7 +239,7 @@
 }
 
 .rcm__footer-note {
-  color: #5b6472;
+  color: var(--text-muted);
   font-size: 0.82rem;
 }
 
@@ -270,3 +270,5 @@
     align-items: stretch;
   }
 }
+
+

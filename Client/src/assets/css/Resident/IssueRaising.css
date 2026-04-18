@@ -3,8 +3,8 @@
 .status-tracker {
   padding: 24px 0;
   margin: 24px 0;
-  border-top: 1px solid #e5e7eb;
-  border-bottom: 1px solid #e5e7eb;
+  border-top: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .tracker-container {
@@ -22,7 +22,7 @@
   left: 0;
   right: 0;
   height: 3px;
-  background: #e5e7eb;
+  background: var(--border-subtle);
   z-index: 0;
 }
 
@@ -31,7 +31,7 @@
   top: 0;
   left: 0;
   height: 100%;
-  background: linear-gradient(90deg, #10b981, #059669);
+  background: linear-gradient(90deg, var(--success-500), var(--success-500));
   transition: width 0.5s ease;
   border-radius: 2px;
 }
@@ -53,28 +53,28 @@
   align-items: center;
   justify-content: center;
   background: white;
-  border: 3px solid #e5e7eb;
+  border: 3px solid var(--border-subtle);
   transition: all 0.3s ease;
   margin-bottom: 8px;
 }
 
 .tracker-step.active .tracker-icon-wrapper {
-  border-color: #10b981;
-  background: #10b981;
+  border-color: var(--success-500);
+  background: var(--success-500);
   color: white;
-  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
+  box-shadow: 0 0 0 4px var(--success-soft);
 }
 
 .tracker-step.completed .tracker-icon-wrapper {
-  border-color: #10b981;
-  background: #10b981;
+  border-color: var(--success-500);
+  background: var(--success-500);
   color: white;
 }
 
 .tracker-step.pending .tracker-icon-wrapper {
-  border-color: #e5e7eb;
+  border-color: var(--border-subtle);
   background: white;
-  color: #9ca3af;
+  color: var(--text-faint);
 }
 
 .tracker-icon {
@@ -85,17 +85,17 @@
   font-size: 12px;
   font-weight: 500;
   text-align: center;
-  color: #6b7280;
+  color: var(--text-muted);
   max-width: 80px;
 }
 
 .tracker-step.active .tracker-label {
-  color: #10b981;
+  color: var(--success-500);
   font-weight: 600;
 }
 
 .tracker-step.completed .tracker-label {
-  color: #059669;
+  color: var(--success-500);
 }
 
 .special-status-badge {
@@ -110,27 +110,27 @@
 }
 
 .special-status-badge.on-hold {
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--warning-soft);
+  color: var(--warning-700);
   border: 1px solid #fbbf24;
 }
 
 .special-status-badge.reopened {
-  background: #dbeafe;
-  color: #1e40af;
-  border: 1px solid #3b82f6;
+  background: var(--info-soft);
+  color: var(--brand-700);
+  border: 1px solid var(--brand-500);
 }
 
 .special-status-badge.rejected {
-  background: #fee2e2;
-  color: #991b1b;
-  border: 1px solid #ef4444;
+  background: var(--danger-soft);
+  color: var(--danger-700);
+  border: 1px solid var(--danger-500);
 }
 
 .special-status-badge.auto-closed {
-  background: #f3f4f6;
-  color: #374151;
-  border: 1px solid #9ca3af;
+  background: var(--surface-2);
+  color: var(--text-subtle);
+  border: 1px solid var(--text-faint);
 }
 
 /* Detail grid (also used in details modal) */
@@ -139,7 +139,7 @@
   grid-template-columns: repeat(2, 1fr);
   gap: 18px 32px;
   padding: 24px 18px;
-  background: #fafbfc;
+  background: var(--surface-1);
   border-radius: 12px;
   margin-bottom: 16px;
 }
@@ -154,7 +154,7 @@
 
 .ir-details-grid .detail-label {
   font-weight: 500;
-  color: #6b7280;
+  color: var(--text-muted);
   min-width: 110px;
   display: inline-block;
 }
@@ -180,8 +180,8 @@
 .ir-stat-card {
   flex: 1 1 180px;
   min-width: 180px;
-  background: #fff;
-  border-left: 6px solid #e5e7eb;
+  background: var(--surface-0);
+  border-left: 6px solid var(--border-subtle);
   border-radius: 8px;
   padding: 16px 18px;
   margin-bottom: 12px;
@@ -199,9 +199,9 @@
   flex: 1 1 320px;
   min-width: 280px;
   max-width: 100%;
-  background: #fff;
+  background: var(--surface-0);
   border-radius: 10px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 1px 4px var(--shadow-alpha-2);
   margin-bottom: 12px;
   padding: 18px 16px;
   display: flex;
@@ -260,16 +260,18 @@
 }
 
 .resident-ui-page .tracker-progress {
-  background: linear-gradient(90deg, #7c3aed, #8b5cf6);
+  background: linear-gradient(90deg, var(--accent-500), var(--accent-500));
 }
 
 .resident-ui-page .tracker-step.active .tracker-icon-wrapper,
 .resident-ui-page .tracker-step.completed .tracker-icon-wrapper {
-  border-color: #7c3aed;
-  background: #7c3aed;
+  border-color: var(--accent-500);
+  background: var(--accent-500);
 }
 
 .resident-ui-page .tracker-step.active .tracker-label,
 .resident-ui-page .tracker-step.completed .tracker-label {
-  color: #6d28d9;
+  color: var(--accent-500);
 }
+
+

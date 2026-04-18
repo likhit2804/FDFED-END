@@ -1,6 +1,6 @@
 /* Shared resident shell alignment for all ManagerPageShell-based resident pages */
 .resident-ui-page .manager-ui-page__inner {
-  width: min(100%, 1320px);
+  width: min(100%, var(--ue-content-max-width, 1480px));
   margin-inline: auto;
 }
 
@@ -38,7 +38,7 @@
 
 /* Normalize old legacy action variants into manager palette */
 .resident-ui-page .action-btn.view {
-  background: #fff;
+  background: var(--surface-0);
   color: var(--manager-text);
   border: 1px solid var(--manager-border-strong);
 }
@@ -51,15 +51,15 @@
 
 /* Resident status colors (consistent across issue/common-space/payments) */
 .resident-ui-page .status-badge.status-pending {
-  background: #fef3c7;
-  color: #b45309;
+  background: var(--warning-soft);
+  color: var(--warning-700);
   border-color: #fcd34d;
 }
 
 .resident-ui-page .status-badge.status-approved,
 .resident-ui-page .status-badge.status-completed,
 .resident-ui-page .status-badge.status-resolved {
-  background: #dcfce7;
+  background: var(--success-soft);
   color: #166534;
   border-color: #86efac;
 }
@@ -67,15 +67,15 @@
 .resident-ui-page .status-badge.status-cancelled,
 .resident-ui-page .status-badge.status-rejected,
 .resident-ui-page .status-badge.status-overdue {
-  background: #fee2e2;
-  color: #991b1b;
+  background: var(--danger-soft);
+  color: var(--danger-700);
   border-color: #fca5a5;
 }
 
 .resident-ui-page .status-badge.status-assigned,
 .resident-ui-page .status-badge.status-in-progress {
-  background: #f3edff;
-  color: #6d28d9;
+  background: var(--accent-soft);
+  color: var(--accent-500);
   border-color: #d6c6f4;
 }
 
@@ -108,3 +108,4 @@
     flex: 1 1 100%;
   }
 }
+

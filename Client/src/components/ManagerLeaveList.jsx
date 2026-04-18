@@ -10,7 +10,7 @@ import {
   ManagerRecordCard,
   ManagerRecordGrid,
   ManagerSection,
-} from "./Manager/ui";
+} from "./shared/roleUI";
 
 const formatDate = (value) => {
   if (!value) return "-";
@@ -81,9 +81,9 @@ export default function ManagerLeaveList() {
       chips={[`${stats.total} requests`, `${stats.pending} pending decisions`]}
     >
       <div className="ue-stat-grid">
-        <StatCard label="Total Requests" value={stats.total} icon={<FileText size={22} />} iconColor="#2563eb" iconBg="#dbeafe" />
-        <StatCard label="Pending" value={stats.pending} icon={<Clock size={22} />} iconColor="#d97706" iconBg="#fef3c7" />
-        <StatCard label="Approved" value={stats.approved} icon={<CheckCircle size={22} />} iconColor="#16a34a" iconBg="#dcfce7" />
+        <StatCard label="Total Requests" value={stats.total} icon={<FileText size={22} />} iconColor="var(--info-600)" iconBg="var(--info-soft)" />
+        <StatCard label="Pending" value={stats.pending} icon={<Clock size={22} />} iconColor="var(--warning-700)" iconBg="var(--warning-soft)" />
+        <StatCard label="Approved" value={stats.approved} icon={<CheckCircle size={22} />} iconColor="var(--success-500)" iconBg="var(--success-soft)" />
       </div>
 
       <ManagerSection
@@ -147,3 +147,5 @@ export default function ManagerLeaveList() {
     </ManagerPageShell>
   );
 }
+
+

@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import { openRazorpayCheckout } from "../../services/razorpay";
 import { Loader } from "../Loader";
 import { PasswordChangeForm, ProfileHeader } from "../shared";
+import { getInitials } from "../shared/nonAdmin/profileUtils";
 import { PlanChangeForm } from "./Profile/PlanChangeForm";
 import { ProfileEditSection } from "./Profile/ProfileEditSection";
 import {
@@ -236,14 +237,7 @@ export const ManagerProfile = () => {
       .finally(() => setPlanSubmitting(false));
   };
 
-  const initials = formData.name
-    ? formData.name
-        .split(" ")
-        .slice(0, 2)
-        .map((name) => name[0])
-        .join("")
-        .toUpperCase()
-    : "?";
+  const initials = getInitials(formData.name);
 
   if (loading) {
     return (
@@ -271,7 +265,7 @@ export const ManagerProfile = () => {
     <ManagerPageShell
       eyebrow="Profile"
       title="Keep manager identity, subscription, and community setup aligned."
-      description="This page now follows the same manager shell as payments, issues, users, and ads, while keeping profile actions grouped into consistent operation panels."
+      description="This page now follows the same manager shell as payments, issues, and users, while keeping profile actions grouped into consistent operation panels."
     >
       <div className="manager-profile-stack">
         <div className="manager-ui-two-column manager-profile-two-column">

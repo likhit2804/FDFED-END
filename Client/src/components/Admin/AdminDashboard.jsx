@@ -106,7 +106,7 @@ export default function DashboardOverview() {
           icon={<Users size={22} />}
           value={totalResidents}
           label="Total Residents"
-          borderColor="#16a34a"
+          borderColor="var(--success-500)"
         />
         <Card
           icon={<FileText size={22} />}
@@ -118,7 +118,7 @@ export default function DashboardOverview() {
           icon={<Wallet size={22} />}
           value={`₹${monthlyRevenue.toLocaleString()}`}
           label="Monthly Revenue"
-          borderColor="#8b5cf6"
+          borderColor="var(--info-600)"
         />
       </div>
 
@@ -197,3 +197,4 @@ export default function DashboardOverview() {
     </>
   );
 }
+
