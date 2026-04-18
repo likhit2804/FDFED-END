@@ -25,6 +25,7 @@
     "flash": "^1.1.0",
     "helmet": "^8.1.0",
     "iconv-lite": "^0.7.0",
+    "ioredis": "^5.8.2",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.19.1",
     "mongoose-sequence": "^6.0.1",
