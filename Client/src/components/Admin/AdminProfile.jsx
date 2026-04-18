@@ -203,6 +203,7 @@ export default function AdminProfile() {
         body: JSON.stringify({
           currentPassword: passwordData.current,
           newPassword: passwordData.new,
+          confirmPassword: passwordData.confirm,
         }),
       });
 
@@ -350,6 +351,7 @@ export default function AdminProfile() {
                     placeholder="Enter current password"
                     value={passwordData.current}
                     onChange={handlePasswordChange}
+                    required
                   />
                 </div>
 
@@ -362,6 +364,7 @@ export default function AdminProfile() {
                     placeholder="Enter new password"
                     value={passwordData.new}
                     onChange={handlePasswordChange}
+                    required
                   />
                 </div>
 
@@ -377,6 +380,7 @@ export default function AdminProfile() {
                     placeholder="Confirm new password"
                     value={passwordData.confirm}
                     onChange={handlePasswordChange}
+                    required
                   />
                   {errors.confirm && (
                     <div className="invalid-feedback">{errors.confirm}</div>

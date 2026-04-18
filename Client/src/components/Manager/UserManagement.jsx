@@ -23,13 +23,39 @@ const DynamicForm = ({ fields, initial = {}, onSubmit, submitLabel = "Save" }) =
   const [form, setForm] = useState(() =>
     fields.reduce((accumulator, field) => ({ ...accumulator, [field.key]: initial[field.key] ?? "" }), {})
   );
+  const [errors, setErrors] = useState({});
 
   useEffect(() => {
     setForm(fields.reduce((accumulator, field) => ({ ...accumulator, [field.key]: initial[field.key] ?? "" }), {}));
+    setErrors({});
   }, [fields, initial]);
 
   const handleChange = (key, value) => {
     setForm((previous) => ({ ...previous, [key]: value }));
+    setErrors((previous) => ({ ...previous, [key]: "" }));
+  };
+
+  const validate = () => {
+    const nextErrors = {};
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    fields.forEach((field) => {
+      const value = String(form[field.key] ?? "").trim();
+      if (field.required && !value) {
+        nextErrors[field.key] = `${field.label} is required`;
+        return;
+      }
+      if (field.type === "email" && value && !emailRegex.test(value)) {
+        nextErrors[field.key] = "Enter a valid email address";
+        return;
+      }
+      if (field.pattern && value && !field.pattern.test(value)) {
+        nextErrors[field.key] = field.error || `Invalid ${field.label.toLowerCase()}`;
+      }
+    });
+
+    setErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
   };
 
   return (
@@ -37,6 +63,7 @@ const DynamicForm = ({ fields, initial = {}, onSubmit, submitLabel = "Save" }) =
       className="um-form"
       onSubmit={(event) => {
         event.preventDefault();
+        if (!validate()) return;
         onSubmit(form);
       }}
     >
@@ -51,8 +78,13 @@ const DynamicForm = ({ fields, initial = {}, onSubmit, submitLabel = "Save" }) =
               value={form[field.key]}
               onChange={(event) => handleChange(field.key, event.target.value)}
               placeholder={field.placeholder || ""}
+              required={Boolean(field.required)}
+              error={errors[field.key]}
             />
           )}
+          {field.type === "textarea" && errors[field.key] ? (
+            <p style={{ margin: "6px 0 0", fontSize: 12, color: "#dc2626" }}>{errors[field.key]}</p>
+          ) : null}
         </div>
       ))}
       <div className="um-form-actions">
@@ -69,11 +101,11 @@ const ENTITY_CONFIG = {
     label: "Resident",
     endpoint: "resident",
     fields: [
-      { key: "residentFirstname", label: "First Name" },
-      { key: "residentLastname", label: "Last Name" },
-      { key: "email", label: "Email", type: "email" },
-      { key: "uCode", label: "UCode / Flat" },
-      { key: "contact", label: "Contact" },
+      { key: "residentFirstname", label: "First Name", required: true },
+      { key: "residentLastname", label: "Last Name", required: true },
+      { key: "email", label: "Email", type: "email", required: true },
+      { key: "uCode", label: "UCode / Flat", required: true },
+      { key: "contact", label: "Contact", pattern: /^[0-9]{10}$/, error: "Contact must be 10 digits" },
     ],
     cardTitle: (resident) => `${resident.residentFirstname || ""} ${resident.residentLastname || ""}`.trim(),
     cardSubtitle: (resident) => resident.uCode || resident.flat || "Resident",
@@ -120,12 +152,12 @@ const ENTITY_CONFIG = {
     label: "Worker",
     endpoint: "worker",
     fields: [
-      { key: "workerName", label: "Name" },
-      { key: "workerEmail", label: "Email", type: "email" },
-      { key: "workerJobRole", label: "Job Role" },
-      { key: "workerContact", label: "Contact" },
+      { key: "workerName", label: "Name", required: true },
+      { key: "workerEmail", label: "Email", type: "email", required: true },
+      { key: "workerJobRole", label: "Job Role", required: true },
+      { key: "workerContact", label: "Contact", pattern: /^[0-9]{10}$/, error: "Contact must be 10 digits" },
       { key: "workerAddress", label: "Address" },
-      { key: "workerSalary", label: "Salary" },
+      { key: "workerSalary", label: "Salary", pattern: /^\d+(\.\d{1,2})?$/, error: "Salary must be a valid non-negative number" },
     ],
     cardTitle: (worker) => worker.name || "Worker",
     cardSubtitle: (worker) => worker.jobRole || worker.workerJobRole || "Assigned role",

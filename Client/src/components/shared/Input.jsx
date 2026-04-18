@@ -51,6 +51,7 @@ const Input = forwardRef(({
                 <input
                     ref={ref}
                     type={type}
+                    required={required}
                     disabled={disabled}
                     style={{
                         width: '100%',

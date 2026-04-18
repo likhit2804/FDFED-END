@@ -77,9 +77,13 @@ const ManagerSetup = () => {
   };
 
   const handleBlockChange = (index, field, value) => {
+    const nextValue =
+      field === "name"
+        ? value.toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 12)
+        : value;
     setBlocks((current) =>
       current.map((block, currentIndex) =>
-        currentIndex === index ? { ...block, [field]: value } : block
+        currentIndex === index ? { ...block, [field]: nextValue } : block
       )
     );
   };
@@ -88,11 +92,28 @@ const ManagerSetup = () => {
     setLoading(true);
 
     try {
-      const payload = blocks.map((block) => ({
-        name: block.name,
-        totalFloors: parseInt(block.totalFloors, 10),
-        flatsPerFloor: parseInt(block.flatsPerFloor, 10),
-      }));
+      const seen = new Set();
+      const payload = blocks.map((block, index) => {
+        const name = String(block.name || "").trim().toUpperCase();
+        const totalFloors = Number.parseInt(block.totalFloors, 10);
+        const flatsPerFloor = Number.parseInt(block.flatsPerFloor, 10);
+
+        if (!name) {
+          throw new Error(`Block ${index + 1}: name is required`);
+        }
+        if (seen.has(name)) {
+          throw new Error(`Duplicate block name: ${name}`);
+        }
+        if (!Number.isInteger(totalFloors) || totalFloors < 1 || totalFloors > 120) {
+          throw new Error(`Block ${name}: total floors must be between 1 and 120`);
+        }
+        if (!Number.isInteger(flatsPerFloor) || flatsPerFloor < 1 || flatsPerFloor > 200) {
+          throw new Error(`Block ${name}: units per floor must be between 1 and 200`);
+        }
+
+        seen.add(name);
+        return { name, totalFloors, flatsPerFloor };
+      });
 
       const res = await axios.post(
         `${API_BASE_URL}/manager/setup-structure`,
