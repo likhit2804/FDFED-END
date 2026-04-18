@@ -222,8 +222,17 @@ const CLIENT_INDEX_PATH = path.join(CLIENT_DIST_PATH, "index.html");
 app.use(helmet({
   contentSecurityPolicy: false, // Disable for now to avoid breaking existing app
   crossOriginEmbedderPolicy: false,
-  crossOriginResourcePolicy: false
+  crossOriginResourcePolicy: false,
+  // Keep COOP compatible with payment popups.
+  crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
+  originAgentCluster: false,
 }));
+
+// Force popup-friendly COOP in case hosting/proxy layers alter defaults.
+app.use((req, res, next) => {
+  res.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
+  next();
+});
 
 // Create access log directory/stream safely for fresh environments.
 const accessLogDir = path.join(__dirname, "logs");
