@@ -17,11 +17,6 @@ import {
   ManagerSection,
 } from "./ui";
 
-const API_BASE =
-  process.env.NODE_ENV === "production"
-    ? `${window.location.origin}/manager`
-    : "/manager";
-
 export const Subscription = () => {
   const { user } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
@@ -37,8 +32,8 @@ export const Subscription = () => {
     const fetchData = async () => {
       try {
         const [statusRes, plansRes] = await Promise.all([
-          axios.get(`${API_BASE}/subscription-status`, { withCredentials: true }),
-          axios.get(`${API_BASE}/subscription-plans`, { withCredentials: true }),
+          axios.get("/manager/subscription-status"),
+          axios.get("/manager/subscription-plans"),
         ]);
 
         if (statusRes.data?.community) setStatus(statusRes.data.community);
@@ -69,11 +64,7 @@ export const Subscription = () => {
     try {
       setPaying(true);
 
-      const orderRes = await axios.post(
-        `${API_BASE}/subscription-payment/order`,
-        { subscriptionPlan: planKey },
-        { withCredentials: true }
-      );
+      const orderRes = await axios.post("/manager/subscription-payment/order", { subscriptionPlan: planKey });
 
       const paymentResponse = await openRazorpayCheckout({
         key: orderRes.data.data.key,
@@ -93,16 +84,12 @@ export const Subscription = () => {
         },
       });
 
-      const response = await axios.post(
-        `${API_BASE}/subscription-payment`,
-        {
-          subscriptionPlan: planKey,
-          razorpayOrderId: paymentResponse.razorpay_order_id,
-          razorpayPaymentId: paymentResponse.razorpay_payment_id,
-          razorpaySignature: paymentResponse.razorpay_signature,
-        },
-        { withCredentials: true }
-      );
+      const response = await axios.post("/manager/subscription-payment", {
+        subscriptionPlan: planKey,
+        razorpayOrderId: paymentResponse.razorpay_order_id,
+        razorpayPaymentId: paymentResponse.razorpay_payment_id,
+        razorpaySignature: paymentResponse.razorpay_signature,
+      });
 
       toast.success("Subscription activated successfully");
       dispatch(

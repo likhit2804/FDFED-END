@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import axios from "axios";
 import '../../assets/css/SignIn.css';
 import logo from '../../imgs/Logo.png';
 
@@ -31,17 +32,13 @@ export const ResidentRegister = () => {
     if (!code.trim()) return toast.error("Please enter your registration code");
     setLoading(true);
     try {
-      const res = await fetch(`${import.meta.env.VITE_URL || ""}/resident-register/validate-code`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: code.trim() }),
-      });
-      const data = await res.json();
+      const res = await axios.post("/resident-register/validate-code", { code: code.trim() });
+      const data = res.data;
       if (!data.success) return toast.error(data.message || "Invalid code");
       setFlatInfo(data.data);
       setStep(2);
-    } catch {
-      toast.error("Network error. Please try again.");
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Network error. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -56,17 +53,13 @@ export const ResidentRegister = () => {
 
     setLoading(true);
     try {
-      const res = await fetch(`${import.meta.env.VITE_URL || ""}/resident-register/complete`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, registrationCode: flatInfo.registrationCode }),
-      });
-      const data = await res.json();
+      const res = await axios.post("/resident-register/complete", { ...form, registrationCode: flatInfo.registrationCode });
+      const data = res.data;
       if (!data.success) return toast.error(data.message || "Registration failed");
       toast.success("Registration complete! Check your email for your temporary password.");
       navigate("/SignIn");
-    } catch {
-      toast.error("Network error. Please try again.");
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Network error. Please try again.");
     } finally {
       setLoading(false);
     }

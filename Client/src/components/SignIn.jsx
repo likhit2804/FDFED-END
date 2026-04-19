@@ -113,7 +113,7 @@ export const SignIn = () => {
 
   const resend = async () => {
     if (!pending2fa?.tempToken) return;
-    try { setIsResending(true); await axios.post('/resend-otp', { tempToken: pending2fa.tempToken }, { withCredentials: true }); toast.success('OTP resent'); setSecondsLeft(initialTimer); }
+    try { setIsResending(true); await axios.post('/api/resend-otp', { tempToken: pending2fa.tempToken }); toast.success('OTP resent'); setSecondsLeft(initialTimer); }
     catch (e) { toast.error(e?.response?.data?.message || 'Failed to resend OTP'); }
     finally { setIsResending(false); }
   };
@@ -125,7 +125,7 @@ export const SignIn = () => {
     if (!forgotPasswordUserType) { toast.error('Please select your role'); return; }
     try {
       setIsSendingReset(true);
-      const res = await axios.post('/forgot-password', { email: forgotPasswordEmail, userType: forgotPasswordUserType }, { withCredentials: true });
+      const res = await axios.post('/forgot-password', { email: forgotPasswordEmail, userType: forgotPasswordUserType });
       if (res.data.success) { toast.success('Password reset email sent!'); setShowForgotPassword(false); setForgotPasswordEmail(''); setForgotPasswordUserType(''); }
     } catch (err) { toast.error(err?.response?.data?.message || 'Failed to send reset email'); }
     finally { setIsSendingReset(false); }

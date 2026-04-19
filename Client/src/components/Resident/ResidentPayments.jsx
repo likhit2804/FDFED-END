@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import axios from "axios";
 import {
     DollarSign,
     Clock,
@@ -68,14 +69,9 @@ const PaymentsHistory = ({ onStats, filters = {} }) => {
         setLoading(true);
         setError(null);
 
-        fetch("/resident/payments", {
-            method: "GET",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-        })
-            .then(async (res) => {
-                if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                return res.json();
+        axios.get("/resident/payments")
+            .then((res) => {
+                return res.data;
             })
             .then((data) => {
                 const list = data.payments || [];
@@ -84,7 +80,7 @@ const PaymentsHistory = ({ onStats, filters = {} }) => {
             })
             .catch((err) => {
                 console.error("Failed to load resident payments", err);
-                setError("Failed to load payments.");
+                setError(err.response?.data?.message || "Failed to load payments.");
                 setPayments([]);
             })
             .finally(() => setLoading(false));
@@ -108,13 +104,8 @@ const PaymentsHistory = ({ onStats, filters = {} }) => {
         setError(null);
         setNotice(null);
         try {
-            const orderRes = await fetch(`/resident/payment/${selected._id}/order`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                credentials: "include",
-            });
-            const orderData = await orderRes.json();
-            if (!orderRes.ok) throw new Error(orderData?.message || "Failed to create payment order");
+            const orderRes = await axios.post(`/resident/payment/${selected._id}/order`);
+            const orderData = orderRes.data;
 
             const paymentResponse = await openRazorpayCheckout({
                 key: orderData.data.key,
@@ -129,18 +120,12 @@ const PaymentsHistory = ({ onStats, filters = {} }) => {
                 },
             });
 
-            const verifyRes = await fetch(`/resident/payment/${selected._id}/verify`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                credentials: "include",
-                body: JSON.stringify({
-                    razorpayOrderId: paymentResponse.razorpay_order_id,
-                    razorpayPaymentId: paymentResponse.razorpay_payment_id,
-                    razorpaySignature: paymentResponse.razorpay_signature,
-                }),
+            const verifyRes = await axios.post(`/resident/payment/${selected._id}/verify`, {
+                razorpayOrderId: paymentResponse.razorpay_order_id,
+                razorpayPaymentId: paymentResponse.razorpay_payment_id,
+                razorpaySignature: paymentResponse.razorpay_signature,
             });
-            const verifyData = await verifyRes.json();
-            if (!verifyRes.ok) throw new Error(verifyData?.message || "Payment failed");
+            const verifyData = verifyRes.data;
 
             const updated = payments.map((p) =>
                 p._id === selected._id
@@ -163,7 +148,7 @@ const PaymentsHistory = ({ onStats, filters = {} }) => {
                 setNotice("Payment was cancelled.");
                 setShowPayModal(false);
             } else {
-                setError(err.message || "Payment update failed");
+                setError(err.response?.data?.message || err.message || "Payment update failed");
             }
         } finally {
             setPaying(false);
