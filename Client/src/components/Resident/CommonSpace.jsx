@@ -405,7 +405,7 @@ export const CommonSpaceBooking = () => {
       <ToastContainer position="top-center" />
       <ManagerPageShell
         eyebrow="Common Spaces"
-        title="Book and track common space usage in one desk."
+        title="Booking and track common space usage in one desk."
         description="Use the same booking UI language as manager pages so cards, controls, and actions stay consistent."
         chips={[`${bookings?.length || 0} bookings`, `${pendingBookingsCount} pending`]}
         className="resident-ui-page resident-common-space-page"
