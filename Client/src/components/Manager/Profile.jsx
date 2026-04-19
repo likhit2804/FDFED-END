@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import axios from "axios";
 
 import { openRazorpayCheckout } from "../../services/razorpay";
 import { Loader } from "../Loader";
@@ -42,12 +43,8 @@ export const ManagerProfile = () => {
     setLoading(true);
     setError(null);
 
-    fetch("/manager/profile/api", {
-      method: "GET",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-    })
-      .then((response) => response.json())
+    axios.get("/manager/profile/api")
+      .then((response) => response.data)
       .then((data) => {
         if (data.success) {
           setFormData({
@@ -65,15 +62,11 @@ export const ManagerProfile = () => {
           setError(data.message || "Failed to load profile");
         }
       })
-      .catch(() => setError("Failed to load profile data"))
+      .catch((error) => setError(error.response?.data?.message || "Failed to load profile data"))
       .finally(() => setLoading(false));
 
-    fetch("/manager/subscription-status", {
-      method: "GET",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-    })
-      .then((response) => response.json())
+    axios.get("/manager/subscription-status")
+      .then((response) => response.data)
       .then((sub) => {
         if (sub.success && sub.community) {
           setSubscriptionInfo(sub.community);
@@ -94,14 +87,14 @@ export const ManagerProfile = () => {
     form.append("location", formData.location);
     form.append("address", formData.address);
 
-    fetch("/manager/profile", { method: "POST", body: form, credentials: "include" })
-      .then((response) => response.json())
+    axios.post("/manager/profile", form)
+      .then((response) => response.data)
       .then((data) => {
         if (!data.success) {
           setError(data.message || "Failed to update profile");
         }
       })
-      .catch(() => setError("Failed to update profile"));
+      .catch((error) => setError(error.response?.data?.message || "Failed to update profile"));
   };
 
   const handlePasswordSubmit = async ({ cp, np, cnp }) => {
@@ -112,13 +105,8 @@ export const ManagerProfile = () => {
     }
 
     try {
-      const response = await fetch("/manager/profile/changePassword", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ cp, np, cnp }),
-      });
-      const data = await response.json();
+      const response = await axios.post("/manager/profile/changePassword", { cp, np, cnp });
+      const data = response.data;
       if (data.success) {
         setPasswordMessage("Password changed successfully!");
         setTimeout(() => {
@@ -129,7 +117,7 @@ export const ManagerProfile = () => {
         setPasswordMessage(data.message || "Failed to change password");
       }
     } catch (requestError) {
-      setPasswordMessage("Failed to change password");
+      setPasswordMessage(requestError.response?.data?.message || "Failed to change password");
     }
   };
 
@@ -139,12 +127,8 @@ export const ManagerProfile = () => {
     if (plans) return;
 
     setPlanLoading(true);
-    fetch("/manager/subscription-plans", {
-      method: "GET",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-    })
-      .then((response) => response.json())
+    axios.get("/manager/subscription-plans")
+      .then((response) => response.data)
       .then((data) => {
         if (data.success && data.plans) {
           setPlans(data.plans);
@@ -152,7 +136,7 @@ export const ManagerProfile = () => {
           setPlanError(data.message || "Failed to load plans");
         }
       })
-      .catch(() => setPlanError("Failed to load plans"))
+      .catch((error) => setPlanError(error.response?.data?.message || "Failed to load plans"))
       .finally(() => setPlanLoading(false));
   };
 
@@ -173,13 +157,8 @@ export const ManagerProfile = () => {
     const plan = plans[selectedPlan];
     setPlanSubmitting(true);
 
-    fetch("/manager/subscription-payment/order", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ subscriptionPlan: selectedPlan }),
-    })
-      .then((response) => response.json())
+    axios.post("/manager/subscription-payment/order", { subscriptionPlan: selectedPlan })
+      .then((response) => response.data)
       .then(async (orderData) => {
         if (!orderData.success) {
           throw new Error(orderData.message || "Failed to create payment order");
@@ -203,19 +182,14 @@ export const ManagerProfile = () => {
           },
         });
 
-        return fetch("/manager/subscription-payment", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({
-            subscriptionPlan: selectedPlan,
-            razorpayOrderId: paymentResponse.razorpay_order_id,
-            razorpayPaymentId: paymentResponse.razorpay_payment_id,
-            razorpaySignature: paymentResponse.razorpay_signature,
-          }),
+        return axios.post("/manager/subscription-payment", {
+          subscriptionPlan: selectedPlan,
+          razorpayOrderId: paymentResponse.razorpay_order_id,
+          razorpayPaymentId: paymentResponse.razorpay_payment_id,
+          razorpaySignature: paymentResponse.razorpay_signature,
         });
       })
-      .then((response) => response.json())
+      .then((response) => response.data)
       .then((data) => {
         if (data.success) {
           setSubscriptionInfo((previous) =>
@@ -233,7 +207,7 @@ export const ManagerProfile = () => {
           setPlanError(data.message || "Failed to update plan");
         }
       })
-      .catch((requestError) => setPlanError(requestError.message || "Failed to update plan"))
+      .catch((requestError) => setPlanError(requestError.response?.data?.message || requestError.message || "Failed to update plan"))
       .finally(() => setPlanSubmitting(false));
   };
 

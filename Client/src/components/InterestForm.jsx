@@ -1,5 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
+import axios from "axios";
 import '../assets/css/InterestForm.css';
 
 export const InterestForm = () => {
@@ -91,18 +92,8 @@ export const InterestForm = () => {
                 submitData.append('photos', photo);
             });
 
-            const API_BASE_URL = import.meta.env.VITE_API_URL || '';
-
-            const response = await fetch(`${API_BASE_URL}/interest/submit`, {
-                method: 'POST',
-                body: submitData
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-
-            const result = await response.json();
+            const response = await axios.post("/interest/submit", submitData);
+            const result = response.data;
 
             if (result.success) {
                 showAlert('Application submitted successfully!', 'success');
@@ -127,22 +118,10 @@ export const InterestForm = () => {
             }
         } catch (error) {
             console.error('Submit error:', error);
-            let errorMessage = '';
-
-            if (error.message.includes('Failed to fetch')) {
-                errorMessage = 'Connection failed - server not running on port 3000';
-            } else if (error.message.includes('HTTP 400')) {
-                errorMessage = 'Validation error - check required fields and formats';
-            } else if (error.message.includes('HTTP 409')) {
-                errorMessage = 'Duplicate found - email or community already exists';
-            } else if (error.message.includes('HTTP 413')) {
-                errorMessage = 'Files too large - max 5MB per photo, 5 photos total';
-            } else if (error.message.includes('HTTP 500')) {
-                errorMessage = 'Server error - please try again in a few minutes';
-            } else {
-                errorMessage = `Error: ${error.message} - please contact support`;
-            }
-
+            const errorMessage =
+                error.response?.data?.message ||
+                error.message ||
+                "Submission failed";
             showAlert(errorMessage, 'error');
         } finally {
             setLoading(false);

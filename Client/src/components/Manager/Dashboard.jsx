@@ -1,5 +1,6 @@
 import React, { memo, useEffect, useState } from "react";
 import { toast } from "react-toastify";
+import axios from "axios";
 import {
   AlertCircle,
   Briefcase,
@@ -673,28 +674,13 @@ export function ManagerDashboard() {
         setLoading(true);
         setError(null);
 
-        const response = await fetch("/manager/api/dashboard", {
-          method: "GET",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-        });
+        const response = await axios.get("/manager/api/dashboard");
+        const result = response.data;
 
         if (response.status === 401) {
           setError("Unauthorized: Please log in again");
           return;
         }
-
-        if (!response.ok) {
-          const payload = await response.json();
-          throw new Error(payload.message || `Failed: ${response.status}`);
-        }
-
-        const contentType = response.headers.get("content-type");
-        if (!contentType?.includes("application/json")) {
-          throw new Error("Invalid response format.");
-        }
-
-        const result = await response.json();
 
         if (!result.success) {
           throw new Error(result.message || "Failed to fetch dashboard data");
@@ -703,7 +689,7 @@ export function ManagerDashboard() {
         setDashboardData(result.data);
         setBookingNotifications(result.data.bookings?.recent || []);
       } catch (requestError) {
-        setError(requestError.message || "An error occurred while fetching dashboard data.");
+        setError(requestError.response?.data?.message || requestError.message || "An error occurred while fetching dashboard data.");
       } finally {
         setLoading(false);
       }

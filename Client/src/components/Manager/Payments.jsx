@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { AlertCircle, BarChart3, Clock, DollarSign, ReceiptText } from "lucide-react";
+import axios from "axios";
 
 import { Loader } from "../Loader.jsx";
 import { Dropdown, EmptyState, GraphBar, GraphPie, Modal, SearchBar, StatCard, StatusBadge } from "../shared";
@@ -142,13 +143,8 @@ const PaymentsHistory = ({ onStats, onRecords, filters = {} }) => {
         setLoading(true);
         setError(null);
 
-        const response = await fetch("/manager/api/payments", {
-          method: "GET",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-        });
-
-        const data = await response.json();
+        const response = await axios.get("/manager/api/payments");
+        const data = response.data;
         if (!mounted) return;
 
         const records = data.payments || [];
@@ -157,7 +153,7 @@ const PaymentsHistory = ({ onStats, onRecords, filters = {} }) => {
         onRecords?.(records);
       } catch (requestError) {
         if (!mounted) return;
-        setError("Failed to load payments.");
+        setError(requestError.response?.data?.message || "Failed to load payments.");
         setPayments([]);
         onRecords?.([]);
       } finally {

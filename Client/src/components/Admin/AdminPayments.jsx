@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
+import axios from "axios";
 import Header from "./Header";
 import Tabs from "./Tabs";
 import SearchBar from "./SearchBar";
@@ -33,10 +34,6 @@ export default function Payments() {
   const StatusTabs = ["All", "Completed", "Pending", "Failed"];
   const DateRangeTabs = ["All Time", "Today", "This Week", "This Month", "This Year"];
   const planOptions = ["All Plans", "Basic", "Standard", "Premium"];
-  const API_BASE_URL =
-    process.env.NODE_ENV === "production"
-      ? `${window.location.origin}/admin/api`
-      : "/admin/api";
 
   // ===== Fetch Payments =====
   useEffect(() => {
@@ -45,18 +42,8 @@ export default function Payments() {
         setLoading(true);
         setError("");
 
-        const res = await fetch(`${API_BASE_URL}/payments`, {
-          method: "GET",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
-          },
-        });
-
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
-        const json = await res.json();
+        const res = await axios.get("/admin/api/payments");
+        const json = res.data;
         if (json.success) {
           const { payments, statistics, monthlyRevenue, planDistribution } = json.data;
 
@@ -80,7 +67,7 @@ export default function Payments() {
         }
       } catch (err) {
         console.error("Error fetching payments:", err);
-        setError("Failed to load payment data");
+        setError(err.response?.data?.message || "Failed to load payment data");
       } finally {
         setLoading(false);
       }

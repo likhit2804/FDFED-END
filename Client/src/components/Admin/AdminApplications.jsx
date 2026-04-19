@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import axios from "axios";
 import {
   X,
   Eye,
@@ -65,25 +66,13 @@ export default function ManagerApplications() {
   const [rejectionReason, setRejectionReason] = useState("");
   const [showRejectModal, setShowRejectModal] = useState(false);
 
-  const API_BASE_URL =
-    process.env.NODE_ENV === "production"
-      ? window.location.origin
-      : "";
-
   // ===== Fetch Applications =====
   useEffect(() => {
     const fetchApplications = async () => {
       try {
         setLoading(true);
 
-        const res = await fetch(`${API_BASE_URL}/admin/api/interests`, {
-          method: "GET",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
-          },
-        });
+        const res = await axios.get("/admin/api/interests");
 
         if (res.status === 401) {
           localStorage.removeItem("token");
@@ -91,7 +80,7 @@ export default function ManagerApplications() {
           return;
         }
 
-        const json = await res.json();
+        const json = res.data;
         if (json.success && Array.isArray(json.data)) {
           const formatted = json.data.map((app) => ({
             id: app._id,
@@ -120,8 +109,13 @@ export default function ManagerApplications() {
           throw new Error("Invalid response structure");
         }
       } catch (err) {
+        if (err.response?.status === 401) {
+          localStorage.removeItem("token");
+          window.location.href = "/adminLogin";
+          return;
+        }
         console.error("Error fetching manager applications:", err);
-        setError("Failed to load applications");
+        setError(err.response?.data?.message || "Failed to load applications");
       } finally {
         setLoading(false);
       }
@@ -135,16 +129,9 @@ export default function ManagerApplications() {
     try {
       setActionLoading(appId);
       setActionType('approve');
-      const res = await fetch(`${API_BASE_URL}/admin/api/interests/${appId}/approve`, {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
-        },
-      });
+      const res = await axios.post(`/admin/api/interests/${appId}/approve`);
 
-      if (res.ok) {
+      if (res.data?.success) {
         const updatedApp = { ...selectedApp, status: "APPROVED", uiStatus: "AWAITING PAYMENT", paymentStatus: "pending" };
         setApplications(prev =>
           prev.map(app =>
@@ -161,11 +148,10 @@ export default function ManagerApplications() {
         setSuccessMessage("Application approved! Payment link sent to applicant.");
         setTimeout(() => setSuccessMessage(""), 5000);
       } else {
-        const errorData = await res.json();
-        setError(errorData.message || "Failed to approve application");
+        setError(res.data?.message || "Failed to approve application");
       }
     } catch (err) {
-      setError("Error approving application");
+      setError(err.response?.data?.message || "Error approving application");
       console.error(err);
     } finally {
       setActionLoading(null);
@@ -182,17 +168,9 @@ export default function ManagerApplications() {
     try {
       setActionLoading(appId);
       setActionType('reject');
-      const res = await fetch(`${API_BASE_URL}/admin/api/interests/${appId}/reject`, {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
-        },
-        body: JSON.stringify({ reason: rejectionReason }),
-      });
+      const res = await axios.post(`/admin/api/interests/${appId}/reject`, { reason: rejectionReason });
 
-      if (res.ok) {
+      if (res.data?.success) {
         const updatedApp = { ...selectedApp, status: "REJECTED", rejectionReason };
         setApplications(prev =>
           prev.map(app =>
@@ -211,11 +189,10 @@ export default function ManagerApplications() {
         setSuccessMessage("Application rejected successfully! Rejection email sent to applicant.");
         setTimeout(() => setSuccessMessage(""), 5000);
       } else {
-        const errorData = await res.json();
-        setError(errorData.message || "Failed to reject application");
+        setError(res.data?.message || "Failed to reject application");
       }
     } catch (err) {
-      setError("Error rejecting application");
+      setError(err.response?.data?.message || "Error rejecting application");
       console.error(err);
     } finally {
       setActionLoading(null);
@@ -604,21 +581,15 @@ export default function ManagerApplications() {
                   try {
                     setActionLoading(selectedApp.id);
                     setActionType('resend');
-                    const res = await fetch(`${API_BASE_URL}/admin/api/interests/${selectedApp.id}/resend-link`, {
-                      method: "POST",
-                      headers: {
-                        Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
-                      },
-                    });
-                    if (res.ok) {
+                    const res = await axios.post(`/admin/api/interests/${selectedApp.id}/resend-link`);
+                    if (res.data?.success) {
                       setSuccessMessage("Payment link resent successfully!");
                       setTimeout(() => setSuccessMessage(""), 5000);
                     } else {
-                      const data = await res.json();
-                      setError(data.message || "Failed to resend link");
+                      setError(res.data?.message || "Failed to resend link");
                     }
                   } catch (err) {
-                    setError("Error resending link");
+                    setError(err.response?.data?.message || "Error resending link");
                   } finally {
                     setActionLoading(null);
                   }
