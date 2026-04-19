@@ -1,14 +1,12 @@
 import { useState, useEffect } from 'react';
+import { resolveApiBaseUrl } from '../utils/apiBaseUrl';
 
 export function useApplicationsData() {
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const API_BASE_URL =
-    process.env.NODE_ENV === 'production'
-      ? window.location.origin
-      : '';
+  const API_BASE_URL = resolveApiBaseUrl();
 
   const fetchApplications = async () => {
     try {

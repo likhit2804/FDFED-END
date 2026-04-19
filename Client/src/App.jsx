@@ -34,6 +34,7 @@ import { setUser } from "./slices/authSlice";
 
 import OnboardingPayment from "./components/Onboarding/OnboardingPayment";
 import { Loader } from "./components/Loader";
+import { withApiBase } from "./utils/apiBaseUrl";
 
 // --> LAZY LOADED ROUTE CHUNKS <--
 
@@ -76,7 +77,7 @@ function App() {
   const dispatch = useDispatch();
 
   useEffect(() => {
-    fetch("/api/auth/getUser", {
+    fetch(withApiBase("/api/auth/getUser"), {
       credentials: "include",
     })
       .then(res => res.json())

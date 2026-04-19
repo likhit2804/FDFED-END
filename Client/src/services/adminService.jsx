@@ -1,5 +1,7 @@
 // src/Services/adminService.js
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
+import { resolveApiBaseUrl } from "../utils/apiBaseUrl";
+
+const API_BASE = resolveApiBaseUrl();
 
 export const adminLogin = async (email, password) => {
   try {

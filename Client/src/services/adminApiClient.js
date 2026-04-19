@@ -1,10 +1,10 @@
 // Centralized Admin API Client with retry logic and better error handling
+import { resolveApiBaseUrl } from "../utils/apiBaseUrl";
+
 class AdminApiClient {
   constructor() {
-    this.baseURL =
-      process.env.NODE_ENV === "production"
-        ? `${window.location.origin}/admin/api`
-        : "/admin/api";
+    const apiBase = resolveApiBaseUrl();
+    this.baseURL = apiBase ? `${apiBase}/admin/api` : "/admin/api";
     this.maxRetries = 3;
     this.retryDelay = 1000; // 1 second base delay
   }
@@ -172,7 +172,7 @@ class AdminApiClient {
 
   // Community Managers API
   async getCommunityManagers() {
-    return this.get("/community-managers");
+    return this.get("/managers");
   }
 
   // Applications API

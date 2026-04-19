@@ -1,7 +1,8 @@
 // src/context/AdminAuthContext.jsx
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { resolveApiBaseUrl } from "../utils/apiBaseUrl";
 
-const API_BASE = "";
+const API_BASE = resolveApiBaseUrl();
 
 const AdminAuthContext = createContext();
 
