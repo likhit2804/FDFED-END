@@ -10,6 +10,7 @@
     "benchmark:redis": "node scripts/redisBenchmark.js"
   },
   "dependencies": {
+    "axios": "^1.6.0",
     "bcrypt": "^6.0.0",
     "bcryptjs": "^3.0.2",
     "body-parser": "^2.2.1",
