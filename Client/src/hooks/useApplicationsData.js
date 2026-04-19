@@ -76,7 +76,7 @@ export function useApplicationsData() {
 
   const handleApprove = async (appId) => {
     try {
-      const res = await fetch(`${API_BASE_URL}/admin/interests/${appId}/approve`, {
+      const res = await fetch(`${API_BASE_URL}/admin/api/interests/${appId}/approve`, {
         method: 'POST',
         credentials: 'include',
         headers: {
@@ -106,7 +106,7 @@ export function useApplicationsData() {
 
   const handleReject = async (appId, reason) => {
     try {
-      const res = await fetch(`${API_BASE_URL}/admin/interests/${appId}/reject`, {
+      const res = await fetch(`${API_BASE_URL}/admin/api/interests/${appId}/reject`, {
         method: 'POST',
         credentials: 'include',
         headers: {

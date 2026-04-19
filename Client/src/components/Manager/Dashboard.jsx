@@ -35,12 +35,6 @@ const CURRENCY_FORMATTER = new Intl.NumberFormat("en-IN", {
   maximumFractionDigits: 0,
 });
 
-const DATE_FORMATTER = new Intl.DateTimeFormat("en-IN", {
-  day: "2-digit",
-  month: "short",
-  year: "numeric",
-});
-
 const TIME_FORMATTER = new Intl.DateTimeFormat("en-IN", {
   day: "2-digit",
   month: "short",
@@ -160,30 +154,11 @@ function buildTimeline(data) {
 }
 
 const HeroBanner = memo(function HeroBanner({ data, onNavigate }) {
-  const pendingActions =
-    (data?.payments?.overdue || 0) +
-    (data?.issues?.urgent || 0) +
-    (data?.bookings?.pending || 0);
-
   return (
     <section className="manager-hero">
       <div className="manager-hero__content">
         <div className="manager-hero__eyebrow">Manager Dashboard</div>
         <h1 className="manager-hero__title">Stay ahead of daily community operations.</h1>
-        <p className="manager-hero__subtitle">
-          {pendingActions > 0
-            ? `${pendingActions} items need attention across collections, bookings, and service operations.`
-            : "Operations are stable right now. Use this view to monitor activity, dues, and resident demand."}
-        </p>
-        <div className="manager-hero__chips">
-          <span className="manager-chip manager-chip--solid">
-            {formatCompactPercent(getCollectionRate(data?.payments || {}))} collection health
-          </span>
-          <span className="manager-chip">
-            {formatCompactPercent(getBookingApprovalRate(data?.bookings || {}))} booking approval rate
-          </span>
-          <span className="manager-chip">{DATE_FORMATTER.format(new Date())}</span>
-        </div>
       </div>
 
       <div className="manager-hero__actions">

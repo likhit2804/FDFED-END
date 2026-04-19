@@ -9,10 +9,17 @@ import './assets/css/global.css'
 import './assets/css/Resident/residentUnified.css'
 import axios from 'axios'
 
-if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+const normalizedConfiguredBaseUrl = import.meta.env.VITE_API_BASE_URL
+  ? String(import.meta.env.VITE_API_BASE_URL).trim().replace(/\/+$/, "")
+  : "";
+
+if (normalizedConfiguredBaseUrl) {
+  axios.defaults.baseURL = normalizedConfiguredBaseUrl;
+} else if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
   axios.defaults.baseURL = "http://localhost:3000";
 } else {
-  axios.defaults.baseURL = "https://urbanease-backend-6gff.onrender.com";
+  // In production, default to same-origin API to avoid environment mismatch.
+  axios.defaults.baseURL = "";
 }
 
 // Always send cookies!

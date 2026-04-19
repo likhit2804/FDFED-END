@@ -52,6 +52,9 @@ const resolveClientBaseUrl = (req) => {
   return 'http://localhost:5173';
 };
 
+const normalizeInputText = (value) => String(value ?? '').trim().replace(/\s+/g, ' ');
+const sanitizeInputText = (value) => validator.escape(normalizeInputText(value));
+
 // Lightweight router for direct submit with Cloudinary uploads
 import express from 'express';
 import { memoryUpload } from '../../configs/multer.js';
@@ -148,53 +151,72 @@ export const showInterestForm = (req, res) => {
 export const submitInterestForm = async (req, res) => {
   try {
     const { firstName, lastName, email, phone, communityName, location, description } = req.body;
+    const normalizedFirstName = sanitizeInputText(firstName);
+    const normalizedLastName = sanitizeInputText(lastName);
+    const normalizedEmail = normalizeInputText(email).toLowerCase();
+    const normalizedPhone = sanitizeInputText(phone);
+    const normalizedCommunityName = sanitizeInputText(communityName);
+    const normalizedLocation = sanitizeInputText(location);
+    const normalizedDescription = sanitizeInputText(description);
 
     // Required fields validation
-    if (!firstName || !lastName || !email || !phone || !communityName || !location || !description) {
+    if (
+      !normalizedFirstName ||
+      !normalizedLastName ||
+      !normalizedEmail ||
+      !normalizedPhone ||
+      !normalizedCommunityName ||
+      !normalizedLocation ||
+      !normalizedDescription
+    ) {
       return res.status(400).json({
         success: false,
         message: 'All required fields must be filled.',
         receivedFields: {
-          firstName: !!firstName,
-          lastName: !!lastName,
-          email: !!email,
-          phone: !!phone,
-          communityName: !!communityName,
-          location: !!location,
-          description: !!description
+          firstName: !!normalizedFirstName,
+          lastName: !!normalizedLastName,
+          email: !!normalizedEmail,
+          phone: !!normalizedPhone,
+          communityName: !!normalizedCommunityName,
+          location: !!normalizedLocation,
+          description: !!normalizedDescription
         }
       });
     }
 
     // Email validation
-    if (!validator.isEmail(email)) {
+    if (!validator.isEmail(normalizedEmail)) {
       return res.status(400).json({ success: false, message: 'Please enter a valid email address.' });
     }
 
     // Phone validation
-    if (!validator.isMobilePhone(phone, 'any', { strictMode: false })) {
+    if (!validator.isMobilePhone(normalizedPhone, 'any', { strictMode: false })) {
       return res.status(400).json({ success: false, message: 'Please enter a valid phone number.' });
     }
 
-    // Check for existing application by email
-    const emailExists = await Interest.findOne({ email: email.toLowerCase().trim() });
+    // Check for existing active application by email
+    const emailExists = await Interest.findOne({
+      email: normalizedEmail,
+      status: { $in: ['pending', 'approved'] }
+    }).lean();
     if (emailExists) {
       return res.status(409).json({
         success: false,
-        message: 'An application with this email already exists. Please check your email for further communication.'
+        message: 'An active application with this email already exists. Please check your email for further communication.'
       });
     }
 
-    // Check for duplicate community + location combination
+    // Check for duplicate active community + location combination
     const communityLocationExists = await Interest.findOne({
-      communityName: validator.escape(communityName.trim()),
-      location: validator.escape(location.trim())
-    });
+      communityName: normalizedCommunityName,
+      location: normalizedLocation,
+      status: { $in: ['pending', 'approved'] }
+    }).lean();
 
     if (communityLocationExists) {
       return res.status(409).json({
         success: false,
-        message: `An application for the community "${communityName}" in "${location}" already exists.`
+        message: `An active application for the community "${normalizedCommunityName}" in "${normalizedLocation}" already exists.`
       });
     }
 
@@ -220,13 +242,13 @@ export const submitInterestForm = async (req, res) => {
 
     // Create new interest application
     const newApplication = new Interest({
-      firstName: validator.escape(firstName.trim()),
-      lastName: validator.escape(lastName.trim()),
-      email: email.toLowerCase().trim(),
-      phone: validator.escape(phone.trim()),
-      communityName: validator.escape(communityName.trim()),
-      location: validator.escape(location.trim()),
-      description: validator.escape(description.trim()),
+      firstName: normalizedFirstName,
+      lastName: normalizedLastName,
+      email: normalizedEmail,
+      phone: normalizedPhone,
+      communityName: normalizedCommunityName,
+      location: normalizedLocation,
+      description: normalizedDescription,
       photos: photoUrls,
       status: 'pending',
       submittedAt: new Date()

@@ -264,10 +264,28 @@ app.use(
   })
 );
 
-const allowedOrigins = [
-  "http://localhost:5173", 
-  "https://urbanease-client.onrender.com" // Your live frontend URL!
-];
+const normalizeOrigin = (value) => {
+  if (!value) return "";
+  try {
+    const url = new URL(String(value).trim());
+    return `${url.protocol}//${url.host}`;
+  } catch {
+    return "";
+  }
+};
+
+const allowedOrigins = Array.from(
+  new Set(
+    [
+      "http://localhost:5173",
+      "https://urbanease-client.onrender.com",
+      "https://urbaneasefinal.onrender.com",
+      normalizeOrigin(process.env.CLIENT_BASE_URL),
+      normalizeOrigin(process.env.FRONTEND_URL),
+      normalizeOrigin(process.env.APP_BASE_URL),
+    ].filter(Boolean)
+  )
+);
 
 app.use(
   cors({
@@ -291,8 +309,14 @@ app.use(cookieParser());
 
 // Serve uploaded files (advertisements, etc.) as static files with CORS headers
 app.use('/uploads', (req, res, next) => {
+  const requestOrigin = req.headers.origin;
+  const matchedOrigin =
+    requestOrigin && allowedOrigins.includes(requestOrigin)
+      ? requestOrigin
+      : allowedOrigins[0];
+
   // Set CORS headers for all uploads requests (including 304 cached responses)
-  res.setHeader('Access-Control-Allow-Origin', 'http://localhost:5173');
+  res.setHeader('Access-Control-Allow-Origin', matchedOrigin);
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');

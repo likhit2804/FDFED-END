@@ -9,8 +9,6 @@ function joinClassNames(...classNames) {
 export function RolePageShell({
   eyebrow,
   title,
-  description,
-  chips = [],
   actions,
   children,
   className = "",
@@ -22,16 +20,7 @@ export function RolePageShell({
           <div className="manager-ui-hero__copy">
             {eyebrow ? <div className="manager-ui-hero__eyebrow">{eyebrow}</div> : null}
             <h1 className="manager-ui-hero__title">{title}</h1>
-            {description ? <p className="manager-ui-hero__description">{description}</p> : null}
-            {chips.length > 0 ? (
-              <div className="manager-ui-hero__chips">
-                {chips.map((chip) => (
-                  <span key={chip} className="manager-ui-chip">
-                    {chip}
-                  </span>
-                ))}
-              </div>
-            ) : null}
+            {/* Intentionally hide hero meta lines (description + chips) across role pages. */}
           </div>
 
           {actions ? <div className="manager-ui-hero__actions">{actions}</div> : null}
