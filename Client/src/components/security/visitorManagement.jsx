@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Users, UserCheck, UserX, Plus } from "lucide-react";
 import { toast } from "react-toastify";
+import axios from "axios";
 import { Loader } from "../Loader";
 import { StatCard, SearchBar, Tabs, EmptyState, Modal, Input, Select } from '../shared';
 import {
@@ -27,10 +28,8 @@ const VisitorManagement = () => {
   // ── Fetch visitors ──────────────────────────────────────────
   const fetchVisitors = useCallback(async () => {
     try {
-      const res = await fetch("/security/visitorManagement/api/visitors", {
-        credentials: "include",
-      });
-      const data = await res.json();
+      const res = await axios.get("/security/visitorManagement/api/visitors");
+      const data = res.data;
       if (data.success) {
         setVisitors(data.visitors || []);
         setStats(data.stats || { total: 0, active: 0, checkedOut: 0, pending: 0 });
@@ -47,10 +46,8 @@ const VisitorManagement = () => {
   // ── Handle Check-in / Check-out ─────────────────────────────
   const handleStatusChange = async (id, action) => {
     try {
-      const res = await fetch(`/security/visitorManagement/${action}/${id}`, {
-        credentials: "include",
-      });
-      const data = await res.json();
+      const res = await axios.get(`/security/visitorManagement/${action}/${id}`);
+      const data = res.data;
       if (data.success) {
         toast.success(`Visitor ${action === "checked-in" ? "checked in" : "checked out"}`);
         fetchVisitors();
@@ -58,7 +55,7 @@ const VisitorManagement = () => {
         toast.error(data.message || "Action failed");
       }
     } catch (err) {
-      toast.error("Something went wrong");
+      toast.error(err.response?.data?.message || "Something went wrong");
     }
   };
 
@@ -74,13 +71,8 @@ const VisitorManagement = () => {
     }
     setSubmitting(true);
     try {
-      const res = await fetch("/security/addVisitor", {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
-      const data = await res.json();
+      const res = await axios.post("/security/addVisitor", formData);
+      const data = res.data;
       if (data.success) {
         toast.success("Visitor added successfully");
         setShowModal(false);
@@ -90,7 +82,7 @@ const VisitorManagement = () => {
         toast.error(data.message || "Failed to add visitor");
       }
     } catch (err) {
-      toast.error("Something went wrong");
+      toast.error(err.response?.data?.message || "Something went wrong");
     } finally {
       setSubmitting(false);
     }

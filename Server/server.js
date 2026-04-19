@@ -257,13 +257,27 @@ app.use(
     secret: "your-secret-key",
     resave: false,
     saveUninitialized: true,
-    cookie: { secure: false },
+    cookie: {
+      secure: true,
+      sameSite: "none",
+    },
   })
 );
 
+const allowedOrigins = [
+  "http://localhost:5173", 
+  "https://urbanease-client.onrender.com" // Your live frontend URL!
+];
+
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
   })
 );
@@ -605,8 +619,8 @@ app.post("/logout", (req, res) => {
   try {
     res.clearCookie("token", {
       httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
+      sameSite: "none",
+      secure: true,
     });
     return res.status(200).json({ success: true, message: "Logged out" });
   } catch (err) {
@@ -756,7 +770,8 @@ app.post("/login", authLimiter, async (req, res) => {
       res.cookie("token", finalToken, {
         httpOnly: true,
         maxAge: 7 * 24 * 60 * 60 * 1000,
-        sameSite: "lax",
+        sameSite: "none",
+        secure: true,
       });
 
       return res.json({
@@ -856,7 +871,8 @@ app.post("/api/verify-otp", async (req, res) => {
     res.cookie("token", finalToken, {
       httpOnly: true,
       maxAge: 7 * 24 * 60 * 60 * 1000,
-      sameSite: "lax",
+      sameSite: "none",
+      secure: true,
     });
 
     return res.json({

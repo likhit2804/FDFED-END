@@ -1,18 +1,16 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import axios from "axios";
 
 // Fetch resident's issues
 export const fetchIssues = createAsyncThunk(
   "issue/fetchIssues",
   async (_, { rejectWithValue }) => {
     try {
-      const res = await fetch("/resident/issue/data", {
-        credentials: "include",
-      });
-      if (!res.ok) throw new Error("Failed to fetch issues");
-      const data = await res.json();
+      const res = await axios.get("/resident/issue/data");
+      const data = res.data;
       return data.issues || [];
     } catch (err) {
-      return rejectWithValue(err.message);
+      return rejectWithValue(err.response?.data?.message || err.message);
     }
   }
 );
@@ -22,17 +20,12 @@ export const raiseIssue = createAsyncThunk(
   "issue/raiseIssue",
   async (issueData, { rejectWithValue }) => {
     try {
-      const res = await fetch("/resident/issue/raise", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(issueData),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) throw new Error(data.message || "Failed to raise issue");
+      const res = await axios.post("/resident/issue/raise", issueData);
+      const data = res.data;
+      if (!data.success) throw new Error(data.message || "Failed to raise issue");
       return data.issue;
     } catch (err) {
-      return rejectWithValue(err.message);
+      return rejectWithValue(err.response?.data?.message || err.message);
     }
   }
 );
@@ -42,15 +35,12 @@ export const approveIssue = createAsyncThunk(
   "issue/approveIssue",
   async (issueId, { rejectWithValue }) => {
     try {
-      const res = await fetch(`/resident/issue/confirmIssue/${issueId}`, {
-        method: "POST",
-        credentials: "include",
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) throw new Error(data.message || "Failed to approve issue");
+      const res = await axios.post(`/resident/issue/confirmIssue/${issueId}`);
+      const data = res.data;
+      if (!data.success) throw new Error(data.message || "Failed to approve issue");
       return issueId;
     } catch (err) {
-      return rejectWithValue(err.message);
+      return rejectWithValue(err.response?.data?.message || err.message);
     }
   }
 );
@@ -60,15 +50,12 @@ export const rejectIssue = createAsyncThunk(
   "issue/rejectIssue",
   async (issueId, { rejectWithValue }) => {
     try {
-      const res = await fetch(`/resident/issue/rejectIssueResolution/${issueId}`, {
-        method: "POST",
-        credentials: "include",
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) throw new Error(data.message || "Failed to reject issue");
+      const res = await axios.post(`/resident/issue/rejectIssueResolution/${issueId}`);
+      const data = res.data;
+      if (!data.success) throw new Error(data.message || "Failed to reject issue");
       return issueId;
     } catch (err) {
-      return rejectWithValue(err.message);
+      return rejectWithValue(err.response?.data?.message || err.message);
     }
   }
 );
@@ -78,17 +65,12 @@ export const submitFeedback = createAsyncThunk(
   "issue/submitFeedback",
   async ({ id, feedback, rating }, { rejectWithValue }) => {
     try {
-      const res = await fetch("/resident/issue/submitFeedback", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ id, feedback, rating }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) throw new Error(data.message || "Failed to submit feedback");
+      const res = await axios.post("/resident/issue/submitFeedback", { id, feedback, rating });
+      const data = res.data;
+      if (!data.success) throw new Error(data.message || "Failed to submit feedback");
       return { id, feedback, rating };
     } catch (err) {
-      return rejectWithValue(err.message);
+      return rejectWithValue(err.response?.data?.message || err.message);
     }
   }
 );

@@ -2,6 +2,7 @@ import React, { Suspense, lazy, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast, ToastContainer } from "react-toastify";
 import { useDispatch, useSelector } from "react-redux";
+import axios from "axios";
 import { fetchIssues, raiseIssue, submitFeedback } from "../../slices/IssueSlice";
 import { AlertCircle, CheckCircle, ListChecks } from "lucide-react";
 import { Loader } from "../Loader";
@@ -66,14 +67,13 @@ export const IssueRaising = () => {
       ? `/resident/issue/confirmIssue/${id}`
       : `/resident/issue/rejectIssueResolution/${id}`;
     try {
-      const res = await fetch(url, { method: "POST", credentials: "include" });
-      const text = await res.text();
-      const data = text ? JSON.parse(text) : {};
+      const res = await axios.post(url);
+      const data = res.data || {};
       if (!data.success) throw new Error(data.message || `Failed to ${action}`);
       toast.success(action === "confirm" ? "Issue confirmed! Payment process initiated." : "Issue reopened!");
       setIsDetailsPopupOpen(false);
       dispatch(fetchIssues());
-    } catch (err) { toast.error(err.message || "Action not allowed"); }
+    } catch (err) { toast.error(err.response?.data?.message || err.message || "Action not allowed"); }
   };
 
   const handleFeedbackSubmit = async () => {
