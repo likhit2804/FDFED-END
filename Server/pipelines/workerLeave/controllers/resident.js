@@ -20,12 +20,40 @@ export const applyLeave = async (req, res) => {
         });
     }
 
+    const parsedStartDate = new Date(startDate);
+    const parsedEndDate = new Date(endDate);
+    if (Number.isNaN(parsedStartDate.getTime()) || Number.isNaN(parsedEndDate.getTime())) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid leave date values",
+      });
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    parsedStartDate.setHours(0, 0, 0, 0);
+    parsedEndDate.setHours(0, 0, 0, 0);
+
+    if (parsedStartDate < today) {
+      return res.status(400).json({
+        success: false,
+        message: "Start date cannot be in the past",
+      });
+    }
+
+    if (parsedEndDate < parsedStartDate) {
+      return res.status(400).json({
+        success: false,
+        message: "End date cannot be before start date",
+      });
+    }
+
     const leave = new Leave({
       worker: req.user.id,
       community: req.user.community,
       type: type || "other",
-      startDate: new Date(startDate),
-      endDate: new Date(endDate),
+      startDate: parsedStartDate,
+      endDate: parsedEndDate,
       reason: reason || "",
       status: "pending",
     });

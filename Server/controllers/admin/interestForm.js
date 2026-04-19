@@ -18,6 +18,40 @@ import { sendApplicationApprovedEmail, sendApplicationRejectedEmail, sendAccount
 import { createRazorpayOrder, getRazorpayPublicConfig, verifyRazorpaySignature } from '../../services/razorpayService.js';
 dotenv.config();
 
+const normalizeBaseUrl = (value) => {
+  if (!value) return '';
+  try {
+    const url = new URL(String(value).trim());
+    return `${url.protocol}//${url.host}`;
+  } catch {
+    return '';
+  }
+};
+
+const resolveClientBaseUrl = (req) => {
+  const envBaseUrl =
+    normalizeBaseUrl(process.env.CLIENT_BASE_URL) ||
+    normalizeBaseUrl(process.env.FRONTEND_URL) ||
+    normalizeBaseUrl(process.env.APP_BASE_URL);
+  if (envBaseUrl) return envBaseUrl;
+
+  const originHeader = normalizeBaseUrl(req.get('origin') || req.headers.origin);
+  if (originHeader) return originHeader;
+
+  const forwardedHost = String(req.headers['x-forwarded-host'] || '').split(',')[0].trim();
+  const forwardedProto = String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim();
+  if (forwardedHost) {
+    return `${forwardedProto || req.protocol || 'https'}://${forwardedHost}`;
+  }
+
+  const host = req.get('host');
+  if (host) {
+    return `${req.protocol || 'https'}://${host}`;
+  }
+
+  return 'http://localhost:5173';
+};
+
 // Lightweight router for direct submit with Cloudinary uploads
 import express from 'express';
 import { memoryUpload } from '../../configs/multer.js';
@@ -345,7 +379,7 @@ export const approveApplication = async (req, res) => {
     const adminName = adminUser?.name || 'Admin';
 
     // 5. Send Email with Payment Link
-    const clientUrl = process.env.CLIENT_BASE_URL || 'http://localhost:5173';
+    const clientUrl = resolveClientBaseUrl(req);
     const paymentLink = `${clientUrl}/onboarding/payment?token=${onboardingToken}`;
 
     console.log("[Approval] Sending payment link to:", interest.email);
@@ -478,7 +512,7 @@ export const resendPaymentLink = async (req, res) => {
     await interest.save();
 
     // Send email
-    const clientUrl = process.env.CLIENT_BASE_URL || 'http://localhost:5173';
+    const clientUrl = resolveClientBaseUrl(req);
     const paymentLink = `${clientUrl}/onboarding/payment?token=${onboardingToken}`;
 
     console.log(`[Resend Payment Link] Sending to ${interest.email} with token: ${onboardingToken.substring(0, 8)}...`);

@@ -1,10 +1,15 @@
-import React, { useEffect, useState } from "react";
+import React, { Suspense, lazy, useEffect, useMemo, useState } from "react";
 import axios from "axios";
+import "react-day-picker/dist/style.css";
 
 import { EntityCard, StatCard, Modal, Input, Select, EmptyState } from "../shared";
 import { Loader } from "../Loader";
 import { Calendar, Clock, QrCode, Users, XCircle } from "lucide-react";
 import { ManagerActionButton, ManagerPageShell, ManagerSection } from "../shared/roleUI";
+
+const LazyDayPicker = lazy(() =>
+  import("react-day-picker").then((module) => ({ default: module.DayPicker })),
+);
 
 export function PreApproval() {
   const [visitors, setVisitors] = useState([]);
@@ -14,6 +19,29 @@ export function PreApproval() {
   const [qrImage, setQrImage] = useState("");
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({ visitorName: "", contactNumber: "", purpose: "", dateOfVisit: "", timeOfVisit: "" });
+  const [selectedVisitDate, setSelectedVisitDate] = useState(() => {
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    return now;
+  });
+
+  const todayDate = useMemo(() => {
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    return now;
+  }, []);
+  const todayIso = useMemo(() => todayDate.toISOString().split("T")[0], [todayDate]);
+  const nowTimeForInput = useMemo(
+    () => new Date().toTimeString().slice(0, 5),
+    [form.dateOfVisit],
+  );
+
+  const toIsoDate = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
 
   async function loadVisitors() {
     try {
@@ -46,12 +74,40 @@ export function PreApproval() {
     } catch (err) { console.error("QR Fetch error:", err); }
   }
 
+  function openPreApprovalForm() {
+    setSelectedVisitDate(todayDate);
+    setForm({
+      visitorName: "",
+      contactNumber: "",
+      purpose: "",
+      dateOfVisit: todayIso,
+      timeOfVisit: "",
+    });
+    setShowForm(true);
+  }
+
+  function handleVisitDateSelect(day) {
+    if (!day) return;
+    const picked = new Date(day);
+    picked.setHours(0, 0, 0, 0);
+    setSelectedVisitDate(picked);
+    setForm((previous) => ({ ...previous, dateOfVisit: toIsoDate(picked) }));
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
+    if (form.dateOfVisit && form.dateOfVisit < todayIso) {
+      alert("Date of visit cannot be in the past.");
+      return;
+    }
     try {
       const res = await axios.post("/resident/preapproval", form);
       const data = res.data;
-      if (data.success) { setShowForm(false); setForm({ visitorName: "", contactNumber: "", purpose: "", dateOfVisit: "", timeOfVisit: "" }); loadVisitors(); }
+      if (data.success) {
+        setShowForm(false);
+        setForm({ visitorName: "", contactNumber: "", purpose: "", dateOfVisit: "", timeOfVisit: "" });
+        loadVisitors();
+      }
     } catch (err) { console.error("Form submit error:", err); }
   }
 
@@ -73,7 +129,7 @@ export function PreApproval() {
         title="Pre approvals"
         description="Create visitor approvals and manage active QR passes."
         actions={
-          <ManagerActionButton variant="primary" onClick={() => setShowForm(true)}>
+          <ManagerActionButton variant="primary" onClick={openPreApprovalForm}>
             <i className="bi bi-plus-lg me-1" />
             Pre Approve
           </ManagerActionButton>
@@ -164,8 +220,35 @@ export function PreApproval() {
             ]}
             placeholder="Select type"
           />
-          <Input type="date" label="Date of Visit" name="dateOfVisit" required value={form.dateOfVisit} onChange={handleChange} />
-          <Input type="time" label="Time of Visit" name="timeOfVisit" required value={form.timeOfVisit} onChange={handleChange} />
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 8 }}>
+              Date of Visit<span style={{ color: "#dc2626", marginLeft: 3 }}>*</span>
+            </label>
+            <Suspense fallback={<Loader label="Loading calendar..." size={22} />}>
+              <LazyDayPicker
+                className="ue-calendar ue-calendar--inline"
+                mode="single"
+                selected={selectedVisitDate}
+                onSelect={handleVisitDateSelect}
+                disabled={{ before: todayDate }}
+                startMonth={todayDate}
+                showOutsideDays
+                captionLayout="dropdown"
+              />
+            </Suspense>
+            <small style={{ color: "#6b7280" }}>
+              Selected date: {selectedVisitDate.toLocaleDateString("en-IN")}
+            </small>
+          </div>
+          <Input
+            type="time"
+            label="Time of Visit"
+            name="timeOfVisit"
+            required
+            value={form.timeOfVisit}
+            min={form.dateOfVisit === todayIso ? nowTimeForInput : undefined}
+            onChange={handleChange}
+          />
         </Modal>
       ) : null}
 

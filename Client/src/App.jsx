@@ -62,6 +62,7 @@ const WorkerDashboard = lazy(() => import("./components/Worker/Dashboard").then(
 const Tasks = lazy(() => import("./components/Worker/Tasks").then(m => ({ default: m.Tasks })));
 const History = lazy(() => import("./components/Worker/History").then(m => ({ default: m.History })));
 const WorkerProfile = lazy(() => import("./components/Worker/Profile").then(m => ({ default: m.WorkerProfile })));
+const WorkerLeaveList = lazy(() => import("./components/Worker/WorkerLeaveList"));
 
 // Security Routes
 const SecurityDashboard = lazy(() => import("./components/security/Dashboard.jsx").then(m => ({ default: m.SecurityDashboard })));
@@ -154,6 +155,7 @@ function App() {
             <Route path="dashboard" element={<WorkerDashboard />} />
             <Route path="tasks" element={<Tasks />} />
             <Route path="history" element={<History />} />
+            <Route path="leaves" element={<WorkerLeaveList />} />
             <Route path="profile" element={<WorkerProfile />} />
           </Route>
         </Route>

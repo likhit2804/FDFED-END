@@ -33,6 +33,18 @@ export const createPreApproval = async (req, res) => {
     }
 
     const scheduledAt = new Date(`${dateOfVisit}T${timeOfVisit}`);
+    if (Number.isNaN(scheduledAt.getTime())) {
+      return res.status(400).json({ success: false, message: "Invalid visit date/time" });
+    }
+
+    const now = new Date();
+    if (scheduledAt < now) {
+      return res.status(400).json({
+        success: false,
+        message: "Past visit date/time is not allowed",
+      });
+    }
+
     const tempId = new mongoose.Types.ObjectId();
     const uniqueId = generateCustomID(tempId.toString(), "PA");
 

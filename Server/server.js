@@ -1,4 +1,4 @@
-import express from "express";
+﻿import express from "express";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
@@ -99,11 +99,11 @@ console.log('Environment variables validated successfully');
 mongoose
   .connect(process.env.MONGO_URI1)
   .then(() => {
-    console.log('✅ Database connected');
+    console.log('âœ… Database connected');
     initializeDefaultPlans();
   })
   .catch((err) => {
-    console.error('❌ Database connection failed:', err);
+    console.error('âŒ Database connection failed:', err);
     process.exit(1);
   });
 
@@ -148,15 +148,15 @@ function getTokenFromSocketHandshake(socket) {
 }
 
 io.on("connection", (socket) => {
-  console.log("🔥 Socket connected:", socket.id);
+  console.log("ðŸ”¥ Socket connected:", socket.id);
 
   try {
     const token = getTokenFromSocketHandshake(socket);
-    console.log("🔍 Token extracted:", token ? "✅ Found" : "❌ Not found");
+    console.log("ðŸ” Token extracted:", token ? "âœ… Found" : "âŒ Not found");
 
     if (token) {
       const payload = jwt.verify(token, process.env.JWT_SECRET);
-      console.log("✅ Token verified. Payload:", {
+      console.log("âœ… Token verified. Payload:", {
         id: payload.id,
         email: payload.email,
         userType: payload.userType,
@@ -170,7 +170,7 @@ io.on("connection", (socket) => {
         socket.data.userId = payload.id;
         socket.data.userType = payload.userType;
 
-        console.log(`✅ Manager (${payload.id}) joined room: ${room}`);
+        console.log(`âœ… Manager (${payload.id}) joined room: ${room}`);
       } else if (payload.userType === "Resident") {
         const room = `resident_${payload.id}`;
         socket.join(room);
@@ -181,7 +181,7 @@ io.on("connection", (socket) => {
           socket.data.communityId = payload.community;
         }
 
-        console.log(`✅ Resident (${payload.id}) joined room: ${room}`);
+        console.log(`âœ… Resident (${payload.id}) joined room: ${room}`);
       } else if (payload.userType === "Worker") {
         const room = `worker_${payload.id}`;
         socket.join(room);
@@ -192,23 +192,23 @@ io.on("connection", (socket) => {
           socket.data.communityId = payload.community;
         }
 
-        console.log(`✅ Worker (${payload.id}) joined room: ${room}`);
+        console.log(`âœ… Worker (${payload.id}) joined room: ${room}`);
       } else if (!payload.community) {
-        console.log(`⚠️ No community ID found in token, skipping room join`);
+        console.log(`âš ï¸ No community ID found in token, skipping room join`);
       } else {
         console.log(
-          `ℹ️ User type '${payload.userType}' does not have a room mapping`
+          `â„¹ï¸ User type '${payload.userType}' does not have a room mapping`
         );
       }
     } else {
-      console.warn("⚠️ No token provided in socket handshake");
+      console.warn("âš ï¸ No token provided in socket handshake");
     }
   } catch (err) {
-    console.warn("❌ Socket auth failed:", err.message);
+    console.warn("âŒ Socket auth failed:", err.message);
   }
 
   socket.on("disconnect", () => {
-    console.log("❌ Socket disconnected:", socket.id);
+    console.log("âŒ Socket disconnected:", socket.id);
   });
 });
 
@@ -467,7 +467,7 @@ const otpLimiter = rateLimit({
  *                 example: "abc123"
  *     responses:
  *       200:
- *         description: Valid code — returns community and flat info
+ *         description: Valid code â€” returns community and flat info
  *       404:
  *         description: Invalid or already-used code
  *       400:
@@ -1010,14 +1010,19 @@ app.post("/forgot-password", forgotPasswordLimiter, async (req, res) => {
     }
 
     // Import appropriate model based on user type
+    const normalizedUserType = String(userType).trim().toLowerCase();
     let UserModel;
-    if (userType === 'Resident') {
+    if (normalizedUserType === 'resident') {
       UserModel = (await import('./models/resident.js')).default;
-    } else if (userType === 'Security') {
+    } else if (normalizedUserType === 'security') {
       UserModel = (await import('./models/security.js')).default;
-    } else if (userType === 'Worker') {
+    } else if (normalizedUserType === 'worker') {
       UserModel = (await import('./models/workers.js')).default;
-    } else if (userType === 'communityManager' || userType === 'CommunityManager') {
+    } else if (
+      normalizedUserType === 'communitymanager' ||
+      normalizedUserType === 'community manager' ||
+      normalizedUserType === 'community_manager'
+    ) {
       UserModel = (await import('./models/cManager.js')).default;
     } else {
       return res.status(400).json({
@@ -1042,17 +1047,25 @@ app.post("/forgot-password", forgotPasswordLimiter, async (req, res) => {
 
     // Generate random secure password (12 characters)
     const newPassword = Math.random().toString(36).slice(-10) + Math.random().toString(36).slice(-2).toUpperCase();
-    console.log('🔑 Generated new password:', newPassword); // DEBUG
     const hashedPassword = await bcrypt.hash(newPassword, 12);
-    console.log('🔒 Hashed password:', hashedPassword); // DEBUG
+    const oldPasswordHash = user.password;
 
     // Update user's password
     user.password = hashedPassword;
     await user.save();
-    console.log('✅ Password saved to database for user:', email); // DEBUG
 
-    // Send email with new password
-    await sendTemporaryPassword(email, newPassword);
+    // Send email with new password (and rollback if email fails)
+    try {
+      await sendTemporaryPassword(email, newPassword);
+    } catch (emailError) {
+      user.password = oldPasswordHash;
+      await user.save();
+      console.error("Forgot password email send failed:", emailError.message);
+      return res.status(502).json({
+        success: false,
+        message: "Unable to send reset email right now. Please try again later."
+      });
+    }
 
     console.log(`Password reset successful for email: ${email}, userType: ${userType}`);
 
@@ -1086,7 +1099,7 @@ app.post("/forgot-password", forgotPasswordLimiter, async (req, res) => {
  *       200:
  *         description: Returns user data with subscription status
  *       401:
- *         description: Unauthorized — no valid token
+ *         description: Unauthorized â€” no valid token
  */
 app.get("/api/auth/getUser", auth, cacheRoute(180), async (req, res) => {
   const cookie = req.cookies.token;
@@ -1141,5 +1154,6 @@ app.get(/.*/, (req, res) => {
 // ---------------- START SERVER WITH SOCKET.IO ----------------
 
 server.listen(PORT, () => {
-  console.log(`🚀 Server running at http://localhost:${PORT}`);
+  console.log(`ðŸš€ Server running at http://localhost:${PORT}`);
 });
+

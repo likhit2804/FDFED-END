@@ -22,6 +22,7 @@ const NAV_ITEMS = {
     { to: "/worker/dashboard", label: "Dashboard" },
     { to: "/worker/history", label: "History" },
     { to: "/worker/tasks", label: "Tasks" },
+    { to: "/worker/leaves", label: "Leaves" },
   ],
   manager: [
     { to: "/manager/dashboard", label: "Dashboard" },

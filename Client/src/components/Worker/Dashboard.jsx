@@ -30,6 +30,7 @@ import {
 
 export const WorkerDashboard = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const issues = useSelector((state) => state?.worker?.Issues) || [];
   const [showLeaveModal, setShowLeaveModal] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -73,9 +74,14 @@ export const WorkerDashboard = () => {
           title="Task dashboard"
           description="Current work summary for the logged-in worker."
           actions={(
-            <ManagerActionButton variant="primary" onClick={() => setShowLeaveModal(true)}>
-              <i className="bi bi-calendar-check" /> Apply for Leave
-            </ManagerActionButton>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <ManagerActionButton variant="secondary" onClick={() => navigate("/worker/leaves")}>
+                <i className="bi bi-card-list" /> View Leaves
+              </ManagerActionButton>
+              <ManagerActionButton variant="primary" onClick={() => setShowLeaveModal(true)}>
+                <i className="bi bi-calendar-check" /> Apply for Leave
+              </ManagerActionButton>
+            </div>
           )}
         >
           <div className="ue-stat-grid">
