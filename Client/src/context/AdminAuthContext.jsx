@@ -1,7 +1,6 @@
 // src/context/AdminAuthContext.jsx
 import React, { createContext, useContext, useState, useEffect } from "react";
-
-const API_BASE = "";
+import axios from "axios";
 
 const AdminAuthContext = createContext();
 
@@ -25,10 +24,7 @@ export const AdminAuthProvider = ({ children }) => {
   // ✅ Logout and clear session (also clear server cookie)
   const logout = async () => {
     try {
-      await fetch(`${API_BASE}/logout`, {
-        method: "POST",
-        credentials: "include",
-      });
+      await axios.post("/logout");
     } catch (err) {
       console.error("Admin logout error:", err);
     } finally {

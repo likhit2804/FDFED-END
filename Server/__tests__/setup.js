@@ -1,4 +1,4 @@
-import { MongoMemoryServer } from 'mongodb-memory-server';
+import { MongoMemoryReplSet } from 'mongodb-memory-server';
 import mongoose from 'mongoose';
 
 let mongoServer;
@@ -12,7 +12,10 @@ export async function connect() {
 
   // Check if mongoServer is already running
   if (!mongoServer) {
-    mongoServer = await MongoMemoryServer.create();
+    mongoServer = await MongoMemoryReplSet.create({
+      replSet: { count: 1 },
+    });
+    await mongoServer.waitUntilRunning();
   }
   
   const uri = mongoServer.getUri();

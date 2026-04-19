@@ -31,6 +31,7 @@ import ProtectedAdminRoute from "./components/Admin/ProtectedAdminRoute";
 import React, { useEffect, Suspense, lazy } from "react";
 import { useDispatch } from "react-redux";
 import { setUser } from "./slices/authSlice";
+import axios from "axios";
 
 import OnboardingPayment from "./components/Onboarding/OnboardingPayment";
 import { Loader } from "./components/Loader";
@@ -75,16 +76,20 @@ function App() {
   const dispatch = useDispatch();
 
   useEffect(() => {
-    fetch("/api/auth/getUser", {
-      credentials: "include",
-    })
-      .then(res => res.json())
-      .then(data => {
+    const loadUser = async () => {
+      try {
+        const response = await axios.get("/api/auth/getUser");
+        const data = response.data;
         console.log("user fetched", data);
         if (data.user) {
           dispatch(setUser(data.user));
         }
-      });
+      } catch (error) {
+        console.error("Failed to load user:", error.response?.data?.message || error.message);
+      }
+    };
+
+    loadUser();
   }, [dispatch]);
 
 

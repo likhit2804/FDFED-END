@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Briefcase, User } from "lucide-react";
 import { toast } from "react-toastify";
+import axios from "axios";
 
 import { Loader } from "../Loader";
 import { PasswordChangeForm, ProfileHeader } from "../shared";
@@ -35,17 +36,14 @@ export const WorkerProfile = () => {
   useEffect(() => {
     const loadProfile = async () => {
       try {
-        const response = await fetch("/worker/profile", {
-          method: "GET",
-          credentials: "include",
-        });
-        const data = await response.json();
+        const response = await axios.get("/worker/profile");
+        const data = response.data;
         if (data.success && data.worker) {
           setFormData(mapWorkerProfile(data.worker));
         }
       } catch (error) {
         console.error("Worker profile fetch error:", error);
-        toast.error("Failed to load profile");
+        toast.error(error.response?.data?.message || "Failed to load profile");
       } finally {
         setIsLoading(false);
       }
@@ -76,12 +74,8 @@ export const WorkerProfile = () => {
       body.append("address", formData.address);
       if (imageFile) body.append("image", imageFile);
 
-      const response = await fetch("/worker/profile", {
-        method: "POST",
-        credentials: "include",
-        body,
-      });
-      const data = await response.json();
+      const response = await axios.post("/worker/profile", body);
+      const data = response.data;
 
       if (!data.success) {
         toast.error(data.message || "Failed to update profile");
@@ -94,7 +88,7 @@ export const WorkerProfile = () => {
       }
     } catch (error) {
       console.error(error);
-      toast.error("Something went wrong while updating profile");
+      toast.error(error.response?.data?.message || "Something went wrong while updating profile");
     }
   };
 
@@ -105,17 +99,15 @@ export const WorkerProfile = () => {
     }
 
     try {
-      const response = await fetch("/worker/change-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ currentPassword: cp, newPassword: np }),
+      const response = await axios.post("/worker/change-password", {
+        currentPassword: cp,
+        newPassword: np,
       });
-      const data = await response.json();
+      const data = response.data;
       if (data.success) toast.success(data.message || "Password changed successfully");
       else toast.error(data.message || "Failed to change password");
     } catch (error) {
-      toast.error("Something went wrong while changing password");
+      toast.error(error.response?.data?.message || "Something went wrong while changing password");
     }
   };
 

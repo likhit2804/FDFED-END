@@ -7,11 +7,10 @@
  * 
  * 1. Browser Console (must be logged in as admin):
  *    const token = localStorage.getItem('adminToken');
- *    fetch('http://localhost:5000/api/communities/COMMUNITY_ID_HERE', {
- *      method: 'DELETE',
- *      headers: { 'Authorization': `Bearer ${token}` }
+ *    axios.delete('http://localhost:5000/api/communities/COMMUNITY_ID_HERE', {
+ *      headers: { Authorization: `Bearer ${token}` }
  *    })
- *    .then(r => r.json())
+ *    .then(r => r.data)
  *    .then(data => console.log(data))
  * 
  * 2. cURL Command:

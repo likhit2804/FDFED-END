@@ -300,9 +300,9 @@ export const getResidentIssues = async (req, res) => {
 // --------------------------------------------------
 export const getIssueDataById = async (req, res) => {
     try {
-        const { issueID } = req.params;
+        const { id: issueID } = req.params;
         console.log("Fetching issue data for ID:", issueID);
-        const issue = await Issue.findById(issueID, { community: req.user.community })
+        const issue = await Issue.findOne({ _id: issueID, community: req.user.community })
             .populate("resident")
             .populate("workerAssigned")
             .populate("payment");

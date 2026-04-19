@@ -70,14 +70,13 @@ export const updateCommunityController = async (req, res) => {
  * const token = localStorage.getItem('adminToken');
  * 
  * // Step 2: Delete community (replace COMMUNITY_ID)
- * fetch('http://localhost:5000/api/communities/COMMUNITY_ID', {
- *   method: 'DELETE',
+ * axios.delete('http://localhost:5000/api/communities/COMMUNITY_ID', {
  *   headers: {
- *     'Authorization': `Bearer ${token}`,
- *     'Content-Type': 'application/json'
- *   }
+ *     Authorization: `Bearer ${token}`,
+ *     "Content-Type": "application/json"
+ *   },
  * })
- * .then(response => response.json())
+ * .then(response => response.data)
  * .then(data => {
  *   console.log('✅ Deletion complete!');
  *   console.log('Deleted counts:', data.deleted);

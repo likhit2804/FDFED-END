@@ -1,36 +1,22 @@
 import { useState, useEffect } from 'react';
+import axios from 'axios';
 
 export function useApplicationsData() {
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const API_BASE_URL =
-    process.env.NODE_ENV === 'production'
-      ? window.location.origin
-      : '';
-
   const fetchApplications = async () => {
     try {
       setLoading(true);
       setError('');
 
-      const res = await fetch(`${API_BASE_URL}/admin/api/interests`, {
-        method: 'GET',
-        credentials: 'include',
+      const response = await axios.get('/admin/api/interests', {
         headers: {
-          'Content-Type': 'application/json',
           Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
         },
       });
-
-      if (res.status === 401) {
-        localStorage.removeItem('token');
-        window.location.href = '/adminLogin';
-        return;
-      }
-
-      const json = await res.json();
+      const json = response.data;
       if (json.success && Array.isArray(json.data)) {
         const formatted = json.data.map((app) => ({
           id: app._id,
@@ -67,8 +53,13 @@ export function useApplicationsData() {
         throw new Error('Invalid response structure');
       }
     } catch (err) {
+      if (err.response?.status === 401) {
+        localStorage.removeItem('token');
+        window.location.href = '/adminLogin';
+        return;
+      }
       console.error('Error fetching manager applications:', err);
-      setError('Failed to load applications');
+      setError(err.response?.data?.message || 'Failed to load applications');
     } finally {
       setLoading(false);
     }
@@ -76,62 +67,45 @@ export function useApplicationsData() {
 
   const handleApprove = async (appId) => {
     try {
-      const res = await fetch(`${API_BASE_URL}/admin/interests/${appId}/approve`, {
-        method: 'POST',
-        credentials: 'include',
+      await axios.post(`/admin/interests/${appId}/approve`, {}, {
         headers: {
-          'Content-Type': 'application/json',
           Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
         },
       });
 
-      if (res.ok) {
-        setApplications((prev) =>
-          prev.map((app) =>
-            app.id === appId
-              ? { ...app, status: 'APPROVED', uiStatus: 'AWAITING PAYMENT', paymentStatus: 'pending' }
-              : app
-          )
-        );
-        return { success: true };
-      } else {
-        const json = await res.json();
-        throw new Error(json.message || 'Failed to approve application');
-      }
+      setApplications((prev) =>
+        prev.map((app) =>
+          app.id === appId
+            ? { ...app, status: 'APPROVED', uiStatus: 'AWAITING PAYMENT', paymentStatus: 'pending' }
+            : app
+        )
+      );
+      return { success: true };
     } catch (err) {
       console.error('Approval error:', err);
-      return { success: false, error: err.message };
+      return { success: false, error: err.response?.data?.message || err.message };
     }
   };
 
   const handleReject = async (appId, reason) => {
     try {
-      const res = await fetch(`${API_BASE_URL}/admin/interests/${appId}/reject`, {
-        method: 'POST',
-        credentials: 'include',
+      await axios.post(`/admin/interests/${appId}/reject`, { reason }, {
         headers: {
-          'Content-Type': 'application/json',
           Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
         },
-        body: JSON.stringify({ reason }),
       });
 
-      if (res.ok) {
-        setApplications((prev) =>
-          prev.map((app) =>
-            app.id === appId
-              ? { ...app, status: 'REJECTED', uiStatus: 'REJECTED', rejectionReason: reason }
-              : app
-          )
-        );
-        return { success: true };
-      } else {
-        const json = await res.json();
-        throw new Error(json.message || 'Failed to reject application');
-      }
+      setApplications((prev) =>
+        prev.map((app) =>
+          app.id === appId
+            ? { ...app, status: 'REJECTED', uiStatus: 'REJECTED', rejectionReason: reason }
+            : app
+        )
+      );
+      return { success: true };
     } catch (err) {
       console.error('Rejection error:', err);
-      return { success: false, error: err.message };
+      return { success: false, error: err.response?.data?.message || err.message };
     }
   };
 

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Building2, User } from "lucide-react";
 import { toast } from "react-toastify";
+import axios from "axios";
 
 import { Loader } from "../Loader";
 import { PasswordChangeForm, ProfileHeader } from "../shared";
@@ -32,17 +33,14 @@ export const SecurityProfile = () => {
   useEffect(() => {
     const loadProfile = async () => {
       try {
-        const response = await fetch("/security/profile", {
-          method: "GET",
-          credentials: "include",
-        });
-        const data = await response.json();
+        const response = await axios.get("/security/profile");
+        const data = response.data;
         if (data.success && data.security) {
           setFormData(mapSecurityProfile(data.security));
         }
       } catch (error) {
         console.error("Security profile fetch error:", error);
-        toast.error("Failed to load profile");
+        toast.error(error.response?.data?.message || "Failed to load profile");
       } finally {
         setIsLoading(false);
       }
@@ -58,18 +56,13 @@ export const SecurityProfile = () => {
 
   const handleSaveProfile = async () => {
     try {
-      const response = await fetch("/security/profile", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          name: formData.name,
-          email: formData.email,
-          contact: formData.contact,
-          address: formData.address,
-        }),
+      const response = await axios.post("/security/profile", {
+        name: formData.name,
+        email: formData.email,
+        contact: formData.contact,
+        address: formData.address,
       });
-      const data = await response.json();
+      const data = response.data;
       if (!data.success) {
         toast.error(data.message || "Profile update failed");
         return;
@@ -77,7 +70,7 @@ export const SecurityProfile = () => {
       toast.success("Profile updated");
     } catch (error) {
       console.error(error);
-      toast.error("Error updating profile");
+      toast.error(error.response?.data?.message || "Error updating profile");
     }
   };
 
@@ -88,13 +81,11 @@ export const SecurityProfile = () => {
     }
 
     try {
-      const response = await fetch("/security/change-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ currentPassword: cp, newPassword: np }),
+      const response = await axios.post("/security/change-password", {
+        currentPassword: cp,
+        newPassword: np,
       });
-      const data = await response.json();
+      const data = response.data;
       if (!data.success) {
         toast.error(data.message || "Password update failed");
         return;
@@ -102,7 +93,7 @@ export const SecurityProfile = () => {
       toast.success("Password updated successfully");
     } catch (error) {
       console.error(error);
-      toast.error("Something went wrong while updating password");
+      toast.error(error.response?.data?.message || "Something went wrong while updating password");
     }
   };
 

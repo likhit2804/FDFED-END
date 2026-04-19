@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import axios from "axios";
 
 function getRazorpayCredentials() {
   const keyId = process.env.RAZORPAY_KEY_ID;
@@ -25,30 +26,31 @@ export async function createRazorpayOrder({
   currency = "INR",
 }) {
   const { keyId, keySecret } = getRazorpayCredentials();
-
-  const response = await fetch("https://api.razorpay.com/v1/orders", {
-    method: "POST",
-    headers: {
-      Authorization: `Basic ${Buffer.from(`${keyId}:${keySecret}`).toString("base64")}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      amount: amountInPaise,
-      currency,
-      receipt,
-      notes,
-    }),
-  });
-
-  const data = await response.json();
-
-  if (!response.ok) {
+  try {
+    const response = await axios.post(
+      "https://api.razorpay.com/v1/orders",
+      {
+        amount: amountInPaise,
+        currency,
+        receipt,
+        notes,
+      },
+      {
+        headers: {
+          Authorization: `Basic ${Buffer.from(`${keyId}:${keySecret}`).toString("base64")}`,
+          "Content-Type": "application/json",
+        },
+      },
+    );
+    return response.data;
+  } catch (error) {
     const message =
-      data?.error?.description || data?.message || "Failed to create Razorpay order";
+      error.response?.data?.error?.description ||
+      error.response?.data?.message ||
+      error.message ||
+      "Failed to create Razorpay order";
     throw new Error(message);
   }
-
-  return data;
 }
 
 export function verifyRazorpaySignature({

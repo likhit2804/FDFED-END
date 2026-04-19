@@ -39,7 +39,7 @@ describe('Auth Middleware', () => {
     });
     await auth(req, res, next);
     expect(res.status).toHaveBeenCalledWith(401);
-    expect(res.clearCookie).toHaveBeenCalledWith('token');
+    expect(res.clearCookie).toHaveBeenCalledWith('token', expect.any(Object));
   });
 
   test('should set req.user on valid token from cookie', async () => {
@@ -65,7 +65,7 @@ describe('Auth Middleware', () => {
     expect(req.user.email).toBe('bearer@test.com');
   });
 
-  test('should prefer cookie token over header when both exist', async () => {
+  test('should prefer Authorization header token when both cookie and header exist', async () => {
     const cookiePayload = { id: '1', email: 'cookie@test.com', userType: 'Resident' };
     const headerPayload = { id: '2', email: 'header@test.com', userType: 'Worker' };
     const { req, res, next } = createMocks({
@@ -73,6 +73,6 @@ describe('Auth Middleware', () => {
       headers: { authorization: `Bearer ${jwt.sign(headerPayload, process.env.JWT_SECRET)}` },
     });
     await auth(req, res, next);
-    expect(req.user.email).toBe('header@test.com'); // cookie takes priority
+    expect(req.user.email).toBe('header@test.com');
   });
 });

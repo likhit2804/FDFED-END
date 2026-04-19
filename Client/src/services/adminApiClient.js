@@ -1,3 +1,5 @@
+import axios from "axios";
+
 // Centralized Admin API Client with retry logic and better error handling
 class AdminApiClient {
   constructor() {
@@ -56,53 +58,43 @@ class AdminApiClient {
   async request(endpoint, options = {}, retries = 0) {
     const url = `${this.baseURL}${endpoint}`;
     const config = {
-      credentials: "include",
+      withCredentials: true,
       headers: this.getHeaders(),
       ...options,
     };
 
     try {
-      const response = await fetch(url, config);
+      const response = await axios({
+        url,
+        ...config,
+      });
 
-      // Handle 401
-      if (response.status === 401) {
-        this.handleUnauthorized();
-        throw new Error("Unauthorized");
-      }
-
-      // Handle non-OK responses
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-
-        // Check if we should retry
-        if (this.isRetryableError(response.status) && retries < this.maxRetries) {
-          const delay = this.retryDelay * Math.pow(2, retries); // Exponential backoff
-          console.warn(`Retrying request to ${endpoint} in ${delay}ms (attempt ${retries + 1}/${this.maxRetries})`);
-          await this.sleep(delay);
-          return this.request(endpoint, options, retries + 1);
-        }
-
-        const errorMessage = errorData.message || this.getErrorMessage(response.status);
-        const error = new Error(errorMessage);
-        error.status = response.status;
-        error.data = errorData;
-        throw error;
-      }
-
-      // Parse JSON response
-      const data = await response.json();
-      return data;
+      return response.data;
     } catch (error) {
-      // Network error or fetch failed
-      if (!error.status && retries < this.maxRetries) {
+      const status = error.response?.status;
+
+      if (status === 401) {
+        this.handleUnauthorized();
+      }
+
+      if (this.isRetryableError(status) && retries < this.maxRetries) {
         const delay = this.retryDelay * Math.pow(2, retries);
-        console.warn(`Network error, retrying in ${delay}ms (attempt ${retries + 1}/${this.maxRetries})`);
+        console.warn(`Retrying request to ${endpoint} in ${delay}ms (attempt ${retries + 1}/${this.maxRetries})`);
         await this.sleep(delay);
         return this.request(endpoint, options, retries + 1);
       }
 
-      console.error(`API Error [${endpoint}]:`, error);
-      throw error;
+      const errorData = error.response?.data || {};
+      const errorMessage =
+        errorData.message ||
+        this.getErrorMessage(status, error.message || "An error occurred");
+
+      const normalizedError = new Error(errorMessage);
+      normalizedError.status = status;
+      normalizedError.data = errorData;
+
+      console.error(`API Error [${endpoint}]:`, normalizedError);
+      throw normalizedError;
     }
   }
 
@@ -115,7 +107,7 @@ class AdminApiClient {
   async post(endpoint, body) {
     return this.request(endpoint, {
       method: "POST",
-      body: JSON.stringify(body),
+      data: body,
     });
   }
 
@@ -123,7 +115,7 @@ class AdminApiClient {
   async put(endpoint, body) {
     return this.request(endpoint, {
       method: "PUT",
-      body: JSON.stringify(body),
+      data: body,
     });
   }
 
@@ -131,7 +123,7 @@ class AdminApiClient {
   async patch(endpoint, body) {
     return this.request(endpoint, {
       method: "PATCH",
-      body: JSON.stringify(body),
+      data: body,
     });
   }
 
@@ -139,7 +131,7 @@ class AdminApiClient {
   async delete(endpoint, body = null) {
     const options = { method: "DELETE" };
     if (body) {
-      options.body = JSON.stringify(body);
+      options.data = body;
     }
     return this.request(endpoint, options);
   }

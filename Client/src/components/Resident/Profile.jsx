@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Building2, User } from "lucide-react";
 import { toast } from "react-toastify";
+import axios from "axios";
 
 import { Loader } from "../Loader";
 import { PasswordChangeForm, ProfileHeader } from "../shared";
@@ -36,11 +37,8 @@ export const ResidentProfile = () => {
   useEffect(() => {
     const loadProfile = async () => {
       try {
-        const response = await fetch("/resident/profile", {
-          method: "GET",
-          credentials: "include",
-        });
-        const data = await response.json();
+        const response = await axios.get("/resident/profile");
+        const data = response.data;
         if (!data.success || !data.resident) {
           setError(data.message || "Failed to load profile");
           return;
@@ -48,7 +46,7 @@ export const ResidentProfile = () => {
         setFormData(mapResidentProfile(data.resident));
       } catch (requestError) {
         console.error("Resident profile fetch error:", requestError);
-        setError("Failed to load profile");
+        setError(requestError.response?.data?.message || "Failed to load profile");
       } finally {
         setIsLoading(false);
       }
@@ -80,12 +78,8 @@ export const ResidentProfile = () => {
       body.append("uCode", formData.uCode);
       if (selectedImage) body.append("image", selectedImage);
 
-      const response = await fetch("/resident/profile", {
-        method: "POST",
-        credentials: "include",
-        body,
-      });
-      const data = await response.json();
+      const response = await axios.post("/resident/profile", body);
+      const data = response.data;
       if (!data.success) {
         toast.error(data.message || "Update failed");
         return;
@@ -93,7 +87,7 @@ export const ResidentProfile = () => {
       toast.success("Profile updated successfully");
     } catch (requestError) {
       console.error(requestError);
-      toast.error("Error updating profile");
+      toast.error(requestError.response?.data?.message || "Error updating profile");
     }
   };
 
@@ -104,13 +98,11 @@ export const ResidentProfile = () => {
     }
 
     try {
-      const response = await fetch("/resident/change-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ currentPassword: cp, newPassword: np }),
+      const response = await axios.post("/resident/change-password", {
+        currentPassword: cp,
+        newPassword: np,
       });
-      const data = await response.json();
+      const data = response.data;
       if (!data.success && !data.ok) {
         toast.error(data.message || "Password update failed");
         return;
@@ -118,7 +110,7 @@ export const ResidentProfile = () => {
       toast.success("Password updated successfully");
     } catch (requestError) {
       console.error(requestError);
-      toast.error("Something went wrong while updating password");
+      toast.error(requestError.response?.data?.message || "Something went wrong while updating password");
     }
   };
 

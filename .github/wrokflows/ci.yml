@@ -8,8 +8,14 @@ on:
 
 jobs:
   test:
-    name: Run Tests
+    name: Run Backend Tests
     runs-on: ubuntu-latest
+    
+    services:
+      mongodb:
+        image: mongo:6.0 # You can change this to match your production version
+        ports:
+          - 27017:27017
     
     steps:
       - uses: actions/checkout@v4
@@ -19,33 +25,30 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-          cache-dependency-path: 'FDFED-END/Server/package-lock.json'
+          cache-dependency-path: 'Server/package-lock.json'
       
       - name: Install Server dependencies
         run: npm install
-        working-directory: FDFED-END/Server
+        working-directory: Server
       
       - name: Run tests
         run: npm test
-        working-directory: FDFED-END/Server
+        working-directory: Server
         env:
           JWT_SECRET: ci-test-secret-key
           NODE_ENV: test
-      
-      - name: Generate test report
-        if: always()
-        run: npm run test:report || true
-        working-directory: FDFED-END/Server
+          # Point the app to the temporary GitHub database!
+          MONGO_URI: mongodb://localhost:27017/urbanease_test
       
       - name: Upload test report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-report
-          path: FDFED-END/Server/test-report.json
+          name: server-test-report
+          path: Server/test-report.json
 
   build:
-    name: Build Client
+    name: Build React Client
     runs-on: ubuntu-latest
     
     steps:
@@ -56,12 +59,12 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-          cache-dependency-path: 'FDFED-END/Client/package-lock.json'
+          cache-dependency-path: 'Client/package-lock.json'
       
       - name: Install Client dependencies
         run: npm install
-        working-directory: FDFED-END/Client
+        working-directory: Client
       
       - name: Build
         run: npm run build
-        working-directory: FDFED-END/Client
+        working-directory: Client
