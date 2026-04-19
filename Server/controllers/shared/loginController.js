@@ -40,7 +40,8 @@ async function authenticateUser(model, email, password, res) {
     res.cookie('token', token, {
         httpOnly: true,
         maxAge: 7 * 24 * 60 * 60 * 1000,
-        sameSite: 'lax'
+        sameSite: 'none',
+        secure: true
     });
 
 
