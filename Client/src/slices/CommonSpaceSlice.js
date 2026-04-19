@@ -1,4 +1,5 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
+import axios from "axios";
 
 
 const initialState = {
@@ -11,19 +12,8 @@ const initialState = {
 
 export const fetchuserBookings = createAsyncThunk("commonSpace/fetchBookings", async (_, { rejectWithValue }) => {
   try {
-    const response = await fetch("/resident/commonSpace", {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-      },
-      credentials: "include"
-    });
-    if (!response.ok) {
-      const errorData = await response.json();
-      return rejectWithValue(errorData);
-    }
-    const data = await response.json();
+    const response = await axios.get("/resident/commonSpace");
+    const data = response.data;
     console.log("data : ", data);
 
     if (data.success) {
@@ -32,31 +22,18 @@ export const fetchuserBookings = createAsyncThunk("commonSpace/fetchBookings", a
       return rejectWithValue(data);
     }
   } catch (error) {
-    return rejectWithValue(error.message);
+    return rejectWithValue(error.response?.data?.message || error.message);
   }
 })
 
 
 export const ConfirmBooking = createAsyncThunk("commonSpace/ConfirmBooking", async ({ data, newBooking, requestId }, { rejectWithValue }) => {
   try {
-    const response = await fetch("/resident/commonSpace", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-      },
-
-      credentials: "include",
-      body: JSON.stringify({ data, newBooking }),
-
-    });
-    const d = await response.json();
-    if (!response.ok) {
-      return rejectWithValue({ error: d, requestId });
-    }
+    const response = await axios.post("/resident/commonSpace", { data, newBooking });
+    const d = response.data;
     return { space: d.space, requestId };
   } catch (error) {
-    return rejectWithValue(error.message);
+    return rejectWithValue({ error: error.response?.data?.message || error.message, requestId });
   }
 }
 )
@@ -65,54 +42,26 @@ export const ConfirmBooking = createAsyncThunk("commonSpace/ConfirmBooking", asy
 
 export const fetchDataforManager = createAsyncThunk("commonSpace/fetchDataforManager", async (_, { rejectWithValue }) => {
   try {
-    const response = await fetch("/manager/commonSpace",
-      {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json",
-        },
-        credentials: "include",
-      }
-    );
-    if (!response.ok) {
-      const errorData = await response.json();
-      return rejectWithValue(errorData);
-    }
-    const data = await response.json();
+    const response = await axios.get("/manager/commonSpace");
+    const data = response.data;
     if (data.bookings) {
       return data;
     } else {
       return rejectWithValue(data);
     }
   } catch (error) {
-    return rejectWithValue(error.message);
+    return rejectWithValue(error.response?.data?.message || error.message);
   }
 });
 
 export const EditSpace = createAsyncThunk("commonSpace/EditSpace",
   async ({ id, updatedData }, { rejectWithValue }) => {
     try {
-      const response = await fetch(
-        `/manager/spaces/${id}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-          },
-          credentials: "include",
-
-          body: JSON.stringify(updatedData),
-        }
-      );
-      const data = await response.json();
-      if (!response.ok) {
-        return rejectWithValue(data);
-      }
+      const response = await axios.put(`/manager/spaces/${id}`, updatedData);
+      const data = response.data;
       return data;
     } catch (error) {
-      return rejectWithValue(error.message);
+      return rejectWithValue(error.response?.data?.message || error.message);
     }
   }
 );
@@ -121,25 +70,10 @@ export const DeleteSpace = createAsyncThunk(
   "commonSpace/DeleteSpace",
   async (id, { rejectWithValue }) => {
     try {
-      const response = await fetch(
-        `/manager/spaces/${id}`,
-        {
-          method: "DELETE",
-          headers: {
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-          },
-
-          credentials: "include"
-        }
-      );
-      const data = await response.json();
-      if (!response.ok) {
-        return rejectWithValue(data);
-      }
+      await axios.delete(`/manager/spaces/${id}`);
       return id;
     } catch (error) {
-      return rejectWithValue(error.message);
+      return rejectWithValue(error.response?.data?.message || error.message);
     }
   }
 );
@@ -148,22 +82,11 @@ export const AddSpace = createAsyncThunk(
   "commonSpace/AddSpace",
   async (newSpaceData, { rejectWithValue }) => {
     try {
-      const response = await fetch("/manager/spaces", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify(newSpaceData),
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        return rejectWithValue(data);
-      }
+      const response = await axios.post("/manager/spaces", newSpaceData);
+      const data = response.data;
       return data;
     } catch (error) {
-      return rejectWithValue(error.message);
+      return rejectWithValue(error.response?.data?.message || error.message);
     }
   }
 );
@@ -172,25 +95,11 @@ export const updateSpaceAvailabilityControls = createAsyncThunk(
   "commonSpace/updateSpaceAvailabilityControls",
   async ({ id, availabilityControls }, { rejectWithValue }) => {
     try {
-      const response = await fetch(
-        `/manager/spaces/${id}/availability-controls`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
-          credentials: "include",
-          body: JSON.stringify({ availabilityControls }),
-        },
-      );
-      const data = await response.json();
-      if (!response.ok) {
-        return rejectWithValue(data);
-      }
+      const response = await axios.put(`/manager/spaces/${id}/availability-controls`, { availabilityControls });
+      const data = response.data;
       return data;
     } catch (error) {
-      return rejectWithValue(error.message);
+      return rejectWithValue(error.response?.data?.message || error.message);
     }
   },
 );
@@ -200,24 +109,12 @@ export const ProceedPayment = createAsyncThunk("commonSpace/ProceedPayment",
     console.log("Data in slice :", paymentData);
 
     try {
-      const response = await fetch("/resident/payment/post", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json",
-        },
-
-        credentials: "include",
-        body: JSON.stringify(paymentData),
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        return rejectWithValue(data);
-      }
+      const response = await axios.post("/resident/payment/post", paymentData);
+      const data = response.data;
 
       return data.Id;
     } catch (error) {
-      return rejectWithValue(error.message);
+      return rejectWithValue(error.response?.data?.message || error.message);
     }
   }
 )
@@ -226,24 +123,11 @@ export const cancelUserBooking = createAsyncThunk(
   "commonSpace/cancelBooking",
   async ({ bookingId, originalStatus }, { rejectWithValue }) => {
     try {
-      const response = await fetch(
-        `/resident/booking/cancel/${bookingId}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-          },
-          credentials: "include"
-        }
-      );
-      const data = await response.json();
-      if (!response.ok) {
-        return rejectWithValue({ error: data, bookingId, originalStatus });
-      }
+      const response = await axios.put(`/resident/booking/cancel/${bookingId}`);
+      const data = response.data;
       return { id: bookingId, message: data.message };
     } catch (error) {
-      return rejectWithValue(error.message);
+      return rejectWithValue({ error: error.response?.data?.message || error.message, bookingId, originalStatus });
     }
   }
 );
@@ -271,20 +155,8 @@ export const cancelBookingByManager = createAsyncThunk(
         payload.refundAmount = Number(refundAmount);
       }
 
-      const response = await fetch(`/manager/commonSpace/reject/${bookingId}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify(payload),
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        return rejectWithValue(data);
-      }
+      const response = await axios.post(`/manager/commonSpace/reject/${bookingId}`, payload);
+      const data = response.data;
 
       return {
         bookingId,
@@ -293,7 +165,7 @@ export const cancelBookingByManager = createAsyncThunk(
         refund: data.refund,
       };
     } catch (error) {
-      return rejectWithValue(error.message);
+      return rejectWithValue(error.response?.data?.message || error.message);
     }
   },
 );

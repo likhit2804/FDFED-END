@@ -1,4 +1,5 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import axios from "axios";
 
 const API = "/manager/issue";
 
@@ -7,14 +8,8 @@ export const fetchManagerIssues = createAsyncThunk(
   "managerIssues/fetchManagerIssues",
   async (_, { rejectWithValue }) => {
     try {
-      const res = await fetch(`${API}/myIssues`, { credentials: "include" });
-      
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.message || `HTTP ${res.status}`);
-      }
-      
-      const data = await res.json();
+      const res = await axios.get(`${API}/myIssues`);
+      const data = res.data;
       
       if (!data.success) {
         throw new Error(data.message || "Failed to fetch issues");
@@ -29,7 +24,7 @@ export const fetchManagerIssues = createAsyncThunk(
       };
     } catch (err) {
       console.error("fetchManagerIssues error:", err);
-      return rejectWithValue(err.message || "Failed to fetch issues");
+      return rejectWithValue(err.response?.data?.message || err.message || "Failed to fetch issues");
     }
   }
 );
@@ -39,14 +34,8 @@ export const fetchIssueDetails = createAsyncThunk(
   "managerIssues/fetchIssueDetails",
   async (id, { rejectWithValue }) => {
     try {
-      const res = await fetch(`${API}/${id}`, { credentials: "include" });
-      
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.message || `HTTP ${res.status}`);
-      }
-      
-      const data = await res.json();
+      const res = await axios.get(`${API}/${id}`);
+      const data = res.data;
       
       if (!data.success) {
         throw new Error(data.message || "Failed to fetch issue");
@@ -55,7 +44,7 @@ export const fetchIssueDetails = createAsyncThunk(
       return data.issue;
     } catch (err) {
       console.error("fetchIssueDetails error:", err);
-      return rejectWithValue(err.message || "Failed to fetch issue details");
+      return rejectWithValue(err.response?.data?.message || err.message || "Failed to fetch issue details");
     }
   }
 );
@@ -65,23 +54,16 @@ export const assignManagerIssue = createAsyncThunk(
   "managerIssues/assignManagerIssue",
   async ({ id, worker, deadline, remarks }, { rejectWithValue }) => {
     try {
-      const res = await fetch(`${API}/assign/${id}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ worker, deadline, remarks }),
-      });
-      
-      const data = await res.json();
-      
-      if (!res.ok || !data.success) {
+      const res = await axios.post(`${API}/assign/${id}`, { worker, deadline, remarks });
+      const data = res.data;
+      if (!data.success) {
         throw new Error(data.message || "Assign failed");
       }
       
       return data.issue;
     } catch (err) {
       console.error("assignManagerIssue error:", err);
-      return rejectWithValue(err.message || "Failed to assign worker");
+      return rejectWithValue(err.response?.data?.message || err.message || "Failed to assign worker");
     }
   }
 );
@@ -91,23 +73,16 @@ export const reassignManagerIssue = createAsyncThunk(
   "managerIssues/reassignManagerIssue",
   async ({ id, newWorker, deadline, remarks }, { rejectWithValue }) => {
     try {
-      const res = await fetch(`${API}/reassign/${id}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ newWorker, deadline, remarks }),
-      });
-      
-      const data = await res.json();
-      
-      if (!res.ok || !data.success) {
+      const res = await axios.post(`${API}/reassign/${id}`, { newWorker, deadline, remarks });
+      const data = res.data;
+      if (!data.success) {
         throw new Error(data.message || "Reassign failed");
       }
       
       return data.issue;
     } catch (err) {
       console.error("reassignManagerIssue error:", err);
-      return rejectWithValue(err.message || "Failed to reassign worker");
+      return rejectWithValue(err.response?.data?.message || err.message || "Failed to reassign worker");
     }
   }
 );
@@ -117,21 +92,16 @@ export const closeManagerIssue = createAsyncThunk(
   "managerIssues/closeManagerIssue",
   async ({ id }, { rejectWithValue }) => {
     try {
-      const res = await fetch(`${API}/close/${id}`, {
-        method: "POST",
-        credentials: "include",
-      });
-      
-      const data = await res.json();
-      
-      if (!res.ok || !data.success) {
+      const res = await axios.post(`${API}/close/${id}`);
+      const data = res.data;
+      if (!data.success) {
         throw new Error(data.message || "Close failed");
       }
       
       return { id, status: "Closed" };
     } catch (err) {
       console.error("closeManagerIssue error:", err);
-      return rejectWithValue(err.message || "Failed to close issue");
+      return rejectWithValue(err.response?.data?.message || err.message || "Failed to close issue");
     }
   }
 );
@@ -141,14 +111,8 @@ export const fetchRejectedIssues = createAsyncThunk(
   "managerIssues/fetchRejectedIssues",
   async (_, { rejectWithValue }) => {
     try {
-      const res = await fetch(`${API}/rejected/pending`, { credentials: "include" });
-      
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.message || `HTTP ${res.status}`);
-      }
-      
-      const data = await res.json();
+      const res = await axios.get(`${API}/rejected/pending`);
+      const data = res.data;
       
       if (!data.success) {
         throw new Error(data.message || "Failed to fetch rejected issues");
@@ -157,7 +121,7 @@ export const fetchRejectedIssues = createAsyncThunk(
       return data.issues || [];
     } catch (err) {
       console.error("fetchRejectedIssues error:", err);
-      return rejectWithValue(err.message || "Failed to fetch rejected issues");
+      return rejectWithValue(err.response?.data?.message || err.message || "Failed to fetch rejected issues");
     }
   }
 );
@@ -167,14 +131,8 @@ export const fetchWorkers = createAsyncThunk(
   "managerIssues/fetchWorkers",
   async (_, { rejectWithValue }) => {
     try {
-      const res = await fetch("/manager/workers", { credentials: "include" });
-      
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.message || `HTTP ${res.status}`);
-      }
-      
-      const data = await res.json();
+      const res = await axios.get("/manager/workers");
+      const data = res.data;
       
       if (!data.success) {
         throw new Error(data.message || "Failed to fetch workers");
@@ -183,7 +141,7 @@ export const fetchWorkers = createAsyncThunk(
       return data.workers || [];
     } catch (err) {
       console.error("fetchWorkers error:", err);
-      return rejectWithValue(err.message || "Failed to fetch workers");
+      return rejectWithValue(err.response?.data?.message || err.message || "Failed to fetch workers");
     }
   }
 );

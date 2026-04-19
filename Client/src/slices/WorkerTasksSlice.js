@@ -1,18 +1,16 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import axios from "axios";
 
 // Fetch tasks assigned to the worker
 export const fetchWorkerTasks = createAsyncThunk(
   "workerTasks/fetchWorkerTasks",
   async (_, { rejectWithValue }) => {
     try {
-      const res = await fetch("/worker/api/tasks", {
-        credentials: "include",
-      });
-      if (!res.ok) throw new Error("Failed to fetch tasks");
-      const data = await res.json();
+      const res = await axios.get("/worker/api/tasks");
+      const data = res.data;
       return data.tasks || [];
     } catch (err) {
-      return rejectWithValue(err.message);
+      return rejectWithValue(err.response?.data?.message || err.message);
     }
   }
 );
@@ -22,15 +20,12 @@ export const startWorkerTask = createAsyncThunk(
   "workerTasks/startWorkerTask",
   async (taskId, { rejectWithValue }) => {
     try {
-      const res = await fetch(`/worker/issue/start/${taskId}`, {
-        method: "POST",
-        credentials: "include",
-      });
-      const data = await res.json();
+      const res = await axios.post(`/worker/issue/start/${taskId}`);
+      const data = res.data;
       if (!data.success) throw new Error(data.message);
       return { taskId };
     } catch (err) {
-      return rejectWithValue(err.message);
+      return rejectWithValue(err.response?.data?.message || err.message);
     }
   }
 );
@@ -40,15 +35,12 @@ export const resolveWorkerTask = createAsyncThunk(
   "workerTasks/resolveWorkerTask",
   async (taskId, { rejectWithValue }) => {
     try {
-      const res = await fetch(`/worker/issue/resolve/${taskId}`, {
-        method: "POST",
-        credentials: "include",
-      });
-      const data = await res.json();
+      const res = await axios.post(`/worker/issue/resolve/${taskId}`);
+      const data = res.data;
       if (!data.success) throw new Error(data.message);
       return { taskId };
     } catch (err) {
-      return rejectWithValue(err.message);
+      return rejectWithValue(err.response?.data?.message || err.message);
     }
   }
 );
@@ -58,15 +50,12 @@ export const misassignedWorkerTask = createAsyncThunk(
   "workerTasks/misassignedWorkerTask",
   async (taskId, { rejectWithValue }) => {
     try {
-      const res = await fetch(`/worker/issue/misassigned/${taskId}`, {
-        method: "POST",
-        credentials: "include",
-      });
-      const data = await res.json();
+      const res = await axios.post(`/worker/issue/misassigned/${taskId}`);
+      const data = res.data;
       if (!data.success) throw new Error(data.message);
       return { taskId };
     } catch (err) {
-      return rejectWithValue(err.message);
+      return rejectWithValue(err.response?.data?.message || err.message);
     }
   }
 );
