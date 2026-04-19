@@ -1,0 +1,70 @@
+{
+  "generatedAt": "2026-04-19T04:01:52.130Z",
+  "benchmarkConfig": {
+    "runs": 12,
+    "warmup": 2,
+    "ttlSeconds": 120,
+    "dbOnlyMode": false
+  },
+  "target": {
+    "communityId": "69e45061e1d347383d7d20e6",
+    "managerId": "69e45062e1d347383d7d2156",
+    "estimatedDocs": 727
+  },
+  "results": {
+    "noCache": {
+      "label": "DB only (no cache)",
+      "avg": 6.893133416666633,
+      "p50": 6.578139999999848,
+      "p95": 9.380016999999953,
+      "min": 5.481575000000021,
+      "max": 9.380016999999953,
+      "runs": 12,
+      "sourceCounter": {
+        "db": 12
+      }
+    },
+    "cacheCold": {
+      "label": "Redis cold miss",
+      "avg": 7.325016333333299,
+      "p50": 7.033550999999989,
+      "p95": 8.001279999999952,
+      "min": 6.685739999999896,
+      "max": 8.001279999999952,
+      "runs": 6,
+      "sourceCounter": {
+        "db": 6
+      }
+    },
+    "cacheWarm": {
+      "label": "Redis warm hit",
+      "avg": 0.4438231666666563,
+      "p50": 0.41651900000010755,
+      "p95": 0.7807410000000345,
+      "min": 0.3329309999999168,
+      "max": 0.7807410000000345,
+      "runs": 12,
+      "sourceCounter": {
+        "cache": 12
+      }
+    }
+  },
+  "improvementVsNoCache": {
+    "warmHitAvg": {
+      "deltaMs": 6.45,
+      "percent": 93.56
+    },
+    "warmHitP95": {
+      "deltaMs": 8.6,
+      "percent": 91.68
+    },
+    "coldMissAvg": {
+      "deltaMs": -0.43,
+      "percent": -6.27
+    }
+  },
+  "diagnostics": {
+    "redisLikelyNetworkBound": false,
+    "note": "Redis warm-hit is faster than DB path."
+  }
+}

@@ -90,6 +90,43 @@ npm run dev
 
 Frontend runs on `http://localhost:5173` and the backend runs on `http://localhost:3000` by default.
 
+## Docker Setup
+
+UrbanEase is Dockerized for end-review demos with:
+
+- `client` (Vite dev server on port `5173`)
+- `server` (Express API on port `3000`)
+- `redis` (cache on port `6379`)
+- `mongodb` (local DB on port `27017`)
+
+### Quick Start
+
+```bash
+docker compose up --build
+```
+
+or
+
+```bash
+npm run docker:up
+```
+
+### Optional Environment Overrides
+
+Copy `.env.docker.example` to `.env` at project root and edit values if needed.
+
+Key Docker envs:
+
+- `MONGO_URI1` (default local Docker Mongo: `mongodb://mongodb:27017/urbanEase`)
+- `REDIS_URL` (default Docker Redis: `redis://redis:6379`)
+- `JWT_SECRET`, `EMAIL_USER`, `EMAIL_PASS`
+
+### Stop Containers
+
+```bash
+docker compose down
+```
+
 ## API Documentation
 
 - Swagger UI: [http://localhost:3000/api-docs](http://localhost:3000/api-docs)

@@ -13,8 +13,10 @@ import Visitor from "../models/visitors.js";
 import CommonSpaces from "../models/commonSpaces.js";
 import CommunityManager from "../models/cManager.js";
 
-// For local benchmarking, prefer .env values over stale shell vars.
-dotenv.config({ override: true });
+// By default, keep existing environment values (useful for Docker).
+// Set DOTENV_OVERRIDE=true only when you explicitly want .env to override env vars.
+const shouldOverrideEnv = String(process.env.DOTENV_OVERRIDE || "").toLowerCase() === "true";
+dotenv.config({ override: shouldOverrideEnv });
 
 // Backward compatibility: support accidental typo key in .env.
 if (!process.env.REDIS_URL && process.env.REDIS_URl) {
@@ -36,6 +38,8 @@ const MONGO_URI = process.env.MONGO_URI1 || process.env.MONGO_URI;
 const RUNS = Number(process.env.REDIS_BENCHMARK_RUNS || 12);
 const WARMUP = Number(process.env.REDIS_BENCHMARK_WARMUP || 2);
 const CACHE_TTL_SECONDS = Number(process.env.REDIS_BENCHMARK_TTL || 120);
+const DB_ONLY_MODE = String(process.env.REDIS_BENCHMARK_DB_ONLY || "").toLowerCase() === "true";
+const REPORT_OUTPUT = process.env.REDIS_BENCHMARK_OUTPUT || "";
 
 if (!MONGO_URI) {
   console.error("Missing MONGO_URI1 or MONGO_URI in environment.");
@@ -288,12 +292,35 @@ function buildImprovement(base, candidate) {
   };
 }
 
+async function directoryExists(targetPath) {
+  try {
+    const stat = await fs.stat(targetPath);
+    return stat.isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+async function resolveReportPath(__dirname) {
+  if (REPORT_OUTPUT.trim()) {
+    return path.resolve(REPORT_OUTPUT.trim());
+  }
+
+  const repoDocsDir = path.resolve(__dirname, "../../project_docs");
+  if (await directoryExists(repoDocsDir)) {
+    return path.join(repoDocsDir, "redis_benchmark_report.json");
+  }
+
+  // Docker run mode usually mounts only /app (Server), so fall back there.
+  return path.resolve(__dirname, "../redis_benchmark_report.json");
+}
+
 async function main() {
   await mongoose.connect(MONGO_URI);
 
   try {
-    const redisOk = await waitForRedisReady();
-    if (!redisOk) {
+    const redisOk = DB_ONLY_MODE ? false : await waitForRedisReady();
+    if (!DB_ONLY_MODE && !redisOk) {
       console.error("Redis is not ready. Start Redis and rerun: npm run benchmark:redis");
       process.exitCode = 1;
       return;
@@ -309,10 +336,12 @@ async function main() {
     const communityId = target.assignedCommunity;
     const cacheKey = buildBenchmarkCacheKey(`manager-dashboard:${communityId}`);
 
-    await clearAllCache();
-    await clearBenchmarkCacheKey(cacheKey);
+    if (redisOk) {
+      await clearAllCache();
+      await clearBenchmarkCacheKey(cacheKey);
+    }
 
-    console.log("Redis Benchmark Target");
+    console.log(DB_ONLY_MODE ? "DB-Only Benchmark Target" : "Redis Benchmark Target");
     console.log(`communityId=${communityId}`);
     console.log(`managerId=${target._id}`);
     console.log(`estimatedDocs=${target.totalDocs}`);
@@ -324,62 +353,75 @@ async function main() {
       { warmup: WARMUP, runs: RUNS }
     );
 
-    const cacheCold = await benchmark(
-      "Redis cold miss",
-      async () => {
-        await clearBenchmarkCacheKey(cacheKey);
-        return getSnapshotWithRedis(cacheKey, communityId);
-      },
-      { warmup: 1, runs: Math.max(6, Math.floor(RUNS / 2)) }
-    );
+    let cacheCold = null;
+    let cacheWarm = null;
+    let improvementVsNoCache = null;
+    let diagnostics = null;
 
-    await clearBenchmarkCacheKey(cacheKey);
-    await getSnapshotWithRedis(cacheKey, communityId);
+    if (redisOk) {
+      cacheCold = await benchmark(
+        "Redis cold miss",
+        async () => {
+          await clearBenchmarkCacheKey(cacheKey);
+          return getSnapshotWithRedis(cacheKey, communityId);
+        },
+        { warmup: 1, runs: Math.max(6, Math.floor(RUNS / 2)) }
+      );
 
-    const cacheWarm = await benchmark(
-      "Redis warm hit",
-      async () => getSnapshotWithRedis(cacheKey, communityId),
-      { warmup: 1, runs: RUNS }
-    );
+      await clearBenchmarkCacheKey(cacheKey);
+      await getSnapshotWithRedis(cacheKey, communityId);
+
+      cacheWarm = await benchmark(
+        "Redis warm hit",
+        async () => getSnapshotWithRedis(cacheKey, communityId),
+        { warmup: 1, runs: RUNS }
+      );
+    }
 
     console.log("Latency Results");
     printRow(noCache);
-    printRow(cacheCold);
-    printRow(cacheWarm);
+    if (cacheCold && cacheWarm) {
+      printRow(cacheCold);
+      printRow(cacheWarm);
+    } else {
+      console.log("Redis rows skipped (DB-only mode).");
+    }
     console.log("");
 
-    const improvementVsNoCache = {
-      warmHitAvg: buildImprovement(noCache.avg, cacheWarm.avg),
-      warmHitP95: buildImprovement(noCache.p95, cacheWarm.p95),
-      coldMissAvg: buildImprovement(noCache.avg, cacheCold.avg),
-    };
+    if (cacheCold && cacheWarm) {
+      improvementVsNoCache = {
+        warmHitAvg: buildImprovement(noCache.avg, cacheWarm.avg),
+        warmHitP95: buildImprovement(noCache.p95, cacheWarm.p95),
+        coldMissAvg: buildImprovement(noCache.avg, cacheCold.avg),
+      };
 
-    console.log("Improvement Summary");
-    console.log(
-      `Warm-hit avg improvement: ${improvementVsNoCache.warmHitAvg.percent}% (${improvementVsNoCache.warmHitAvg.deltaMs}ms)`
-    );
-    console.log(
-      `Warm-hit p95 improvement: ${improvementVsNoCache.warmHitP95.percent}% (${improvementVsNoCache.warmHitP95.deltaMs}ms)`
-    );
-    console.log(
-      `Cold-miss avg improvement: ${improvementVsNoCache.coldMissAvg.percent}% (${improvementVsNoCache.coldMissAvg.deltaMs}ms)`
-    );
-    console.log("");
-
-    const diagnostics = {
-      redisLikelyNetworkBound: improvementVsNoCache.warmHitAvg.percent < 0,
-      note:
-        improvementVsNoCache.warmHitAvg.percent < 0
-          ? "Redis warm-hit is slower than DB path. Usually caused by high Redis network latency (different region or distant managed Redis)."
-          : "Redis warm-hit is faster than DB path.",
-    };
-
-    if (diagnostics.redisLikelyNetworkBound) {
-      console.log("Diagnostic Note");
+      console.log("Improvement Summary");
       console.log(
-        "- Warm-hit is slower than DB. Use Redis in same region/VPC as app, or local Redis for lab benchmarking."
+        `Warm-hit avg improvement: ${improvementVsNoCache.warmHitAvg.percent}% (${improvementVsNoCache.warmHitAvg.deltaMs}ms)`
+      );
+      console.log(
+        `Warm-hit p95 improvement: ${improvementVsNoCache.warmHitP95.percent}% (${improvementVsNoCache.warmHitP95.deltaMs}ms)`
+      );
+      console.log(
+        `Cold-miss avg improvement: ${improvementVsNoCache.coldMissAvg.percent}% (${improvementVsNoCache.coldMissAvg.deltaMs}ms)`
       );
       console.log("");
+
+      diagnostics = {
+        redisLikelyNetworkBound: improvementVsNoCache.warmHitAvg.percent < 0,
+        note:
+          improvementVsNoCache.warmHitAvg.percent < 0
+            ? "Redis warm-hit is slower than DB path. Usually caused by high Redis network latency (different region or distant managed Redis)."
+            : "Redis warm-hit is faster than DB path.",
+      };
+
+      if (diagnostics.redisLikelyNetworkBound) {
+        console.log("Diagnostic Note");
+        console.log(
+          "- Warm-hit is slower than DB. Use Redis in same region/VPC as app, or local Redis for lab benchmarking."
+        );
+        console.log("");
+      }
     }
 
     const report = {
@@ -388,6 +430,7 @@ async function main() {
         runs: RUNS,
         warmup: WARMUP,
         ttlSeconds: CACHE_TTL_SECONDS,
+        dbOnlyMode: DB_ONLY_MODE,
       },
       target: {
         communityId: String(communityId),
@@ -405,7 +448,8 @@ async function main() {
 
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = path.dirname(__filename);
-    const reportPath = path.resolve(__dirname, "../../project_docs/redis_benchmark_report.json");
+    const reportPath = await resolveReportPath(__dirname);
+    await fs.mkdir(path.dirname(reportPath), { recursive: true });
     await fs.writeFile(reportPath, JSON.stringify(report, null, 2), "utf8");
 
     console.log(`Report saved to: ${reportPath}`);

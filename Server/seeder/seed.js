@@ -190,78 +190,79 @@ const seedResidentsAndRelated = async (communities, staff) => {
     console.log('👥 Seeding Residents, Payments, Issues, Visitors with scattered dates...');
     const now = new Date();
 
-    const blocks = await Block.find({ community: community._id });
-    for (const block of blocks) {
-        const flats = await Flat.find({ block: block._id });
-        for (const flat of flats) {
-            if (faker.datatype.boolean(0.6)) {
-                const residentData = generateResident(community._id, block.name.split(' ')[1], flat.flatNumber.split('-')[1]);
-                residentData.password = HASHED_PASSWORD;
+    for (const { community, manager } of communities) {
+        const blocks = await Block.find({ community: community._id });
+        for (const block of blocks) {
+            const flats = await Flat.find({ block: block._id });
+            for (const flat of flats) {
+                if (faker.datatype.boolean(0.6)) {
+                    const residentData = generateResident(community._id, block.name.split(' ')[1], flat.flatNumber.split('-')[1]);
+                    residentData.password = HASHED_PASSWORD;
 
-                try {
-                    const moveInDate = faker.date.between({ from: community.createdAt, to: now });
-                    const resident = new Resident(residentData);
-                    resident.createdAt = moveInDate;
-                    await resident.save();
+                    try {
+                        const moveInDate = faker.date.between({ from: community.createdAt, to: now });
+                        const resident = new Resident(residentData);
+                        resident.createdAt = moveInDate;
+                        await resident.save();
 
-                    flat.status = 'Occupied';
-                    flat.residentId = resident._id;
-                    await flat.save();
+                        flat.status = 'Occupied';
+                        flat.residentId = resident._id;
+                        await flat.save();
 
-                    let currentDate = new Date(moveInDate);
-                    // Randomize payment day for each resident
-                    const payDay = faker.number.int({ min: 1, max: 28 });
-                    currentDate.setDate(payDay);
-                    if (moveInDate.getDate() > payDay) currentDate.setMonth(currentDate.getMonth() + 1);
+                        let currentDate = new Date(moveInDate);
+                        // Randomize payment day for each resident
+                        const payDay = faker.number.int({ min: 1, max: 28 });
+                        currentDate.setDate(payDay);
+                        if (moveInDate.getDate() > payDay) currentDate.setMonth(currentDate.getMonth() + 1);
 
-                    while (currentDate <= now) {
-                        const paymentData = generatePayment(resident._id, manager._id, community._id, new Date(currentDate));
-                        if (currentDate.getMonth() === now.getMonth() && currentDate.getFullYear() === now.getFullYear()) {
-                            paymentData.status = faker.helpers.arrayElement(['Pending', 'Completed']);
-                        } else {
-                            paymentData.status = faker.helpers.arrayElement(['Completed', 'Completed', 'Completed', 'Overdue']);
+                        while (currentDate <= now) {
+                            const paymentData = generatePayment(resident._id, manager._id, community._id, new Date(currentDate));
+                            if (currentDate.getMonth() === now.getMonth() && currentDate.getFullYear() === now.getFullYear()) {
+                                paymentData.status = faker.helpers.arrayElement(['Pending', 'Completed']);
+                            } else {
+                                paymentData.status = faker.helpers.arrayElement(['Completed', 'Completed', 'Completed', 'Overdue']);
+                            }
+
+                            if (paymentData.status === 'Completed') {
+                                const paidConfig = new Date(currentDate);
+                                paidConfig.setDate(paidConfig.getDate() + faker.number.int({ min: -2, max: 7 }));
+                                paymentData.paymentDate = paidConfig;
+                            } else {
+                                paymentData.paymentDate = null;
+                            }
+
+                            const payment = new Payment(paymentData);
+                            payment.createdAt = currentDate;
+                            await payment.save();
+                            currentDate.setMonth(currentDate.getMonth() + 1);
                         }
 
-                        if (paymentData.status === 'Completed') {
-                            const paidConfig = new Date(currentDate);
-                            paidConfig.setDate(paidConfig.getDate() + faker.number.int({ min: -2, max: 7 }));
-                            paymentData.paymentDate = paidConfig;
-                        } else {
-                            paymentData.paymentDate = null;
+                        if (faker.datatype.boolean(0.4)) {
+                            for (let k = 0; k < faker.number.int({ min: 1, max: 3 }); k++) {
+                                const issueData = generateIssue(resident._id, community._id);
+                                const issueDate = faker.date.between({ from: moveInDate, to: now });
+                                const issue = new Issue(issueData);
+                                issue.createdAt = issueDate;
+                                await issue.save();
+                            }
                         }
 
-                        const payment = new Payment(paymentData);
-                        payment.createdAt = currentDate;
-                        await payment.save();
-                        currentDate.setMonth(currentDate.getMonth() + 1);
-                    }
-
-                    if (faker.datatype.boolean(0.4)) {
-                        for (let k = 0; k < faker.number.int({ min: 1, max: 3 }); k++) {
-                            const issueData = generateIssue(resident._id, community._id);
-                            const issueDate = faker.date.between({ from: moveInDate, to: now });
-                            const issue = new Issue(issueData);
-                            issue.createdAt = issueDate;
-                            await issue.save();
+                        if (faker.datatype.boolean(0.5)) {
+                            for (let v = 0; v < faker.number.int({ min: 1, max: 5 }); v++) {
+                                const securityId = staff.length > 0 ? faker.helpers.arrayElement(staff)._id : null;
+                                const visitorData = generateVisitor(community._id, resident._id, securityId);
+                                const visitDate = faker.date.between({ from: moveInDate, to: now });
+                                if (visitorData.checkInAt) visitorData.checkInAt = visitDate;
+                                const visitor = new Visitor(visitorData);
+                                visitor.createdAt = visitDate;
+                                await visitor.save();
+                            }
                         }
-                    }
-
-                    if (faker.datatype.boolean(0.5)) {
-                        for (let v = 0; v < faker.number.int({ min: 1, max: 5 }); v++) {
-                            const securityId = staff.length > 0 ? faker.helpers.arrayElement(staff)._id : null;
-                            const visitorData = generateVisitor(community._id, resident._id, securityId);
-                            const visitDate = faker.date.between({ from: moveInDate, to: now });
-                            if (visitorData.checkInAt) visitorData.checkInAt = visitDate;
-                            const visitor = new Visitor(visitorData);
-                            visitor.createdAt = visitDate;
-                            await visitor.save();
-                        }
-                    }
-                } catch (err) { }
+                    } catch (err) { }
+                }
             }
         }
     }
-
 }
 
 

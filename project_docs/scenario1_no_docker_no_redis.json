@@ -1,0 +1,32 @@
+{
+  "generatedAt": "2026-04-19T03:59:40.500Z",
+  "benchmarkConfig": {
+    "runs": 12,
+    "warmup": 2,
+    "ttlSeconds": 120,
+    "dbOnlyMode": true
+  },
+  "target": {
+    "communityId": "69956b85d39a452a75d59ab9",
+    "managerId": "69956b86d39a452a75d59b11",
+    "estimatedDocs": 552
+  },
+  "results": {
+    "noCache": {
+      "label": "DB only (no cache)",
+      "avg": 87.5394250000001,
+      "p50": 40.00489999999991,
+      "p95": 578.5551,
+      "min": 36.25579999999991,
+      "max": 578.5551,
+      "runs": 12,
+      "sourceCounter": {
+        "db": 12
+      }
+    },
+    "cacheCold": null,
+    "cacheWarm": null
+  },
+  "improvementVsNoCache": null,
+  "diagnostics": null
+}

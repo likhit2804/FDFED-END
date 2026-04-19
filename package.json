@@ -8,7 +8,10 @@
     "start:server": "npm run start --prefix Server",
     "start:server:dev": "npm run dev --prefix Server",
     "start:client": "npm run dev --prefix Client",
-    "dev": "concurrently \"npm run start:server:dev\" \"npm run start:client\""
+    "dev": "concurrently \"npm run start:server:dev\" \"npm run start:client\"",
+    "docker:up": "docker compose up --build",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f"
   },
   "dependencies": {
     "express-flash": "^0.0.2"

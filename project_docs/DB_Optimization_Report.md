@@ -309,20 +309,24 @@ If warm-hit latency is slower than DB-only latency, it indicates Redis network/r
 4. Show `GET /api/cache/stats` to display hit-rate growth
 5. Show `redis_benchmark_report.json` with latency improvements
 
-### Latest Benchmark (After Region Alignment)
+### Final Verification Matrix (3 Required Scenarios)
 
-Run context: Redis region aligned with app/DB path (same-near region), using `npm run benchmark:redis`.
+Run date: 2026-04-19  
+Evidence files:
+- `project_docs/scenario1_no_docker_no_redis.json`
+- `project_docs/scenario2_no_docker_with_redis.json`
+- `project_docs/scenario3_docker_with_redis.json`
 
-| Scenario | avg | p50 | p95 | min | max |
-|---|---|---|---|---|---|
-| DB only (no cache) | 49.37ms | 39.01ms | 161.25ms | 37.71ms | 161.25ms |
-| Redis cold miss | 123.74ms | 123.16ms | 126.19ms | 122.68ms | 126.19ms |
-| Redis warm hit | **28.81ms** | **28.58ms** | **31.41ms** | **26.75ms** | **31.41ms** |
+| Scenario | DB-only avg | Redis warm-hit avg | Warm-hit improvement | DB-only p95 | Redis warm-hit p95 | Warm-hit p95 improvement |
+|---|---:|---:|---:|---:|---:|---:|
+| No Docker + No Redis | 87.54ms | N/A | N/A | 578.56ms | N/A | N/A |
+| No Docker + Redis | 71.99ms | 2.54ms | 96.48% | 412.18ms | 3.34ms | 99.19% |
+| Docker + Redis | 6.89ms | 0.44ms | 93.56% | 9.38ms | 0.78ms | 91.68% |
 
-Improvement summary:
-- Warm-hit avg improvement: **41.65%** (49.37ms -> 28.81ms, saved 20.57ms)
-- Warm-hit p95 improvement: **80.52%** (161.25ms -> 31.41ms, saved 129.84ms)
-- Cold-miss avg is slower than DB-only (expected): first request pays DB + Redis write cost; subsequent requests are significantly faster via warm-hit.
+Interpretation:
+- Redis provides major latency reduction in both local and containerized runs.
+- Docker + Redis delivers the lowest absolute latency due to tight container-network path and reduced host jitter.
+- Cold miss can be close to or slightly slower than DB-only because it includes cache population overhead.
 
 ### Redis Checklist
 

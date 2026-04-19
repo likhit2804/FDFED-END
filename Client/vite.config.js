@@ -2,6 +2,8 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 
+const proxyTarget = process.env.VITE_PROXY_TARGET || "http://localhost:3000";
+
 export default defineConfig({
   plugins: [
     react(),
@@ -40,39 +42,45 @@ export default defineConfig({
   server: {
     proxy: {
       "/api": {
-        target: "http://localhost:3000",
+        target: proxyTarget,
         changeOrigin: true,
         secure: false,
       },
       "/admin/api": {
-        target: "http://localhost:3000",
+        target: proxyTarget,
         changeOrigin: true,
         secure: false,
       },
       "/login": {
-        target: "http://localhost:3000",
+        target: proxyTarget,
         changeOrigin: true,
         secure: false,
       },
       "/logout": {
-        target: "http://localhost:3000",
+        target: proxyTarget,
         changeOrigin: true,
         secure: false,
       },
       "/leaves": {
-        target: "http://localhost:3000",
+        target: proxyTarget,
         changeOrigin: true,
         secure: false,
       },
       "/interest": {
-        target: "http://localhost:3000",
+        target: proxyTarget,
         changeOrigin: true,
         secure: false,
+      },
+      "/socket.io": {
+        target: proxyTarget,
+        changeOrigin: true,
+        secure: false,
+        ws: true,
       },
       // Role-based route prefixes — proxy API fetch calls to Express,
       // but let browser navigation (Accept: text/html) through to Vite/React.
       "/resident": {
-        target: "http://localhost:3000",
+        target: proxyTarget,
         changeOrigin: true,
         secure: false,
         bypass: (req) => {
@@ -80,7 +88,7 @@ export default defineConfig({
         },
       },
       "/security": {
-        target: "http://localhost:3000",
+        target: proxyTarget,
         changeOrigin: true,
         secure: false,
         bypass: (req) => {
@@ -88,7 +96,7 @@ export default defineConfig({
         },
       },
       "/worker": {
-        target: "http://localhost:3000",
+        target: proxyTarget,
         changeOrigin: true,
         secure: false,
         bypass: (req) => {
@@ -96,7 +104,7 @@ export default defineConfig({
         },
       },
       "/manager": {
-        target: "http://localhost:3000",
+        target: proxyTarget,
         changeOrigin: true,
         secure: false,
         bypass: (req) => {
@@ -104,7 +112,7 @@ export default defineConfig({
         },
       },
       "/resident-register": {
-        target: "http://localhost:3000",
+        target: proxyTarget,
         changeOrigin: true,
         secure: false,
         bypass: (req) => {
