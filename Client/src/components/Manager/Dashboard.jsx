@@ -1,4 +1,4 @@
-import React, { memo, useEffect, useState } from "react";
+import React, { memo, useCallback, useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import axios from "axios";
 import {
@@ -28,6 +28,7 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import "../../assets/css/Manager/Dashboard.css";
 
 import { Loader } from "../Loader";
+import { DateRangeFilter } from "../shared";
 import { useSocket } from "../../hooks/useSocket";
 
 const CURRENCY_FORMATTER = new Intl.NumberFormat("en-IN", {
@@ -654,8 +655,40 @@ export function ManagerDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [bookingNotifications, setBookingNotifications] = useState([]);
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
   const socket = useSocket("");
   const navigate = useNavigate();
+
+  const fetchDashboardData = useCallback(async (from = "", to = "") => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const params = {};
+      if (from) params.from = from;
+      if (to) params.to = to;
+
+      const response = await axios.get("/manager/api/dashboard", { params });
+      const result = response.data;
+
+      if (response.status === 401) {
+        setError("Unauthorized: Please log in again");
+        return;
+      }
+
+      if (!result.success) {
+        throw new Error(result.message || "Failed to fetch dashboard data");
+      }
+
+      setDashboardData(result.data);
+      setBookingNotifications(result.data.bookings?.recent || []);
+    } catch (requestError) {
+      setError(requestError.response?.data?.message || requestError.message || "An error occurred while fetching dashboard data.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (!socket) return;
@@ -669,32 +702,18 @@ export function ManagerDashboard() {
   }, [socket]);
 
   useEffect(() => {
-    (async () => {
-      try {
-        setLoading(true);
-        setError(null);
+    fetchDashboardData();
+  }, [fetchDashboardData]);
 
-        const response = await axios.get("/manager/api/dashboard");
-        const result = response.data;
+  const handleApplyRange = () => {
+    fetchDashboardData(fromDate, toDate);
+  };
 
-        if (response.status === 401) {
-          setError("Unauthorized: Please log in again");
-          return;
-        }
-
-        if (!result.success) {
-          throw new Error(result.message || "Failed to fetch dashboard data");
-        }
-
-        setDashboardData(result.data);
-        setBookingNotifications(result.data.bookings?.recent || []);
-      } catch (requestError) {
-        setError(requestError.response?.data?.message || requestError.message || "An error occurred while fetching dashboard data.");
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, []);
+  const handleResetRange = () => {
+    setFromDate("");
+    setToDate("");
+    fetchDashboardData("", "");
+  };
 
   if (error) {
     return (
@@ -711,6 +730,30 @@ export function ManagerDashboard() {
       <div className="manager-dashboard-shell__inner">
         <HeroBanner data={dashboardData} onNavigate={navigate} />
         <OpsStrip data={dashboardData} loading={loading} />
+        <section
+          style={{
+            background: "#ffffff",
+            border: "1px solid #e2e8f0",
+            borderRadius: "16px",
+            padding: "14px 16px",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: "12px",
+            flexWrap: "wrap",
+          }}
+        >
+          <div style={{ fontWeight: 700, color: "#0f172a" }}>Graph Date Range</div>
+          <DateRangeFilter
+            fromDate={fromDate}
+            toDate={toDate}
+            onFromDateChange={setFromDate}
+            onToDateChange={setToDate}
+            onApply={handleApplyRange}
+            onReset={handleResetRange}
+            loading={loading}
+          />
+        </section>
 
         <section className="manager-dashboard-grid">
           <div className="manager-dashboard-grid__main">

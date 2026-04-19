@@ -7,6 +7,9 @@
     "test:report": "node --experimental-vm-modules node_modules/jest/bin/jest.js --json --outputFile=test-report.json",
     "test:verbose": "node --experimental-vm-modules node_modules/jest/bin/jest.js --verbose",
     "seed": "node seeder/seed.js",
+    "seed:mega": "node seeder/seedMegaCommunity.js",
+    "seed:lite": "node seeder/seedLiteCommunities.js",
+    "rebalance:security": "node scripts/rebalanceSecurityPerCommunity.js --apply",
     "benchmark:redis": "node scripts/redisBenchmark.js"
   },
   "dependencies": {

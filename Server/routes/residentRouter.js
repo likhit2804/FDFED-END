@@ -7,6 +7,7 @@ import Payment from "../models/payment.js";
 import Visitor from "../models/visitors.js";
 import { getTimeAgo, getPaymentRemainders } from "../utils/residentHelpers.js";
 import { cacheRoute } from "../middleware/cacheMiddleware.js";
+import { parseDateRangeFromQuery, withDateRangeMatch } from "../utils/dateRange.js";
 
 const residentRouter = express.Router();
 
@@ -44,12 +45,29 @@ residentRouter.use("/", notificationResidentRouter);
 residentRouter.get("/api/dashboard", cacheRoute(15), async (req, res) => {
   try {
     const now = new Date();
+    const dateRange = parseDateRangeFromQuery(req.query);
+    if (dateRange.error) {
+      return res.status(400).json({ success: false, message: dateRange.error });
+    }
+
     const recents = [];
-    const issues = await Issue.find({ resident: req.user.id });
-    const commonSpaces = await CommonSpaces.find({ bookedBy: req.user.id });
-    const payments = await Payment.find({ sender: req.user.id });
-    const preApp = await Visitor.find({ approvedBy: req.user.id });
+    const issueQuery = withDateRangeMatch({ resident: req.user.id }, "createdAt", dateRange.range);
+    const commonSpaceQuery = withDateRangeMatch({ bookedBy: req.user.id }, "createdAt", dateRange.range);
+    const preApprovalQuery = withDateRangeMatch({ approvedBy: req.user.id }, "createdAt", dateRange.range);
+
+    const issues = await Issue.find(issueQuery);
+    const commonSpaces = await CommonSpaces.find(commonSpaceQuery);
+    const paymentsRaw = await Payment.find({ sender: req.user.id });
+    const preApp = await Visitor.find(preApprovalQuery);
     const resident = await Resident.findById(req.user.id);
+
+    const payments = paymentsRaw.filter((paymentDoc) => {
+      if (!dateRange.range) return true;
+      const eventDate = paymentDoc.paymentDate || paymentDoc.createdAt;
+      if (!eventDate) return false;
+      const ts = new Date(eventDate).getTime();
+      return ts >= dateRange.range.$gte.getTime() && ts <= dateRange.range.$lte.getTime();
+    });
 
     recents.push(
       ...issues.map((i) => ({ type: "Issue", title: i.issueID, date: i.createdAt })),
@@ -80,12 +98,23 @@ residentRouter.get("/api/dashboard", cacheRoute(15), async (req, res) => {
       n.timeAgo = getTimeAgo(n.createdAt);
     });
     notificationFeed.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    const trimmedNotifications = notificationFeed.filter(
-      (n) => new Date(n.createdAt) >= oneDayAgo
-    );
+    const trimmedNotifications = dateRange.range
+      ? notificationFeed.filter((n) => {
+        const createdAt = new Date(n.createdAt).getTime();
+        return createdAt >= dateRange.range.$gte.getTime() && createdAt <= dateRange.range.$lte.getTime();
+      })
+      : notificationFeed.filter((n) => new Date(n.createdAt) >= new Date(Date.now() - 24 * 60 * 60 * 1000));
 
-    return res.json({ success: true, recents, notifications: trimmedNotifications, pendingPayments });
+    return res.json({
+      success: true,
+      recents,
+      notifications: trimmedNotifications,
+      pendingPayments,
+      appliedRange: {
+        from: dateRange.from,
+        to: dateRange.to,
+      },
+    });
   } catch (err) {
     console.error("Dashboard error:", err);
     return res.status(500).json({ success: false, message: "Server error" });

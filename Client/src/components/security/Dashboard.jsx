@@ -3,28 +3,34 @@ import { Clock, UserCheck, Users } from "lucide-react";
 import axios from "axios";
 
 import { Loader } from "../Loader";
-import { GraphBar, GraphPie, StatCard } from "../shared";
+import { DateRangeFilter, GraphBar, GraphPie, StatCard } from "../shared";
 import { ManagerPageShell, ManagerSection } from "../shared/roleUI";
 import { UE_CHART_COLORS } from "../shared/chartPalette";
 
 export const SecurityDashboard = () => {
   const [stats, setStats] = useState({ Visitor: 0, Pending: 0, Active: 0 });
   const [loading, setLoading] = useState(true);
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+
+  const fetchData = async (from = "", to = "") => {
+    try {
+      setLoading(true);
+      const params = {};
+      if (from) params.from = from;
+      if (to) params.to = to;
+      const response = await axios.get("/security/dashboard/api", { params });
+      const data = response.data;
+      if (!data.success) return;
+      setStats(data.stats || { Visitor: 0, Pending: 0, Active: 0 });
+    } catch (error) {
+      console.error("Security dashboard load error:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await axios.get("/security/dashboard/api");
-        const data = response.data;
-        if (!data.success) return;
-        setStats(data.stats || { Visitor: 0, Pending: 0, Active: 0 });
-      } catch (error) {
-        console.error("Security dashboard load error:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchData();
   }, []);
 
@@ -74,6 +80,21 @@ export const SecurityDashboard = () => {
         eyebrow="Insights"
         title="Visitor analytics"
         description="Live distribution and load trends for gate operations."
+        actions={(
+          <DateRangeFilter
+            fromDate={fromDate}
+            toDate={toDate}
+            onFromDateChange={setFromDate}
+            onToDateChange={setToDate}
+            onApply={() => fetchData(fromDate, toDate)}
+            onReset={() => {
+              setFromDate("");
+              setToDate("");
+              fetchData("", "");
+            }}
+            loading={loading}
+          />
+        )}
       >
         {loading ? (
           <div className="manager-ui-empty">

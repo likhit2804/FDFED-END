@@ -8,10 +8,11 @@ import { useEffect, useMemo, useState } from "react";
 import { CircleAlert, CircleCheck, ClipboardList } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 import LeaveApplyForm from "../LeaveApplyForm";
 import { Loader } from "../Loader";
-import { EmptyState, GraphPie, StatCard } from "../shared";
+import { DateRangeFilter, EmptyState, GraphPie, StatCard } from "../shared";
 import { setDashboardData, setIssues } from "../../slices/workerSlice";
 import { UE_CHART_PALETTE } from "../shared/chartPalette";
 import {
@@ -34,23 +35,30 @@ export const WorkerDashboard = () => {
   const issues = useSelector((state) => state?.worker?.Issues) || [];
   const [showLeaveModal, setShowLeaveModal] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+
+  const fetchData = async (from = "", to = "") => {
+    try {
+      setLoading(true);
+      const params = {};
+      if (from) params.from = from;
+      if (to) params.to = to;
+
+      const response = await axios.get("/worker/getDashboardData", { params });
+      const data = response.data;
+      if (!data.success) return;
+
+      dispatch(setDashboardData(data.worker));
+      dispatch(setIssues(data.issues || []));
+    } catch (error) {
+      console.error("Worker dashboard fetch error:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await axios.get("/worker/getDashboardData");
-        const data = response.data;
-        if (!data.success) return;
-
-        dispatch(setDashboardData(data.worker));
-        dispatch(setIssues(data.issues || []));
-      } catch (error) {
-        console.error("Worker dashboard fetch error:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchData();
   }, [dispatch]);
 
@@ -96,6 +104,21 @@ export const WorkerDashboard = () => {
           eyebrow="Insights"
           title="Performance analytics"
           description="Live chart for current task status distribution."
+          actions={(
+            <DateRangeFilter
+              fromDate={fromDate}
+              toDate={toDate}
+              onFromDateChange={setFromDate}
+              onToDateChange={setToDate}
+              onApply={() => fetchData(fromDate, toDate)}
+              onReset={() => {
+                setFromDate("");
+                setToDate("");
+                fetchData("", "");
+              }}
+              loading={loading}
+            />
+          )}
         >
           {loading ? (
             <div className="manager-ui-empty">

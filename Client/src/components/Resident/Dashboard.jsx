@@ -3,13 +3,14 @@ import { AlertCircle, Bell, CalendarCheck2, Clock3 } from "lucide-react";
 import axios from "axios";
 
 import { Loader } from "../Loader";
-import { EmptyState, StatCard } from "../shared";
+import { DateRangeFilter, EmptyState, GraphBar, StatCard } from "../shared";
 import {
   ManagerPageShell,
   ManagerRecordCard,
   ManagerRecordGrid,
   ManagerSection,
 } from "../shared/roleUI";
+import { UE_CHART_COLORS } from "../shared/chartPalette";
 
 const formatTimestamp = (value) => {
   if (!value) return "Just now";
@@ -25,24 +26,31 @@ export const ResidentDashboard = () => {
   const [recents, setRecents] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+
+  const loadDashboard = async (from = "", to = "") => {
+    try {
+      setLoading(true);
+      const params = {};
+      if (from) params.from = from;
+      if (to) params.to = to;
+
+      const response = await axios.get("/resident/api/dashboard", { params });
+      const data = response.data;
+      if (!data.success) return;
+
+      setRecents(data.recents || []);
+      setNotifications(data.notifications || []);
+    } catch (error) {
+      console.error("Resident dashboard fetch error:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        const response = await axios.get("/resident/api/dashboard");
-        const data = response.data;
-        if (!data.success) return;
-
-        setRecents(data.recents || []);
-        setNotifications(data.notifications || []);
-      } catch (error) {
-        console.error("Resident dashboard fetch error:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    load();
+    loadDashboard();
   }, []);
 
   const issueCount = useMemo(
@@ -67,6 +75,19 @@ export const ResidentDashboard = () => {
         String(item?.type || "").toLowerCase().includes("preapproval")
       ).length,
     [recents]
+  );
+
+  const activityGraphData = useMemo(
+    () => [
+      { name: "Issues", count: issueCount },
+      { name: "Payments", count: paymentCount },
+      { name: "Pre-Approvals", count: preApprovalCount },
+      {
+        name: "Common Space",
+        count: recents.filter((item) => String(item?.type || "").toLowerCase().includes("commonspace")).length,
+      },
+    ],
+    [issueCount, paymentCount, preApprovalCount, recents]
   );
 
   return (
@@ -112,6 +133,41 @@ export const ResidentDashboard = () => {
             iconBg="var(--surface-2)"
           />
         </div>
+      </ManagerSection>
+
+      <ManagerSection
+        eyebrow="Insights"
+        title="Activity graph"
+        description="Date-filtered distribution of your recent activity types."
+        actions={(
+          <DateRangeFilter
+            fromDate={fromDate}
+            toDate={toDate}
+            onFromDateChange={setFromDate}
+            onToDateChange={setToDate}
+            onApply={() => loadDashboard(fromDate, toDate)}
+            onReset={() => {
+              setFromDate("");
+              setToDate("");
+              loadDashboard("", "");
+            }}
+            loading={loading}
+          />
+        )}
+      >
+        {loading ? (
+          <div className="manager-ui-empty">
+            <Loader label="Loading resident activity graph..." />
+          </div>
+        ) : (
+          <GraphBar
+            title="Activity split"
+            subtitle="Grouped by activity type in selected date range"
+            xKey="name"
+            data={activityGraphData}
+            bars={[{ key: "count", label: "Records", color: UE_CHART_COLORS.slate }]}
+          />
+        )}
       </ManagerSection>
 
       <div className="manager-ui-two-column">

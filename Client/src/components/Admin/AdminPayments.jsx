@@ -9,6 +9,7 @@ import GraphLine from "./GraphLine";
 import GraphPie from "./GraphPie";
 import Card from "./Card";
 import { DollarSign, Grid2x2, Clock, XCircle } from "lucide-react";
+import { GraphBar } from "../shared";
 
 export default function Payments() {
   // ===== States =====
@@ -20,6 +21,7 @@ export default function Payments() {
     failedPayments: 0,
   });
   const [graphData, setGraphData] = useState([]);
+  const [communityRevenueData, setCommunityRevenueData] = useState([]);
   const [planDistribution, setPlanDistribution] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -45,7 +47,7 @@ export default function Payments() {
         const res = await axios.get("/admin/api/payments");
         const json = res.data;
         if (json.success) {
-          const { payments, statistics, monthlyRevenue, planDistribution } = json.data;
+          const { payments, statistics, monthlyRevenue, planDistribution, communityRevenue = [] } = json.data;
 
           setData(
             payments.map((p) => ({
@@ -61,6 +63,11 @@ export default function Payments() {
 
           setStats(statistics);
           setGraphData(monthlyRevenue.map((m) => ({ x: m.month, y: m.revenue })));
+          setCommunityRevenueData(
+            communityRevenue
+              .slice(0, 10)
+              .map((item) => ({ x: item.communityName, revenue: item.revenue, transactions: item.completedTransactions }))
+          );
           setPlanDistribution(planDistribution);
         } else {
           throw new Error("Invalid response from server");
@@ -373,6 +380,20 @@ const filteredGraphData = useMemo(() => {
             Payment Status Distribution
           </h5>
           <GraphPie data={paymentStatusData} colors={["#22c55e", "#facc15", "#ef4444"]} />
+        </div>
+
+        <div style={styles.graphCard}>
+          <h5 style={{ fontWeight: 700, color: "#0f172a", marginBottom: "16px" }}>
+            Revenue by Community
+          </h5>
+          <GraphBar
+            title="Top Communities"
+            subtitle="Completed-payment revenue per community"
+            xKey="x"
+            data={communityRevenueData}
+            bars={[{ key: "revenue", label: "Revenue", color: "#0f766e" }]}
+            height={300}
+          />
         </div>
       </div>
 

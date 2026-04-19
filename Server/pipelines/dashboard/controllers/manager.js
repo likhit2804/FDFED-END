@@ -7,14 +7,25 @@ import visitor from "../../../models/visitors.js";
 import CommunityManager from "../../../models/cManager.js";
 import mongoose from "mongoose";
 import { sendError } from "../../shared/helpers.js";
+import { parseDateRangeFromQuery, withDateRangeMatch } from "../../../utils/dateRange.js";
 
 export const getDashboardData = async (req, res) => {
     try {
+        const dateRange = parseDateRangeFromQuery(req.query);
+        if (dateRange.error) {
+            return res.status(400).json({
+                success: false,
+                message: dateRange.error,
+            });
+        }
+
         const communityId = req.user.community;
         const communityMatchId =
             typeof communityId === "string" && mongoose.Types.ObjectId.isValid(communityId)
                 ? new mongoose.Types.ObjectId(communityId)
                 : communityId;
+        const issueMatch = withDateRangeMatch({ community: communityMatchId }, "createdAt", dateRange.range);
+        const bookingMatch = withDateRangeMatch({ community: communityMatchId }, "createdAt", dateRange.range);
 
         const [
             totalResidents,
@@ -29,7 +40,7 @@ export const getDashboardData = async (req, res) => {
             Worker.countDocuments({ community: communityMatchId }),
             visitor.countDocuments({ community: communityMatchId }),
             Issue.aggregate([
-                { $match: { community: communityMatchId } },
+                { $match: issueMatch },
                 {
                     $facet: {
                         counts: [
@@ -100,7 +111,7 @@ export const getDashboardData = async (req, res) => {
                 },
             ]),
             CommonSpaces.aggregate([
-                { $match: { community: communityMatchId } },
+                { $match: bookingMatch },
                 {
                     $facet: {
                         counts: [
@@ -155,6 +166,12 @@ export const getDashboardData = async (req, res) => {
             ]),
             Payment.aggregate([
                 { $match: { community: communityMatchId } },
+                {
+                    $addFields: {
+                        effectiveDate: { $ifNull: ["$paymentDate", "$createdAt"] },
+                    },
+                },
+                ...(dateRange.hasRange ? [{ $match: { effectiveDate: dateRange.range } }] : []),
                 {
                     $project: {
                         statusLower: { $toLower: { $ifNull: ["$status", ""] } },
@@ -292,6 +309,10 @@ export const getDashboardData = async (req, res) => {
                 },
                 visitors: {
                     today: totalAdvisitorsCount,
+                },
+                appliedRange: {
+                    from: dateRange.from,
+                    to: dateRange.to,
                 },
             },
             message: "Dashboard data fetched successfully",

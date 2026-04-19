@@ -198,6 +198,7 @@ export const getPayments = async (req, res) => {
 
     let totalRevenue = 0, totalTransactions = 0, pendingPayments = 0, failedPayments = 0;
     const allPayments = [];
+    const communityRevenueMap = new Map();
 
     for (const p of payments) {
       const amount = p.amount || 0;
@@ -213,6 +214,20 @@ export const getPayments = async (req, res) => {
       if (status === 'completed') {
         totalRevenue += amount;
         totalTransactions++;
+
+        const communityKey = p.communityId?._id
+          ? p.communityId._id.toString()
+          : (p.communityId ? p.communityId.toString() : 'unknown');
+        const communityName = p.communityId?.name || 'Unknown';
+        const entry = communityRevenueMap.get(communityKey) || {
+          communityId: communityKey,
+          communityName,
+          revenue: 0,
+          completedTransactions: 0,
+        };
+        entry.revenue += amount;
+        entry.completedTransactions += 1;
+        communityRevenueMap.set(communityKey, entry);
       } else if (status === 'pending') {
         pendingPayments++;
       } else if (status === 'failed') {
@@ -262,6 +277,8 @@ export const getPayments = async (req, res) => {
       standard: communities.filter((c) => c.subscriptionPlan === 'standard').length,
       premium: communities.filter((c) => c.subscriptionPlan === 'premium').length,
     };
+    const communityRevenue = [...communityRevenueMap.values()]
+      .sort((a, b) => b.revenue - a.revenue);
 
     res.json({
       success: true,
@@ -269,6 +286,7 @@ export const getPayments = async (req, res) => {
         payments: allPayments,
         statistics: { totalRevenue, totalTransactions, pendingPayments, failedPayments },
         monthlyRevenue,
+        communityRevenue,
         planDistribution,
       },
     });
