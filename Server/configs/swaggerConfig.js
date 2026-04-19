@@ -13,6 +13,10 @@ const options = {
     },
     servers: [
       {
+        url: 'https://urbanease-backend-6gff.onrender.com',
+        description: 'Production Server',
+      },
+      {
         url: 'http://localhost:3000',
         description: 'Development Server',
       },

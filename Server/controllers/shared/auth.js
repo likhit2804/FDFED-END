@@ -25,7 +25,11 @@ const auth = async (req, res, next) => {
         req.user = decoded;  
         next(); 
     } catch (error) {
-        res.clearCookie('token');  
+        res.clearCookie('token', {
+            httpOnly: true,
+            sameSite: "none",
+            secure: true,
+        });  
         if (isApi) {
             return res.status(401).json({ success: false, message: 'Session expired or invalid, please log in again' });
         }
