@@ -197,43 +197,45 @@ const VisitorManagement = () => {
         )}
       </ManagerSection>
 
-      <Modal
-        isOpen={showModal}
-        onClose={() => setShowModal(false)}
-        title="Add a Visitor"
-        size="lg"
-        footer={
-          <>
-            <button onClick={() => setShowModal(false)} disabled={submitting} style={{ padding: "9px 18px", borderRadius: 8, border: "1px solid #e5e7eb", background: "#f9fafb", color: "#374151", fontWeight: 600, cursor: "pointer" }}>
-              Cancel
-            </button>
-            <button onClick={handleSubmit} disabled={submitting} style={{ padding: "9px 20px", borderRadius: 8, border: "none", background: "var(--warning-700)", color: "#fff", fontWeight: 600, cursor: submitting ? "not-allowed" : "pointer", opacity: submitting ? 0.7 : 1 }}>
-              {submitting ? "Submitting..." : "Submit Request"}
-            </button>
-          </>
-        }
-      >
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 20px" }}>
-          <Select
-            label="Type of visitor"
-            name="visitorType"
-            value={formData.visitorType}
-            onChange={handleChange}
-            options={[
-              { label: "Guest", value: "Guest" },
-              { label: "Delivery", value: "Delivery" },
-              { label: "Service", value: "Service" },
-            ]}
-            placeholder="Select visitor type"
-          />
-          <Input label="Contact number" placeholder="10 digit mobile number" name="contact" value={formData.contact} onChange={handleChange} />
-          <Input label="Full name" placeholder="Enter visitor's full name" name="fullName" value={formData.fullName} onChange={handleChange} />
-          <Input label="Email address" type="email" placeholder="visitor@example.com" name="email" value={formData.email} onChange={handleChange} />
-          <div style={{ gridColumn: "1 / -1" }}>
-            <Input label="Vehicle number (optional)" placeholder="e.g. MH12AB1234" name="vehicleNo" value={formData.vehicleNo} onChange={handleChange} />
+      {showModal ? (
+        <Modal
+          isOpen={showModal}
+          onClose={() => setShowModal(false)}
+          title="Add a Visitor"
+          size="lg"
+          footer={
+            <>
+              <button onClick={() => setShowModal(false)} disabled={submitting} style={{ padding: "9px 18px", borderRadius: 8, border: "1px solid #e5e7eb", background: "#f9fafb", color: "#374151", fontWeight: 600, cursor: "pointer" }}>
+                Cancel
+              </button>
+              <button onClick={handleSubmit} disabled={submitting} style={{ padding: "9px 20px", borderRadius: 8, border: "none", background: "var(--warning-700)", color: "#fff", fontWeight: 600, cursor: submitting ? "not-allowed" : "pointer", opacity: submitting ? 0.7 : 1 }}>
+                {submitting ? "Submitting..." : "Submit Request"}
+              </button>
+            </>
+          }
+        >
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 20px" }}>
+            <Select
+              label="Type of visitor"
+              name="visitorType"
+              value={formData.visitorType}
+              onChange={handleChange}
+              options={[
+                { label: "Guest", value: "Guest" },
+                { label: "Delivery", value: "Delivery" },
+                { label: "Service", value: "Service" },
+              ]}
+              placeholder="Select visitor type"
+            />
+            <Input label="Contact number" placeholder="10 digit mobile number" name="contact" value={formData.contact} onChange={handleChange} />
+            <Input label="Full name" placeholder="Enter visitor's full name" name="fullName" value={formData.fullName} onChange={handleChange} />
+            <Input label="Email address" type="email" placeholder="visitor@example.com" name="email" value={formData.email} onChange={handleChange} />
+            <div style={{ gridColumn: "1 / -1" }}>
+              <Input label="Vehicle number (optional)" placeholder="e.g. MH12AB1234" name="vehicleNo" value={formData.vehicleNo} onChange={handleChange} />
+            </div>
           </div>
-        </div>
-      </Modal>
+        </Modal>
+      ) : null}
     </ManagerPageShell>
   );
 };

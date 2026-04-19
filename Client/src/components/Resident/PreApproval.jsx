@@ -137,59 +137,63 @@ export function PreApproval() {
       </ManagerSection>
 
       {/* Pre-Approve Form Modal */}
-      <Modal
-        isOpen={showForm}
-        onClose={() => setShowForm(false)}
-        title="Pre Approve Visitor"
-        size="sm"
-        footer={
-          <>
-            <button onClick={() => setShowForm(false)} style={{ padding: '9px 18px', borderRadius: 8, border: '1px solid #e5e7eb', background: '#f9fafb', color: '#374151', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
-            <button onClick={handleSubmit} style={{ padding: '9px 20px', borderRadius: 8, border: 'none', background: '#2563eb', color: '#fff', fontWeight: 600, cursor: 'pointer' }}>
-              <i className="bi bi-check-circle me-1"></i> Submit Request
-            </button>
-          </>
-        }
-      >
-        <Input label="Visitor Name" name="visitorName" required value={form.visitorName} onChange={handleChange} />
-        <Input label="Phone Number" name="contactNumber" required maxLength={10} value={form.contactNumber} onChange={handleChange} />
-        <Select
-          label="Visitor Type"
-          name="purpose"
-          required
-          value={form.purpose}
-          onChange={handleChange}
-          options={[
-            { label: 'Guest', value: 'guest' },
-            { label: 'Delivery', value: 'delivery' },
-            { label: 'Service', value: 'service' },
-            { label: 'Maintenance', value: 'maintenance' },
-          ]}
-          placeholder="Select type"
-        />
-        <Input type="date" label="Date of Visit" name="dateOfVisit" required value={form.dateOfVisit} onChange={handleChange} />
-        <Input type="time" label="Time of Visit" name="timeOfVisit" required value={form.timeOfVisit} onChange={handleChange} />
-      </Modal>
+      {showForm ? (
+        <Modal
+          isOpen={showForm}
+          onClose={() => setShowForm(false)}
+          title="Pre Approve Visitor"
+          size="sm"
+          footer={
+            <>
+              <button onClick={() => setShowForm(false)} style={{ padding: '9px 18px', borderRadius: 8, border: '1px solid #e5e7eb', background: '#f9fafb', color: '#374151', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
+              <button onClick={handleSubmit} style={{ padding: '9px 20px', borderRadius: 8, border: 'none', background: '#2563eb', color: '#fff', fontWeight: 600, cursor: 'pointer' }}>
+                <i className="bi bi-check-circle me-1"></i> Submit Request
+              </button>
+            </>
+          }
+        >
+          <Input label="Visitor Name" name="visitorName" required value={form.visitorName} onChange={handleChange} />
+          <Input label="Phone Number" name="contactNumber" required maxLength={10} value={form.contactNumber} onChange={handleChange} />
+          <Select
+            label="Visitor Type"
+            name="purpose"
+            required
+            value={form.purpose}
+            onChange={handleChange}
+            options={[
+              { label: 'Guest', value: 'guest' },
+              { label: 'Delivery', value: 'delivery' },
+              { label: 'Service', value: 'service' },
+              { label: 'Maintenance', value: 'maintenance' },
+            ]}
+            placeholder="Select type"
+          />
+          <Input type="date" label="Date of Visit" name="dateOfVisit" required value={form.dateOfVisit} onChange={handleChange} />
+          <Input type="time" label="Time of Visit" name="timeOfVisit" required value={form.timeOfVisit} onChange={handleChange} />
+        </Modal>
+      ) : null}
 
       {/* QR Code Modal */}
-      <Modal
-        isOpen={showQR}
-        onClose={() => setShowQR(false)}
-        title="Pre-Approval QR Code"
-        size="sm"
-        footer={
-          <button
-            onClick={() => { const a = document.createElement("a"); a.href = qrImage; a.download = "QR-Code.png"; a.click(); }}
-            style={{ padding: '9px 20px', borderRadius: 8, border: 'none', background: '#2563eb', color: '#fff', fontWeight: 600, cursor: 'pointer' }}
-          >
-            <i className="bi bi-download me-1"></i> Download QR
-          </button>
-        }
-      >
-        <div style={{ textAlign: 'center', padding: '16px 0' }}>
-          <img src={qrImage} alt="QR Code" style={{ width: "200px" }} />
-        </div>
-      </Modal>
+      {showQR ? (
+        <Modal
+          isOpen={showQR}
+          onClose={() => setShowQR(false)}
+          title="Pre-Approval QR Code"
+          size="sm"
+          footer={
+            <button
+              onClick={() => { const a = document.createElement("a"); a.href = qrImage; a.download = "QR-Code.png"; a.click(); }}
+              style={{ padding: '9px 20px', borderRadius: 8, border: 'none', background: '#2563eb', color: '#fff', fontWeight: 600, cursor: 'pointer' }}
+            >
+              <i className="bi bi-download me-1"></i> Download QR
+            </button>
+          }
+        >
+          <div style={{ textAlign: 'center', padding: '16px 0' }}>
+            <img src={qrImage} alt="QR Code" style={{ width: "200px" }} />
+          </div>
+        </Modal>
+      ) : null}
     </ManagerPageShell>
   );
 }

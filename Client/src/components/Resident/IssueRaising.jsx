@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { Suspense, lazy, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast, ToastContainer } from "react-toastify";
 import { useDispatch, useSelector } from "react-redux";
@@ -8,9 +8,14 @@ import { Loader } from "../Loader";
 import { useSocket } from "../../hooks/useSocket";
 import { EmptyState, Modal, Input, Select, StatCard, Textarea, Tabs } from "../shared";
 import { ResidentIssueCard } from "./IssueRaising/ResidentIssueCard";
-import { ResidentIssueDetailsModal } from "./IssueRaising/ResidentIssueDetailsModal";
-import { ManagerActionButton, ManagerPageShell, ManagerSection } from "../shared/roleUI";
+import { ManagerActionButton, ManagerPageShell, ManagerRecordGrid, ManagerSection } from "../shared/roleUI";
 import "../../assets/css/Resident/IssueRaising.css";
+
+const LazyResidentIssueDetailsModal = lazy(() =>
+  import("./IssueRaising/ResidentIssueDetailsModal").then((module) => ({
+    default: module.ResidentIssueDetailsModal,
+  })),
+);
 
 const R_CATEGORIES = ["Plumbing", "Electrical", "Security", "Maintenance", "Pest Control", "Waste Management"];
 const C_CATEGORIES = ["Streetlight", "Elevator", "Garden", "Common Area"];
@@ -128,19 +133,23 @@ export const IssueRaising = () => {
       </div>
 
       {/* Issues List */}
-      <h4 className="table-title">{activeTab} issues</h4>
-      <div className="ue-entity-grid ir-issues-grid">
-        {loading && (
-          <div className="col-12 d-flex justify-content-center py-5"><Loader /></div>
-        )}
+      <h4 className="manager-ui-section__title">{activeTab} issues</h4>
+      <ManagerRecordGrid>
+        {loading ? (
+          <div className="manager-ui-empty manager-ui-grid-span-all">
+            <Loader />
+          </div>
+        ) : null}
         {!loading && filteredIssues?.filter(Boolean).length > 0
           ? filteredIssues.filter(Boolean).map((issue) => (
             <ResidentIssueCard key={issue._id} issue={issue} onViewDetails={showDetails} />
           ))
           : !loading && (
-            <EmptyState icon={<AlertCircle size={42} />} title="No issues found" sub="Raise an issue to begin tracking updates." />
+            <div className="manager-ui-grid-span-all">
+              <EmptyState icon={<AlertCircle size={42} />} title="No issues found" sub="Raise an issue to begin tracking updates." />
+            </div>
           )}
-      </div>
+      </ManagerRecordGrid>
       </ManagerSection>
 
       {/* Raise Issue Modal */}
@@ -177,19 +186,23 @@ export const IssueRaising = () => {
       </Modal>
 
       {/* Details Modal */}
-      <ResidentIssueDetailsModal
-        issue={selectedIssue}
-        isOpen={isDetailsPopupOpen}
-        onClose={() => setIsDetailsPopupOpen(false)}
-        onConfirm={(id) => handleIssueAction(id, "confirm")}
-        onReject={(id) => handleIssueAction(id, "reject")}
-        feedbackText={feedbackText}
-        setFeedbackText={setFeedbackText}
-        feedbackRating={feedbackRating}
-        setFeedbackRating={setFeedbackRating}
-        feedbackSubmitting={feedbackSubmitting}
-        onFeedbackSubmit={handleFeedbackSubmit}
-      />
+      {isDetailsPopupOpen ? (
+        <Suspense fallback={<Loader label="Loading issue details..." size={24} />}>
+          <LazyResidentIssueDetailsModal
+            issue={selectedIssue}
+            isOpen={isDetailsPopupOpen}
+            onClose={() => setIsDetailsPopupOpen(false)}
+            onConfirm={(id) => handleIssueAction(id, "confirm")}
+            onReject={(id) => handleIssueAction(id, "reject")}
+            feedbackText={feedbackText}
+            setFeedbackText={setFeedbackText}
+            feedbackRating={feedbackRating}
+            setFeedbackRating={setFeedbackRating}
+            feedbackSubmitting={feedbackSubmitting}
+            onFeedbackSubmit={handleFeedbackSubmit}
+          />
+        </Suspense>
+      ) : null}
     </ManagerPageShell>
   );
 };

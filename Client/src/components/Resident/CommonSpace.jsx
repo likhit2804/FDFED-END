@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
@@ -7,7 +7,6 @@ import 'react-day-picker/dist/style.css';
 import { ToastContainer, toast } from 'react-toastify';
 import { useDispatch, useSelector } from 'react-redux';
 import { Building2, Calendar, Clock } from "lucide-react";
-import { DayPicker } from 'react-day-picker';
 import {
   fetchuserBookings, cancelUserBooking,
   ConfirmBooking, optimisticAddBooking, optimisticCancelBooking,
@@ -15,7 +14,6 @@ import {
 import { Loader } from '../Loader';
 import { EmptyState, Modal, Select, StatCard, Textarea } from '../shared';
 import { BookingCard } from './CommonSpace/BookingCard';
-import { BookingDetailsModal } from './CommonSpace/BookingDetailsModal';
 import { ManagerActionButton, ManagerPageShell, ManagerSection } from '../shared/roleUI';
 import {
   buildSlotsFromFacilityConfig,
@@ -27,6 +25,15 @@ import {
   parseTimeToMinutes,
   toIsoDate,
 } from "../shared/commonSpace/commonSpaceUtils";
+
+const LazyDayPicker = lazy(() =>
+  import("react-day-picker").then((module) => ({ default: module.DayPicker })),
+);
+const LazyBookingDetailsModal = lazy(() =>
+  import("./CommonSpace/BookingDetailsModal").then((module) => ({
+    default: module.BookingDetailsModal,
+  })),
+);
 
 export const CommonSpaceBooking = () => {
   const dispatch = useDispatch();
@@ -497,27 +504,29 @@ export const CommonSpaceBooking = () => {
               ) : null}
               {isCalendarOpen
                 ? createPortal(
-                    <div
-                      className={`cs-date-popover ${calendarPlacement === 'top' ? 'cs-date-popover--top' : ''}`}
-                      id="cs-booking-day-picker"
-                      style={{ top: `${calendarPosition.top}px`, left: `${calendarPosition.left}px` }}
-                    >
-                      <DayPicker
-                        className="ue-calendar ue-calendar--popover"
-                        mode="single"
-                        selected={selectedDate}
-                        onSelect={handleDatePick}
-                        disabled={[
-                          { before: todayDate },
-                          { after: maxBookableDate },
-                          isBlackoutDay,
-                        ]}
-                        showOutsideDays
-                        captionLayout="dropdown"
-                        startMonth={todayDate}
-                        endMonth={maxBookableDate}
-                      />
-                    </div>,
+                    <Suspense fallback={<Loader label="Loading calendar..." size={24} />}>
+                      <div
+                        className={`cs-date-popover ${calendarPlacement === 'top' ? 'cs-date-popover--top' : ''}`}
+                        id="cs-booking-day-picker"
+                        style={{ top: `${calendarPosition.top}px`, left: `${calendarPosition.left}px` }}
+                      >
+                        <LazyDayPicker
+                          className="ue-calendar ue-calendar--popover"
+                          mode="single"
+                          selected={selectedDate}
+                          onSelect={handleDatePick}
+                          disabled={[
+                            { before: todayDate },
+                            { after: maxBookableDate },
+                            isBlackoutDay,
+                          ]}
+                          showOutsideDays
+                          captionLayout="dropdown"
+                          startMonth={todayDate}
+                          endMonth={maxBookableDate}
+                        />
+                      </div>
+                    </Suspense>,
                     document.body
                   )
                 : null}
@@ -560,16 +569,20 @@ export const CommonSpaceBooking = () => {
       </Modal>
 
       {/* Details Modal */}
-      <BookingDetailsModal
-        booking={selectedBooking}
-        isOpen={isDetailsPopupOpen}
-        onClose={() => setIsDetailsPopupOpen(false)}
-        onPayment={() => {
-          setIsDetailsPopupOpen(false);
-          toast.info('Complete this booking payment from the Payments tab.');
-          navigate('/resident/payments');
-        }}
-      />
+      {isDetailsPopupOpen ? (
+        <Suspense fallback={<Loader label="Loading booking details..." size={24} />}>
+          <LazyBookingDetailsModal
+            booking={selectedBooking}
+            isOpen={isDetailsPopupOpen}
+            onClose={() => setIsDetailsPopupOpen(false)}
+            onPayment={() => {
+              setIsDetailsPopupOpen(false);
+              toast.info('Complete this booking payment from the Payments tab.');
+              navigate('/resident/payments');
+            }}
+          />
+        </Suspense>
+      ) : null}
     </>
   );
 };

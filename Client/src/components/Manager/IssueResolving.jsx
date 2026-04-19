@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { Suspense, lazy, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { AlertCircle, BarChart3, Building2, CheckCircle, RefreshCw, Users } from "lucide-react";
 import { toast, ToastContainer } from "react-toastify";
@@ -14,11 +14,9 @@ import {
 } from "../../slices/ManagerIssuesSlice";
 import { useSocket } from "../../hooks/useSocket";
 import { Loader } from "../Loader";
-import { Dropdown, GraphBar, GraphPie, SearchBar, StatCard, Tabs } from "../shared";
+import { Dropdown, SearchBar, StatCard, Tabs } from "../shared";
 import { useTabFilters } from "./IssueResolving/useTabFilters";
 import { IssueCard } from "./IssueResolving/IssueCard";
-import { IssueDetailsModal } from "./IssueResolving/IssueDetailsModal";
-import { WorkerAssignModal } from "./IssueResolving/WorkerAssignModal";
 import { UE_CHART_COLORS, UE_CHART_PALETTE } from "../shared/chartPalette";
 import {
   ManagerActionButton,
@@ -28,6 +26,19 @@ import {
   ManagerToolbar,
   ManagerToolbarGrow,
 } from "./ui";
+
+const LazyGraphBar = lazy(() => import("../shared/GraphBar"));
+const LazyGraphPie = lazy(() => import("../shared/GraphPie"));
+const LazyIssueDetailsModal = lazy(() =>
+  import("./IssueResolving/IssueDetailsModal").then((module) => ({
+    default: module.IssueDetailsModal,
+  })),
+);
+const LazyWorkerAssignModal = lazy(() =>
+  import("./IssueResolving/WorkerAssignModal").then((module) => ({
+    default: module.WorkerAssignModal,
+  })),
+);
 
 export const IssueResolving = () => {
   const dispatch = useDispatch();
@@ -197,19 +208,23 @@ export const IssueResolving = () => {
           description="Track issue mix by status and priority before assigning workers."
         >
           <div className="manager-ui-two-column">
-            <GraphPie
-              title="Status split"
-              subtitle="All issues in manager scope"
-              data={statusChartData}
-              colors={[...UE_CHART_PALETTE, UE_CHART_COLORS.danger]}
-            />
-            <GraphBar
-              title="Priority load"
-              subtitle="Count by urgency level"
-              xKey="name"
-              data={priorityChartData}
-              bars={[{ key: "count", label: "Issues", color: UE_CHART_COLORS.slate }]}
-            />
+            <Suspense fallback={<Loader label="Loading status chart..." size={24} />}>
+              <LazyGraphPie
+                title="Status split"
+                subtitle="All issues in manager scope"
+                data={statusChartData}
+                colors={[...UE_CHART_PALETTE, UE_CHART_COLORS.danger]}
+              />
+            </Suspense>
+            <Suspense fallback={<Loader label="Loading priority chart..." size={24} />}>
+              <LazyGraphBar
+                title="Priority load"
+                subtitle="Count by urgency level"
+                xKey="name"
+                data={priorityChartData}
+                bars={[{ key: "count", label: "Issues", color: UE_CHART_COLORS.slate }]}
+              />
+            </Suspense>
           </div>
         </ManagerSection>
 
@@ -269,15 +284,13 @@ export const IssueResolving = () => {
               type="date"
               value={filters.dateFrom}
               onChange={(event) => setFilter("dateFrom", event.target.value)}
-              className="form-control"
-              style={{ maxWidth: 170, borderRadius: 12, borderColor: "#d6c6f4" }}
+              className="form-control manager-ui-date-input"
             />
             <input
               type="date"
               value={filters.dateTo}
               onChange={(event) => setFilter("dateTo", event.target.value)}
-              className="form-control"
-              style={{ maxWidth: 170, borderRadius: 12, borderColor: "#d6c6f4" }}
+              className="form-control manager-ui-date-input"
             />
           </ManagerToolbar>
 
@@ -309,25 +322,33 @@ export const IssueResolving = () => {
         </ManagerSection>
       </ManagerPageShell>
 
-      <IssueDetailsModal
-        issue={previewIssue}
-        isOpen={previewOpen}
-        onClose={closeDetails}
-        canAssign={canAssign}
-        canReassign={canReassign}
-        onAssign={openAssign}
-        onReassign={openReassign}
-      />
+      {previewOpen ? (
+        <Suspense fallback={<Loader label="Loading issue details..." size={24} />}>
+          <LazyIssueDetailsModal
+            issue={previewIssue}
+            isOpen={previewOpen}
+            onClose={closeDetails}
+            canAssign={canAssign}
+            canReassign={canReassign}
+            onAssign={openAssign}
+            onReassign={openReassign}
+          />
+        </Suspense>
+      ) : null}
 
-      <WorkerAssignModal
-        mode={assignMode || "assign"}
-        issue={previewIssue}
-        workers={workers}
-        workersLoading={workersLoading}
-        isOpen={!!assignMode}
-        onClose={() => setAssignMode(null)}
-        onSubmit={handleWorkerAction}
-      />
+      {assignMode ? (
+        <Suspense fallback={<Loader label="Loading assignment panel..." size={24} />}>
+          <LazyWorkerAssignModal
+            mode={assignMode || "assign"}
+            issue={previewIssue}
+            workers={workers}
+            workersLoading={workersLoading}
+            isOpen={!!assignMode}
+            onClose={() => setAssignMode(null)}
+            onSubmit={handleWorkerAction}
+          />
+        </Suspense>
+      ) : null}
     </>
   );
 };

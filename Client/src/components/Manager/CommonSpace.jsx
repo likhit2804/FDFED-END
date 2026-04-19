@@ -1,9 +1,8 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { Suspense, lazy, useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useDispatch, useSelector } from "react-redux";
 import { ToastContainer, toast } from "react-toastify";
 import { BarChart3, Building2, Calendar, CheckCircle, Eye, Plus, Trash2 } from "lucide-react";
-import { DayPicker } from "react-day-picker";
 import "react-day-picker/dist/style.css";
 
 import {
@@ -20,9 +19,6 @@ import {
   ConfirmModal,
   EmptyState,
   FormSection,
-  GraphBar,
-  GraphLine,
-  GraphPie,
   Input,
   Modal,
   SearchBar,
@@ -30,6 +26,7 @@ import {
   StatCard,
   Textarea,
 } from "../shared";
+import { Loader } from "../Loader";
 import {
   ManagerActionButton,
   ManagerPageShell,
@@ -53,6 +50,13 @@ import {
   toDateFromIso,
   toDateInputValue,
 } from "../shared/commonSpace/commonSpaceUtils";
+
+const LazyDayPicker = lazy(() =>
+  import("react-day-picker").then((module) => ({ default: module.DayPicker })),
+);
+const LazyGraphBar = lazy(() => import("../shared/GraphBar"));
+const LazyGraphLine = lazy(() => import("../shared/GraphLine"));
+const LazyGraphPie = lazy(() => import("../shared/GraphPie"));
 
 export const CommonSpace = () => {
   const dispatch = useDispatch();
@@ -520,29 +524,35 @@ export const CommonSpace = () => {
           description="Monitor booking health by status, monthly demand, and top facility usage."
         >
           <div className="manager-ui-two-column">
-            <GraphPie
-              title="Status breakdown"
-              subtitle="Current booking state distribution"
-              data={bookingStatusData}
-              colors={[...UE_CHART_PALETTE, UE_CHART_COLORS.danger]}
-            />
-            <GraphBar
-              title="Top facilities"
-              subtitle="Most requested amenities"
-              xKey="name"
-              data={facilityUsageData}
-              bars={[{ key: "value", label: "Bookings", color: UE_CHART_COLORS.emerald }]}
-            />
+            <Suspense fallback={<Loader label="Loading status chart..." size={24} />}>
+              <LazyGraphPie
+                title="Status breakdown"
+                subtitle="Current booking state distribution"
+                data={bookingStatusData}
+                colors={[...UE_CHART_PALETTE, UE_CHART_COLORS.danger]}
+              />
+            </Suspense>
+            <Suspense fallback={<Loader label="Loading facility chart..." size={24} />}>
+              <LazyGraphBar
+                title="Top facilities"
+                subtitle="Most requested amenities"
+                xKey="name"
+                data={facilityUsageData}
+                bars={[{ key: "value", label: "Bookings", color: UE_CHART_COLORS.emerald }]}
+              />
+            </Suspense>
           </div>
           <div style={{ marginTop: 16 }}>
-            <GraphLine
-              title="Bookings over time"
-              subtitle="Last six months"
-              xKey="name"
-              data={bookingTrendData}
-              lines={[{ key: "bookings", label: "Bookings", color: UE_CHART_COLORS.plum }]}
-              showArea
-            />
+            <Suspense fallback={<Loader label="Loading trend chart..." size={24} />}>
+              <LazyGraphLine
+                title="Bookings over time"
+                subtitle="Last six months"
+                xKey="name"
+                data={bookingTrendData}
+                lines={[{ key: "bookings", label: "Bookings", color: UE_CHART_COLORS.plum }]}
+                showArea
+              />
+            </Suspense>
           </div>
         </ManagerSection>
 
@@ -765,37 +775,39 @@ export const CommonSpace = () => {
                   <p className="manager-ui-note">
                     Pick a date from calendar. Red = blackout, Blue = slot override.
                   </p>
-                  <DayPicker
-                    className="ue-calendar ue-calendar--inline"
-                    mode="single"
-                    month={controlMonth}
-                    onMonthChange={setControlMonth}
-                    selected={selectedControlDate}
-                    onSelect={(date) => {
-                      if (!date) return;
-                      setSelectedControlDate(date);
-                    }}
-                    showOutsideDays
-                    startMonth={minControlDate}
-                    endMonth={maxControlDate}
-                    disabled={{ before: minControlDate, after: maxControlDate }}
-                    modifiers={{
-                      blackout: blackoutModifierDays,
-                      override: overrideModifierDays,
-                    }}
-                    modifiersStyles={{
-                      blackout: {
-                        backgroundColor: "var(--danger-soft)",
-                        color: "var(--danger-700)",
-                        fontWeight: 700,
-                      },
-                      override: {
-                        backgroundColor: "var(--info-soft)",
-                        color: "var(--brand-600)",
-                        fontWeight: 700,
-                      },
-                    }}
-                  />
+                  <Suspense fallback={<Loader label="Loading calendar..." size={24} />}>
+                    <LazyDayPicker
+                      className="ue-calendar ue-calendar--inline"
+                      mode="single"
+                      month={controlMonth}
+                      onMonthChange={setControlMonth}
+                      selected={selectedControlDate}
+                      onSelect={(date) => {
+                        if (!date) return;
+                        setSelectedControlDate(date);
+                      }}
+                      showOutsideDays
+                      startMonth={minControlDate}
+                      endMonth={maxControlDate}
+                      disabled={{ before: minControlDate, after: maxControlDate }}
+                      modifiers={{
+                        blackout: blackoutModifierDays,
+                        override: overrideModifierDays,
+                      }}
+                      modifiersStyles={{
+                        blackout: {
+                          backgroundColor: "var(--danger-soft)",
+                          color: "var(--danger-700)",
+                          fontWeight: 700,
+                        },
+                        override: {
+                          backgroundColor: "var(--info-soft)",
+                          color: "var(--brand-600)",
+                          fontWeight: 700,
+                        },
+                      }}
+                    />
+                  </Suspense>
                 </div>
 
                 <div className="manager-ui-surface">

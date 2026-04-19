@@ -1,5 +1,4 @@
-import React, { useEffect, useState } from "react";
-import { Html5QrcodeScanner } from "html5-qrcode";
+import React, { useEffect, useRef, useState } from "react";
 
 import { Loader } from "../Loader";
 import { Modal, Tabs, StatusBadge, EmptyState } from "../shared";
@@ -16,19 +15,35 @@ export function SecurityPreApproval() {
   const [list, setList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showScanner, setShowScanner] = useState(false);
-  let scannerRef = null;
+  const [scannerLoading, setScannerLoading] = useState(false);
+  const scannerRef = useRef(null);
 
-  const openScanner = () => {
+  const openScanner = async () => {
     setShowScanner(true);
-    setTimeout(() => {
-      scannerRef = new Html5QrcodeScanner("qr-reader", { fps: 10, qrbox: 250 });
-      scannerRef.render(onScanSuccess, onScanError);
+    setScannerLoading(true);
+    setTimeout(async () => {
+      try {
+        const { Html5QrcodeScanner } = await import("html5-qrcode");
+        scannerRef.current = new Html5QrcodeScanner("qr-reader", { fps: 10, qrbox: 250 });
+        scannerRef.current.render(onScanSuccess, onScanError);
+      } catch (error) {
+        console.error("Failed to load scanner:", error);
+      } finally {
+        setScannerLoading(false);
+      }
     }, 100);
   };
 
   const closeScanner = () => {
     setShowScanner(false);
-    try { scannerRef?.clear(); } catch (err) { console.warn("Scanner clear failed:", err); }
+    setScannerLoading(false);
+    try {
+      scannerRef.current?.clear();
+    } catch (err) {
+      console.warn("Scanner clear failed:", err);
+    } finally {
+      scannerRef.current = null;
+    }
   };
 
   const onScanSuccess = async (decodedText) => {
@@ -75,6 +90,16 @@ export function SecurityPreApproval() {
   const filtered = list.filter((v) => v.status === tab);
 
   const tabItems = ["Pending", "Approved", "Rejected"].map(t => ({ label: t, value: t }));
+
+  useEffect(() => () => {
+    try {
+      scannerRef.current?.clear();
+    } catch (error) {
+      console.warn("Scanner cleanup failed:", error);
+    } finally {
+      scannerRef.current = null;
+    }
+  }, []);
 
   return (
     <>
@@ -138,7 +163,13 @@ export function SecurityPreApproval() {
       </ManagerPageShell>
 
       <Modal isOpen={showScanner} onClose={closeScanner} title="Scan QR Code" size="sm">
-        <div id="qr-reader" style={{ width: "350px" }} />
+        {scannerLoading ? (
+          <div className="manager-ui-empty">
+            <Loader label="Loading scanner..." />
+          </div>
+        ) : (
+          <div id="qr-reader" style={{ width: "350px" }} />
+        )}
       </Modal>
     </>
   );
