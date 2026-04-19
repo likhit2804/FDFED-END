@@ -407,6 +407,16 @@ export const CommonSpaceBooking = () => {
     setIsDetailsPopupOpen(true);
   };
 
+  const bookingFooterButtonBase = {
+    minWidth: 142,
+    minHeight: 42,
+    borderRadius: 10,
+    fontWeight: 700,
+    padding: "10px 16px",
+    border: "1px solid transparent",
+    cursor: "pointer",
+  };
+
   return (
     <>
       <ToastContainer position="top-center" />
@@ -459,10 +469,28 @@ export const CommonSpaceBooking = () => {
         size="lg"
         footer={
           <>
-            <button type="button" className="manager-ui-button manager-ui-button--secondary" onClick={() => setIsBookingFormOpen(false)}>
+            <button
+              type="button"
+              onClick={() => setIsBookingFormOpen(false)}
+              style={{
+                ...bookingFooterButtonBase,
+                background: "#ffffff",
+                borderColor: "#cbd5e1",
+                color: "#1f2937",
+              }}
+            >
               Cancel
             </button>
-            <button type="button" className="manager-ui-button manager-ui-button--primary" onClick={handleSubmit(onSubmit)} disabled={formSubmitting || Boolean(dateRestrictionMessage)}>
+            <button
+              type="button"
+              onClick={handleSubmit(onSubmit)}
+              disabled={formSubmitting || Boolean(dateRestrictionMessage)}
+              style={{
+                ...bookingFooterButtonBase,
+                background: formSubmitting || Boolean(dateRestrictionMessage) ? "#9ca3af" : "#2563eb",
+                color: "#ffffff",
+              }}
+            >
               {formSubmitting ? 'Submitting...' : 'Submit Booking'}
             </button>
           </>

@@ -1,3 +1,5 @@
+import { buildCategoryCountData } from "../chartDataUtils";
+
 export const formatBookingDate = (value, locale = "en-US") =>
   new Date(value).toLocaleDateString(locale, {
     year: "numeric",
@@ -177,14 +179,53 @@ export const getOccupancyRate = (bookings = []) => {
   return Math.round((approvedCount / bookings.length) * 100);
 };
 
-export const getBookingStatusData = (bookings = []) => {
-  const counts = bookings.reduce((accumulator, booking) => {
-    const status = booking?.status || "Unknown";
-    accumulator[status] = (accumulator[status] || 0) + 1;
-    return accumulator;
-  }, {});
+export const normalizeBookingStatusLabel = (statusValue) => {
+  const label = String(statusValue || "").trim();
+  if (!label) return "Unknown";
 
-  return Object.entries(counts).map(([name, value]) => ({ name, value }));
+  const normalized = label.toLowerCase();
+  if (normalized === "avalaible" || normalized === "available") return "Available";
+  if (
+    normalized === "cancelled" ||
+    normalized === "cancelled by resident" ||
+    normalized === "cancelled by manager"
+  ) {
+    return "Cancelled";
+  }
+
+  return label;
+};
+
+export const getBookingStatusData = (bookings = []) => {
+  const bookingStatusOrder = [
+    "Pending",
+    "Active",
+    "Approved/Paid",
+    "Cancelled/Rejected",
+    "Completed/Expired",
+  ];
+
+  const toGroupedStatus = (statusLabel) => {
+    const normalized = normalizeBookingStatusLabel(statusLabel);
+    const lower = normalized.toLowerCase();
+
+    if (lower === "pending" || lower === "pending payment") return "Pending";
+    if (lower === "available" || lower === "booked" || lower === "active") return "Active";
+    if (lower === "approved" || lower === "paid") return "Approved/Paid";
+    if (lower === "cancelled" || lower === "rejected") return "Cancelled/Rejected";
+    if (lower === "completed" || lower === "expired") return "Completed/Expired";
+
+    return "Unknown";
+  };
+
+  return buildCategoryCountData(
+    bookings,
+    (booking) => booking?.status,
+    {
+      order: bookingStatusOrder,
+      normalize: (statusLabel) => toGroupedStatus(statusLabel),
+    },
+  );
 };
 
 export const getBookingTrendData = (bookings = []) => {

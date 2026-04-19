@@ -18,6 +18,7 @@ import { Dropdown, SearchBar, StatCard, Tabs } from "../shared";
 import { useTabFilters } from "./IssueResolving/useTabFilters";
 import { IssueCard } from "./IssueResolving/IssueCard";
 import { UE_CHART_COLORS, UE_CHART_PALETTE } from "../shared/chartPalette";
+import { buildCategoryCountData } from "../shared/chartDataUtils";
 import {
   ManagerActionButton,
   ManagerPageShell,
@@ -39,6 +40,14 @@ const LazyWorkerAssignModal = lazy(() =>
     default: module.WorkerAssignModal,
   })),
 );
+
+const ISSUE_STATUS_ORDER = [
+  "Pending",
+  "In Progress",
+  "Awaiting Closure",
+  "Closed",
+  "Rejected",
+];
 
 export const IssueResolving = () => {
   const dispatch = useDispatch();
@@ -69,13 +78,30 @@ export const IssueResolving = () => {
   const { filters, setFilter, filtered: activeIssues } = useTabFilters(issuesByTab, activeTab);
 
   const statusChartData = useMemo(() => {
-    const statusCounts = issues.reduce((accumulator, issue) => {
-      const status = issue?.status || "Unknown";
-      accumulator[status] = (accumulator[status] || 0) + 1;
-      return accumulator;
-    }, {});
+    const toGroupedIssueStatus = (statusValue) => {
+      const status = String(statusValue || "").trim().toLowerCase();
 
-    return Object.entries(statusCounts).map(([name, value]) => ({ name, value }));
+      if (status === "pending assignment" || status === "assigned") return "Pending";
+      if (status === "in progress" || status === "reopened" || status === "on hold") return "In Progress";
+      if (status === "resolved (awaiting confirmation)" || status === "payment pending") {
+        return "Awaiting Closure";
+      }
+      if (status === "closed" || status === "auto-closed" || status === "payment completed") {
+        return "Closed";
+      }
+      if (status === "rejected") return "Rejected";
+
+      return "Unknown";
+    };
+
+    return buildCategoryCountData(
+      issues,
+      (issue) => issue?.status,
+      {
+        order: ISSUE_STATUS_ORDER,
+        normalize: (statusLabel) => toGroupedIssueStatus(statusLabel),
+      },
+    );
   }, [issues]);
 
   const priorityChartData = useMemo(() => {

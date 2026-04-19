@@ -1,6 +1,24 @@
 import mongoose from "mongoose";
 import Community from "./communities.js";
 
+const normalizeCommonSpaceStatus = (value) => {
+  const raw = String(value || "").trim();
+  if (!raw) return "Pending";
+
+  const normalized = raw.toLowerCase();
+  if (normalized === "avalaible" || normalized === "available") return "Available";
+  if (normalized === "payment pending" || normalized === "pending payment") return "Pending Payment";
+  if (
+    normalized === "cancelled by resident" ||
+    normalized === "cancelled by manager" ||
+    normalized === "cancelled"
+  ) {
+    return "Cancelled";
+  }
+
+  return raw;
+};
+
 const commonSpacesSchema = new mongoose.Schema({
   ID: String,
 
@@ -44,13 +62,13 @@ const commonSpacesSchema = new mongoose.Schema({
       "Booked",
       "Pending Payment",
       "Paid",
-      "Cancelled By Resident",
-      "Cancelled By Manager",
+      "Cancelled",
       "Completed",
       "Expired",
       "Rejected"
     ],
     default: "Pending",
+    set: normalizeCommonSpaceStatus,
   },
 
   paymentStatus: {

@@ -46,6 +46,7 @@ import {
   getDayControlDraft,
   getFacilityUsageData,
   getOccupancyRate,
+  normalizeBookingStatusLabel,
   parseClosedSlotsInput,
   toDateFromIso,
   toDateInputValue,
@@ -572,19 +573,22 @@ export const CommonSpace = () => {
 
           {filteredBookings.length > 0 ? (
             <ManagerRecordGrid>
-              {filteredBookings.map((booking) => (
+              {filteredBookings.map((booking) => {
+                const normalizedStatus = normalizeBookingStatusLabel(booking.status);
+                const isAvailableStatus = normalizedStatus === "Available";
+                return (
                 <ManagerRecordCard
                   key={booking._id}
                   title={booking.name}
                   subtitle={`${formatBookingDate(booking.Date)} • ${booking.from} - ${booking.to}`}
-                  status={<span className="manager-ui-status-pill">{booking.status}</span>}
+                  status={<span className="manager-ui-status-pill">{normalizedStatus}</span>}
                   meta={[
                     { label: "Booking ID", value: booking.ID || "-" },
                     { label: "Booked By", value: `${booking.bookedBy?.residentFirstname || ""} ${booking.bookedBy?.residentLastname || ""}`.trim() || "-" },
                     { label: "Purpose", value: booking.description || "-" },
                   ]}
                   actions={
-                    booking.status === "Pending" ? (
+                    normalizedStatus === "Pending" ? (
                       <>
                         <ManagerActionButton variant="secondary" onClick={() => console.log("Checking availability for", booking._id)}>
                           Check Availability
@@ -593,7 +597,7 @@ export const CommonSpace = () => {
                           Cancel / Refund
                         </ManagerActionButton>
                       </>
-                    ) : booking.status === "Avalaible" || booking.status === "Available" ? (
+                    ) : isAvailableStatus ? (
                       <>
                         <ManagerActionButton variant="primary" onClick={() => handleApprove(booking._id)}>
                           Approve
@@ -623,7 +627,8 @@ export const CommonSpace = () => {
                     )
                   }
                 />
-              ))}
+                );
+              })}
             </ManagerRecordGrid>
           ) : (
             <EmptyState
