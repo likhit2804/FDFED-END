@@ -118,10 +118,15 @@ const Modal = ({
                 {/* Footer */}
                 {footer && (
                     <div style={{
-                        padding: '14px 24px',
-                        borderTop: '1px solid #e5e7eb',
-                        display: 'flex', gap: 10, justifyContent: 'flex-end',
-                        background: '#f9fafb', flexShrink: 0,
+                        padding: '16px 24px',
+                        borderTop: '1px solid #e2e8f0',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'flex-end',
+                        gap: 12,
+                        flexWrap: 'wrap',
+                        background: '#f8fafc',
+                        flexShrink: 0,
                     }}>
                         {footer}
                     </div>

@@ -76,7 +76,9 @@ const workerTasksSlice = createSlice({
       })
       .addCase(fetchWorkerTasks.fulfilled, (state, action) => {
         state.loading = false;
-        state.tasks = action.payload;
+        state.tasks = (action.payload || []).sort(
+          (a, b) => new Date(b.createdAt || b.updatedAt || 0) - new Date(a.createdAt || a.updatedAt || 0)
+        );
       })
       .addCase(fetchWorkerTasks.rejected, (state, action) => {
         state.loading = false;

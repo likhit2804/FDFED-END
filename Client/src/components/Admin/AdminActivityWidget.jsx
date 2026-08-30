@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Activity, AlertTriangle, Clock, TrendingUp } from 'lucide-react';
+import { Activity, AlertTriangle, Clock, TrendingUp, Trash2, Plus, Edit3, Lock, RefreshCw, FileText } from 'lucide-react';
 import adminApiClient from '../../services/adminApiClient.js';     
 
 import styles from './AdminActivityWidget.module.css';
@@ -43,12 +43,12 @@ export default function AdminActivityWidget() {
   };
 
   const getActionIcon = (action) => {
-    if (action.includes('delete')) return '🗑️';
-    if (action.includes('create')) return '➕';
-    if (action.includes('update')) return '✏️';
-    if (action.includes('login')) return '🔐';
-    if (action.includes('restore')) return '♻️';
-    return '📋';
+    if (action.includes('delete')) return <Trash2 size={15} />;
+    if (action.includes('create')) return <Plus size={15} />;
+    if (action.includes('update')) return <Edit3 size={15} />;
+    if (action.includes('login')) return <Lock size={15} />;
+    if (action.includes('restore')) return <RefreshCw size={15} />;
+    return <FileText size={15} />;
   };
 
   const getActionColor = (action) => {

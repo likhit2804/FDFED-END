@@ -32,9 +32,9 @@ export default function Dropdown({ options, selected, onChange }) {
         onClick={() => setOpen(!open)}
         style={{
           width: "100%",
-          padding: "10px 16px",
+          padding: "8px 12px",
           border: "1px solid #e2e8f0",
-          borderRadius: "10px",
+          borderRadius: "8px",
           backgroundColor: "#ffffff",
           color: "#1e293b",
           display: "flex",
@@ -42,7 +42,8 @@ export default function Dropdown({ options, selected, onChange }) {
           justifyContent: "space-between",
           cursor: "pointer",
           fontWeight: 500,
-          fontSize: "14px",
+          fontSize: "13px",
+          height: "38px",
           boxShadow: "0 1px 2px rgba(0,0,0,0.03)",
           transition: "border-color 0.2s ease, background-color 0.2s ease",
           outline: "none",

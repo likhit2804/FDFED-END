@@ -6,6 +6,8 @@ import {
   Users,
   ClipboardCheck,
   Clock,
+  CheckCircle2,
+  XCircle,
 } from "lucide-react";
 
 // Spinner component
@@ -48,6 +50,7 @@ if (typeof document !== 'undefined') {
   document.head.appendChild(style);
 }
 import "bootstrap/dist/css/bootstrap.min.css";
+import Header from "./Header";
 import Card from "./Card";
 import Tabs from "./Tabs";
 import Status from "./Status";
@@ -222,186 +225,66 @@ export default function ManagerApplications() {
   const styles = {
     container: {
       display: "flex",
-      minHeight: "100vh",
-      background: "linear-gradient(to bottom right, #f8fafc, #eef2f7)",
-      fontFamily: "Poppins, sans-serif",
-      padding: "24px",
-      gap: "24px",
+      flexDirection: "column",
+      gap: "18px",
+      width: "100%",
     },
     listPane: {
-      flex: "1 1 100%",
+      width: "100%",
       display: "flex",
       flexDirection: "column",
-      gap: "16px",
-    },
-    previewPane: {
-      flex: "1 1 40%",
-      background: "#fff",
-      borderRadius: "16px",
-      boxShadow: "0 2px 10px rgba(0,0,0,0.05)",
-      padding: "24px",
-      overflowY: "auto",
-      transition: "all 0.3s ease",
+      gap: "14px",
     },
     cardItem: {
       background: "#fff",
-      borderRadius: "16px",
-      boxShadow: "0 2px 10px rgba(0,0,0,0.05)",
-      padding: "20px",
+      borderRadius: "12px",
+      boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+      border: "1px solid #f1f5f9",
+      padding: "14px 18px",
       cursor: "pointer",
-      borderLeft: "6px solid transparent",
-      transition: "transform 0.2s ease, border 0.2s ease",
+      borderLeft: "4px solid transparent",
+      transition: "transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease",
     },
     headerRow: {
       display: "flex",
       justifyContent: "space-between",
       alignItems: "center",
-      marginBottom: "10px",
+      marginBottom: "6px",
     },
-    name: { fontWeight: 600, fontSize: "18px", color: "#0f172a" },
+    name: { fontWeight: 600, fontSize: "15px", color: "#0f172a" },
   };
 
   return (
     <div style={styles.container}>
-      {/* Success Banner */}
-      {successMessage && (
-        <div style={{
-          position: "fixed",
-          top: "20px",
-          left: "50%",
-          transform: "translateX(-50%)",
-          backgroundColor: "#10b981",
-          border: "1px solid #059669",
-          color: "white",
-          padding: "12px 16px",
-          borderRadius: "8px",
-          boxShadow: "0 8px 20px rgba(0,0,0,0.15)",
-          zIndex: 1000,
-          maxWidth: "450px",
-          width: "90%",
-          fontSize: "16px",
-          fontWeight: "600",
-          display: "flex",
-          alignItems: "center",
-          animation: "slideInDown 0.3s ease-out",
-        }}>
-          <div style={{ fontSize: "20px", marginRight: "10px", minWidth: "24px" }}>✅</div>
-          <div style={{
-            flex: 1,
-            whiteSpace: "nowrap",
-            overflow: "hidden",
-            textOverflow: "ellipsis"
-          }}>
-            Application processed successfully!
-          </div>
-          <button
-            onClick={() => setSuccessMessage("")}
-            style={{
-              background: "rgba(255,255,255,0.2)",
-              border: "none",
-              color: "white",
-              cursor: "pointer",
-              fontSize: "18px",
-              padding: "4px 8px",
-              borderRadius: "4px",
-              lineHeight: "1",
-              minWidth: "28px",
-              height: "28px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              transition: "background-color 0.2s ease",
-              marginLeft: "10px",
-            }}
-            onMouseEnter={(e) => e.target.style.backgroundColor = "rgba(255,255,255,0.3)"}
-            onMouseLeave={(e) => e.target.style.backgroundColor = "rgba(255,255,255,0.2)"}
-          >
-            ×
-          </button>
-        </div>
-      )}
+      {/* Header */}
+      <Header title="Community Manager Applications" />
 
-      {/* Error Banner */}
-      {error && (
-        <div style={{
-          position: "fixed",
-          top: successMessage ? "80px" : "20px",
-          left: "50%",
-          transform: "translateX(-50%)",
-          backgroundColor: "#ef4444",
-          border: "1px solid #dc2626",
-          color: "white",
-          padding: "12px 16px",
-          borderRadius: "8px",
-          boxShadow: "0 8px 20px rgba(0,0,0,0.15)",
-          zIndex: 1000,
-          maxWidth: "450px",
-          width: "90%",
-          fontSize: "16px",
-          fontWeight: "600",
-          display: "flex",
-          alignItems: "center",
-          animation: "slideInDown 0.3s ease-out",
-        }}>
-          <div style={{ fontSize: "20px", marginRight: "10px", minWidth: "24px" }}>⚠</div>
-          <div style={{
-            flex: 1,
-            overflow: 'hidden',
-            lineHeight: '1.2'
-          }}>
-            {error}
-          </div>
-          <button
-            onClick={() => setError("")}
-            style={{
-              background: "rgba(255,255,255,0.2)",
-              border: "none",
-              color: "white",
-              cursor: "pointer",
-              fontSize: "18px",
-              padding: "4px 8px",
-              borderRadius: "4px",
-              lineHeight: "1",
-              minWidth: "28px",
-              height: "28px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              transition: "background-color 0.2s ease",
-              marginLeft: "10px",
-            }}
-            onMouseEnter={(e) => e.target.style.backgroundColor = "rgba(255,255,255,0.3)"}
-            onMouseLeave={(e) => e.target.style.backgroundColor = "rgba(255,255,255,0.2)"}
-          >
-            ×
-          </button>
-        </div>
-      )}
       {/* ===== Left Pane ===== */}
       <div style={styles.listPane}>
-        <h2 style={{ fontWeight: 700, color: "#0f172a" }}>
-          Community Manager Applications
-        </h2>
-
-        {/* === Summary Cards === */}
+        {/* === Summary Cards (Occupy full horizontal width) === */}
         <div
-          className="d-flex flex-wrap"
-          style={{ gap: "16px", marginBottom: "16px" }}
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+            gap: "14px",
+            width: "100%",
+            marginBottom: "6px",
+          }}
         >
           <Card
-            icon={<Users />}
+            icon={<Users size={20} />}
             value={total}
             label="Total Applications"
             borderColor="#3b82f6"
           />
           <Card
-            icon={<ClipboardCheck />}
+            icon={<ClipboardCheck size={20} />}
             value={approved}
             label="Approved"
             borderColor="#22c55e"
           />
           <Card
-            icon={<Clock />}
+            icon={<Clock size={20} />}
             value={pending}
             label="Pending"
             borderColor="#fbbf24"
@@ -682,14 +565,14 @@ export default function ManagerApplications() {
 
           {/* Show approval/rejection details */}
           {selectedApp.status === "APPROVED" && selectedApp.approvedBy && (
-            <div style={{ marginTop: "16px", color: "#22c55e", fontSize: "14px" }}>
-              ✓ Approved by {selectedApp.approvedBy} on {selectedApp.approvedAt}
+            <div style={{ marginTop: "16px", color: "#22c55e", fontSize: "14px", display: "flex", alignItems: "center", gap: "6px" }}>
+              <CheckCircle2 size={16} /> Approved by {selectedApp.approvedBy} on {selectedApp.approvedAt}
             </div>
           )}
           {selectedApp.status === "REJECTED" && (
             <div style={{ marginTop: "16px" }}>
-              <div style={{ color: "#ef4444", fontSize: "14px", marginBottom: "4px" }}>
-                ✗ Rejected{selectedApp.rejectedBy ? ` by ${selectedApp.rejectedBy}` : ""}{selectedApp.rejectedAt ? ` on ${selectedApp.rejectedAt}` : ""}
+              <div style={{ color: "#ef4444", fontSize: "14px", marginBottom: "4px", display: "flex", alignItems: "center", gap: "6px" }}>
+                <XCircle size={16} /> Rejected{selectedApp.rejectedBy ? ` by ${selectedApp.rejectedBy}` : ""}{selectedApp.rejectedAt ? ` on ${selectedApp.rejectedAt}` : ""}
               </div>
               {selectedApp.rejectionReason && (
                 <div style={{ color: "#475569", fontSize: "13px", backgroundColor: "#fef2f2", padding: "8px", borderRadius: "6px", border: "1px solid #fecaca" }}>

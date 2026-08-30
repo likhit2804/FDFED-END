@@ -5,14 +5,14 @@ import CommunityManager from "../../../models/cManager.js";
 import Notifications from "../../../models/Notifications.js";
 import { flagMisassigned } from "../../../utils/issueAutomation.js";
 import { pushNotification } from "../../notifications/services/notificationService.js";
-import { getCommunityManagerForCommunity, emitIssueUpdate } from "../utils/issueShared.js";
+import { getCommunityManagerForCommunity, emitIssueUpdate, logIssueActivity } from "../utils/issueShared.js";
 
 // --------------------------------------------------
 // WORKER: Start Issue
 // --------------------------------------------------
 export const startIssue = async (req, res) => {
     try {
-        const issue = await Issue.findById({ _id: req.params.id, community: req.user.community });
+        const issue = await Issue.findOne({ _id: req.params.id, community: req.user.community });
         if (!issue)
             return res.status(404).json({ success: false, message: "Issue not found" });
 
@@ -23,6 +23,7 @@ export const startIssue = async (req, res) => {
         }
 
         issue.status = "In Progress";
+        logIssueActivity(issue, "Started", "Worker", "Field technician started work on this issue", req.user.id);
         await issue.save();
 
         await pushNotification(Resident, issue.resident, {
@@ -48,7 +49,7 @@ export const startIssue = async (req, res) => {
 export const resolveIssue = async (req, res) => {
     const { estimatedCost } = req.body;
     try {
-        const issue = await Issue.findById({
+        const issue = await Issue.findOne({
             _id: req.params.id,
             community: req.user.community,
         }).populate("resident");
@@ -68,28 +69,30 @@ export const resolveIssue = async (req, res) => {
                 .json({ success: false, message: "You are not authorized to resolve this issue" });
         }
 
-        const parsedCost = Number(estimatedCost);
-        if (!Number.isFinite(parsedCost) || parsedCost <= 0) {
-            return res
-                .status(400)
-                .json({ success: false, message: "Estimated cost must be a positive number" });
-        }
+        const isFreeCategory =
+            issue.categoryType === "Community" ||
+            issue.category === "Waste Management" ||
+            issue.category === "Security";
 
+        const parsedCost = isFreeCategory ? 0 : Math.max(0, Number(estimatedCost) || 0);
         issue.estimatedCost = parsedCost;
 
         if (issue.categoryType === "Resident") {
             issue.status = "Resolved (Awaiting Confirmation)";
             issue.resolvedAt = new Date();
+            const costNote = parsedCost > 0 ? ` Estimated cost: ₹${parsedCost}` : " Free society service.";
+            logIssueActivity(issue, "Resolved", "Worker", `Work completed.${costNote}`, req.user.id);
             await pushNotification(Resident, issue.resident._id, {
                 type: "Issue",
                 title: "Issue Resolved",
-                message: `Your issue ${issue.issueID || issue._id} has been resolved. Please confirm.`,
+                message: `Your issue ${issue.issueID || issue._id} has been resolved.${parsedCost > 0 ? ` Cost: ₹${parsedCost}.` : ""} Please review and confirm.`,
                 referenceId: issue._id,
                 referenceType: "Issue",
             });
         } else if (issue.categoryType === "Community") {
             issue.status = "Closed";
             issue.resolvedAt = new Date();
+            logIssueActivity(issue, "Resolved", "Worker", `Community maintenance resolved by technician.`, req.user.id);
             const manager = await getCommunityManagerForCommunity(issue.community);
             if (manager) {
                 await pushNotification(CommunityManager, manager._id, {
@@ -138,6 +141,7 @@ export const getWorkerTasks = async (req, res) => {
             workerAssigned: req.user.id,
             status: { $in: ["Assigned", "In Progress", "Reopened"] },
         })
+            .sort({ createdAt: -1 })
             .populate("workerAssigned")
             .populate("resident");
 

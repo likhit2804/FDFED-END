@@ -154,6 +154,7 @@ const initialState = {
   issueDetails: null,
   workers: [],
   loading: false,
+  detailsLoading: false,
   rejectedLoading: false,
   workersLoading: false,
   error: null,
@@ -189,26 +190,26 @@ const managerIssuesSlice = createSlice({
         state.issues = [];
       })
 
-      // fetch details
+      // fetch details (isolated so it does NOT unmount or reload background cards)
       .addCase(fetchIssueDetails.pending, (state) => {
-        state.loading = true;
+        state.detailsLoading = true;
       })
       .addCase(fetchIssueDetails.fulfilled, (state, action) => {
-        state.loading = false;
+        state.detailsLoading = false;
         state.issueDetails = action.payload;
       })
       .addCase(fetchIssueDetails.rejected, (state, action) => {
-        state.loading = false;
+        state.detailsLoading = false;
         state.error = action.payload;
       })
 
       // assign
       .addCase(assignManagerIssue.pending, (state) => {
-        state.loading = true;
+        state.actionLoading = true;
         state.error = null;
       })
       .addCase(assignManagerIssue.fulfilled, (state, action) => {
-        state.loading = false;
+        state.actionLoading = false;
         const updated = action.payload;
         const idx = state.issues.findIndex((i) => i._id === updated._id);
         if (idx !== -1) {
@@ -218,17 +219,17 @@ const managerIssuesSlice = createSlice({
         }
       })
       .addCase(assignManagerIssue.rejected, (state, action) => {
-        state.loading = false;
+        state.actionLoading = false;
         state.error = action.payload || "Failed to assign worker";
       })
 
       // reassign
       .addCase(reassignManagerIssue.pending, (state) => {
-        state.loading = true;
+        state.actionLoading = true;
         state.error = null;
       })
       .addCase(reassignManagerIssue.fulfilled, (state, action) => {
-        state.loading = false;
+        state.actionLoading = false;
         const updated = action.payload;
         const idx = state.issues.findIndex((i) => i._id === updated._id);
         if (idx !== -1) {
@@ -236,17 +237,17 @@ const managerIssuesSlice = createSlice({
         }
       })
       .addCase(reassignManagerIssue.rejected, (state, action) => {
-        state.loading = false;
+        state.actionLoading = false;
         state.error = action.payload || "Failed to reassign worker";
       })
 
       // close
       .addCase(closeManagerIssue.pending, (state) => {
-        state.loading = true;
+        state.actionLoading = true;
         state.error = null;
       })
       .addCase(closeManagerIssue.fulfilled, (state, action) => {
-        state.loading = false;
+        state.actionLoading = false;
         const { id, status } = action.payload;
         const idx = state.issues.findIndex((i) => i._id === id);
         if (idx !== -1) {
@@ -254,7 +255,7 @@ const managerIssuesSlice = createSlice({
         }
       })
       .addCase(closeManagerIssue.rejected, (state, action) => {
-        state.loading = false;
+        state.actionLoading = false;
         state.error = action.payload || "Failed to close issue";
       })
 

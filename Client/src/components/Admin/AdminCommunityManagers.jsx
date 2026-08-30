@@ -63,22 +63,22 @@ export default function CommunityManagers() {
   return (
     <>
       {/* Header */}
-      <div
-        className="sticky-top border-bottom bg-white rounded-3 shadow-sm px-4 py-3 mb-4 d-flex justify-content-between align-items-center"
-        style={{ zIndex: 100 }}
-      >
+      <div style={{ marginBottom: "20px" }}>
         <Header title="Community Managers" />
       </div>
 
       {/* Filters Row */}
       <div
-        className="bg-white rounded-4 shadow-sm mb-4 d-flex align-items-center justify-content-between flex-wrap gap-4 px-4 py-4"
         style={{
-          border: "1px solid #f1f5f9",
-          minHeight: "84px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: "12px",
+          marginBottom: "20px",
         }}
       >
-        <div style={{ flex: "1 1 auto", minWidth: "280px", marginRight: "16px" }}>
+        <div style={{ flex: "1 1 260px", minWidth: "200px" }}>
           <SearchBar
             placeholder="Search community managers..."
             value={search}

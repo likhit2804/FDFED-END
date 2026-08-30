@@ -1,4 +1,4 @@
-﻿import express from "express";
+import express from "express";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
@@ -163,45 +163,44 @@ io.on("connection", (socket) => {
         community: payload.community,
       });
 
-      if (payload.userType === "CommunityManager" && payload.community) {
-        const room = `community_${payload.community}`;
-        socket.join(room);
+      // Join Community Broadcast Room
+      if (payload.community) {
+        const communityRoom = `community_${payload.community}`;
+        socket.join(communityRoom);
         socket.data.communityId = payload.community;
+        console.log(`✅ ${payload.userType} (${payload.id}) joined community room: ${communityRoom}`);
+      }
+
+      // Join Role/Personal Specific Rooms
+      if (payload.userType === "CommunityManager") {
         socket.data.userId = payload.id;
         socket.data.userType = payload.userType;
-
-        console.log(`âœ… Manager (${payload.id}) joined room: ${room}`);
+        console.log(`✅ Manager (${payload.id}) online`);
       } else if (payload.userType === "Resident") {
-        const room = `resident_${payload.id}`;
-        socket.join(room);
+        const residentRoom = `resident_${payload.id}`;
+        socket.join(residentRoom);
         socket.data.userId = payload.id;
         socket.data.userType = payload.userType;
-
-        if (payload.community) {
-          socket.data.communityId = payload.community;
-        }
-
-        console.log(`âœ… Resident (${payload.id}) joined room: ${room}`);
+        console.log(`✅ Resident (${payload.id}) joined room: ${residentRoom}`);
       } else if (payload.userType === "Worker") {
-        const room = `worker_${payload.id}`;
-        socket.join(room);
+        const workerRoom = `worker_${payload.id}`;
+        socket.join(workerRoom);
         socket.data.userId = payload.id;
         socket.data.userType = payload.userType;
-
-        if (payload.community) {
-          socket.data.communityId = payload.community;
-        }
-
-        console.log(`âœ… Worker (${payload.id}) joined room: ${room}`);
-      } else if (!payload.community) {
-        console.log(`âš ï¸ No community ID found in token, skipping room join`);
+        console.log(`✅ Worker (${payload.id}) joined room: ${workerRoom}`);
+      } else if (payload.userType === "Security") {
+        const securityRoom = `security_${payload.id}`;
+        socket.join(securityRoom);
+        socket.data.userId = payload.id;
+        socket.data.userType = payload.userType;
+        console.log(`✅ Security (${payload.id}) joined room: ${securityRoom}`);
       } else {
         console.log(
-          `â„¹ï¸ User type '${payload.userType}' does not have a room mapping`
+          `â„¹ï¸  User type '${payload.userType}' does not have a room mapping`
         );
       }
     } else {
-      console.warn("âš ï¸ No token provided in socket handshake");
+      console.warn("âš ï¸  No token provided in socket handshake");
     }
   } catch (err) {
     console.warn("âŒ Socket auth failed:", err.message);
@@ -438,8 +437,8 @@ app.use("/api/v1", apiKeyAuth, b2bRouter);
 // ---------------- RATE LIMITERS FOR AUTH ENDPOINTS ----------------
 
 const authLimiter = rateLimit({
-  windowMs: 5 * 60 * 1000, // 5 minutes
-  max: 5, // 5 attempts per window
+  windowMs: 1 * 60 * 1000,
+  max: 100, // relaxed for development testing
   message: {
     success: false,
     message: 'Too many login attempts, please try again after 5 minutes'
@@ -794,8 +793,8 @@ app.post("/login", authLimiter, async (req, res) => {
       res.cookie("token", finalToken, {
         httpOnly: true,
         maxAge: 7 * 24 * 60 * 60 * 1000,
-        sameSite: "none",
-        secure: true,
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+        secure: process.env.NODE_ENV === "production",
       });
 
       return res.json({
@@ -895,8 +894,8 @@ app.post("/api/verify-otp", async (req, res) => {
     res.cookie("token", finalToken, {
       httpOnly: true,
       maxAge: 7 * 24 * 60 * 60 * 1000,
-      sameSite: "none",
-      secure: true,
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      secure: process.env.NODE_ENV === "production",
     });
 
     return res.json({

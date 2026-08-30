@@ -69,6 +69,7 @@ const WorkerLeaveList = lazy(() => import("./components/Worker/WorkerLeaveList")
 const SecurityDashboard = lazy(() => import("./components/security/Dashboard.jsx").then(m => ({ default: m.SecurityDashboard })));
 const VisitorManagement = lazy(() => import("./components/security/visitorManagement.jsx").then(m => ({ default: m.VisitorManagement })));
 const SecurityPreApproval = lazy(() => import("./components/security/preapproval.jsx").then(m => ({ default: m.SecurityPreApproval })));
+const SecurityIssues = lazy(() => import("./components/Security/Issues.jsx").then(m => ({ default: m.SecurityIssues })));
 const SecurityProfile = lazy(() => import("./components/security/profile.jsx").then(m => ({ default: m.SecurityProfile })));
 
 const SubscriptionExpired = lazy(() => import("./components/SubscriptionExpired.jsx"));
@@ -166,6 +167,7 @@ function App() {
             <Route path="dashboard" element={<SecurityDashboard />} />
             <Route path="visitorManagement" element={<VisitorManagement />} />
             <Route path="preapproval" element={<SecurityPreApproval />} />
+            <Route path="issues" element={<SecurityIssues />} />
             <Route path="profile" element={<SecurityProfile />} />
           </Route>
         </Route>

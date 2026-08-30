@@ -94,10 +94,10 @@ export const WorkerAssignModal = ({
             title={title}
             size="sm"
             footer={
-                <>
-                    <button className="btn-secondary" onClick={onClose}>Cancel</button>
-                    <button className="btn-primary" onClick={handleSubmit}>{isAssign ? "Assign" : "Reassign"}</button>
-                </>
+                <div className="d-flex align-items-center justify-content-end gap-3 w-100">
+                    <button type="button" className="manager-ui-button manager-ui-button--secondary" onClick={onClose}>Cancel</button>
+                    <button type="button" className="manager-ui-button manager-ui-button--primary" onClick={handleSubmit}>{isAssign ? "Assign Worker" : "Reassign Worker"}</button>
+                </div>
             }
         >
             {issue && (

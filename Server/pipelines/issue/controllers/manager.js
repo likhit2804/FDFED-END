@@ -1,7 +1,7 @@
 import Issue from "../../../models/issues.js";
 import Worker from "../../../models/workers.js";
 import { pushNotification } from "../../notifications/services/notificationService.js";
-import { emitIssueUpdate } from "../utils/issueShared.js";
+import { emitIssueUpdate, logIssueActivity } from "../utils/issueShared.js";
 
 // pushNotification is now imported from notifications pipeline
 
@@ -12,7 +12,7 @@ export const assignIssue = async (req, res) => {
     const { worker, deadline, remarks } = req.body;
 
     try {
-        const issue = await Issue.findById({ _id: req.params.id, community: req.user.community });
+        const issue = await Issue.findOne({ _id: req.params.id, community: req.user.community });
         if (!issue)
             return res.status(404).json({ success: false, message: "Issue not found" });
 
@@ -30,7 +30,7 @@ export const assignIssue = async (req, res) => {
             });
         }
 
-        const workerData = await Worker.findById({ _id: worker, community: req.user.community });
+        const workerData = await Worker.findOne({ _id: worker, community: req.user.community });
         if (!workerData)
             return res.status(404).json({ success: false, message: "Worker not found" });
 
@@ -57,6 +57,7 @@ export const assignIssue = async (req, res) => {
         issue.remarks = remarks || null;
         issue.status = "Assigned";
         issue.autoAssigned = false;
+        logIssueActivity(issue, "Assigned", "Manager", `Assigned to ${workerData.name} (${workerData.jobRole?.join(", ") || "Staff"})`, req.user.id);
         await issue.save();
 
         // Remove from old worker if reassigning
@@ -81,7 +82,7 @@ export const assignIssue = async (req, res) => {
 
         emitIssueUpdate(issue, "assigned");
 
-        const populated = await Issue.findById({ _id: issue._id, community: req.user.community })
+        const populated = await Issue.findOne({ _id: issue._id, community: req.user.community })
             .populate("resident")
             .populate("workerAssigned");
 
@@ -206,6 +207,7 @@ export const reassignIssue = async (req, res) => {
         issue.autoAssigned = false;
         issue.deadline = deadline || issue.deadline;
         issue.remarks = remarks || issue.remarks;
+        logIssueActivity(issue, "Reassigned", "Manager", `Reassigned to ${workerData.name}. Reason: ${remarks || "Workload / schedule rebalancing"}`, req.user.id);
         await issue.save();
 
         await Worker.findByIdAndUpdate(newWorker, {
@@ -214,7 +216,7 @@ export const reassignIssue = async (req, res) => {
 
         emitIssueUpdate(issue, "reassigned");
 
-        const populated = await Issue.findById({ _id: issue._id, community: req.user.community })
+        const populated = await Issue.findOne({ _id: issue._id, community: req.user.community })
             .populate("resident")
             .populate("workerAssigned")
             .populate("payment");
@@ -235,10 +237,11 @@ export const reassignIssue = async (req, res) => {
 // --------------------------------------------------
 export const closeIssueByManager = async (req, res) => {
     try {
-        const issue = await Issue.findById({ _id: req.params.id, community: req.user.community });
+        const issue = await Issue.findOne({ _id: req.params.id, community: req.user.community });
         if (!issue) return res.status(404).json({ success: false, message: "Issue not found" });
 
         issue.status = "Closed";
+        logIssueActivity(issue, "Closed", "Manager", "Closed directly by Community Manager", req.user.id);
         await issue.save();
 
         emitIssueUpdate(issue, "closed");
@@ -256,7 +259,7 @@ export const closeIssueByManager = async (req, res) => {
 export const getIssueById = async (req, res) => {
     const id = req.params.id;
 
-    const issue = await Issue.findById({ _id: id, community: req.user.community })
+    const issue = await Issue.findOne({ _id: id, community: req.user.community })
         .populate("resident")
         .populate("workerAssigned")
         .populate("misassignedBy")

@@ -61,12 +61,14 @@ export default function SidebarAdmin() {
   };
 
   const renderNavItem = (item, index) => {
-    const isActive = activeTab === item.path;
+    const isActive =
+      activeTab === item.path ||
+      (item.path === "/admin/dashboard" && (activeTab === "/admin" || activeTab === "/admin/"));
     const isHovered = hoveredItem === item.path;
     const Icon = item.icon;
 
     return (
-      <li key={index} style={{ position: "relative", margin: "6px 0" }}>
+      <li key={index} style={{ position: "relative", margin: "4px 0" }}>
         <button
           onClick={() => handleClick(item.path)}
           onMouseEnter={() => setHoveredItem(item.path)}
@@ -76,21 +78,21 @@ export default function SidebarAdmin() {
             display: "flex",
             alignItems: "center",
             justifyContent: collapsed ? "center" : "flex-start",
-            gap: collapsed ? "0" : "12px",
-            padding: collapsed ? "12px 0" : "12px 16px",
+            gap: collapsed ? "0" : "10px",
+            padding: collapsed ? "9px 0" : "9px 12px",
             background: isActive
               ? "rgba(59, 130, 246, 0.15)"
               : isHovered
-                ? "rgba(255,255,255,0.05)"
+                ? "rgba(255,255,255,0.06)"
                 : "transparent",
             color: isActive ? "#ffffff" : "#cbd5e1",
             fontWeight: isActive ? 600 : 500,
-            fontSize: "0.95rem",
-            borderRadius: "10px",
+            fontSize: "0.88rem",
+            borderRadius: "8px",
             border: "none",
             cursor: "pointer",
-            transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-            transform: isHovered && !isActive ? "translateX(4px)" : "none",
+            transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+            transform: isHovered && !isActive ? "translateX(3px)" : "none",
             position: "relative",
             overflow: "hidden",
           }}
@@ -103,21 +105,19 @@ export default function SidebarAdmin() {
                 left: 0,
                 top: "50%",
                 transform: "translateY(-50%)",
-                width: "4px",
+                width: "3.5px",
                 height: "60%",
                 background: "#3b82f6",
-                borderRadius: "0 4px 4px 0",
-                transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                borderRadius: "0 3px 3px 0",
               }}
             />
           )}
-          <Icon size={20} />
+          <Icon size={18} />
           {!collapsed && (
             <span
               style={{
-                transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                transition: "opacity 0.2s ease",
                 opacity: collapsed ? 0 : 1,
-                transform: collapsed ? "translateX(-10px)" : "translateX(0)",
                 whiteSpace: "nowrap",
               }}
             >
@@ -130,20 +130,19 @@ export default function SidebarAdmin() {
             <div
               style={{
                 position: "absolute",
-                left: "70px",
+                left: "62px",
                 top: "50%",
                 transform: "translateY(-50%)",
                 background: "#1e293b",
                 color: "#ffffff",
-                padding: "8px 12px",
-                borderRadius: "8px",
-                fontSize: "0.9rem",
+                padding: "6px 10px",
+                borderRadius: "6px",
+                fontSize: "0.82rem",
                 fontWeight: 500,
                 whiteSpace: "nowrap",
                 boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
                 opacity: isHovered ? 1 : 0,
-                transition:
-                  "opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1), transform 0.2s",
+                transition: "opacity 0.2s ease",
                 zIndex: 1000,
                 pointerEvents: "none",
               }}
@@ -160,16 +159,16 @@ export default function SidebarAdmin() {
     <aside
       style={{
         position: "fixed",
-        top: "20px",
-        left: "20px",
-        width: collapsed ? "80px" : "220px",
-        height: "calc(100vh - 40px)",
+        top: "14px",
+        left: "14px",
+        width: collapsed ? "72px" : "210px",
+        height: "calc(100vh - 28px)",
         background: "#0f172a",
         color: "#ffffff",
-        borderRadius: "20px",
-        boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
+        borderRadius: "16px",
+        boxShadow: "0 4px 20px rgba(0,0,0,0.25)",
         transition:
-          "width 0.35s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+          "width 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease",
         overflow: "hidden",
         overflowY: "auto",
         overflowX: "hidden",
@@ -184,9 +183,8 @@ export default function SidebarAdmin() {
           display: "flex",
           alignItems: "center",
           justifyContent: collapsed ? "center" : "space-between",
-          padding: "14px 18px",
-          borderBottom: "1px solid rgba(255,255,255,0.1)",
-          transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+          padding: "12px 14px",
+          borderBottom: "1px solid rgba(255,255,255,0.08)",
         }}
       >
         {/* Logo wrapper */}
@@ -195,7 +193,6 @@ export default function SidebarAdmin() {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-
             flex: collapsed ? "0" : "1",
           }}
         >
@@ -203,12 +200,10 @@ export default function SidebarAdmin() {
             src={collapsed ? logoWhiteCollapsed : logoWhite}
             alt="Urban Ease Logo"
             style={{
-              height: "34px", // slightly smaller for better alignment
+              height: "26px",
               width: "auto",
               objectFit: "contain",
               display: "block",
-              transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-              transform: collapsed ? "scale(0.9)" : "scale(1)",
             }}
           />
         </div>
@@ -220,27 +215,27 @@ export default function SidebarAdmin() {
             background: "transparent",
             border: "none",
             cursor: "pointer",
-            color: "#ffffff",
+            color: "#94a3b8",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            marginLeft: collapsed ? "0" : "10px",
-            transform: "translateY(4px)", // 👈 fine-tune alignment visually
-            transition:
-              "transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), margin 0.3s ease",
+            padding: "4px",
+            borderRadius: "4px",
+            marginLeft: collapsed ? "0" : "6px",
+            transition: "color 0.2s ease",
           }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = "#ffffff")}
+          onMouseLeave={(e) => (e.currentTarget.style.color = "#94a3b8")}
         >
-          {collapsed ? <ChevronRight size={22} /> : <ChevronLeft size={22} />}
+          {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
         </button>
       </div>
-
 
       {/* Main Navigation */}
       <div
         style={{
           flex: 1,
-          padding: collapsed ? "12px 8px" : "16px 12px",
-          transition: "padding 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+          padding: collapsed ? "10px 6px" : "12px 10px",
           overflowY: "auto",
           overflowX: "hidden",
         }}
@@ -253,9 +248,8 @@ export default function SidebarAdmin() {
       {/* Bottom Section */}
       <div
         style={{
-          padding: collapsed ? "10px 8px" : "12px 12px",
-          borderTop: "1px solid rgba(255,255,255,0.1)",
-          transition: "padding 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+          padding: collapsed ? "8px 6px" : "10px 10px",
+          borderTop: "1px solid rgba(255,255,255,0.08)",
           overflowX: "hidden",
         }}
       >

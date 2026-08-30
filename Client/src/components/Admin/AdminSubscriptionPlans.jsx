@@ -270,16 +270,16 @@ export default function AdminSubscriptionPlans() {
     },
     plansGrid: {
       display: "grid",
-      gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
-      gap: "24px",
+      gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
+      gap: "16px",
     },
     planCard: {
       background: "#ffffff",
-      borderRadius: "16px",
-      padding: "24px",
-      boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
-      border: "1px solid #f1f5f9",
-      transition: "all 0.25s ease",
+      borderRadius: "14px",
+      padding: "16px 18px",
+      boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+      border: "1px solid #e2e8f0",
+      transition: "all 0.2s ease",
       display: "flex",
       flexDirection: "column",
       position: "relative",
@@ -288,26 +288,26 @@ export default function AdminSubscriptionPlans() {
       display: "flex",
       justifyContent: "space-between",
       alignItems: "start",
-      marginBottom: "16px",
+      marginBottom: "12px",
     },
     planName: {
-      fontSize: "20px",
+      fontSize: "16px",
       fontWeight: 700,
       color: "#0f172a",
-      margin: "0 0 4px 0",
+      margin: "0 0 2px 0",
     },
     planKey: {
-      fontSize: "12px",
+      fontSize: "11px",
       color: "#64748b",
       fontFamily: "monospace",
       background: "#f1f5f9",
-      padding: "2px 8px",
+      padding: "2px 6px",
       borderRadius: "4px",
     },
     badge: {
-      padding: "4px 12px",
-      borderRadius: "20px",
-      fontSize: "12px",
+      padding: "2px 8px",
+      borderRadius: "12px",
+      fontSize: "11px",
       fontWeight: 600,
       textTransform: "uppercase",
       letterSpacing: "0.3px",
@@ -321,28 +321,30 @@ export default function AdminSubscriptionPlans() {
       color: "#64748b",
     },
     priceSection: {
-      marginBottom: "20px",
-      paddingBottom: "20px",
+      marginBottom: "12px",
+      paddingBottom: "12px",
       borderBottom: "1px solid #f1f5f9",
+      display: "flex",
+      alignItems: "baseline",
+      gap: "6px",
     },
     price: {
-      fontSize: "36px",
+      fontSize: "24px",
       fontWeight: 700,
       color: "#3b82f6",
       margin: "0",
-      lineHeight: "1",
+      lineHeight: "1.1",
     },
     duration: {
-      fontSize: "14px",
+      fontSize: "12px",
       color: "#64748b",
       textTransform: "uppercase",
-      marginTop: "4px",
     },
     infoRow: {
       display: "flex",
       justifyContent: "space-between",
-      padding: "8px 0",
-      fontSize: "14px",
+      padding: "4px 0",
+      fontSize: "12.5px",
     },
     infoLabel: {
       color: "#64748b",
@@ -352,15 +354,15 @@ export default function AdminSubscriptionPlans() {
       fontWeight: 600,
     },
     featuresSection: {
-      marginTop: "20px",
-      marginBottom: "20px",
+      marginTop: "10px",
+      marginBottom: "12px",
       flexGrow: 1,
     },
     featuresTitle: {
-      fontSize: "14px",
+      fontSize: "12.5px",
       fontWeight: 600,
       color: "#334155",
-      marginBottom: "12px",
+      marginBottom: "8px",
     },
     featuresList: {
       listStyle: "none",
@@ -370,16 +372,16 @@ export default function AdminSubscriptionPlans() {
     featureItem: {
       display: "flex",
       alignItems: "start",
-      gap: "8px",
-      marginBottom: "8px",
-      fontSize: "14px",
+      gap: "6px",
+      marginBottom: "5px",
+      fontSize: "12.5px",
       color: "#475569",
     },
     actionsRow: {
       display: "flex",
-      gap: "8px",
+      gap: "6px",
       marginTop: "auto",
-      paddingTop: "16px",
+      paddingTop: "12px",
       borderTop: "1px solid #f1f5f9",
     },
     editBtn: {
@@ -387,32 +389,32 @@ export default function AdminSubscriptionPlans() {
       background: "#eff6ff",
       color: "#3b82f6",
       border: "none",
-      borderRadius: "8px",
-      padding: "10px 16px",
+      borderRadius: "6px",
+      padding: "7px 12px",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      gap: "6px",
+      gap: "4px",
       fontWeight: 600,
-      fontSize: "14px",
+      fontSize: "12.5px",
       cursor: "pointer",
-      transition: "all 0.2s ease",
+      transition: "all 0.15s ease",
     },
     deleteBtn: {
       flex: 1,
       background: "#fef2f2",
       color: "#ef4444",
       border: "none",
-      borderRadius: "8px",
-      padding: "10px 16px",
+      borderRadius: "6px",
+      padding: "7px 12px",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      gap: "6px",
+      gap: "4px",
       fontWeight: 600,
-      fontSize: "14px",
+      fontSize: "12.5px",
       cursor: "pointer",
-      transition: "all 0.2s ease",
+      transition: "all 0.15s ease",
     },
     emptyState: {
       background: "#ffffff",
@@ -485,31 +487,56 @@ export default function AdminSubscriptionPlans() {
   }
 
   return (
-    <div style={{ fontFamily: 'Poppins, sans-serif' }}>
+    <div style={{ fontFamily: 'inherit' }}>
       {/* Header */}
-      <div
-        className="sticky-top border-bottom bg-white rounded-3 shadow-sm px-4 py-3 mb-4 d-flex justify-content-between align-items-center"
-        style={{ zIndex: 100 }}
-      >
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", flexWrap: "wrap", gap: "12px" }}>
         <div>
-          <h2 style={{ fontSize: "22px", fontWeight: 700, color: "#0f172a", margin: 0 }}>
+          <h2 style={{ fontSize: "22px", fontWeight: 700, color: "#0f172a", margin: "0 0 2px 0" }}>
             Subscription Plans
           </h2>
           <span style={{ color: "#64748b", fontSize: "13px" }}>
             Manage subscription plans for communities
           </span>
         </div>
-        <div style={{ display: "flex", gap: "12px" }}>
+        <div style={{ display: "flex", gap: "8px" }}>
           <button
-            style={styles.refreshBtn}
+            style={{
+              background: "#ffffff",
+              color: "#334155",
+              border: "1px solid #e2e8f0",
+              borderRadius: "8px",
+              padding: "7px 14px",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              fontWeight: 600,
+              fontSize: "13px",
+              cursor: "pointer",
+              boxShadow: "0 1px 2px rgba(0,0,0,0.03)",
+              transition: "all 0.15s ease",
+            }}
             onClick={fetchPlans}
             onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
             onMouseLeave={(e) => (e.currentTarget.style.background = "#ffffff")}
           >
-            <RefreshCw size={18} /> {loading ? "Loading..." : "Refresh"}
+            <RefreshCw size={15} /> {loading ? "Loading..." : "Refresh"}
           </button>
           <button
-            style={showForm ? styles.cancelBtn : styles.createBtn}
+            style={{
+              background: showForm ? "#ef4444" : "#0f172a",
+              color: "#ffffff",
+              border: "none",
+              borderRadius: "8px",
+              padding: "7px 14px",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              fontWeight: 600,
+              fontSize: "13px",
+              cursor: "pointer",
+              boxShadow: "0 1px 3px rgba(15,23,42,0.15)",
+              transition: "all 0.15s ease",
+            }}
             onClick={() => {
               if (showForm) {
                 resetForm();
@@ -517,20 +544,8 @@ export default function AdminSubscriptionPlans() {
                 setShowForm(true);
               }
             }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = "translateY(-2px)";
-              e.currentTarget.style.boxShadow = showForm
-                ? "0 4px 12px rgba(239,68,68,0.4)"
-                : "0 4px 12px rgba(0,0,0,0.15)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = "translateY(0)";
-              e.currentTarget.style.boxShadow = showForm
-                ? "0 2px 6px rgba(239,68,68,0.3)"
-                : "0 2px 6px rgba(0,0,0,0.1)";
-            }}
           >
-            {showForm ? <X size={18} /> : <Plus size={18} />}
+            {showForm ? <X size={15} /> : <Plus size={15} />}
             {showForm ? "Cancel" : "Create New Plan"}
           </button>
         </div>

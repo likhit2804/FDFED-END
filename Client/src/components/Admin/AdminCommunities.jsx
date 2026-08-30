@@ -242,22 +242,22 @@ export default function Communities() {
   return (
     <>
       {/* Header */}
-      <div
-        className="sticky-top border-bottom bg-white rounded-3 shadow-sm px-4 py-3 mb-4 d-flex justify-content-between align-items-center"
-        style={{ zIndex: 100 }}
-      >
+      <div style={{ marginBottom: "20px" }}>
         <Header title="Communities" />
       </div>
 
       {/* Filters Row */}
       <div
-        className="bg-white rounded-4 shadow-sm mb-4 d-flex align-items-center justify-content-between flex-wrap gap-4 px-4 py-4"
         style={{
-          border: "1px solid #f1f5f9",
-          minHeight: "84px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: "12px",
+          marginBottom: "20px",
         }}
       >
-        <div style={{ flex: "1 1 auto", minWidth: "280px", marginRight: "16px" }}>
+        <div style={{ flex: "1 1 260px", minWidth: "200px" }}>
           <SearchBar
             placeholder="Search communities..."
             value={search}
@@ -265,19 +265,11 @@ export default function Communities() {
           />
         </div>
 
-        <div
-          className="d-flex justify-content-center align-items-center"
-          style={{
-            flex: "0 0 auto",
-            minWidth: "280px",
-            maxWidth: "400px",
-            marginRight: "16px",
-          }}
-        >
+        <div style={{ flex: "0 1 340px", minWidth: "260px" }}>
           <Tabs options={tabs} active={activeTab} onChange={setActiveTab} />
         </div>
 
-        <div style={{ flex: "0 0 200px", minWidth: "160px" }}>
+        <div style={{ flex: "0 0 180px", minWidth: "150px" }}>
           <Dropdown
             options={locations}
             selected={location}

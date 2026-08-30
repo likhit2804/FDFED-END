@@ -71,26 +71,6 @@ export const useTableFilter = (data, filters) => {
         const now = new Date();
 
         switch (filters.dateRange) {
-          case 'Today':
-            if (
-              itemDate.getDate() !== now.getDate() ||
-              itemDate.getMonth() !== now.getMonth() ||
-              itemDate.getFullYear() !== now.getFullYear()
-            ) {
-              return false;
-            }
-            break;
-
-          case 'This Week': {
-            const weekStart = new Date(now);
-            weekStart.setDate(now.getDate() - now.getDay());
-            weekStart.setHours(0, 0, 0, 0);
-            const weekEnd = new Date(weekStart);
-            weekEnd.setDate(weekStart.getDate() + 7);
-            if (itemDate < weekStart || itemDate >= weekEnd) return false;
-            break;
-          }
-
           case 'This Month':
             if (
               itemDate.getMonth() !== now.getMonth() ||

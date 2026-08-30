@@ -8,9 +8,9 @@
 }
 
 .title {
-  font-size: 28px;
+  font-size: 22px;
   font-weight: 700;
-  color: var(--text-strong);
+  color: var(--text-strong, #0f172a);
   letter-spacing: -0.5px;
   margin: 0;
   flex-shrink: 0;

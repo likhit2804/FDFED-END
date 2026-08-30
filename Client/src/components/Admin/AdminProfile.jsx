@@ -187,228 +187,259 @@ export default function AdminProfile() {
   };
 
   return (
-    <>
+    <div style={{ width: "100%" }}>
       {/* ===== Header ===== */}
-      <div
-        className="sticky-top border-bottom bg-white rounded-3 shadow-sm px-4 py-3 mb-4 d-flex justify-content-between align-items-center"
-        style={{ zIndex: 100 }}
-      >
+      <div style={{ marginBottom: "20px" }}>
         <Header title="Profile Management" />
       </div>
 
-      <div className="container-fluid px-4 pb-5">
-        <div className="row g-4">
-          {/* ===== Left: Profile Info ===== */}
-          <div className="col-lg-6">
-            <div className="card border-0 shadow-sm rounded-4 p-4 h-100">
-              <h5 className="fw-bold mb-4">
-                <i className="bi bi-person-circle me-2 text-danger"></i>
-                Profile Information
-              </h5>
+      <div className="row g-3">
+        {/* ===== Left: Profile Info ===== */}
+        <div className="col-lg-6">
+          <div
+            style={{
+              background: "#ffffff",
+              border: "1px solid #e2e8f0",
+              borderRadius: "14px",
+              padding: "20px 22px",
+              boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+              height: "100%",
+            }}
+          >
+            <h6 style={{ fontWeight: 700, color: "#0f172a", marginBottom: "16px", fontSize: "15px" }}>
+              <i className="bi bi-person-circle me-2 text-primary"></i>
+              Profile Information
+            </h6>
 
-              <div className="text-center mb-4">
-                <label htmlFor="imageUpload" style={{ cursor: "pointer" }}>
-                  <div
-                    className="rounded-circle overflow-hidden mx-auto position-relative"
-                    style={{
-                      width: "120px",
-                      height: "120px",
-                      border: "3px solid #dc2626",
-                    }}
-                  >
-                    {previewUrl ? (
-                      <img
-                        src={previewUrl}
-                        alt="Profile"
-                        style={{
-                          width: "100%",
-                          height: "100%",
-                          objectFit: "cover",
-                        }}
-                      />
-                    ) : (
-                      <i
-                        className="bi bi-person-fill"
-                        style={{
-                          fontSize: "4rem",
-                          color: "#ccc",
-                          lineHeight: "120px",
-                        }}
-                      ></i>
-                    )}
-                  </div>
-                </label>
+            <div className="text-center mb-3">
+              <label htmlFor="imageUpload" style={{ cursor: "pointer" }}>
+                <div
+                  className="rounded-circle overflow-hidden mx-auto position-relative"
+                  style={{
+                    width: "80px",
+                    height: "80px",
+                    border: "2.5px solid #3b82f6",
+                    boxShadow: "0 2px 8px rgba(59,130,246,0.2)",
+                  }}
+                >
+                  {previewUrl ? (
+                    <img
+                      src={previewUrl}
+                      alt="Profile"
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                      }}
+                    />
+                  ) : (
+                    <i
+                      className="bi bi-person-fill"
+                      style={{
+                        fontSize: "2.5rem",
+                        color: "#94a3b8",
+                        lineHeight: "80px",
+                      }}
+                    ></i>
+                  )}
+                </div>
+              </label>
+              <input
+                type="file"
+                id="imageUpload"
+                className="d-none"
+                accept="image/*"
+                onChange={handleImageChange}
+              />
+              <div style={{ fontSize: "11.5px", color: "#64748b", marginTop: "4px" }}>Click to change photo</div>
+            </div>
+
+            <form onSubmit={handleSaveProfile}>
+              <div className="mb-2">
+                <label style={{ fontSize: "12.5px", fontWeight: 600, color: "#334155", marginBottom: "4px" }}>Name</label>
                 <input
-                  type="file"
-                  id="imageUpload"
-                  className="d-none"
-                  accept="image/*"
-                  onChange={handleImageChange}
+                  type="text"
+                  className="form-control"
+                  style={{ fontSize: "13px", height: "36px", borderRadius: "8px", borderColor: "#e2e8f0" }}
+                  name="name"
+                  value={formData.name}
+                  onChange={handleProfileChange}
+                  required
                 />
               </div>
 
-              <form onSubmit={handleSaveProfile}>
-                <div className="mb-3">
-                  <label className="form-label fw-semibold">Name</label>
-                  <input
-                    type="text"
-                    className="form-control rounded-3"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleProfileChange}
-                    required
-                  />
-                </div>
+              <div className="mb-3">
+                <label style={{ fontSize: "12.5px", fontWeight: 600, color: "#334155", marginBottom: "4px" }}>Email Address</label>
+                <input
+                  type="email"
+                  className="form-control"
+                  style={{ fontSize: "13px", height: "36px", borderRadius: "8px", borderColor: "#e2e8f0" }}
+                  name="email"
+                  value={formData.email}
+                  onChange={handleProfileChange}
+                  required
+                />
+              </div>
 
-                <div className="mb-3">
-                  <label className="form-label fw-semibold">Email Address</label>
-                  <input
-                    type="email"
-                    className="form-control rounded-3"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleProfileChange}
-                    required
-                  />
-                </div>
+              {successMsg && (
+                <div className="alert alert-success py-1 px-2 small mb-2">{successMsg}</div>
+              )}
+              {errorMsg && (
+                <div className="alert alert-danger py-1 px-2 small mb-2">{errorMsg}</div>
+              )}
 
-                {successMsg && (
-                  <div className="alert alert-success py-2">{successMsg}</div>
-                )}
-                {errorMsg && (
-                  <div className="alert alert-danger py-2">{errorMsg}</div>
-                )}
-
-                <button
-                  type="submit"
-                  disabled={loading || !isFormChanged()}
-                  className="btn btn-danger w-100 rounded-3 fw-semibold py-2 mt-3"
-                >
-                  {loading ? (
-                    <span>
-                      <i className="bi bi-hourglass-split me-2"></i>Saving...
-                    </span>
-                  ) : (
-                    <>
-                      <i className="bi bi-save me-2"></i>
-                      {isFormChanged() ? "Save Changes" : "No Changes"}
-                    </>
-                  )}
-                </button>
-              </form>
-            </div>
-          </div>
-
-          {/* ===== Right: Change Password ===== */}
-          <div className="col-lg-6">
-            <div className="card border-0 shadow-sm rounded-4 p-4 h-100">
-              <h5 className="fw-bold mb-4">
-                <i className="bi bi-shield-lock-fill text-danger me-2"></i>
-                Change Password
-              </h5>
-
-              <form onSubmit={handleChangePassword}>
-                <div className="mb-3">
-                  <label className="form-label fw-semibold">
-                    Current Password
-                  </label>
-                  <input
-                    type="password"
-                    className="form-control rounded-3"
-                    name="current"
-                    placeholder="Enter current password"
-                    value={passwordData.current}
-                    onChange={handlePasswordChange}
-                    required
-                  />
-                </div>
-
-                <div className="mb-3">
-                  <label className="form-label fw-semibold">New Password</label>
-                  <input
-                    type="password"
-                    className="form-control rounded-3"
-                    name="new"
-                    placeholder="Enter new password"
-                    value={passwordData.new}
-                    onChange={handlePasswordChange}
-                    required
-                  />
-                </div>
-
-                <div className="mb-3">
-                  <label className="form-label fw-semibold">
-                    Confirm Password
-                  </label>
-                  <input
-                    type="password"
-                    className={`form-control rounded-3 ${errors.confirm ? "is-invalid" : ""
-                      }`}
-                    name="confirm"
-                    placeholder="Confirm new password"
-                    value={passwordData.confirm}
-                    onChange={handlePasswordChange}
-                    required
-                  />
-                  {errors.confirm && (
-                    <div className="invalid-feedback">{errors.confirm}</div>
-                  )}
-                </div>
-
-                <button
-                  type="submit"
-                  className="btn btn-danger w-100 rounded-3 fw-semibold py-2"
-                  disabled={loading}
-                >
-                  {loading ? (
-                    <span>
-                      <i className="bi bi-hourglass-split me-2"></i>Updating...
-                    </span>
-                  ) : (
-                    <>
-                      <i className="bi bi-key-fill me-2"></i>Update Password
-                    </>
-                  )}
-                </button>
-              </form>
-            </div>
+              <button
+                type="submit"
+                disabled={loading || !isFormChanged()}
+                style={{
+                  background: isFormChanged() ? "#0f172a" : "#94a3b8",
+                  color: "#ffffff",
+                  border: "none",
+                  borderRadius: "8px",
+                  padding: "8px 16px",
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  width: "100%",
+                  cursor: isFormChanged() ? "pointer" : "default",
+                  transition: "all 0.15s ease",
+                }}
+              >
+                {loading ? "Saving..." : isFormChanged() ? "Save Changes" : "No Changes"}
+              </button>
+            </form>
           </div>
         </div>
 
-        {/* ===== System Settings Row ===== */}
-        <div className="row g-4 mt-2">
-          <div className="col-12">
-            <div className="card border-0 shadow-sm rounded-4 p-4">
-              <h5 className="fw-bold mb-4">
-                <i className="bi bi-gear-fill me-2 text-danger"></i>
-                System Settings
-              </h5>
+        {/* ===== Right: Change Password ===== */}
+        <div className="col-lg-6">
+          <div
+            style={{
+              background: "#ffffff",
+              border: "1px solid #e2e8f0",
+              borderRadius: "14px",
+              padding: "20px 22px",
+              boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+              height: "100%",
+            }}
+          >
+            <h6 style={{ fontWeight: 700, color: "#0f172a", marginBottom: "16px", fontSize: "15px" }}>
+              <i className="bi bi-shield-lock-fill text-primary me-2"></i>
+              Change Password
+            </h6>
 
-              <div className="d-flex justify-content-between align-items-center p-3 bg-light rounded-3">
-                <div>
-                  <h6 className="fw-bold mb-1">Skip 2FA (OTP) for Non-Admin Users</h6>
-                  <p className="text-muted small mb-0">
-                    When enabled, Residents, Managers, and Staff will skip the OTP verification step during login.
-                    <br />
-                    <span className="text-danger fw-bold">Note: OTP remains mandatory for Admins.</span>
-                  </p>
-                </div>
-                <div className="form-check form-switch fs-4">
-                  <input
-                    className="form-check-input"
-                    type="checkbox"
-                    role="switch"
-                    checked={systemSettings.skip2FA}
-                    onChange={handleToggle2FA}
-                    disabled={settingsLoading}
-                    style={{ cursor: "pointer" }}
-                  />
-                </div>
+            <form onSubmit={handleChangePassword}>
+              <div className="mb-2">
+                <label style={{ fontSize: "12.5px", fontWeight: 600, color: "#334155", marginBottom: "4px" }}>
+                  Current Password
+                </label>
+                <input
+                  type="password"
+                  className="form-control"
+                  style={{ fontSize: "13px", height: "36px", borderRadius: "8px", borderColor: "#e2e8f0" }}
+                  name="current"
+                  placeholder="Enter current password"
+                  value={passwordData.current}
+                  onChange={handlePasswordChange}
+                  required
+                />
+              </div>
+
+              <div className="mb-2">
+                <label style={{ fontSize: "12.5px", fontWeight: 600, color: "#334155", marginBottom: "4px" }}>New Password</label>
+                <input
+                  type="password"
+                  className="form-control"
+                  style={{ fontSize: "13px", height: "36px", borderRadius: "8px", borderColor: "#e2e8f0" }}
+                  name="new"
+                  placeholder="Enter new password"
+                  value={passwordData.new}
+                  onChange={handlePasswordChange}
+                  required
+                />
+              </div>
+
+              <div className="mb-3">
+                <label style={{ fontSize: "12.5px", fontWeight: 600, color: "#334155", marginBottom: "4px" }}>
+                  Confirm Password
+                </label>
+                <input
+                  type="password"
+                  className={`form-control ${errors.confirm ? "is-invalid" : ""}`}
+                  style={{ fontSize: "13px", height: "36px", borderRadius: "8px", borderColor: "#e2e8f0" }}
+                  name="confirm"
+                  placeholder="Confirm new password"
+                  value={passwordData.confirm}
+                  onChange={handlePasswordChange}
+                  required
+                />
+                {errors.confirm && (
+                  <div className="invalid-feedback small">{errors.confirm}</div>
+                )}
+              </div>
+
+              <button
+                type="submit"
+                style={{
+                  background: "#0f172a",
+                  color: "#ffffff",
+                  border: "none",
+                  borderRadius: "8px",
+                  padding: "8px 16px",
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  width: "100%",
+                  cursor: "pointer",
+                  transition: "all 0.15s ease",
+                }}
+                disabled={loading}
+              >
+                {loading ? "Updating..." : "Update Password"}
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      {/* ===== System Settings Row ===== */}
+      <div className="row g-3 mt-1">
+        <div className="col-12">
+          <div
+            style={{
+              background: "#ffffff",
+              border: "1px solid #e2e8f0",
+              borderRadius: "14px",
+              padding: "16px 20px",
+              boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+            }}
+          >
+            <h6 style={{ fontWeight: 700, color: "#0f172a", marginBottom: "12px", fontSize: "15px" }}>
+              <i className="bi bi-gear-fill me-2 text-primary"></i>
+              System Settings
+            </h6>
+
+            <div className="d-flex justify-content-between align-items-center p-3 bg-light rounded-3">
+              <div>
+                <h6 style={{ fontWeight: 600, fontSize: "13.5px", margin: "0 0 2px 0" }}>Skip 2FA (OTP) for Non-Admin Users</h6>
+                <p style={{ fontSize: "12px", color: "#64748b", margin: 0 }}>
+                  When enabled, Residents, Managers, and Staff will skip the OTP verification step during login.
+                  <span className="text-danger fw-semibold ms-2">(Note: OTP remains active for Admins)</span>
+                </p>
+              </div>
+              <div className="form-check form-switch fs-5">
+                <input
+                  className="form-check-input"
+                  type="checkbox"
+                  role="switch"
+                  checked={systemSettings.skip2FA}
+                  onChange={handleToggle2FA}
+                  disabled={settingsLoading}
+                  style={{ cursor: "pointer" }}
+                />
               </div>
             </div>
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }

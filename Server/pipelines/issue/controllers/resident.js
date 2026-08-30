@@ -2,6 +2,7 @@ import Issue from "../../../models/issues.js";
 import Worker from "../../../models/workers.js";
 import Resident from "../../../models/resident.js";
 import CommunityManager from "../../../models/cManager.js";
+import Security from "../../../models/security.js";
 import Payment from "../../../models/payment.js";
 import { createPaymentRecord } from "../../payment/services/paymentService.js";
 import { pushNotification } from "../../notifications/services/notificationService.js";
@@ -11,7 +12,7 @@ import {
     checkDuplicateIssue,
     checkDuplicateCommunityIssue,
 } from "../../../utils/issueAutomation.js";
-import { getCommunityManagerForCommunity, emitIssueUpdate } from "../utils/issueShared.js";
+import { getCommunityManagerForCommunity, emitIssueUpdate, logIssueActivity } from "../utils/issueShared.js";
 
 function determineIssuePriority(category, categoryType, description = "", title = "") {
     const now = new Date();
@@ -20,7 +21,7 @@ function determineIssuePriority(category, categoryType, description = "", title 
 
     const content = `${title} ${description}`.toLowerCase();
 
-    if (/(flood|sewage|major water leak|power outage|no electricity|electrical sparks|stuck in elevator|can't get out)/.test(content)) {
+    if (/(flood|sewage|major water leak|power outage|no electricity|electric|spark|shock|stuck in elevator|can't get out)/.test(content)) {
         return "Urgent";
     }
 
@@ -110,6 +111,15 @@ export const raiseIssue = async (req, res) => {
             community: resident.community,
             otherCategory,
             status: "Pending Assignment",
+            timeline: [
+                {
+                    action: "Created",
+                    performedBy: "Resident",
+                    performedById: resident._id,
+                    details: `Issue raised via Resident Portal for ${finalLocation}`,
+                    timestamp: new Date(),
+                },
+            ],
         });
         await issue.save();
 
@@ -184,22 +194,78 @@ export const confirmIssue = async (req, res) => {
             return res.status(400).json({ success: false, message: "Cannot confirm this issue" });
         }
 
-        issue.status = "Payment Pending";
+        let createdPayment = null;
+        if (issue.estimatedCost && Number(issue.estimatedCost) > 0) {
+            issue.status = "Payment Pending";
+            issue.paymentStatus = "Pending";
+
+            // Check if payment record already exists for this issue
+            const existingPayment = await Payment.findOne({
+                belongTo: "Issue",
+                belongToId: issue._id,
+            });
+
+            if (!existingPayment) {
+                const manager = await getCommunityManagerForCommunity(issue.community);
+                if (manager) {
+                    createdPayment = await createPaymentRecord({
+                        title: `Repair Invoice: ${issue.title || issue.category}`,
+                        senderId: req.user.id,
+                        receiverId: manager._id,
+                        amount: Number(issue.estimatedCost),
+                        communityId: issue.community,
+                        belongTo: "Issue",
+                        belongToId: issue._id,
+                        remarks: `Maintenance repair invoice for ticket ${issue.issueID || issue._id}`,
+                    });
+                }
+            } else {
+                createdPayment = existingPayment;
+            }
+        } else {
+            // Free service / zero cost transitions directly to Closed
+            issue.status = "Closed";
+            issue.paymentStatus = "None";
+        }
+
+        const { rating, feedback } = req.body || {};
+        if (rating) {
+            issue.rating = Number(rating);
+        }
+        if (feedback && feedback.trim()) {
+            issue.feedback = feedback.trim();
+        }
+
+        const ratingText = issue.rating ? ` (${issue.rating}★)` : "";
+        logIssueActivity(
+            issue,
+            "Confirmed",
+            "Resident",
+            `Resident approved repair work${ratingText}.${issue.feedback ? ` Feedback: "${issue.feedback}"` : ""}`,
+            req.user.id
+        );
         await issue.save();
 
         if (issue.workerAssigned) {
             await pushNotification(Worker, issue.workerAssigned, {
                 type: "Issue",
                 title: "Resident Confirmed",
-                message: `Resident confirmed issue ${issue.issueID || issue._id}. Payment is pending.`,
+                message: `Resident confirmed issue ${issue.issueID || issue._id}.${issue.rating ? ` Rating: ${issue.rating}/5 stars.` : ""} ${issue.status === "Payment Pending" ? "Payment is pending." : "Ticket closed."}`,
                 referenceId: issue._id,
                 referenceType: "Issue",
             });
         }
 
-        emitIssueUpdate(issue, "payment_pending");
+        emitIssueUpdate(issue, issue.status === "Payment Pending" ? "payment_pending" : "closed");
 
-        res.json({ success: true, message: "Issue confirmed. Payment process initiated." });
+        res.json({
+            success: true,
+            message: issue.status === "Payment Pending"
+                ? "Issue confirmed, rating recorded, and payment invoice generated."
+                : "Issue confirmed and closed.",
+            issue,
+            payment: createdPayment,
+        });
     } catch (error) {
         console.error(error);
         res.status(500).json({ success: false, message: "Server error" });
@@ -229,6 +295,7 @@ export const rejectIssueResolution = async (req, res) => {
 
         issue.status = "Reopened";
         issue.autoAssigned = false;
+        logIssueActivity(issue, "Reopened", "Resident", "Resident rejected resolution. Ticket reopened for reassignment.", req.user.id);
         await issue.save();
 
         if (issue.workerAssigned) {
@@ -285,6 +352,7 @@ export const getResidentIssues = async (req, res) => {
             resident: req.user.id,
             community: req.user.community,
         })
+            .sort({ createdAt: -1 })
             .populate("workerAssigned")
             .populate("payment");
 
@@ -393,3 +461,44 @@ export const submitFeedback = async (req, res) => {
         res.status(500).json({ success: false, message: error.message || "Server error" });
     }
 };
+
+// --------------------------------------------------
+// RESIDENT: Get Emergency Contacts (Live Manager & Security)
+// --------------------------------------------------
+export const getEmergencyContacts = async (req, res) => {
+    try {
+        const communityId = req.user.community;
+
+        // 1. Fetch Estate Manager for this community
+        const manager = await CommunityManager.findOne({
+            $or: [{ assignedCommunity: communityId }, { community: communityId }],
+        }).select("name contact email");
+
+        // 2. Fetch on-duty Security Guard for this community
+        const security = await Security.findOne({
+            community: communityId,
+        }).select("name contact Shift workplace");
+
+        res.json({
+            success: true,
+            contacts: {
+                estateOffice: {
+                    name: manager?.name || "Estate Office",
+                    contact: manager?.contact || "101",
+                    email: manager?.email || null,
+                    extension: "101",
+                },
+                securityGate: {
+                    name: security?.name || "Main Security Gate",
+                    contact: security?.contact || "100",
+                    shift: security?.Shift || "Day",
+                    extension: "100",
+                },
+            },
+        });
+    } catch (error) {
+        console.error("Emergency Contacts Error:", error);
+        res.status(500).json({ success: false, message: "Failed to fetch emergency contacts" });
+    }
+};
+

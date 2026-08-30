@@ -28,24 +28,61 @@ const GraphBar = ({
     height = 240,
     grid = true,
     radius = 6,
+    xAngle = -20,
+    xHeight = 50,
+    xInterval = 0,
 }) => (
-    <Card shadow="md" style={{ padding: '20px 24px' }}>
+    <div style={{ width: '100%' }}>
         {title && (
-            <div style={{ marginBottom: 16 }}>
-                <h4 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#1f2937' }}>{title}</h4>
-                {subtitle && <p style={{ margin: '4px 0 0', fontSize: 12, color: '#475569' }}>{subtitle}</p>}
+            <div style={{ marginBottom: 12 }}>
+                <h4 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#0f172a' }}>{title}</h4>
+                {subtitle && <p style={{ margin: '3px 0 0', fontSize: 12, color: '#64748b' }}>{subtitle}</p>}
             </div>
         )}
         <ResponsiveContainer width="100%" height={height}>
-            <BarChart data={data} barGap={4}>
+            <BarChart
+                data={data}
+                barGap={4}
+                margin={{ top: 10, right: 16, left: 0, bottom: xAngle !== 0 ? xHeight - 15 : 10 }}
+            >
                 {grid && <CartesianGrid strokeDasharray="3 3" stroke={UE_CHART_GRID} vertical={false} />}
-                <XAxis dataKey={xKey} tick={{ fontSize: 12, fill: UE_CHART_AXIS }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 12, fill: UE_CHART_AXIS }} axisLine={false} tickLine={false} />
+                <XAxis
+                    dataKey={xKey}
+                    interval={xInterval}
+                    angle={xAngle}
+                    textAnchor={xAngle !== 0 ? "end" : "middle"}
+                    height={xHeight}
+                    tick={{ fontSize: 11, fill: UE_CHART_AXIS }}
+                    tickFormatter={(val) => {
+                        if (typeof val === 'string' && val.length > 18) {
+                            return val.slice(0, 16) + '…';
+                        }
+                        return val;
+                    }}
+                    axisLine={{ stroke: '#e2e8f0' }}
+                    tickLine={false}
+                />
+                <YAxis
+                    tick={{ fontSize: 11, fill: UE_CHART_AXIS }}
+                    axisLine={false}
+                    tickLine={false}
+                    tickFormatter={(val) => (val >= 1000 ? `₹${(val / 1000).toFixed(0)}k` : `₹${val}`)}
+                />
                 <Tooltip
-                    contentStyle={{ borderRadius: 10, border: `1px solid ${UE_CHART_TOOLTIP_BORDER}`, fontSize: 13 }}
+                    contentStyle={{
+                        borderRadius: 8,
+                        border: `1px solid ${UE_CHART_TOOLTIP_BORDER}`,
+                        fontSize: 12.5,
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                    }}
+                    formatter={(value, name) => [`₹${Number(value).toLocaleString()}`, name]}
+                    labelFormatter={(label, payload) => {
+                        const fullLabel = payload?.[0]?.payload?.fullX || label;
+                        return fullLabel;
+                    }}
                     cursor={{ fill: UE_CHART_CURSOR }}
                 />
-                {bars.length > 1 && <Legend wrapperStyle={{ fontSize: 13 }} />}
+                {bars.length > 1 && <Legend wrapperStyle={{ fontSize: 12, paddingTop: 6 }} />}
                 {bars.map(({ key, label, color }, index) => (
                     <Bar
                         key={key}
@@ -57,7 +94,7 @@ const GraphBar = ({
                 ))}
             </BarChart>
         </ResponsiveContainer>
-    </Card>
+    </div>
 );
 
 export default GraphBar;

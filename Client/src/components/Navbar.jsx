@@ -37,6 +37,7 @@ const NAV_ITEMS = {
     { to: "/security/dashboard", label: "Dashboard" },
     { to: "/security/visitorManagement", label: "Visitors" },
     { to: "/security/preapproval", label: "Preapproval" },
+    { to: "/security/issues", label: "Issues Desk" },
   ],
 };
 

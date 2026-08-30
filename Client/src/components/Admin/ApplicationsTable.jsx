@@ -1,5 +1,5 @@
 import React from 'react';
-import { Eye, CheckCircle2, XCircle, Clock, CreditCard } from 'lucide-react';
+import { Eye, CheckCircle2, XCircle, Clock, CreditCard, Inbox } from 'lucide-react';
 import Status from './Status';
 import styles from './Applications.module.css';
 
@@ -22,7 +22,7 @@ export default function ApplicationsTable({ applications, onViewDetails, onAppro
   if (applications.length === 0) {
     return (
       <div className={styles.emptyState}>
-        <div className={styles.emptyIcon}>📋</div>
+        <div className={styles.emptyIcon}><Inbox size={32} color="#94a3b8" /></div>
         <h3>No applications found</h3>
         <p>There are no applications matching your criteria</p>
       </div>

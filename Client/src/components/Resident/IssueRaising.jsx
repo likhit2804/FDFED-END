@@ -4,7 +4,7 @@ import { toast, ToastContainer } from "react-toastify";
 import { useDispatch, useSelector } from "react-redux";
 import axios from "axios";
 import { fetchIssues, raiseIssue, submitFeedback } from "../../slices/IssueSlice";
-import { AlertCircle, CheckCircle, ListChecks } from "lucide-react";
+import { AlertCircle, CheckCircle, ListChecks, PhoneCall, ShieldAlert, Clock, AlertTriangle } from "lucide-react";
 import { Loader } from "../Loader";
 import { useSocket } from "../../hooks/useSocket";
 import { EmptyState, Modal, Input, Select, StatCard, Textarea, Tabs } from "../shared";
@@ -34,6 +34,10 @@ export const IssueRaising = () => {
   const [feedbackText, setFeedbackText] = useState("");
   const [feedbackRating, setFeedbackRating] = useState(5);
   const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
+  const [emergencyContacts, setEmergencyContacts] = useState({
+    estateOffice: { name: "Estate Office", contact: "101", extension: "101" },
+    securityGate: { name: "Main Security Gate", contact: "100", extension: "100" },
+  });
 
   const { register, handleSubmit, reset, watch } = useForm({
     defaultValues: { title: "", category: "", description: "", location: "", otherCategory: "" },
@@ -43,8 +47,22 @@ export const IssueRaising = () => {
   // Data loading
   useEffect(() => { dispatch(fetchIssues()); }, [dispatch]);
   useEffect(() => {
+    axios
+      .get("/resident/issue/emergency-contacts")
+      .then((res) => {
+        if (res.data?.success && res.data?.contacts) {
+          setEmergencyContacts(res.data.contacts);
+        }
+      })
+      .catch((err) => console.error("Failed to load emergency contacts:", err));
+  }, []);
+
+  useEffect(() => {
     if (!socket) return;
-    const refresh = () => dispatch(fetchIssues());
+    const refresh = () => {
+      console.log("🔄 [RESIDENT SOCKET] issue:updated received -> refetching issues...");
+      dispatch(fetchIssues());
+    };
     socket.on("issue:updated", refresh);
     return () => socket.off("issue:updated", refresh);
   }, [socket, dispatch]);
@@ -62,15 +80,17 @@ export const IssueRaising = () => {
       .catch((err) => { setFormSubmitting(false); toast.error(err || "Failed to raise issue."); });
   };
 
-  const handleIssueAction = async (id, action) => {
+  const handleIssueAction = async (payloadOrId, action) => {
+    const id = typeof payloadOrId === "object" ? payloadOrId.id : payloadOrId;
+    const body = typeof payloadOrId === "object" ? { rating: payloadOrId.rating, feedback: payloadOrId.feedback } : {};
     const url = action === "confirm"
       ? `/resident/issue/confirmIssue/${id}`
       : `/resident/issue/rejectIssueResolution/${id}`;
     try {
-      const res = await axios.post(url);
+      const res = await axios.post(url, body);
       const data = res.data || {};
       if (!data.success) throw new Error(data.message || `Failed to ${action}`);
-      toast.success(action === "confirm" ? "Issue confirmed! Payment process initiated." : "Issue reopened!");
+      toast.success(action === "confirm" ? "Work approved & rating submitted! Payment initiated." : "Issue reopened for review!");
       setIsDetailsPopupOpen(false);
       dispatch(fetchIssues());
     } catch (err) { toast.error(err.response?.data?.message || err.message || "Action not allowed"); }
@@ -89,7 +109,9 @@ export const IssueRaising = () => {
   const showDetails = (issue) => { setSelectedIssue(issue); setIsDetailsPopupOpen(true); };
 
   // Derived data
-  const filteredIssues = issues?.filter((i) => i?.categoryType === activeTab);
+  const filteredIssues = issues
+    ?.filter((i) => i?.categoryType === activeTab)
+    ?.sort((a, b) => new Date(b.createdAt || b.updatedAt || 0) - new Date(a.createdAt || a.updatedAt || 0));
   const pendingCount = issues?.filter((i) => i?.status === "Pending")?.length || 0;
   const resolvedCount = issues?.filter((i) => i?.status === "Resolved")?.length || 0;
 
@@ -114,26 +136,76 @@ export const IssueRaising = () => {
           </ManagerActionButton>
         }
       >
+        {/* Emergency Hotline Quick Dial Banner */}
+        <div
+          className="mb-4 p-3 rounded-3 d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3"
+          style={{
+            background: "linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, rgba(245, 158, 11, 0.08) 100%)",
+            border: "1px solid rgba(239, 68, 68, 0.25)",
+          }}
+        >
+          <div className="d-flex align-items-center gap-3">
+            <div
+              className="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0"
+              style={{ width: "42px", height: "42px", background: "rgba(239, 68, 68, 0.15)", color: "var(--danger-500, #ef4444)" }}
+            >
+              <ShieldAlert size={22} />
+            </div>
+            <div>
+              <div className="fw-semibold text-danger d-flex align-items-center gap-2" style={{ fontSize: "14px" }}>
+                <span>Emergency Hotlines</span>
+                <span className="badge bg-danger text-white rounded-pill px-2 py-0.5" style={{ fontSize: "10px" }}>Urgent SLA: 30m</span>
+              </div>
+              <p className="mb-0 text-muted" style={{ fontSize: "12.5px" }}>
+                For immediate life-safety emergencies (Fire, Lift Entrapment, Major Leaks), dial Security Gate or Estate Office directly:
+              </p>
+            </div>
+          </div>
 
-      {/* Tabs */}
-      <Tabs
-        tabs={[
-          { label: "Resident Issues", value: "Resident" },
-          { label: "Community Issues", value: "Community" },
-        ]}
-        active={activeTab}
-        onChange={setActiveTab}
-      />
+          <div className="d-flex align-items-center gap-2 flex-wrap flex-shrink-0">
+            <a
+              href={`tel:${emergencyContacts?.securityGate?.contact || "100"}`}
+              className="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1 px-3 py-1.5 rounded-pill shadow-sm"
+              style={{ fontSize: "12px", fontWeight: 600 }}
+              title={`Call Security Gate: ${emergencyContacts?.securityGate?.contact || "100"}`}
+            >
+              <PhoneCall size={14} /> {emergencyContacts?.securityGate?.name || "Security Gate"} ({emergencyContacts?.securityGate?.contact || "100"})
+            </a>
+            <a
+              href={`tel:${emergencyContacts?.estateOffice?.contact || "101"}`}
+              className="btn btn-sm btn-outline-warning text-dark d-inline-flex align-items-center gap-1 px-3 py-1.5 rounded-pill shadow-sm"
+              style={{ fontSize: "12px", fontWeight: 600 }}
+              title={`Call Estate Office: ${emergencyContacts?.estateOffice?.contact || "101"}`}
+            >
+              <PhoneCall size={14} /> {emergencyContacts?.estateOffice?.name || "Estate Office"} ({emergencyContacts?.estateOffice?.contact || "101"})
+            </a>
+          </div>
+        </div>
 
-      {/* Stats */}
-      <div className="ue-stat-grid mb-4">
-        <StatCard label="Total Issues" value={issues?.length || 0} icon={<ListChecks size={22} />} iconColor="var(--brand-500)" iconBg="var(--info-soft)" />
-        <StatCard label="Pending Issues" value={pendingCount} icon={<AlertCircle size={22} />} iconColor="var(--danger-500)" iconBg="var(--danger-soft)" />
-        <StatCard label="Resolved Issues" value={resolvedCount} icon={<CheckCircle size={22} />} iconColor="var(--info-600)" iconBg="var(--surface-2)" />
-      </div>
+        {/* Tabs */}
+        <Tabs
+          tabs={[
+            { label: "Resident Issues", value: "Resident" },
+            { label: "Community Issues", value: "Community" },
+          ]}
+          active={activeTab}
+          onChange={setActiveTab}
+        />
 
-      {/* Issues List */}
-      <h4 className="manager-ui-section__title">{activeTab} issues</h4>
+        {/* Stats */}
+        <div className="ue-stat-grid mb-4">
+          <StatCard label="Total Issues" value={issues?.length || 0} icon={<ListChecks size={22} />} iconColor="var(--brand-500)" iconBg="var(--info-soft)" />
+          <StatCard label="Pending Issues" value={pendingCount} icon={<AlertCircle size={22} />} iconColor="var(--danger-500)" iconBg="var(--danger-soft)" />
+          <StatCard label="Resolved Issues" value={resolvedCount} icon={<CheckCircle size={22} />} iconColor="var(--info-600)" iconBg="var(--surface-2)" />
+        </div>
+
+        {/* Issues List */}
+        <div className="d-flex align-items-center justify-content-between mb-3">
+          <h4 className="manager-ui-section__title mb-0">{activeTab} issues (Latest First)</h4>
+          <span className="text-muted d-inline-flex align-items-center gap-1" style={{ fontSize: "12px" }}>
+            <Clock size={13} /> SLA Targets: Urgent (30m) • High (4h) • Normal (24h)
+          </span>
+        </div>
       <ManagerRecordGrid>
         {loading ? (
           <div className="manager-ui-empty manager-ui-grid-span-all">
@@ -141,8 +213,8 @@ export const IssueRaising = () => {
           </div>
         ) : null}
         {!loading && filteredIssues?.filter(Boolean).length > 0
-          ? filteredIssues.filter(Boolean).map((issue) => (
-            <ResidentIssueCard key={issue._id} issue={issue} onViewDetails={showDetails} />
+          ? filteredIssues.filter(Boolean).map((issue, index) => (
+            <ResidentIssueCard key={issue._id} issue={issue} index={index} onViewDetails={showDetails} />
           ))
           : !loading && (
             <div className="manager-ui-grid-span-all">
@@ -179,7 +251,8 @@ export const IssueRaising = () => {
         </Select>
         {category === "Other" && <Input label="Specify Category" required id="otherCategory" placeholder="Enter custom category" disabled={formSubmitting} {...register("otherCategory", { required: true })} />}
         <div style={{ background: "var(--surface-2)", padding: "10px 14px", borderRadius: 10, marginBottom: 16, fontSize: 13, color: "var(--brand-700)" }}>
-          <i className="bi bi-info-circle" style={{ marginRight: 8 }} />Priority is automatically determined based on issue type, timing, and urgency keywords
+          <i className="bi bi-info-circle" style={{ marginRight: 8 }} />
+          Priority is automatically calculated based on category, urgency keywords, and time of day.
         </div>
         <Input label={`Location${activeTab === "Community" ? " *" : " (Optional)"}`} id="location" placeholder="e.g., Block A, Floor 3, Apt 302" disabled={formSubmitting} {...register("location", { required: activeTab === "Community" })} />
         <Textarea label="Description" required id="description" rows={5} placeholder="Detailed description of the issue..." disabled={formSubmitting} {...register("description", { required: true })} />
@@ -189,17 +262,11 @@ export const IssueRaising = () => {
       {isDetailsPopupOpen ? (
         <Suspense fallback={<Loader label="Loading issue details..." size={24} />}>
           <LazyResidentIssueDetailsModal
-            issue={selectedIssue}
+            issue={issues?.find((i) => i._id === selectedIssue?._id) || selectedIssue}
             isOpen={isDetailsPopupOpen}
             onClose={() => setIsDetailsPopupOpen(false)}
-            onConfirm={(id) => handleIssueAction(id, "confirm")}
+            onConfirm={(payload) => handleIssueAction(payload, "confirm")}
             onReject={(id) => handleIssueAction(id, "reject")}
-            feedbackText={feedbackText}
-            setFeedbackText={setFeedbackText}
-            feedbackRating={feedbackRating}
-            setFeedbackRating={setFeedbackRating}
-            feedbackSubmitting={feedbackSubmitting}
-            onFeedbackSubmit={handleFeedbackSubmit}
           />
         </Suspense>
       ) : null}

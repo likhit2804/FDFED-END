@@ -1,25 +1,9 @@
-import React from "react";
-import { Modal, Textarea, Select } from "../../shared";
-import { StatusTracker } from "./StatusTracker";
-
-const DETAIL_FIELDS = [
-    { label: "Issue ID", render: (i) => i.issueID || `#${i._id?.slice(-6)}`, icon: null },
-    { label: "Status", render: (i) => <span className={`status-badge status-${(i.status || "").toLowerCase().replace(/\s+/g, "-")}`}>{i.status}</span>, icon: null },
-    { label: "Title", render: (i) => i.title, icon: "bi-card-heading" },
-    { label: "Category", render: (i) => <>{i.category}{i.otherCategory && <span className="text-muted ms-2">({i.otherCategory})</span>}</>, icon: "bi-tag" },
-    { label: "Assigned Worker", render: (i) => i.workerAssigned ? `Worker ID: ${i.workerAssigned?.toString().slice(-6)}` : <span className="text-muted">Not Assigned</span>, icon: "bi-person-badge" },
-    { label: "Assignment", render: (i) => i.autoAssigned ? "Auto" : "Manual", icon: "bi-lightning-charge" },
-    { label: "Priority", render: (i) => <span className={`priority-${i.priority?.toLowerCase()}`}>{i.priority} <span style={{ fontSize: "11px", color: "#666" }}>(Auto-determined)</span></span>, icon: "bi-exclamation-circle" },
-    { label: "Raised On", render: (i) => new Date(i.createdAt).toLocaleDateString("en-IN"), icon: "bi-calendar" },
-];
-
-const CONDITIONAL_FIELDS = [
-    { label: "Location", key: "location", icon: "bi-geo-alt" },
-    { label: "Resolved On", key: "resolvedAt", icon: "bi-check-circle", className: "text-success", render: (v) => new Date(v).toLocaleDateString("en-IN") },
-];
+import React, { useState } from "react";
+import { IssueDetailsModal, Textarea } from "../../shared";
+import { CheckCircle2, XCircle, Star, MessageSquareQuote } from "lucide-react";
 
 /**
- * Details modal for a single issue with status tracker, detail grid, and feedback form.
+ * Details modal for a single issue with integrated Review & Rating on Approval.
  */
 export const ResidentIssueDetailsModal = ({
     issue,
@@ -27,112 +11,199 @@ export const ResidentIssueDetailsModal = ({
     onClose,
     onConfirm,
     onReject,
-    feedbackText,
-    setFeedbackText,
-    feedbackRating,
-    setFeedbackRating,
-    feedbackSubmitting,
-    onFeedbackSubmit,
-}) => (
-    <Modal
-        isOpen={isOpen && !!issue}
-        onClose={onClose}
-        title="Issue Details"
-        size="xl"
-        footer={
-            <>
-                {issue?.categoryType === "Resident" &&
-                    issue?.status?.trim().toLowerCase() === "resolved (awaiting confirmation)" && (
-                        <>
-                    <button className="manager-ui-button manager-ui-button--primary" onClick={() => onConfirm(issue._id)}>
-                        <i className="bi bi-check-circle" /> Approve Resolution
-                    </button>
-                    <button className="manager-ui-button manager-ui-button--danger" onClick={() => onReject(issue._id)}>
-                        <i className="bi bi-x-circle" /> Reject Resolution
-                    </button>
-                </>
-                    )}
-                <button className="manager-ui-button manager-ui-button--secondary" onClick={onClose}>Close</button>
-            </>
+}) => {
+    const [rating, setRating] = useState(5);
+    const [hoverRating, setHoverRating] = useState(0);
+    const [feedback, setFeedback] = useState("");
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    if (!isOpen || !issue) return null;
+
+    const isAwaitingConfirmation =
+        issue.categoryType === "Resident" &&
+        issue.status?.trim().toLowerCase() === "resolved (awaiting confirmation)";
+
+    const handleConfirmClick = async () => {
+        setIsSubmitting(true);
+        try {
+            await onConfirm({ id: issue._id, rating, feedback });
+            onClose();
+        } finally {
+            setIsSubmitting(false);
         }
-    >
-        {issue && (
-            <div className="popup-body">
-                <StatusTracker issue={issue} />
+    };
 
-                <div className="ir-details-grid shadow-sm">
-                    {DETAIL_FIELDS.map(({ label, render, icon }) => (
-                        <div className="detail-item" key={label}>
-                            {icon && <i className={`bi ${icon} text-primary`} />}
-                            <div>
-                                <span className="detail-label">{label}</span>
-                                <span className="detail-value">{render(issue)}</span>
-                            </div>
-                        </div>
-                    ))}
+    const handleRejectClick = async () => {
+        setIsSubmitting(true);
+        try {
+            await onReject(issue._id);
+            onClose();
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
 
-                    {/* Payment status */}
-                    <div className="detail-item">
-                        <i className="bi bi-cash-coin text-primary" />
-                        <div>
-                            <span className="detail-label">Payment Status</span>
-                            <span className="detail-value">{issue.paymentStatus || <span className="text-muted">N/A</span>}</span>
+    const actions = [];
+    if (isAwaitingConfirmation) {
+        actions.push({
+            label: isSubmitting ? "Approving..." : "Approve & Rate Service",
+            variant: "success",
+            icon: <CheckCircle2 size={16} />,
+            disabled: isSubmitting,
+            onClick: handleConfirmClick,
+        });
+        actions.push({
+            label: "Reject Resolution",
+            variant: "danger",
+            icon: <XCircle size={16} />,
+            disabled: isSubmitting,
+            onClick: handleRejectClick,
+        });
+    }
+
+    return (
+        <IssueDetailsModal
+            issue={issue}
+            isOpen={isOpen}
+            onClose={onClose}
+            role="resident"
+            actions={actions}
+        >
+            {/* Integrated Rating & Feedback Form during Approval */}
+            {isAwaitingConfirmation && (
+                <div
+                    style={{
+                        backgroundColor: "#f0fdf4",
+                        border: "1px solid #bbf7d0",
+                        borderRadius: "14px",
+                        padding: "18px 20px",
+                    }}
+                >
+                    <div className="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+                        <h6
+                            style={{
+                                margin: 0,
+                                fontSize: "14px",
+                                fontWeight: "700",
+                                color: "#166534",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "6px",
+                            }}
+                        >
+                            <Star size={16} className="text-warning" fill="#f59e0b" />
+                            Rate & Accept Technician's Work
+                        </h6>
+                        <span style={{ fontSize: "12px", color: "#15803d", fontWeight: "600" }}>
+                            Repair Completed
+                        </span>
+                    </div>
+
+                    <p style={{ fontSize: "13px", color: "#14532d", margin: "0 0 14px 0" }}>
+                        Please rate your service experience before approving the resolution. Your feedback helps maintain service quality.
+                    </p>
+
+                    {/* Interactive Star Rating */}
+                    <div className="mb-3">
+                        <label
+                            style={{
+                                display: "block",
+                                fontSize: "11px",
+                                fontWeight: "700",
+                                textTransform: "uppercase",
+                                letterSpacing: "0.5px",
+                                color: "#166534",
+                                marginBottom: "6px",
+                            }}
+                        >
+                            Rating ({rating} of 5 Stars)
+                        </label>
+                        <div className="d-flex align-items-center gap-1.5">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                                <button
+                                    key={star}
+                                    type="button"
+                                    onClick={() => setRating(star)}
+                                    onMouseEnter={() => setHoverRating(star)}
+                                    onMouseLeave={() => setHoverRating(0)}
+                                    style={{
+                                        background: "none",
+                                        border: "none",
+                                        padding: "4px",
+                                        cursor: "pointer",
+                                        transition: "transform 0.15s ease",
+                                    }}
+                                >
+                                    <Star
+                                        size={24}
+                                        color={(hoverRating || rating) >= star ? "#f59e0b" : "#cbd5e1"}
+                                        fill={(hoverRating || rating) >= star ? "#f59e0b" : "none"}
+                                    />
+                                </button>
+                            ))}
                         </div>
                     </div>
 
-                    {/* Description (full width) */}
-                    <div className="detail-item col-span-2">
-                        <i className="bi bi-card-text text-primary" />
-                        <div>
-                            <span className="detail-label">Description</span>
-                            <span className="detail-value">{issue.description}</span>
+                    {/* Feedback Textarea */}
+                    <div>
+                        <Textarea
+                            label="Feedback & Comments (Optional)"
+                            id="residentApprovalFeedback"
+                            rows={3}
+                            value={feedback}
+                            onChange={(e) => setFeedback(e.target.value)}
+                            placeholder="How was the technician's punctuality and work quality?..."
+                            disabled={isSubmitting}
+                        />
+                    </div>
+                </div>
+            )}
+
+            {/* Display submitted rating/feedback if already provided */}
+            {issue.rating && (
+                <div
+                    style={{
+                        backgroundColor: "#f8fafc",
+                        border: "1px solid #e2e8f0",
+                        borderRadius: "14px",
+                        padding: "16px 18px",
+                    }}
+                >
+                    <div className="d-flex align-items-center justify-content-between mb-2">
+                        <span
+                            style={{
+                                fontSize: "11px",
+                                fontWeight: "700",
+                                textTransform: "uppercase",
+                                letterSpacing: "0.5px",
+                                color: "#64748b",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "6px",
+                            }}
+                        >
+                            <MessageSquareQuote size={14} /> Resident Rating & Review
+                        </span>
+                        <div className="d-flex align-items-center gap-1">
+                            {[1, 2, 3, 4, 5].map((s) => (
+                                <Star
+                                    key={s}
+                                    size={14}
+                                    color={s <= issue.rating ? "#f59e0b" : "#cbd5e1"}
+                                    fill={s <= issue.rating ? "#f59e0b" : "none"}
+                                />
+                            ))}
                         </div>
                     </div>
-
-                    {/* Conditional fields */}
-                    {CONDITIONAL_FIELDS.map(({ label, key, icon, className, render: renderFn }) =>
-                        issue[key] ? (
-                            <div className="detail-item" key={key}>
-                                <i className={`bi ${icon} ${className || "text-primary"}`} />
-                                <div>
-                                    <span className="detail-label">{label}</span>
-                                    <span className="detail-value">{renderFn ? renderFn(issue[key]) : issue[key]}</span>
-                                </div>
-                            </div>
-                        ) : null
+                    {issue.feedback && (
+                        <p style={{ margin: 0, fontSize: "13px", color: "#334155", fontStyle: "italic" }}>
+                            "{issue.feedback}"
+                        </p>
                     )}
                 </div>
+            )}
+        </IssueDetailsModal>
+    );
+};
 
-                {/* Feedback form for Payment Pending issues */}
-                {issue.categoryType === "Resident" && issue.status === "Payment Pending" && !issue.feedback && (
-                    <div style={{ width: "100%", marginTop: 16 }}>
-                        <Textarea
-                            label="Feedback"
-                            id="feedbackText"
-                            rows={3}
-                            value={feedbackText}
-                            onChange={(e) => setFeedbackText(e.target.value)}
-                            disabled={feedbackSubmitting}
-                            placeholder="Share your feedback about this issue resolution..."
-                        />
-                        <Select
-                            label="Rating"
-                            id="feedbackRating"
-                            value={feedbackRating}
-                            onChange={(e) => setFeedbackRating(Number(e.target.value))}
-                            disabled={feedbackSubmitting}
-                            options={[5, 4, 3, 2, 1].map((r) => ({ label: `${r} Star${r > 1 ? "s" : ""}`, value: r }))}
-                        />
-                        <button
-                            className="manager-ui-button manager-ui-button--primary"
-                            onClick={onFeedbackSubmit}
-                            disabled={feedbackSubmitting || !feedbackText}
-                        >
-                            <i className="bi bi-send" /> Submit Feedback
-                        </button>
-                    </div>
-                )}
-            </div>
-        )}
-    </Modal>
-);
+export default ResidentIssueDetailsModal;

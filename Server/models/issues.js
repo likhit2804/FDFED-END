@@ -30,7 +30,8 @@ const issueSchema = new Schema({
       "Reopened",
       "Rejected",
       "Payment Pending",
-      "Payment Completed"
+      "Payment Completed",
+      "Deleted"
     ],
     default: "Pending Assignment",
   },
@@ -55,6 +56,19 @@ const issueSchema = new Schema({
     type: Boolean,
     default: false,
   },
+
+  // -------------------------
+  // 📜 AUDIT TIMELINE / ACTIVITY LOG
+  // -------------------------
+  timeline: [
+    {
+      action: { type: String, required: true }, // "Created", "Assigned", "Reassigned", "Started", "Resolved", "Confirmed", "Reopened", "Closed", "Deleted"
+      performedBy: { type: String, default: "System" }, // "Resident", "Security", "Manager", "Worker", "System"
+      performedById: { type: Schema.Types.ObjectId, default: null },
+      details: { type: String, default: "" },
+      timestamp: { type: Date, default: Date.now },
+    }
+  ],
 
   // -------------------------
 
@@ -104,7 +118,9 @@ const issueSchema = new Schema({
   resident: {
     type: Schema.Types.ObjectId,
     ref: "Resident",
-    required: true,
+    required: function () {
+      return this.categoryType === "Resident";
+    },
   },
 
   location: {

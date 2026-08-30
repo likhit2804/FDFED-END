@@ -12,16 +12,16 @@ export default function SearchBar({ placeholder, value, onChange }) {
         alignItems: "center",
         backgroundColor: "white",
         border: "1px solid #e2e8f0",
-        borderRadius: "10px",
-        padding: "0 14px",
-        height: "48px",
+        borderRadius: "8px",
+        padding: "0 12px",
+        height: "38px",
         width: "100%",
         transition: "border-color 0.2s ease",
-        outline: "none",           // ✅ ensures parent never shows outline
-        boxShadow: "none",         // ✅ ensures no shadow on focus
+        outline: "none",
+        boxShadow: "none",
       }}
     >
-      <Search size={18} color="#94a3b8" style={{ marginRight: 10 }} />
+      <Search size={16} color="#94a3b8" style={{ marginRight: 8 }} />
 
       <input
         type="text"
@@ -29,31 +29,30 @@ export default function SearchBar({ placeholder, value, onChange }) {
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onFocus={(e) => {
-          // ✅ remove ALL focus visuals
           e.target.style.outline = "none";
           e.target.style.boxShadow = "none";
           containerRef.current.style.boxShadow = "none";
           containerRef.current.style.outline = "none";
-          containerRef.current.style.borderColor = "#0f172a"; // optional subtle dark border
+          containerRef.current.style.borderColor = "#0f172a";
         }}
         onBlur={(e) => {
           e.target.style.outline = "none";
           e.target.style.boxShadow = "none";
           containerRef.current.style.boxShadow = "none";
-          containerRef.current.style.borderColor = "#e2e8f0"; // reset border
+          containerRef.current.style.borderColor = "#e2e8f0";
         }}
         style={{
           border: "none",
           outline: "none",
-          boxShadow: "none",        // ✅ ensures Chrome’s glow is gone
+          boxShadow: "none",
           flex: 1,
-          fontSize: "14.5px",
+          fontSize: "13px",
           color: "#334155",
           fontWeight: 500,
           backgroundColor: "transparent",
           height: "100%",
-          lineHeight: "48px",       // perfect vertical centering
-          marginBottom: 0,          // removes default margin
+          lineHeight: "38px",
+          marginBottom: 0,
         }}
       />
     </div>

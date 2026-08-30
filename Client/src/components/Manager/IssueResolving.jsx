@@ -58,6 +58,7 @@ export const IssueResolving = () => {
     issues = [],
     loading = false,
     error = null,
+    issueDetails = null,
     workers = [],
     workersLoading = false,
   } = managerState;
@@ -127,7 +128,10 @@ export const IssueResolving = () => {
   useEffect(() => {
     if (!socket) return undefined;
 
-    const refresh = () => dispatch(fetchManagerIssues());
+    const refresh = () => {
+      console.log("🔄 [MANAGER SOCKET] issue:updated received -> refetching manager issues...");
+      dispatch(fetchManagerIssues());
+    };
     socket.on("issue:updated", refresh);
 
     return () => socket.off("issue:updated", refresh);
@@ -149,10 +153,10 @@ export const IssueResolving = () => {
       issue.status === "In Progress" ||
       (issue.status === "Pending Assignment" && issue.workerAssigned));
 
-  const openDetails = async (issue) => {
+  const openDetails = (issue) => {
     setPreviewIssue(issue);
-    await dispatch(fetchIssueDetails(issue._id));
     setPreviewOpen(true);
+    dispatch(fetchIssueDetails(issue._id));
   };
 
   const closeDetails = () => {
@@ -188,7 +192,6 @@ export const IssueResolving = () => {
       await dispatch(action(payload)).unwrap();
       toast.success(assignMode === "assign" ? "Worker assigned successfully" : "Worker reassigned successfully");
       setAssignMode(null);
-      dispatch(fetchManagerIssues());
     } catch (requestError) {
       toast.error(String(requestError));
     }
@@ -198,7 +201,6 @@ export const IssueResolving = () => {
     try {
       await dispatch(closeManagerIssue({ id: issue._id })).unwrap();
       toast.success("Issue closed");
-      dispatch(fetchManagerIssues());
     } catch (requestError) {
       toast.error(String(requestError));
     }
@@ -351,7 +353,7 @@ export const IssueResolving = () => {
       {previewOpen ? (
         <Suspense fallback={<Loader label="Loading issue details..." size={24} />}>
           <LazyIssueDetailsModal
-            issue={previewIssue}
+            issue={issueDetails && issueDetails._id === previewIssue?._id ? issueDetails : previewIssue}
             isOpen={previewOpen}
             onClose={closeDetails}
             canAssign={canAssign}

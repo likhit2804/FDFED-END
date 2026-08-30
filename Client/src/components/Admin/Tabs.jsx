@@ -5,11 +5,11 @@ export default function Tabs({ options, active, onChange }) {
     <div
       className="d-flex justify-content-center align-items-center w-100"
       style={{
-        gap: "8px",
-        background: "#f8fafc",
-        borderRadius: "12px",
-        padding: "6px",
-        height: "52px",
+        gap: "6px",
+        background: "#f1f5f9",
+        borderRadius: "8px",
+        padding: "4px",
+        height: "40px",
       }}
     >
       {options.map((option) => {
@@ -23,17 +23,17 @@ export default function Tabs({ options, active, onChange }) {
             style={{
               flex: 1,
               border: "none",
-              borderRadius: "10px",
+              borderRadius: "6px",
               fontWeight: 600,
-              fontSize: "14px",
-              padding: "10px 0",
-              height: "40px",
+              fontSize: "13px",
+              padding: "6px 0",
+              height: "32px",
               color: isActive ? "#ffffff" : "#475569",
               backgroundColor: isActive ? "#0f172a" : "transparent",
               boxShadow: isActive
-                ? "0 2px 6px rgba(0,0,0,0.15)"
-                : "0 0 0 rgba(0,0,0,0)",
-              transition: "all 0.25s ease",
+                ? "0 1px 4px rgba(0,0,0,0.12)"
+                : "none",
+              transition: "all 0.2s ease",
             }}
             onMouseEnter={(e) => {
               if (!isActive)

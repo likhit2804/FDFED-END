@@ -22,9 +22,10 @@ export const useSocket = (url = "", options = {}) => {
     }
 
     // Connect with token in auth object
-    console.log("🔗 Connecting to Socket.IO at:", url);
-    const s = io(url, {
+    console.log("🔗 Connecting to Socket.IO at:", url || "origin");
+    const s = io(url || window.location.origin, {
       withCredentials: true,
+      transports: ["websocket", "polling"],
       auth: {
         token: token,
       },
@@ -39,6 +40,10 @@ export const useSocket = (url = "", options = {}) => {
 
     s.on("connect", () => {
       console.log("✅ Socket connected with ID:", s.id);
+    });
+
+    s.on("issue:updated", (data) => {
+      console.log("📡 [SOCKET RECV] issue:updated received on client:", data);
     });
 
     s.on("connect_error", (error) => {

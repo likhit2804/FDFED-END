@@ -30,15 +30,17 @@ export const raiseIssue = createAsyncThunk(
   }
 );
 
-// Approve (confirm) an issue
+// Approve (confirm) an issue with rating and feedback
 export const approveIssue = createAsyncThunk(
   "issue/approveIssue",
-  async (issueId, { rejectWithValue }) => {
+  async (payload, { rejectWithValue }) => {
     try {
-      const res = await axios.post(`/resident/issue/confirmIssue/${issueId}`);
+      const id = typeof payload === "object" ? payload.id : payload;
+      const body = typeof payload === "object" ? { rating: payload.rating, feedback: payload.feedback } : {};
+      const res = await axios.post(`/resident/issue/confirmIssue/${id}`, body);
       const data = res.data;
       if (!data.success) throw new Error(data.message || "Failed to approve issue");
-      return issueId;
+      return { id, rating: body.rating, feedback: body.feedback, issue: data.issue };
     } catch (err) {
       return rejectWithValue(err.response?.data?.message || err.message);
     }
@@ -91,7 +93,9 @@ const IssueSlice = createSlice({
       })
       .addCase(fetchIssues.fulfilled, (state, action) => {
         state.loading = false;
-        state.issues = action.payload;
+        state.issues = (action.payload || []).sort(
+          (a, b) => new Date(b.createdAt || b.updatedAt || 0) - new Date(a.createdAt || a.updatedAt || 0)
+        );
       })
       .addCase(fetchIssues.rejected, (state, action) => {
         state.loading = false;
@@ -110,8 +114,17 @@ const IssueSlice = createSlice({
         state.error = action.payload;
       })
       .addCase(approveIssue.fulfilled, (state, action) => {
+        const payloadId = action.payload?.id || action.payload;
         state.issues = state.issues.map(issue =>
-          issue._id === action.payload ? { ...issue, status: "Closed" } : issue
+          issue._id === payloadId
+            ? {
+                ...issue,
+                status: "Payment Pending",
+                rating: action.payload?.rating || issue.rating,
+                feedback: action.payload?.feedback || issue.feedback,
+                ...(action.payload?.issue || {}),
+              }
+            : issue
         );
       })
       .addCase(rejectIssue.fulfilled, (state, action) => {

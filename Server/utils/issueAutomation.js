@@ -1,6 +1,7 @@
 import cron from "node-cron";
 import Issue from "../models/issues.js";
 import Worker from "../models/workers.js";
+import { logIssueActivity, emitIssueUpdate } from "../pipelines/issue/utils/issueShared.js";
 
 // Map community issue categories to worker job roles (matching actual database values)
 const COMMUNITY_CATEGORY_TO_JOBROLE = {
@@ -70,11 +71,76 @@ function selectOptimalWorker(workers, priority = 'Normal') {
   return workers.sort((a, b) => a.assignedIssues.length - b.assignedIssues.length)[0];
 }
 
-function getJobRoleForCommunityCategory(category) {
+export function getJobRoleForCommunityCategory(issueOrCategory) {
+  const category = typeof issueOrCategory === "string" ? issueOrCategory : issueOrCategory?.category;
+  let text = "";
+
+  if (typeof issueOrCategory === "object" && issueOrCategory !== null) {
+    text = `${issueOrCategory.title || ""} ${issueOrCategory.description || ""} ${issueOrCategory.otherCategory || ""}`.toLowerCase();
+  }
+
+  if (category && category !== "Other Community" && COMMUNITY_CATEGORY_TO_JOBROLE[category]) {
+    return COMMUNITY_CATEGORY_TO_JOBROLE[category];
+  }
+
+  if (text) {
+    if (/electric|socket|spark|wire|shock|power|light|lamp|switch|fuse|mcb|short\s*circuit/i.test(text)) {
+      return "Electrician";
+    }
+    if (/pipe|drain|tap|sink|faucet|flush|clog|sewage|water|leak|flood/i.test(text)) {
+      return "Plumber";
+    }
+    if (/pest|cockroach|termite|bedbug|ant|rodent|rat|mosquito/i.test(text)) {
+      return "Pest Control";
+    }
+    if (/waste|garbage|trash|bin|dump/i.test(text)) {
+      return "Waste Management";
+    }
+    if (/security|guard|gate|lock|cctv|camera/i.test(text)) {
+      return "Security";
+    }
+  }
+
   return COMMUNITY_CATEGORY_TO_JOBROLE[category] || "Maintenance";
 }
 
-function getJobRoleForResidentCategory(category) {
+export function getJobRoleForResidentCategory(issueOrCategory) {
+  const category = typeof issueOrCategory === "string" ? issueOrCategory : issueOrCategory?.category;
+  let text = "";
+
+  if (typeof issueOrCategory === "object" && issueOrCategory !== null) {
+    text = `${issueOrCategory.title || ""} ${issueOrCategory.description || ""} ${issueOrCategory.otherCategory || ""}`.toLowerCase();
+  }
+
+  // If category is explicitly chosen and not 'Other', use direct mapped role
+  if (category && category !== "Other" && RESIDENT_CATEGORY_TO_JOBROLE[category]) {
+    return RESIDENT_CATEGORY_TO_JOBROLE[category];
+  }
+
+  // Intelligent keyword matching for 'Other' category or multi-domain reports
+  if (text) {
+    // Electrical hazards take highest urgency (sparks, socket, shock, wires)
+    if (/electric|socket|spark|wire|shock|power|switch|fuse|mcb|short\s*circuit|voltage/i.test(text)) {
+      return "Electrician";
+    }
+    // Plumbing issues
+    if (/pipe|drain|tap|sink|faucet|flush|clog|sewage|water|leak/i.test(text)) {
+      return "Plumber";
+    }
+    // Pest Control
+    if (/pest|cockroach|termite|bedbug|ant|rodent|rat|insect|mosquito/i.test(text)) {
+      return "Pest Control";
+    }
+    // Waste Management
+    if (/waste|garbage|trash|bin|dump|rubbish|debris/i.test(text)) {
+      return "Waste Management";
+    }
+    // Security
+    if (/security|guard|gate|lock|intercom|cctv|camera|theft|breakin|intruder/i.test(text)) {
+      return "Security";
+    }
+  }
+
   return RESIDENT_CATEGORY_TO_JOBROLE[category] || "Maintenance";
 }
 
@@ -89,10 +155,10 @@ export async function autoAssignResidentIssue(issue) {
     console.log("Issue Community ID:", issue.community);
     console.log("Issue Community ID type:", typeof issue.community);
 
-    // Use mapped job role for worker search
-    const jobRole = getJobRoleForResidentCategory(issue.category);
+    // Use mapped / keyword-analyzed job role for worker search
+    const jobRole = getJobRoleForResidentCategory(issue);
     
-    console.log(`Looking for workers with jobRole: ${jobRole} for issue category: ${issue.category}`);
+    console.log(`Looking for workers with jobRole: ${jobRole} for issue: "${issue.title}" (Category: ${issue.category})`);
 
     // Debug: Check workers in community first
     const allCommunityWorkers = await Worker.find({
@@ -208,6 +274,7 @@ export async function autoAssignResidentIssue(issue) {
     issue.workerAssigned = selected._id;
     issue.status = "Assigned";
     issue.autoAssigned = true;
+    logIssueActivity(issue, "Assigned", "System", `Auto-assigned to on-duty ${selected.name} (${selected.jobRole?.join(", ") || "Staff"})`, selected._id);
     await issue.save();
 
     // Add issue to worker's assigned issues
@@ -218,6 +285,7 @@ export async function autoAssignResidentIssue(issue) {
 
     console.log(`Auto-assigned Resident issue ${issue._id} to worker ${selected.name}`);
     console.log("=== AUTO ASSIGN RESIDENT ISSUE END ===");
+    emitIssueUpdate(issue, "assigned");
     return { assigned: true, worker: selected };
   } catch (err) {
     console.error("Auto assign resident issue error:", err);
@@ -244,10 +312,10 @@ export async function autoAssignCommunityIssue(issue) {
     console.log("Issue Community ID:", issue.community);
     console.log("Issue Community ID type:", typeof issue.community);
 
-    // Use mapped job role for worker search
-    const jobRole = getJobRoleForCommunityCategory(issue.category);
+    // Use mapped / keyword-analyzed job role for worker search
+    const jobRole = getJobRoleForCommunityCategory(issue);
     
-    console.log(`Looking for workers with jobRole: ${jobRole} for community issue category: ${issue.category}`);
+    console.log(`Looking for workers with jobRole: ${jobRole} for community issue: "${issue.title}" (Category: ${issue.category})`);
 
     // Debug: Check workers in community first
     const allCommunityWorkers = await Worker.find({
@@ -316,6 +384,7 @@ export async function autoAssignCommunityIssue(issue) {
     issue.workerAssigned = selected._id;
     issue.status = "Assigned";
     issue.autoAssigned = true;
+    logIssueActivity(issue, "Assigned", "System", `Auto-assigned to on-duty ${selected.name} (${selected.jobRole?.join(", ") || "Staff"})`, selected._id);
     await issue.save();
 
     // Add issue to worker's assigned issues
@@ -326,6 +395,7 @@ export async function autoAssignCommunityIssue(issue) {
 
     console.log(`Auto-assigned Community issue ${issue._id} to worker ${selected.name}`);
     console.log("=== AUTO ASSIGN COMMUNITY ISSUE END ===");
+    emitIssueUpdate(issue, "assigned");
     return { assigned: true, worker: selected };
   } catch (err) {
     console.error("Auto assign community issue error:", err);

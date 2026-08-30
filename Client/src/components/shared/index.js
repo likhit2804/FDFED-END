@@ -18,6 +18,7 @@ export { default as StatusBadge } from './StatusBadge';
 export { EntityCard } from './EntityCard';
 export { default as DataTable } from './DataTable';
 export { default as EmptyState } from './EmptyState';
+export { default as IssueTimeline } from './IssueTimeline';
 
 // ── Inputs & filters ─────────────────────────────────────────
 export { default as SearchBar } from './SearchBar';
@@ -42,3 +43,4 @@ export { default as GraphBar } from './GraphBar';
 // ── Modals ───────────────────────────────────────────────────
 export { default as Modal } from './Modal';
 export { default as ConfirmModal } from './ConfirmModal';
+export { default as IssueDetailsModal } from './IssueDetailsModal';

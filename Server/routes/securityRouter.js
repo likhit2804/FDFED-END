@@ -20,6 +20,9 @@ securityRouter.use("/", profileSecurityRouter);
 import notificationSecurityRouter from "../pipelines/notifications/router/security.js";
 securityRouter.use("/", notificationSecurityRouter);
 
+import issueSecurityRouter from "../pipelines/issue/router/security.js";
+securityRouter.use("/", issueSecurityRouter);
+
 
 // --------------------------------------------------
 // Dashboard

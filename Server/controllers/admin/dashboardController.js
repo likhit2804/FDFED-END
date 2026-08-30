@@ -242,6 +242,8 @@ export const getPayments = async (req, res) => {
         amount: amount,
         paymentMethod: p.paymentMethod || 'N/A',
         paymentDate: p.paymentDate ? new Date(p.paymentDate).toLocaleDateString('en-IN') : 'N/A',
+        paymentDateIso: p.paymentDate ? new Date(p.paymentDate).toISOString() : null,
+        paymentDateRaw: p.paymentDate || null,
         status: p.status ? p.status.charAt(0).toUpperCase() + p.status.slice(1) : 'Unknown',
         managerName: community?.communityManager?.name || 'Unassigned',
         planDuration: p.duration || 'monthly',

@@ -1,8 +1,11 @@
 import React, { useState } from "react";
+import { useDispatch } from "react-redux";
+import { setUser } from "../slices/authSlice";
 import { adminLogin, adminVerifyOtp, adminResendOtp } from "../services/adminService";
 import { useAdminAuth } from "../context/AdminAuthContext";
 
 const AdminLogin = () => {
+  const dispatch = useDispatch();
   const { login } = useAdminAuth() || {};
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [errors, setErrors] = useState({});
@@ -41,13 +44,13 @@ const AdminLogin = () => {
       setTempToken(data.tempToken);
       setOtpStep(true);
       setErrors({});
-    } else if (data.success) {
-      // Direct login (no 2FA)
-      if (login) {
-        login({ email: formData.email });
-      } else {
-        localStorage.setItem("adminSession", JSON.stringify({ email: formData.email }));
-      }
+    } else if (data.success || data.user) {
+      const userPayload = data.user || { email: formData.email, userType: "admin" };
+      if (data.token) localStorage.setItem("token", data.token);
+      localStorage.setItem("user", JSON.stringify(userPayload));
+      localStorage.setItem("adminSession", JSON.stringify(userPayload));
+      dispatch(setUser(userPayload));
+      if (login) login(userPayload);
       window.location.href = data.redirect || "/admin/dashboard";
     } else {
       setErrors({ password: data.message || "Invalid credentials" });
@@ -61,7 +64,7 @@ const AdminLogin = () => {
     e.preventDefault();
 
     if (!otp || otp.length < 4) {
-      setErrors({ otp: "Please enter the OTP sent to your email" });
+      setErrors({ otp: "Please enter the OTP" });
       return;
     }
 
@@ -71,12 +74,12 @@ const AdminLogin = () => {
     const data = await adminVerifyOtp(otp, tempToken);
 
     if (data.token || data.user) {
-      // OTP verified, login complete
-      if (login) {
-        login({ email: formData.email, ...data.user });
-      } else {
-        localStorage.setItem("adminSession", JSON.stringify({ email: formData.email }));
-      }
+      const userPayload = data.user || { email: formData.email, userType: "admin" };
+      if (data.token) localStorage.setItem("token", data.token);
+      localStorage.setItem("user", JSON.stringify(userPayload));
+      localStorage.setItem("adminSession", JSON.stringify(userPayload));
+      dispatch(setUser(userPayload));
+      if (login) login(userPayload);
       window.location.href = "/admin/dashboard";
     } else {
       setErrors({ otp: data.message || "Invalid OTP" });

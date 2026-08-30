@@ -35,20 +35,23 @@ export const Tasks = () => {
   const [viewMode, setViewMode] = useState("grid");
 
   // Data fetching
-  const fetchTasks = async () => {
-    setLoading(true);
+  const fetchTasks = async (showSpinner = true) => {
+    if (showSpinner) setLoading(true);
     try {
       const res = await axios.get("/worker/api/tasks");
       const data = res.data;
       setTasks(data.tasks || []);
     } catch (err) { toast.error(err.response?.data?.message || err.message || "Error loading tasks"); }
-    setLoading(false);
+    if (showSpinner) setLoading(false);
   };
 
-  useEffect(() => { fetchTasks(); }, []);
+  useEffect(() => { fetchTasks(true); }, []);
   useEffect(() => {
     if (!socket) return;
-    const refresh = () => fetchTasks();
+    const refresh = () => {
+      console.log("🔄 [WORKER SOCKET] issue:updated received -> refetching worker tasks...");
+      fetchTasks(false);
+    };
     socket.on("issue:updated", refresh);
     return () => socket.off("issue:updated", refresh);
   }, [socket]);
@@ -76,11 +79,16 @@ export const Tasks = () => {
   const updateTaskStatus = async (taskId, newStatus, costValue = estimatedCost) => {
     setActionLoading(true);
     try {
+      const task = tasks.find((t) => t._id === taskId) || selectedTask;
+      const isFree =
+        task?.categoryType === "Community" ||
+        task?.category === "Waste Management" ||
+        task?.category === "Security";
+
       const endpoint = newStatus === STATUS_IN_PROGRESS ? "start" : "resolve";
-      const payload = newStatus === STATUS_RESOLVED ? { estimatedCost: Number(costValue) } : null;
-      if (payload && (!Number.isFinite(payload.estimatedCost) || payload.estimatedCost <= 0)) {
-        setActionLoading(false); toast.error("Enter a positive estimated cost before completing."); return;
-      }
+      const finalCost = isFree ? 0 : Math.max(0, Number(costValue) || 0);
+      const payload = newStatus === STATUS_RESOLVED ? { estimatedCost: finalCost } : null;
+
       const res = await axios.post(`/worker/issue/${endpoint}/${taskId}`, payload || undefined);
       const data = res.data;
       if (!data.success) throw new Error(data.message);
@@ -151,7 +159,7 @@ export const Tasks = () => {
           )}
         </ManagerSection>
 
-        <TaskDetailsModal task={selectedTask} isOpen={isDetailModalOpen} onClose={closeTaskModal} estimatedCost={estimatedCost} setEstimatedCost={setEstimatedCost} actionLoading={actionLoading} onUpdateStatus={updateTaskStatus} onMisassigned={handleMisassigned} />
+        <TaskDetailsModal task={tasks?.find((t) => t._id === selectedTask?._id) || selectedTask} isOpen={isDetailModalOpen} onClose={closeTaskModal} estimatedCost={estimatedCost} setEstimatedCost={setEstimatedCost} actionLoading={actionLoading} onUpdateStatus={updateTaskStatus} onMisassigned={handleMisassigned} />
       </ManagerPageShell>
     </>
   );

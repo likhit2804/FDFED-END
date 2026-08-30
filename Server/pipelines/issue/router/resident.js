@@ -7,11 +7,13 @@ import {
     getResidentIssues,
     getIssueDataById,
     submitFeedback,
+    getEmergencyContacts,
 } from "../controllers/resident.js";
 import { validateIssue, validateObjectId } from "../../../middleware/validation.js";
 
 const issueResidentRouter = express.Router();
 
+issueResidentRouter.get("/issue/emergency-contacts", getEmergencyContacts);
 issueResidentRouter.post("/issue/confirmIssue/:id", validateObjectId, confirmIssue);
 issueResidentRouter.post("/issue/rejectIssueResolution/:id", validateObjectId, rejectIssueResolution);
 issueResidentRouter.post("/issue/raise", validateIssue, raiseIssue);
