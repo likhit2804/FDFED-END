@@ -42,9 +42,14 @@ const buildWorkerOptions = (issue, allWorkers, mode) => {
     // Available workers
     allWorkers
         .filter((w) => !disabledIds.has(w._id))
-        .forEach((w) =>
-            opts.push({ label: `${w.name} - ${formatRole(w)}`, value: w._id })
-        );
+        .forEach((w) => {
+            const onLeave = Boolean(w.isOnLeave);
+            opts.push({
+                label: `${w.name} - ${formatRole(w)}${onLeave ? " (On Leave)" : ""}`,
+                value: w._id,
+                disabled: onLeave,
+            });
+        });
 
     return opts;
 };

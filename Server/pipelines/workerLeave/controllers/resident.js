@@ -48,6 +48,22 @@ export const applyLeave = async (req, res) => {
       });
     }
 
+    // Check for overlapping leaves for the same worker
+    const overlappingLeave = await Leave.findOne({
+      worker: req.user.id,
+      status: { $in: ["pending", "approved"] },
+      $or: [
+        { startDate: { $lte: parsedEndDate }, endDate: { $gte: parsedStartDate } },
+      ],
+    });
+
+    if (overlappingLeave) {
+      return res.status(400).json({
+        success: false,
+        message: "You already have an active or pending leave request for overlapping dates.",
+      });
+    }
+
     const leave = new Leave({
       worker: req.user.id,
       community: req.user.community,

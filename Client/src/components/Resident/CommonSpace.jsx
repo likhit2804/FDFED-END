@@ -285,7 +285,8 @@ export const CommonSpaceBooking = () => {
       clearBookingFormState();
       navigate('/resident/payments');
     } catch (error) {
-      toast.error(error?.message || 'Failed to create booking.');
+      const errorMsg = error?.error?.message || error?.error || error?.message || 'Failed to create booking.';
+      toast.error(errorMsg);
     } finally {
       setFormSubmitting(false);
     }
@@ -354,13 +355,20 @@ export const CommonSpaceBooking = () => {
   };
 
   const onSubmit = async (data) => {
-    if (selectedFacility.Type === 'Slot' && selectedSlots.length === 0) { toast.error('Please select at least one time slot.'); return; }
-    let fromTime = 'N/A', toTime = 'N/A', amount = selectedFacility.rent, timeSlots = [];
+    if (!selectedFacility) {
+      toast.error('Please select a facility.');
+      return;
+    }
+    if (selectedFacility.Type === 'Slot' && selectedSlots.length === 0) {
+      toast.error('Please select at least one time slot.');
+      return;
+    }
+    let fromTime = '00:00', toTime = '23:59', amount = selectedFacility.rent || 0, timeSlots = [];
     if (selectedFacility.Type === 'Slot') {
       fromTime = selectedSlots[0];
       toTime = String(parseInt(selectedSlots[selectedSlots.length - 1].split(':')[0]) + 1).padStart(2, '0') + ':00';
       timeSlots = selectedSlots;
-      amount = selectedSlots.length * selectedFacility.rent;
+      amount = selectedSlots.length * (selectedFacility.rent || 0);
     }
 
     const policyError = validateBookingPolicyClientSide({
@@ -373,7 +381,19 @@ export const CommonSpaceBooking = () => {
       return;
     }
 
-    const newBookingData = { ...data, fid: selectedFacility._id, name: selectedFacility.name, Type: selectedFacility.Type, from: fromTime, to: toTime, timeSlots, Date: data.date };
+    const bookingDateStr = data.date || selectedDateValue || toIsoDate(todayDate);
+    const newBookingData = {
+      ...data,
+      facility: selectedFacility.name,
+      fid: selectedFacility._id,
+      name: selectedFacility.name,
+      Type: selectedFacility.Type,
+      from: fromTime,
+      to: toTime,
+      timeSlots,
+      Date: bookingDateStr,
+    };
+
     if ((Number(amount) || 0) <= 0) {
       submitBookingWithoutPayment(newBookingData, Number(amount) || 0);
       return;

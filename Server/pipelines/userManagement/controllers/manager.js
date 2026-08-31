@@ -1,6 +1,7 @@
 import Resident from "../../../models/resident.js";
 import Worker from "../../../models/workers.js";
 import Security from "../../../models/security.js";
+import Leave from "../../../models/leave.js";
 import bcrypt from "bcrypt";
 import { sendPassword } from "../../../controllers/shared/OTP.js";
 import { sendError, sendSuccess } from "../../shared/helpers.js";
@@ -286,11 +287,28 @@ export const deleteWorker = async (req, res) => {
 
 export const getWorkers = async (req, res) => {
     try {
+        const today = new Date();
+        const activeLeaves = await Leave.find({
+            community: req.user.community,
+            status: "approved",
+            startDate: { $lte: today },
+            endDate: { $gte: today },
+        }).select("worker");
+        const onLeaveSet = new Set(activeLeaves.map((l) => l.worker?.toString()));
+
         const workers = await Worker.find({
             community: req.user.community,
             isActive: true
         }).select('name jobRole _id');
-        res.json({ success: true, workers });
+
+        const workersWithLeaveStatus = workers.map((w) => ({
+            _id: w._id,
+            name: w.name,
+            jobRole: w.jobRole,
+            isOnLeave: onLeaveSet.has(w._id.toString()),
+        }));
+
+        res.json({ success: true, workers: workersWithLeaveStatus });
     } catch (error) {
         console.error("Error fetching workers:", error);
         return sendError(res, 500, "Server error", error);

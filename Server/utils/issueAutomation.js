@@ -1,6 +1,7 @@
 import cron from "node-cron";
 import Issue from "../models/issues.js";
 import Worker from "../models/workers.js";
+import Leave from "../models/leave.js";
 import { logIssueActivity, emitIssueUpdate } from "../pipelines/issue/utils/issueShared.js";
 
 // Map community issue categories to worker job roles (matching actual database values)
@@ -144,6 +145,23 @@ export function getJobRoleForResidentCategory(issueOrCategory) {
   return RESIDENT_CATEGORY_TO_JOBROLE[category] || "Maintenance";
 }
 
+// Helper to fetch IDs of workers currently on approved leave
+async function getApprovedOnLeaveWorkerIds(communityId) {
+  try {
+    const today = new Date();
+    const leaves = await Leave.find({
+      community: communityId,
+      status: "approved",
+      startDate: { $lte: today },
+      endDate: { $gte: today },
+    }).select("worker");
+    return new Set(leaves.map((l) => l.worker?.toString()));
+  } catch (err) {
+    console.error("Error fetching on-leave workers:", err);
+    return new Set();
+  }
+}
+
 // --------------------------------------------------
 // AUTO ASSIGN RESIDENT ISSUE
 // --------------------------------------------------
@@ -160,6 +178,8 @@ export async function autoAssignResidentIssue(issue) {
     
     console.log(`Looking for workers with jobRole: ${jobRole} for issue: "${issue.title}" (Category: ${issue.category})`);
 
+    const onLeaveWorkerIds = await getApprovedOnLeaveWorkerIds(issue.community);
+
     // Debug: Check workers in community first
     const allCommunityWorkers = await Worker.find({
       community: issue.community
@@ -169,39 +189,26 @@ export async function autoAssignResidentIssue(issue) {
       console.log(`Worker: ${w.name}, JobRoles: [${w.jobRole.join(', ')}], IsActive: ${w.isActive} (type: ${typeof w.isActive}), Community: ${w.community}`);
     });
 
-    // First try: Find workers with exact job role match (temporarily removing isActive filter for debugging)
+    // First try: Find workers with exact job role match
     let workers = await Worker.find({
       community: issue.community,
       jobRole: { $in: [jobRole] }
     });
 
-    // Filter active workers manually for debugging
+    // Filter active workers and exclude those on approved leave
     const activeWorkers = workers.filter(w => {
-      console.log(`Checking worker ${w.name}: isActive = ${w.isActive} (${typeof w.isActive})`);
-      return w.isActive === true || w.isActive === "true" || w.isActive === 1;
+      const isActive = w.isActive === true || w.isActive === "true" || w.isActive === 1;
+      const isOnLeave = onLeaveWorkerIds.has(w._id.toString());
+      return isActive && !isOnLeave;
     });
     
     workers = activeWorkers;
-    console.log(`Found ${workers.length} active workers for jobRole: ${jobRole} after manual filtering`);
-    
-    // Debug: Check what workers exist with different criteria
-    const workersWithJobRole = await Worker.find({
-      community: issue.community,
-      jobRole: { $in: [jobRole] }
-    });
-    console.log(`Workers with jobRole ${jobRole} (ignoring isActive): ${workersWithJobRole.length}`);
-    
-   
-    console.log(`All workers in community: ${allCommunityWorkers.map(w => ({ 
-      name: w.name, 
-      jobRole: w.jobRole, 
-      isActive: w.isActive 
-    }))}`);
+    console.log(`Found ${workers.length} active (not on leave) workers for jobRole: ${jobRole}`);
 
     // Second try: Fallback to Maintenance workers
     if (!workers.length) {
       console.log(`No workers found for jobRole: ${jobRole}, trying with 'Maintenance'`);
-      workers = await Worker.find({
+      const fallbackWorkers = await Worker.find({
         community: issue.community,
         jobRole: { $in: ["Maintenance"] },
         $or: [
@@ -211,13 +218,14 @@ export async function autoAssignResidentIssue(issue) {
           { isActive: { $ne: false } }
         ]
       });
+      workers = fallbackWorkers.filter(w => !onLeaveWorkerIds.has(w._id.toString()));
       console.log(`Found ${workers.length} maintenance workers as fallback`);
     }
 
     // Third try: Any active worker in the community
     if (!workers.length) {
       console.log("No maintenance workers found, trying any active worker");
-      workers = await Worker.find({
+      const anyWorkers = await Worker.find({
         community: issue.community,
         $or: [
           { isActive: true },
@@ -226,6 +234,7 @@ export async function autoAssignResidentIssue(issue) {
           { isActive: { $ne: false } }
         ]
       });
+      workers = anyWorkers.filter(w => !onLeaveWorkerIds.has(w._id.toString()));
       console.log(`Found ${workers.length} active workers as last resort`);
     }
 
@@ -318,6 +327,8 @@ export async function autoAssignCommunityIssue(issue) {
     console.log(`Looking for workers with jobRole: ${jobRole} for community issue: "${issue.title}" (Category: ${issue.category})`);
 
     // Debug: Check workers in community first
+    const onLeaveWorkerIds = await getApprovedOnLeaveWorkerIds(issue.community);
+
     const allCommunityWorkers = await Worker.find({
       community: issue.community
     });
@@ -326,22 +337,21 @@ export async function autoAssignCommunityIssue(issue) {
       console.log(`Worker: ${w.name}, JobRoles: [${w.jobRole.join(', ')}], IsActive: ${w.isActive} (type: ${typeof w.isActive}), Community: ${w.community}`);
     });
 
-    // First try: Find workers with exact job role match (temporarily removing isActive filter for debugging)
+    // First try: Find workers with exact job role match
     let workers = await Worker.find({
       community: issue.community,
       jobRole: { $in: [jobRole] }
     });
 
-    // Filter active workers manually for debugging
+    // Filter active workers and exclude those on approved leave
     const activeWorkers = workers.filter(w => {
-      console.log(`Checking worker ${w.name}: isActive = ${w.isActive} (${typeof w.isActive})`);
-      return w.isActive === true || w.isActive === "true" || w.isActive === 1;
+      const isActive = w.isActive === true || w.isActive === "true" || w.isActive === 1;
+      const isOnLeave = onLeaveWorkerIds.has(w._id.toString());
+      return isActive && !isOnLeave;
     });
     
     workers = activeWorkers;
-    console.log(`Found ${workers.length} active workers for jobRole: ${jobRole} after manual filtering`);
-
-    console.log(`Found ${workers.length} workers for jobRole: ${jobRole}`);
+    console.log(`Found ${workers.length} active (not on leave) workers for jobRole: ${jobRole}`);
 
     if (!workers.length) {
       console.log(`No workers found for jobRole: ${jobRole}, trying with 'Maintenance'`);
@@ -351,9 +361,11 @@ export async function autoAssignCommunityIssue(issue) {
         jobRole: { $in: ["Maintenance"] }
       });
       
-      // Filter active maintenance workers
+      // Filter active maintenance workers not on leave
       const activeFallbackWorkers = fallbackWorkers.filter(w => {
-        return w.isActive === true || w.isActive === "true" || w.isActive === 1;
+        const isActive = w.isActive === true || w.isActive === "true" || w.isActive === 1;
+        const isOnLeave = onLeaveWorkerIds.has(w._id.toString());
+        return isActive && !isOnLeave;
       });
       
       if (!activeFallbackWorkers.length) {

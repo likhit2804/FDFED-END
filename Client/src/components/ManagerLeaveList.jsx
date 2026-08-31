@@ -1,8 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { toast } from "react-toastify";
 import { CheckCircle, Clock, FileText, XCircle } from "lucide-react";
 
 import { approveLeave, fetchLeaves, rejectLeave } from "../slices/leaveSlice";
+import { useSocket } from "../hooks/useSocket";
 import { EmptyState, StatCard, StatusBadge, Textarea } from "./shared";
 import {
   ManagerActionButton,
@@ -37,10 +39,18 @@ export default function ManagerLeaveList() {
   const leaves = useSelector((state) => state.leave?.leaves || []);
   const [loading, setLoading] = useState(false);
   const [notes, setNotes] = useState({});
+  const [filter, setFilter] = useState("all");
 
   useEffect(() => {
     dispatch(fetchLeaves());
   }, [dispatch]);
+
+  // Real-time synchronization when a worker applies for leave
+  useSocket("leave:applied", (payload) => {
+    console.log("⚡ [ManagerLeaveList] Received leave:applied event:", payload);
+    dispatch(fetchLeaves());
+    toast.info("A worker has submitted a new leave application.");
+  });
 
   const stats = useMemo(() => ({
     total: leaves.length,
@@ -49,25 +59,31 @@ export default function ManagerLeaveList() {
     rejected: leaves.filter((leave) => leave.status === "rejected").length,
   }), [leaves]);
 
+  const filteredLeaves = useMemo(() => {
+    if (filter === "all") return leaves;
+    return leaves.filter((leave) => String(leave.status).toLowerCase() === filter);
+  }, [leaves, filter]);
+
   const calculateDays = (start, end) => {
+    if (!start || !end) return 0;
     const startDate = new Date(start);
     const endDate = new Date(end);
     return Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
   };
 
   const updateLeave = async (mode, id) => {
-    const confirmMessage = mode === "approve" ? "Approve this leave?" : "Reject this leave?";
-    if (!window.confirm(confirmMessage)) return;
-
     setLoading(true);
     try {
       const action = mode === "approve" ? approveLeave : rejectLeave;
       await dispatch(action({ id, notes: notes[id] || "" })).unwrap();
       await dispatch(fetchLeaves()).unwrap();
       setNotes((current) => ({ ...current, [id]: "" }));
+      toast.success(
+        mode === "approve" ? "Leave approved successfully!" : "Leave rejected."
+      );
     } catch (err) {
       console.error(err);
-      alert("Failed to update leave status.");
+      toast.error(err?.message || err?.error || "Failed to update leave status.");
     } finally {
       setLoading(false);
     }
@@ -86,16 +102,48 @@ export default function ManagerLeaveList() {
         <StatCard label="Approved" value={stats.approved} icon={<CheckCircle size={22} />} iconColor="var(--success-500)" iconBg="var(--success-soft)" />
       </div>
 
+      <div className="d-flex align-items-center gap-2 mb-3">
+        {["all", "pending", "approved", "rejected"].map((tab) => (
+          <button
+            key={tab}
+            type="button"
+            onClick={() => setFilter(tab)}
+            style={{
+              padding: "6px 14px",
+              borderRadius: "20px",
+              border: filter === tab ? "1px solid #2563eb" : "1px solid #e2e8f0",
+              background: filter === tab ? "#eff6ff" : "#fff",
+              color: filter === tab ? "#1d4ed8" : "#64748b",
+              fontWeight: 600,
+              fontSize: "0.85rem",
+              textTransform: "capitalize",
+              cursor: "pointer",
+              transition: "all 0.15s ease",
+            }}
+          >
+            {tab} {tab !== "all" && stats[tab] !== undefined ? `(${stats[tab]})` : ""}
+          </button>
+        ))}
+      </div>
+
       <ManagerSection
         eyebrow="Requests"
         title="Leave approvals"
         description="Open each request, review the worker context, and record notes alongside the final decision."
       >
-        {leaves.length === 0 ? (
-          <EmptyState icon={<FileText size={48} />} title="No leave requests" sub="No leave requests are waiting right now." />
+        {filteredLeaves.length === 0 ? (
+          <EmptyState
+            icon={<FileText size={48} />}
+            title="No leave requests"
+            sub={
+              filter === "all"
+                ? "No leave requests are waiting right now."
+                : `No ${filter} leave requests found.`
+            }
+          />
         ) : (
           <ManagerRecordGrid>
-            {leaves.map((leave) => (
+            {filteredLeaves.map((leave) => (
               <ManagerRecordCard
                 key={leave._id}
                 title={leave.worker?.name || leave.worker?.email || "Unknown Worker"}

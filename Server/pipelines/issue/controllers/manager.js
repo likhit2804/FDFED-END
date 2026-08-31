@@ -1,5 +1,6 @@
 import Issue from "../../../models/issues.js";
 import Worker from "../../../models/workers.js";
+import Leave from "../../../models/leave.js";
 import { pushNotification } from "../../notifications/services/notificationService.js";
 import { emitIssueUpdate, logIssueActivity } from "../utils/issueShared.js";
 
@@ -36,6 +37,20 @@ export const assignIssue = async (req, res) => {
 
         if (!workerData.isActive) {
             return res.status(400).json({ success: false, message: "Cannot assign to inactive worker" });
+        }
+
+        const today = new Date();
+        const onLeave = await Leave.findOne({
+            worker,
+            status: "approved",
+            startDate: { $lte: today },
+            endDate: { $gte: today },
+        });
+        if (onLeave) {
+            return res.status(400).json({
+                success: false,
+                message: `${workerData.name} is currently on approved leave and cannot be assigned tasks.`,
+            });
         }
 
         if (issue.autoAssigned && issue.workerAssigned) {
@@ -195,6 +210,24 @@ export const reassignIssue = async (req, res) => {
         const workerData = await Worker.findById(newWorker);
         if (!workerData)
             return res.status(404).json({ success: false, message: "New worker not found." });
+
+        if (!workerData.isActive) {
+            return res.status(400).json({ success: false, message: "Cannot reassign to inactive worker." });
+        }
+
+        const today = new Date();
+        const onLeave = await Leave.findOne({
+            worker: newWorker,
+            status: "approved",
+            startDate: { $lte: today },
+            endDate: { $gte: today },
+        });
+        if (onLeave) {
+            return res.status(400).json({
+                success: false,
+                message: `${workerData.name} is currently on approved leave and cannot be assigned tasks.`,
+            });
+        }
 
         if (issue.workerAssigned) {
             await Worker.findByIdAndUpdate(issue.workerAssigned, {

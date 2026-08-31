@@ -22,6 +22,7 @@ export const SecurityDashboard = () => {
 
   // Log Phone / Intercom Issue Modal State
   const [isLogModalOpen, setIsLogModalOpen] = useState(false);
+  const [submittingIssue, setSubmittingIssue] = useState(false);
   const [flats, setFlats] = useState([]);
   const [issueForm, setIssueForm] = useState({
     callSource: "Intercom",

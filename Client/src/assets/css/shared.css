@@ -5,8 +5,8 @@
 
 /* ── Design Tokens ─────────────────────────────────────── */
 :root {
-  --ue-content-max-width: 1480px;
-  --ue-content-gutter: 24px;
+  --ue-content-max-width: 1400px;
+  --ue-content-gutter: 18px;
 
   /* Brand colours */
   --ue-primary:       var(--brand-500);
@@ -32,19 +32,19 @@
   --ue-bg-card:       var(--surface-0);
   --ue-bg-subtle:     var(--surface-2);
 
-  /* Spacing scale */
-  --ue-space-xs:  4px;
-  --ue-space-sm:  8px;
-  --ue-space-md:  16px;
-  --ue-space-lg:  24px;
-  --ue-space-xl:  32px;
-  --ue-space-2xl: 48px;
+  /* Spacing scale - calibrated for standard 100% zoom */
+  --ue-space-xs:  3px;
+  --ue-space-sm:  6px;
+  --ue-space-md:  12px;
+  --ue-space-lg:  18px;
+  --ue-space-xl:  24px;
+  --ue-space-2xl: 36px;
 
   /* Radius */
   --ue-radius-sm: 6px;
   --ue-radius-md: 10px;
   --ue-radius-lg: 14px;
-  --ue-radius-xl: 20px;
+  --ue-radius-xl: 18px;
   --ue-radius-full: 9999px;
 
   /* Shadows */
@@ -59,6 +59,11 @@
   --ue-font: 'Inter', 'Segoe UI', system-ui, sans-serif;
 }
 
+html {
+  font-size: 14px;
+  -webkit-text-size-adjust: 100%;
+}
+
 /* ── Base reset extras ──────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
 
@@ -68,23 +73,23 @@
   background: var(--ue-bg-page);
   width: min(100%, var(--ue-content-max-width));
   margin-inline: auto;
-  padding: var(--ue-space-lg) max(var(--ue-space-lg), var(--ue-content-gutter));
+  padding: var(--ue-space-md) max(var(--ue-space-md), var(--ue-content-gutter));
   font-family: var(--ue-font);
 }
 
 /* ── Card ───────────────────────────────────────────────── */
 .ue-card {
   background: var(--ue-bg-card);
-  border-radius: var(--ue-radius-lg);
+  border-radius: var(--ue-radius-md);
   box-shadow: var(--ue-shadow-sm);
   border: 1px solid var(--ue-border);
-  padding: var(--ue-space-lg);
+  padding: var(--ue-space-md);
   width: 100%;
   max-width: var(--ue-content-max-width);
   margin-inline: auto;
 }
 
-.ue-card + .ue-card { margin-top: var(--ue-space-md); }
+.ue-card + .ue-card { margin-top: var(--ue-space-sm); }
 
 /* ── Page Header ────────────────────────────────────────── */
 .ue-page-header {
@@ -93,19 +98,19 @@
   justify-content: space-between;
   flex-wrap: wrap;
   gap: var(--ue-space-sm);
-  margin-bottom: var(--ue-space-lg);
+  margin-bottom: var(--ue-space-md);
 }
 
 .ue-page-header__title {
-  font-size: 1.6rem;
+  font-size: 1.35rem;
   font-weight: 700;
   color: var(--ue-text-dark);
   margin: 0;
-  line-height: 1.3;
+  line-height: 1.25;
 }
 
 .ue-page-header__subtitle {
-  font-size: 0.875rem;
+  font-size: 0.82rem;
   color: var(--ue-text-muted);
   margin: var(--ue-space-xs) 0 0 0;
 }
@@ -113,9 +118,9 @@
 /* ── Stat Cards grid ────────────────────────────────────── */
 .ue-stat-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
-  gap: var(--ue-space-md);
-  margin-bottom: var(--ue-space-lg);
+  grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
+  gap: var(--ue-space-sm);
+  margin-bottom: var(--ue-space-md);
   width: 100%;
 }
 
@@ -125,7 +130,7 @@
   border-top-width: 3px;
   border-top-color: var(--ue-primary);
   border-radius: var(--ue-radius-md);
-  padding: var(--ue-space-md);
+  padding: 10px 14px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -137,21 +142,21 @@
 .ue-stat-card:hover { box-shadow: var(--ue-shadow-md); }
 
 .ue-stat-card__icon {
-  width: 44px; height: 44px;
+  width: 36px; height: 36px;
   border-radius: var(--ue-radius-full);
   display: flex; align-items: center; justify-content: center;
-  margin-bottom: var(--ue-space-sm);
+  margin-bottom: 4px;
   background: var(--ue-bg-subtle);
 }
 
 .ue-stat-card__label {
-  font-size: 0.8rem;
+  font-size: 0.74rem;
   color: var(--ue-text-muted);
-  margin: 0 0 4px 0;
+  margin: 0 0 2px 0;
 }
 
 .ue-stat-card__value {
-  font-size: 1.6rem;
+  font-size: 1.35rem;
   font-weight: 700;
   color: var(--ue-text-mid);
   margin: 0;
@@ -161,9 +166,9 @@
 .ue-entity-card {
   display: flex;
   flex-direction: column;
-  gap: var(--ue-space-md);
-  padding: var(--ue-space-md);
-  border-radius: var(--ue-radius-lg);
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: var(--ue-radius-md);
   background: var(--ue-bg-card);
   border: 1px solid var(--ue-border);
   box-shadow: var(--ue-shadow-sm);
@@ -171,8 +176,8 @@
 
 .ue-entity-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr));
-  gap: var(--ue-space-md);
+  grid-template-columns: repeat(auto-fill, minmax(min(270px, 100%), 1fr));
+  gap: 12px;
   width: 100%;
 }
 
@@ -187,49 +192,49 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
-  gap: 6px;
+  gap: 4px;
 }
 
 .ue-entity-card__id {
   color: var(--ue-text-muted);
-  font-size: 0.84rem;
+  font-size: 0.78rem;
   font-weight: 600;
 }
 
 .ue-entity-card__title {
   margin: 0;
   color: var(--ue-text-dark);
-  font-size: 1rem;
+  font-size: 0.94rem;
   font-weight: 700;
 }
 
 .ue-entity-card__details {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 8px;
 }
 
 .ue-entity-card__detail {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
-  padding: 10px 12px;
-  border-radius: 14px;
+  padding: 7px 10px;
+  border-radius: 10px;
   background: var(--ue-bg-subtle);
   border: 1px solid color-mix(in srgb, var(--ue-border) 82%, var(--surface-0));
 }
 
 .ue-entity-card__detail--wide {
   grid-column: 1 / -1;
-  border-radius: 14px;
+  border-radius: 10px;
   align-items: flex-start;
 }
 
 .ue-entity-card__label {
   color: var(--ue-text-muted);
-  font-size: 0.73rem;
+  font-size: 0.68rem;
   font-weight: 700;
   letter-spacing: 0.02em;
   text-transform: uppercase;
@@ -239,7 +244,7 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
   flex: 1 1 auto;
 }
@@ -251,9 +256,9 @@
 
 .ue-entity-card__value {
   color: var(--ue-text-dark);
-  font-size: 0.9rem;
+  font-size: 0.84rem;
   font-weight: 600;
-  line-height: 1.4;
+  line-height: 1.35;
   overflow-wrap: anywhere;
 }
 

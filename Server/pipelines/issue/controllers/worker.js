@@ -3,6 +3,7 @@ import Worker from "../../../models/workers.js";
 import Resident from "../../../models/resident.js";
 import CommunityManager from "../../../models/cManager.js";
 import Notifications from "../../../models/Notifications.js";
+import Leave from "../../../models/leave.js";
 import { flagMisassigned } from "../../../utils/issueAutomation.js";
 import { pushNotification } from "../../notifications/services/notificationService.js";
 import { getCommunityManagerForCommunity, emitIssueUpdate, logIssueActivity } from "../utils/issueShared.js";
@@ -12,6 +13,20 @@ import { getCommunityManagerForCommunity, emitIssueUpdate, logIssueActivity } fr
 // --------------------------------------------------
 export const startIssue = async (req, res) => {
     try {
+        const today = new Date();
+        const activeLeave = await Leave.findOne({
+            worker: req.user.id,
+            status: "approved",
+            startDate: { $lte: today },
+            endDate: { $gte: today },
+        });
+        if (activeLeave) {
+            return res.status(400).json({
+                success: false,
+                message: "You are currently on approved leave and cannot start tasks.",
+            });
+        }
+
         const issue = await Issue.findOne({ _id: req.params.id, community: req.user.community });
         if (!issue)
             return res.status(404).json({ success: false, message: "Issue not found" });
@@ -49,6 +64,20 @@ export const startIssue = async (req, res) => {
 export const resolveIssue = async (req, res) => {
     const { estimatedCost } = req.body;
     try {
+        const today = new Date();
+        const activeLeave = await Leave.findOne({
+            worker: req.user.id,
+            status: "approved",
+            startDate: { $lte: today },
+            endDate: { $gte: today },
+        });
+        if (activeLeave) {
+            return res.status(400).json({
+                success: false,
+                message: "You are currently on approved leave and cannot resolve tasks.",
+            });
+        }
+
         const issue = await Issue.findOne({
             _id: req.params.id,
             community: req.user.community,

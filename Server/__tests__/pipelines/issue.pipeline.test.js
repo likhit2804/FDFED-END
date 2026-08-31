@@ -422,6 +422,7 @@ describe('Issue Pipeline Test Suite', () => {
         location: 'A-101',
         resident: residentDoc._id,
         workerAssigned: workerDoc._id,
+        estimatedCost: 350,
         community: communityId,
         status: 'Resolved (Awaiting Confirmation)',
       });
@@ -613,10 +614,11 @@ describe('Issue Pipeline Test Suite', () => {
       const issue = await Issue.create({
         title: 'Completed community issue',
         category: 'Plumbing',
-        categoryType: 'Community',
+        categoryType: 'Resident',
         description: 'Fixed garden pipe',
         location: 'Garden Area',
         resident: residentDoc._id,
+        estimatedCost: 350,
         community: communityId,
         status: 'Resolved (Awaiting Confirmation)',
       });

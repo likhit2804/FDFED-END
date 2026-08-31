@@ -14,10 +14,10 @@ import { X } from 'lucide-react';
  *   scrollable {boolean}   scrollable body, default true
  */
 const SIZES = {
-    sm: 400,
-    md: 560,
-    lg: 700,
-    xl: 880,
+    sm: 380,
+    md: 520,
+    lg: 640,
+    xl: 780,
 };
 
 const Modal = ({
@@ -73,42 +73,42 @@ const Modal = ({
                 ref={contentRef}
                 style={{
                     background: '#fff',
-                    borderRadius: 16,
+                    borderRadius: 14,
                     width: '100%',
                     maxWidth: maxW,
-                    maxHeight: '90vh',
+                    maxHeight: '88vh',
                     display: 'flex',
                     flexDirection: 'column',
-                    boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
+                    boxShadow: '0 16px 48px rgba(0,0,0,0.22)',
                     overflow: 'hidden',
                 }}
             >
                 {/* Header */}
                 <div style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    padding: '18px 24px', borderBottom: '1px solid #e5e7eb', flexShrink: 0,
+                    padding: '12px 18px', borderBottom: '1px solid #e5e7eb', flexShrink: 0,
                 }}>
                     {title && (
-                        <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: '#111827' }}>{title}</h2>
+                        <h2 style={{ margin: 0, fontSize: 15.5, fontWeight: 700, color: '#111827' }}>{title}</h2>
                     )}
                     <button
                         onClick={onClose}
                         style={{
                             background: '#f3f4f6', border: 'none', borderRadius: 8,
-                            width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
                             cursor: 'pointer', color: '#6b7280', marginLeft: 'auto',
                             transition: 'background 0.15s',
                         }}
                         onMouseEnter={e => e.currentTarget.style.background = '#e5e7eb'}
                         onMouseLeave={e => e.currentTarget.style.background = '#f3f4f6'}
                     >
-                        <X size={16} />
+                        <X size={15} />
                     </button>
                 </div>
 
                 {/* Body */}
                 <div style={{
-                    padding: '20px 24px',
+                    padding: '14px 18px',
                     overflowY: scrollable ? 'auto' : 'visible',
                     flex: 1,
                 }}>
@@ -118,12 +118,12 @@ const Modal = ({
                 {/* Footer */}
                 {footer && (
                     <div style={{
-                        padding: '16px 24px',
+                        padding: '10px 18px',
                         borderTop: '1px solid #e2e8f0',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'flex-end',
-                        gap: 12,
+                        gap: 10,
                         flexWrap: 'wrap',
                         background: '#f8fafc',
                         flexShrink: 0,

@@ -43,32 +43,32 @@ body {
 
 .app-navbar {
   position: sticky;
-  top: 8px;
+  top: 6px;
   z-index: 1000;
-  width: min(calc(100% - 24px), 1700px);
+  width: min(calc(100% - 20px), 1500px);
   margin: 0 auto;
-  border-radius: 22px;
+  border-radius: 16px;
   background: color-mix(in srgb, var(--surface-0) 92%, transparent);
   backdrop-filter: blur(16px);
   border: 1px solid rgba(100, 116, 139, 0.2);
   box-shadow:
-    0 14px 34px rgba(15, 23, 42, 0.09),
-    0 2px 10px rgba(14, 116, 144, 0.08);
+    0 8px 24px rgba(15, 23, 42, 0.08),
+    0 2px 8px rgba(14, 116, 144, 0.06);
 }
 
 .app-navbar__inner {
   width: 100%;
-  padding: 9px 16px;
+  padding: 6px 12px;
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
 }
 
 .app-navbar__brand-row {
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  gap: 12px;
+  gap: 10px;
   flex-shrink: 0;
 }
 
@@ -78,7 +78,7 @@ body {
 }
 
 .app-navbar__brand img {
-  height: 34px;
+  height: 28px;
   width: auto;
   object-fit: contain;
 }
@@ -86,7 +86,7 @@ body {
 .app-navbar__controls {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   margin-left: auto;
 }
 
@@ -95,13 +95,14 @@ body {
   border: 1px solid rgba(100, 116, 139, 0.22);
   background: var(--surface-0);
   color: var(--text-subtle);
-  border-radius: 12px;
-  min-height: 42px;
-  padding: 0 14px;
+  border-radius: 10px;
+  min-height: 35px;
+  padding: 0 10px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 6px;
+  font-size: 0.82rem;
   font-weight: 600;
   transition: var(--transition);
 }
@@ -120,7 +121,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 18px;
+  gap: 12px;
   min-width: 0;
   flex: 1 1 auto;
 }
@@ -130,20 +131,20 @@ body {
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-evenly;
-  gap: 6px;
+  gap: 4px;
   min-width: 0;
   flex: 1 1 auto;
-  padding-inline: clamp(6px, 1.2vw, 20px);
+  padding-inline: clamp(4px, 1vw, 14px);
 }
 
 .app-navbar__link,
 .app-navbar__empty {
   text-decoration: none;
   color: var(--text-subtle);
-  font-size: clamp(0.95rem, 0.86rem + 0.22vw, 1rem);
+  font-size: 0.84rem;
   font-weight: 600;
   line-height: 1;
-  padding: 10px 14px;
+  padding: 7px 11px;
   border-radius: 999px;
   transition: var(--transition);
   white-space: nowrap;
@@ -169,24 +170,24 @@ body {
   border: 1px solid rgba(100, 116, 139, 0.22);
   background: var(--surface-0);
   color: var(--text-subtle);
-  border-radius: 16px;
-  min-height: 48px;
-  padding: 8px 12px 8px 10px;
+  border-radius: 12px;
+  min-height: 38px;
+  padding: 4px 10px 4px 6px;
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   min-width: 0;
   transition: var(--transition);
 }
 
 .app-navbar__profile-toggle:hover {
   border-color: rgba(14, 116, 144, 0.34);
-  box-shadow: 0 8px 18px rgba(71, 85, 105, 0.12);
+  box-shadow: 0 4px 14px rgba(71, 85, 105, 0.1);
 }
 
 .app-navbar__avatar {
-  width: 36px;
-  height: 36px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   overflow: hidden;
   background: var(--info-soft);
@@ -204,7 +205,7 @@ body {
 
 .app-navbar__avatar-fallback {
   color: var(--text-subtle);
-  font-size: 0.95rem;
+  font-size: 0.82rem;
   font-weight: 700;
 }
 
@@ -215,7 +216,7 @@ body {
 }
 
 .app-navbar__profile-copy strong {
-  font-size: 0.94rem;
+  font-size: 0.82rem;
   font-weight: 700;
   color: var(--text-strong);
   white-space: nowrap;
@@ -225,7 +226,7 @@ body {
 }
 
 .app-navbar__profile-copy small {
-  font-size: 0.76rem;
+  font-size: 0.72rem;
   color: var(--text-muted);
   white-space: nowrap;
   overflow: hidden;
