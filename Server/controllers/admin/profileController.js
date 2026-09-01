@@ -1,12 +1,10 @@
-import { uploadToCloudinary } from '../../utils/cloudinaryUpload.js';
+import { uploadToCloudinary } from "../../utils/cloudinaryUpload.js";
 import bcrypt from 'bcrypt';
-import { listAdmins, updateAdminById } from '../../crud/index.js';
-
+import { listAdmins, updateAdminById } from "../../crud/index.js";
 export const getProfile = async (req, res) => {
   try {
     const admin = (await listAdmins({}, '-password'))[0];
     if (!admin) return res.status(404).json({ message: 'Admin not found' });
-
     res.json({
       success: true,
       admin: {
@@ -20,23 +18,18 @@ export const getProfile = async (req, res) => {
     res.status(500).json({ success: false, message: 'Server error' });
   }
 };
-
 export const updateProfile = async (req, res) => {
   try {
     const { name, email } = req.body;
     if (!name || !email)
       return res.status(400).json({ success: false, message: 'Name and email are required' });
-
     const admin = (await listAdmins({}, null))[0];
     if (!admin) return res.status(404).json({ success: false, message: 'Admin not found' });
-
     if (email !== admin.email) {
       const exists = (await listAdmins({ email, _id: { $ne: admin._id } }, null)).length > 0;
       if (exists) return res.status(400).json({ success: false, message: 'Email already exists' });
     }
-
     const updates = { name, email };
-
     if (req.file && req.file.buffer) {
       try {
         const result = await uploadToCloudinary(req.file.buffer, 'profiles/admin', {
@@ -55,9 +48,7 @@ export const updateProfile = async (req, res) => {
         });
       }
     }
-
     const updatedAdmin = await updateAdminById(admin._id, updates);
-
     res.json({
       success: true,
       message: 'Profile updated successfully',
@@ -68,33 +59,25 @@ export const updateProfile = async (req, res) => {
     res.status(500).json({ success: false, message: 'Failed to update profile' });
   }
 };
-
 export const changePassword = async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
     if (!currentPassword || !newPassword)
       return res.status(400).json({ success: false, message: 'All fields are required' });
-
     const admin = (await listAdmins({}, null))[0];
     if (!admin) return res.status(404).json({ success: false, message: 'Admin not found' });
-
     const isMatch = await bcrypt.compare(currentPassword, admin.password);
     if (!isMatch)
       return res.status(400).json({ success: false, message: 'Current password is incorrect' });
-
     const same = await bcrypt.compare(newPassword, admin.password);
     if (same)
       return res.status(400).json({ success: false, message: 'New password must differ' });
-
     const strong = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[\d!@#$%^&*]).{8,}$/;
     if (!strong.test(newPassword))
       return res.status(400).json({ success: false, message: 'Password must include upper, lower, number/special char (min 8 chars)' });
-
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(newPassword, salt);
-
     await updateAdminById(admin._id, { password: hashedPassword });
-
     res.json({ success: true, message: 'Password changed successfully' });
   } catch (err) {
     console.error('Password change error:', err);

@@ -1,8 +1,7 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { Building2, CheckCircle, Home, Layers, Plus, Trash2 } from "lucide-react";
-
 import { Loader } from "../Loader";
 import { StatCard } from "../shared";
 import {
@@ -10,29 +9,24 @@ import {
   ManagerPageShell,
   ManagerRecordCard,
   ManagerRecordGrid,
-  ManagerSection,
+  ManagerSection
 } from "./ui";
-
 const createBlock = (name) => ({
   name,
   totalFloors: 5,
   flatsPerFloor: 4,
 });
-
 const getNextBlockName = (index) => String.fromCharCode(65 + index);
-
 const ManagerSetup = () => {
   const navigate = useNavigate();
   const [blocks, setBlocks] = useState([createBlock("A")]);
   const [loading, setLoading] = useState(false);
   const [fetchingStructure, setFetchingStructure] = useState(true);
   const [editingBlockIndex, setEditingBlockIndex] = useState(null);
-
   useEffect(() => {
     const fetchStructure = async () => {
       try {
         const res = await axios.get("/manager/get-structure");
-
         if (res.data.success && Array.isArray(res.data.blocks) && res.data.blocks.length > 0) {
           setBlocks(res.data.blocks);
         }
@@ -42,10 +36,8 @@ const ManagerSetup = () => {
         setFetchingStructure(false);
       }
     };
-
     fetchStructure();
   }, []);
-
   const totals = useMemo(() => {
     const totalBlocks = blocks.length;
     const totalFloors = blocks.reduce((acc, block) => acc + Number(block.totalFloors || 0), 0);
@@ -55,13 +47,11 @@ const ManagerSetup = () => {
     );
     return { totalBlocks, totalFloors, totalUnits };
   }, [blocks]);
-
   const handleAddBlock = () => {
     const nextIndex = blocks.length;
     setBlocks((current) => [...current, createBlock(getNextBlockName(current.length))]);
     setEditingBlockIndex(nextIndex);
   };
-
   const handleRemoveBlock = (index) => {
     setBlocks((current) => current.filter((_, currentIndex) => currentIndex !== index));
     setEditingBlockIndex((current) => {
@@ -71,7 +61,6 @@ const ManagerSetup = () => {
       return current;
     });
   };
-
   const handleBlockChange = (index, field, value) => {
     const nextValue =
       field === "name"
@@ -83,17 +72,14 @@ const ManagerSetup = () => {
       )
     );
   };
-
   const handleSubmit = async () => {
     setLoading(true);
-
     try {
       const seen = new Set();
       const payload = blocks.map((block, index) => {
         const name = String(block.name || "").trim().toUpperCase();
         const totalFloors = Number.parseInt(block.totalFloors, 10);
         const flatsPerFloor = Number.parseInt(block.flatsPerFloor, 10);
-
         if (!name) {
           throw new Error(`Block ${index + 1}: name is required`);
         }
@@ -106,13 +92,10 @@ const ManagerSetup = () => {
         if (!Number.isInteger(flatsPerFloor) || flatsPerFloor < 1 || flatsPerFloor > 200) {
           throw new Error(`Block ${name}: units per floor must be between 1 and 200`);
         }
-
         seen.add(name);
         return { name, totalFloors, flatsPerFloor };
       });
-
       const res = await axios.post("/manager/setup-structure", { blocks: payload });
-
       if (res.data.success) {
         navigate("/manager/dashboard", { replace: true });
       }
@@ -123,7 +106,6 @@ const ManagerSetup = () => {
       setLoading(false);
     }
   };
-
   return (
     <ManagerPageShell
       eyebrow="Community Setup"
@@ -136,7 +118,6 @@ const ManagerSetup = () => {
         <StatCard label="Total Floors" value={totals.totalFloors} icon={<Layers size={22} />} iconColor="var(--warning-700)" iconBg="var(--warning-soft)" />
         <StatCard label="Total Units" value={totals.totalUnits} icon={<Home size={22} />} iconColor="var(--success-500)" iconBg="var(--success-soft)" />
       </div>
-
       <ManagerSection
         eyebrow="Structure Builder"
         title="Block configuration"
@@ -161,7 +142,6 @@ const ManagerSetup = () => {
             {blocks.map((block, index) => {
               const unitCount = Number(block.totalFloors || 0) * Number(block.flatsPerFloor || 0);
               const isEditing = editingBlockIndex === index;
-
               return (
                 <ManagerRecordCard
                   key={`${block.name}-${index}`}
@@ -239,6 +219,4 @@ const ManagerSetup = () => {
     </ManagerPageShell>
   );
 };
-
 export default ManagerSetup;
-

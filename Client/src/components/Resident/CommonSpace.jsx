@@ -1,20 +1,33 @@
-import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
-import { useForm } from 'react-hook-form';
-import { useNavigate } from 'react-router-dom';
-import '../../assets/css/Resident/CommonSpace.css';
-import 'react-day-picker/dist/style.css';
-import { ToastContainer, toast } from 'react-toastify';
-import { useDispatch, useSelector } from 'react-redux';
+import {
+  Suspense,
+  lazy,
+  useEffect,
+  useRef,
+  useState
+} from "react";
+import { createPortal } from "react-dom";
+import { useForm } from "react-hook-form";
+import { useNavigate } from "react-router-dom";
+import { ToastContainer, toast } from "react-toastify";
+import { useDispatch, useSelector } from "react-redux";
 import { Building2, Calendar, Clock } from "lucide-react";
 import {
-  fetchuserBookings, cancelUserBooking,
-  ConfirmBooking, optimisticAddBooking, optimisticCancelBooking,
-} from '../../slices/CommonSpaceSlice';
-import { Loader } from '../Loader';
-import { EmptyState, Modal, Select, StatCard, Textarea } from '../shared';
-import { BookingCard } from './CommonSpace/BookingCard';
-import { ManagerActionButton, ManagerPageShell, ManagerSection } from '../shared/roleUI';
+  fetchuserBookings,
+  cancelUserBooking,
+  ConfirmBooking,
+  optimisticAddBooking,
+  optimisticCancelBooking
+} from "../../slices/CommonSpaceSlice";
+import { Loader } from "../Loader";
+import {
+  EmptyState,
+  Modal,
+  Select,
+  StatCard,
+  Textarea
+} from "../shared";
+import { BookingCard } from "./CommonSpace/BookingCard";
+import { ManagerActionButton, ManagerPageShell, ManagerSection } from "../shared/roleUI";
 import {
   buildSlotsFromFacilityConfig,
   findDateEntry,
@@ -23,9 +36,8 @@ import {
   formatTime,
   getAvailabilityControlsForResident as getAvailabilityControls,
   parseTimeToMinutes,
-  toIsoDate,
+  toIsoDate
 } from "../shared/commonSpace/commonSpaceUtils";
-
 const LazyDayPicker = lazy(() =>
   import("react-day-picker").then((module) => ({ default: module.DayPicker })),
 );
@@ -34,7 +46,6 @@ const LazyBookingDetailsModal = lazy(() =>
     default: module.BookingDetailsModal,
   })),
 );
-
 export const CommonSpaceBooking = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -55,12 +66,10 @@ export const CommonSpaceBooking = () => {
   const [calendarPlacement, setCalendarPlacement] = useState('bottom');
   const [calendarPosition, setCalendarPosition] = useState({ top: 0, left: 0 });
   const dateTriggerRef = useRef(null);
-
   const { register, handleSubmit, setValue, watch, reset } = useForm({
     defaultValues: { facility: '', date: new Date().toISOString().split('T')[0], purpose: '', Type: '' },
   });
   const selectedDateValue = watch('date');
-
   const today = new Date().toISOString().split('T')[0];
   const todayDate = new Date();
   todayDate.setHours(0, 0, 0, 0);
@@ -74,9 +83,7 @@ export const CommonSpaceBooking = () => {
     const dayIso = toIsoDate(day);
     return Boolean(findDateEntry(selectedFacilityControls.blackoutDates, dayIso));
   };
-
   useEffect(() => { dispatch(fetchuserBookings()); }, [dispatch]);
-
   useEffect(() => {
     if (!selectedFacility || !selectedDateValue) {
       setAvailableSlots([]);
@@ -86,11 +93,9 @@ export const CommonSpaceBooking = () => {
       setValue('Type', selectedFacility?.Type || '');
       return;
     }
-
     const controls = getAvailabilityControls(selectedFacility);
     const blackout = findDateEntry(controls.blackoutDates, selectedDateValue);
     const override = findDateEntry(controls.dateSlotOverrides, selectedDateValue);
-
     if (blackout) {
       const reason = blackout.reason ? `: ${blackout.reason}` : '.';
       setDateRestrictionMessage(`This facility is closed on selected date${reason}`);
@@ -100,7 +105,6 @@ export const CommonSpaceBooking = () => {
       setValue('Type', selectedFacility?.Type || '');
       return;
     }
-
     if (selectedFacility.Type === 'Slot') {
       if (override?.closedAllDay) {
         const reason = override.reason ? `: ${override.reason}` : '.';
@@ -111,7 +115,6 @@ export const CommonSpaceBooking = () => {
         setValue('Type', selectedFacility?.Type || '');
         return;
       }
-
       const bookedForDate = selectedFacility.bookedSlots?.find(
         (entry) => toIsoDate(new Date(entry.date)) === selectedDateValue,
       );
@@ -121,7 +124,6 @@ export const CommonSpaceBooking = () => {
       const filteredSlots = allSlots.filter(
         (slot) => !bookedSlots.includes(slot) && !blockedSlots.has(slot),
       );
-
       setAvailableSlots(filteredSlots);
       setSelectedSlots([]);
       setIsSlotEnabled(filteredSlots.length > 0);
@@ -134,7 +136,6 @@ export const CommonSpaceBooking = () => {
       setIsSlotEnabled(false);
       setDateRestrictionMessage('');
     }
-
     setValue('Type', selectedFacility?.Type || '');
   }, [selectedFacility, selectedDateValue, setValue]);
   const clearBookingFormState = () => {
@@ -144,7 +145,6 @@ export const CommonSpaceBooking = () => {
     setDateRestrictionMessage('');
     setIsCalendarOpen(false);
   };
-
   const handleFacilityChange = (e) => {
     const selected = avalaibleSpaces?.find((s) => s.name === e.target.value);
     setSelectedFacility(selected);
@@ -153,7 +153,6 @@ export const CommonSpaceBooking = () => {
     setSelectedSlots([]); setAvailableSlots([]); setIsSlotEnabled(false);
     setDateRestrictionMessage('');
   };
-
   const handleTimeSlotChange = (e) => {
     const value = e.target.value;
     const hour = parseInt(value.split(':')[0]);
@@ -164,7 +163,6 @@ export const CommonSpaceBooking = () => {
       setSelectedSlots([...selectedSlots, value].sort((a, b) => parseInt(a) - parseInt(b)));
     } else { toast.warning('Please select adjacent time slots only.'); }
   };
-
   const handleDatePick = (pickedDate) => {
     if (!pickedDate) return;
     const normalized = new Date(pickedDate);
@@ -173,7 +171,6 @@ export const CommonSpaceBooking = () => {
     setValue('date', toIsoDate(normalized), { shouldValidate: true, shouldDirty: true });
     setIsCalendarOpen(false);
   };
-
   const updateCalendarPosition = () => {
     if (!dateTriggerRef.current) return;
     const triggerRect = dateTriggerRef.current.getBoundingClientRect();
@@ -185,21 +182,17 @@ export const CommonSpaceBooking = () => {
       ? Math.max(8, triggerRect.top - requiredHeight - 8)
       : Math.min(window.innerHeight - requiredHeight - 8, triggerRect.bottom + 8);
     const left = Math.max(8, Math.min(triggerRect.left, window.innerWidth - popoverWidth - 8));
-
     setCalendarPlacement(placeTop ? 'top' : 'bottom');
     setCalendarPosition({ top, left });
   };
-
   const toggleCalendar = () => {
     if (!isCalendarOpen) {
       updateCalendarPosition();
     }
     setIsCalendarOpen((prev) => !prev);
   };
-
   useEffect(() => {
     if (!isCalendarOpen) return;
-
     const handleReposition = () => updateCalendarPosition();
     const handleOutsideClick = (event) => {
       if (!dateTriggerRef.current) return;
@@ -212,30 +205,25 @@ export const CommonSpaceBooking = () => {
         setIsCalendarOpen(false);
       }
     };
-
     window.addEventListener('resize', handleReposition);
     window.addEventListener('scroll', handleReposition, true);
     document.addEventListener('mousedown', handleOutsideClick);
-
     return () => {
       window.removeEventListener('resize', handleReposition);
       window.removeEventListener('scroll', handleReposition, true);
       document.removeEventListener('mousedown', handleOutsideClick);
     };
   }, [isCalendarOpen]);
-
   const formatSelectedTime = () => {
     if (selectedSlots.length === 0) return <span className="no-selection">No time slots selected</span>;
     const first = parseInt(selectedSlots[0].split(':')[0]);
     const last = parseInt(selectedSlots[selectedSlots.length - 1].split(':')[0]);
     return `${formatTime(first)} - ${formatTime(last + 1)}`;
   };
-
   const submitBookingWithoutPayment = async (bookingPayload, amount) => {
     const requestId = new Date().getTime();
     setFormSubmitting(true);
     dispatch(optimisticAddBooking({ bookingData: bookingPayload, requestId }));
-
     try {
       await dispatch(ConfirmBooking({
         data: {
@@ -246,7 +234,6 @@ export const CommonSpaceBooking = () => {
         newBooking: bookingPayload,
         requestId,
       })).unwrap();
-
       toast.success('Booking submitted successfully!');
       clearBookingFormState();
     } catch (error) {
@@ -260,11 +247,9 @@ export const CommonSpaceBooking = () => {
       setFormSubmitting(false);
     }
   };
-
   const createBookingWithPendingPayment = async (bookingPayload, paymentMeta) => {
     const requestId = new Date().getTime();
     dispatch(optimisticAddBooking({ bookingData: bookingPayload, requestId }));
-
     return dispatch(ConfirmBooking({
       data: {
         bill: paymentMeta?.belongTo || 'Common Space Booking',
@@ -275,7 +260,6 @@ export const CommonSpaceBooking = () => {
       requestId,
     })).unwrap();
   };
-
   const createBookingAndRedirectToPayments = async ({ bookingPayload, paymentMeta }) => {
     try {
       setFormSubmitting(true);
@@ -291,10 +275,8 @@ export const CommonSpaceBooking = () => {
       setFormSubmitting(false);
     }
   };
-
   const validateBookingPolicyClientSide = ({ bookingType, fromTime, selectedTimeSlots }) => {
     if (!selectedFacility || !selectedDateValue) return null;
-
     const controls = getAvailabilityControls(selectedFacility);
     const blackout = findDateEntry(controls.blackoutDates, selectedDateValue);
     if (blackout) {
@@ -302,18 +284,15 @@ export const CommonSpaceBooking = () => {
         ? `This facility is closed on selected date: ${blackout.reason}`
         : 'This facility is closed on selected date.';
     }
-
     const selectedDateObj = new Date(selectedDateValue);
     if (Number.isNaN(selectedDateObj.getTime())) {
       return 'Invalid booking date.';
     }
-
     const maxAllowedDate = new Date(todayDate);
     maxAllowedDate.setDate(maxAllowedDate.getDate() + controls.bookingPolicy.maxAdvanceDays);
     if (selectedDateObj > maxAllowedDate) {
       return `Bookings are allowed only for next ${controls.bookingPolicy.maxAdvanceDays} days.`;
     }
-
     const now = new Date();
     const isSameDay = toIsoDate(now) === selectedDateValue;
     if (isSameDay) {
@@ -323,22 +302,18 @@ export const CommonSpaceBooking = () => {
         return `Same-day booking cutoff (${controls.bookingPolicy.sameDayCutoffTime}) has passed.`;
       }
     }
-
     if (bookingType !== 'Slot') return null;
-
     const override = findDateEntry(controls.dateSlotOverrides, selectedDateValue);
     if (override?.closedAllDay) {
       return override.reason
         ? `Facility is closed all day: ${override.reason}`
         : 'Facility is closed all day for selected date.';
     }
-
     const blockedSlots = new Set(override?.closedSlots || []);
     const blockedSelectedSlots = selectedTimeSlots.filter((slot) => blockedSlots.has(slot));
     if (blockedSelectedSlots.length) {
       return `Selected slots are unavailable: ${blockedSelectedSlots.join(', ')}`;
     }
-
     if (controls.bookingPolicy.minAdvanceHours > 0) {
       const startMinutes = parseTimeToMinutes(fromTime);
       if (startMinutes !== null) {
@@ -350,10 +325,8 @@ export const CommonSpaceBooking = () => {
         }
       }
     }
-
     return null;
   };
-
   const onSubmit = async (data) => {
     if (!selectedFacility) {
       toast.error('Please select a facility.');
@@ -370,7 +343,6 @@ export const CommonSpaceBooking = () => {
       timeSlots = selectedSlots;
       amount = selectedSlots.length * (selectedFacility.rent || 0);
     }
-
     const policyError = validateBookingPolicyClientSide({
       bookingType: selectedFacility.Type,
       fromTime,
@@ -380,7 +352,6 @@ export const CommonSpaceBooking = () => {
       toast.error(policyError);
       return;
     }
-
     const bookingDateStr = data.date || selectedDateValue || toIsoDate(todayDate);
     const newBookingData = {
       ...data,
@@ -393,7 +364,6 @@ export const CommonSpaceBooking = () => {
       timeSlots,
       Date: bookingDateStr,
     };
-
     if ((Number(amount) || 0) <= 0) {
       submitBookingWithoutPayment(newBookingData, Number(amount) || 0);
       return;
@@ -406,7 +376,6 @@ export const CommonSpaceBooking = () => {
       },
     });
   };
-
   const cancelBooking = (data) => {
     if (window.confirm("Do you want to cancel booking")) {
       dispatch(optimisticCancelBooking({ bookingId: data._id, originalStatus: data.status }));
@@ -415,7 +384,6 @@ export const CommonSpaceBooking = () => {
         .catch((error) => toast.error(error.error.error || 'Failed to cancel booking.'));
     }
   };
-
   const showDetails = (booking) => {
     setSelectedBooking({
       ...booking,
@@ -426,7 +394,6 @@ export const CommonSpaceBooking = () => {
     });
     setIsDetailsPopupOpen(true);
   };
-
   const bookingFooterButtonBase = {
     minWidth: 142,
     minHeight: 42,
@@ -436,7 +403,6 @@ export const CommonSpaceBooking = () => {
     border: "1px solid transparent",
     cursor: "pointer",
   };
-
   return (
     <>
       <ToastContainer position="top-center" />
@@ -464,7 +430,6 @@ export const CommonSpaceBooking = () => {
             <StatCard label="Facilities" value={avalaibleSpaces.length} icon={<Building2 size={22} />} iconColor="var(--text-subtle)" iconBg="var(--surface-2)" />
           </div>
         </ManagerSection>
-
         <ManagerSection
           eyebrow="Queue"
           title="Recent bookings"
@@ -480,7 +445,6 @@ export const CommonSpaceBooking = () => {
       </div>
         </ManagerSection>
       </ManagerPageShell>
-
       {/* Booking Form Modal */}
       <Modal
         isOpen={isBookingFormOpen}
@@ -615,7 +579,6 @@ export const CommonSpaceBooking = () => {
           </div>
         </div>
       </Modal>
-
       {/* Details Modal */}
       {isDetailsPopupOpen ? (
         <Suspense fallback={<Loader label="Loading booking details..." size={24} />}>
@@ -634,5 +597,3 @@ export const CommonSpaceBooking = () => {
     </>
   );
 };
-
-

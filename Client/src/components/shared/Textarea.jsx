@@ -1,5 +1,4 @@
-import React, { forwardRef } from 'react';
-
+import { forwardRef } from "react";
 /**
  * Textarea – styled multiline input
  *
@@ -29,7 +28,6 @@ const Textarea = forwardRef(({
                 {required && <span style={{ color: '#dc2626', marginLeft: 3 }}>*</span>}
             </label>
         )}
-
         <textarea
             ref={ref}
             rows={rows}
@@ -54,11 +52,9 @@ const Textarea = forwardRef(({
             onBlur={e => { e.target.style.borderColor = error ? '#fca5a5' : 'var(--ue-border, #e5e7eb)'; }}
             {...rest}
         />
-
         {hint && !error && <p style={{ fontSize: 12, color: '#9ca3af', marginTop: 4, marginBottom: 0 }}>{hint}</p>}
         {error && <p style={{ fontSize: 12, color: '#dc2626', marginTop: 4, marginBottom: 0 }}>{error}</p>}
     </div>
 ));
-
 Textarea.displayName = 'Textarea';
 export default Textarea;

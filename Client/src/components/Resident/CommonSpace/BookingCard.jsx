@@ -1,16 +1,13 @@
-import React from "react";
-import { EntityCard } from "../../shared";
 
+import { EntityCard } from "../../shared";
 /**
  * Single booking card for the bookings grid.
  */
 export const BookingCard = ({ booking, onViewDetails, onCancel }) => {
     const b = booking;
-
     const timeDetail = b?.status === "Active"
         ? { label: "Valid till", value: new Date(new Date(b.Date).setMonth(new Date(b.Date).getMonth() + 1)).toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "numeric" }) }
         : { label: "Time", value: `${b?.from || "-"} - ${b?.to || "-"}` };
-
     return (
         <EntityCard
             id={`#${b?._id}`}

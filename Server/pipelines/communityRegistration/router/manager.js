@@ -2,38 +2,35 @@ import express from "express";
 import { memoryUpload } from "../../../configs/multer.js";
 import { requirePermission } from "../../../middleware/rbac.js";
 import {
-    getAllCommunities,
-    getCommunityById,
-    getCommunityDetail,
-    createCommunity,
-    updateCommunity,
-    getDeletePreview,
-    deleteCommunity,
-    getManagersList,
-    bulkUpdateStatus,
-    restoreCommunity,
-    getAllPlans,
-    getPlanById,
-    createPlan,
-    updatePlan,
-    deletePlan,
-    getAllApplications,
-    approveApplication,
-    rejectApplication,
-    resendPaymentLink,
-    uploadPhoto,
-    getOnboardingDetails,
-    createOnboardingPaymentOrder,
-    completeOnboardingPayment,
-    interestUploadRouter,
+  getAllCommunities,
+  getCommunityById,
+  getCommunityDetail,
+  createCommunity,
+  updateCommunity,
+  getDeletePreview,
+  deleteCommunity,
+  getManagersList,
+  bulkUpdateStatus,
+  restoreCommunity,
+  getAllPlans,
+  getPlanById,
+  createPlan,
+  updatePlan,
+  deletePlan,
+  getAllApplications,
+  approveApplication,
+  rejectApplication,
+  resendPaymentLink,
+  uploadPhoto,
+  getOnboardingDetails,
+  createOnboardingPaymentOrder,
+  completeOnboardingPayment,
+  interestUploadRouter
 } from "../controllers/manager.js";
-
 const communityRegistrationRouter = express.Router();
-
 // --------------------------------------------------
 // Interest Form / Admin Approval
 // --------------------------------------------------
-
 /**
  * @swagger
  * /admin/api/interests:
@@ -47,7 +44,6 @@ const communityRegistrationRouter = express.Router();
  *         description: List of all applications with status
  */
 communityRegistrationRouter.get("/api/interests", getAllApplications);
-
 /**
  * @swagger
  * /admin/api/interests/{id}/approve:
@@ -69,7 +65,6 @@ communityRegistrationRouter.get("/api/interests", getAllApplications);
  *         description: Error during approval
  */
 communityRegistrationRouter.post("/api/interests/:id/approve", approveApplication);
-
 /**
  * @swagger
  * /admin/api/interests/{id}/reject:
@@ -101,7 +96,6 @@ communityRegistrationRouter.post("/api/interests/:id/approve", approveApplicatio
  *         description: Missing rejection reason
  */
 communityRegistrationRouter.post("/api/interests/:id/reject", rejectApplication);
-
 /**
  * @swagger
  * /admin/api/interests/{id}/resend-link:
@@ -121,18 +115,15 @@ communityRegistrationRouter.post("/api/interests/:id/reject", rejectApplication)
  *         description: Payment link resent
  */
 communityRegistrationRouter.post("/api/interests/:id/resend-link", resendPaymentLink);
-
 // Public: onboarding flow
 communityRegistrationRouter.get("/onboarding/:token", getOnboardingDetails);
 communityRegistrationRouter.post("/onboarding/create-order", createOnboardingPaymentOrder);
 communityRegistrationRouter.post("/onboarding/complete", completeOnboardingPayment);
 communityRegistrationRouter.post("/photo-upload", memoryUpload.single("photo"), uploadPhoto);
 communityRegistrationRouter.use("/interest", interestUploadRouter);
-
 // --------------------------------------------------
 // Communities CRUD
 // --------------------------------------------------
-
 /**
  * @swagger
  * /admin/api/communities:
@@ -155,7 +146,6 @@ communityRegistrationRouter.use("/interest", interestUploadRouter);
  */
 communityRegistrationRouter.get("/api/communities", requirePermission("read:communities"), getAllCommunities);
 communityRegistrationRouter.get("/api/communities/stats", requirePermission("read:communities"), (req, res, next) => next());
-
 /**
  * @swagger
  * /admin/api/communities/{id}/detail:
@@ -176,7 +166,6 @@ communityRegistrationRouter.get("/api/communities/stats", requirePermission("rea
  */
 communityRegistrationRouter.get("/api/communities/:id/detail", requirePermission("read:communities"), getCommunityDetail);
 communityRegistrationRouter.get("/api/communities/:id/delete-preview", requirePermission("write:communities"), getDeletePreview);
-
 /**
  * @swagger
  * /admin/api/communities/{id}:
@@ -227,7 +216,6 @@ communityRegistrationRouter.get("/api/communities/:id", requirePermission("read:
 communityRegistrationRouter.post("/api/communities", requirePermission("write:communities"), createCommunity);
 communityRegistrationRouter.put("/api/communities/:id", requirePermission("write:communities"), updateCommunity);
 communityRegistrationRouter.delete("/api/communities/:id", requirePermission("write:communities"), deleteCommunity);
-
 /**
  * @swagger
  * /admin/api/communities/{backupId}/restore:
@@ -247,7 +235,6 @@ communityRegistrationRouter.delete("/api/communities/:id", requirePermission("wr
  *         description: Community restored
  */
 communityRegistrationRouter.post("/api/communities/:backupId/restore", requirePermission("delete:critical"), restoreCommunity);
-
 /**
  * @swagger
  * /admin/api/managers:
@@ -261,13 +248,10 @@ communityRegistrationRouter.post("/api/communities/:backupId/restore", requirePe
  *         description: List of managers
  */
 communityRegistrationRouter.get("/api/managers", requirePermission("read:users"), getManagersList);
-
 communityRegistrationRouter.post("/api/communities/bulk-update", requirePermission("write:communities"), bulkUpdateStatus);
-
 // --------------------------------------------------
 // Subscription Plans
 // --------------------------------------------------
-
 /**
  * @swagger
  * /admin/api/subscription-plans:
@@ -291,7 +275,6 @@ communityRegistrationRouter.post("/api/communities/bulk-update", requirePermissi
 communityRegistrationRouter.get("/api/subscription-plans", getAllPlans);
 communityRegistrationRouter.get("/api/subscription-plans/:id", getPlanById);
 communityRegistrationRouter.post("/api/subscription-plans", createPlan);
-
 /**
  * @swagger
  * /admin/api/subscription-plans/{id}:
@@ -326,6 +309,4 @@ communityRegistrationRouter.post("/api/subscription-plans", createPlan);
  */
 communityRegistrationRouter.put("/api/subscription-plans/:id", updatePlan);
 communityRegistrationRouter.delete("/api/subscription-plans/:id", deletePlan);
-
 export default communityRegistrationRouter;
-

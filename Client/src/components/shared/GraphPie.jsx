@@ -1,8 +1,14 @@
-import React from 'react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
-import Card from './Card';
-import { UE_CHART_PALETTE, UE_CHART_TOOLTIP_BORDER } from './chartPalette';
 
+import {
+  PieChart,
+  Pie,
+  Cell,
+  ResponsiveContainer,
+  Tooltip,
+  Legend
+} from "recharts";
+import Card from './Card';
+import { UE_CHART_PALETTE, UE_CHART_TOOLTIP_BORDER } from "./chartPalette";
 /**
  * GraphPie – donut/pie chart for user pages (mirrors Admin/GraphPie)
  *
@@ -18,7 +24,6 @@ import { UE_CHART_PALETTE, UE_CHART_TOOLTIP_BORDER } from './chartPalette';
  *   nameKey     {string}  default 'name'
  */
 const DEFAULT_COLORS = UE_CHART_PALETTE;
-
 const GraphPie = ({
     data = [],
     colors = DEFAULT_COLORS,
@@ -60,5 +65,4 @@ const GraphPie = ({
         </ResponsiveContainer>
     </Card>
 );
-
 export default GraphPie;

@@ -1,10 +1,14 @@
-import { useEffect, useRef } from 'react';
-import { X, Mail, Phone, Building2, User } from 'lucide-react';
+import { useEffect, useRef } from "react";
+import {
+  X,
+  Mail,
+  Phone,
+  Building2,
+  User
+} from "lucide-react";
 import styles from './ManagerDetailModal.module.css';
-
 const ManagerDetailModal = ({ isOpen, onClose, manager, communityName }) => {
     const modalRef = useRef(null);
-
     // Handle keyboard shortcuts
     useEffect(() => {
         if (!isOpen) return;
@@ -17,9 +21,7 @@ const ManagerDetailModal = ({ isOpen, onClose, manager, communityName }) => {
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [isOpen, onClose]);
-
     if (!isOpen) return null;
-
     const getInitials = (name) => {
         if (!name) return '?';
         return name
@@ -29,7 +31,6 @@ const ManagerDetailModal = ({ isOpen, onClose, manager, communityName }) => {
             .toUpperCase()
             .slice(0, 2);
     };
-
     // If no manager assigned
     if (!manager || manager === 'Unassigned') {
         return (
@@ -55,7 +56,6 @@ const ManagerDetailModal = ({ isOpen, onClose, manager, communityName }) => {
             </div>
         );
     }
-
     return (
         <div className={styles.overlay} onClick={onClose}>
             <div ref={modalRef} className={styles.modal} onClick={(e) => e.stopPropagation()}>
@@ -69,13 +69,11 @@ const ManagerDetailModal = ({ isOpen, onClose, manager, communityName }) => {
                         <X size={18} />
                     </button>
                 </div>
-
                 {/* Content */}
                 <div className={styles.content}>
                     <div className={styles.avatar}>
                         {getInitials(manager.name)}
                     </div>
-
                     <div className={styles.infoList}>
                         <div className={styles.infoItem}>
                             <User size={18} className={styles.infoIcon} />
@@ -84,7 +82,6 @@ const ManagerDetailModal = ({ isOpen, onClose, manager, communityName }) => {
                                 <div className={styles.infoValue}>{manager.name}</div>
                             </div>
                         </div>
-
                         <div className={styles.infoItem}>
                             <Mail size={18} className={styles.infoIcon} />
                             <div className={styles.infoContent}>
@@ -92,7 +89,6 @@ const ManagerDetailModal = ({ isOpen, onClose, manager, communityName }) => {
                                 <div className={styles.infoValue}>{manager.email || 'N/A'}</div>
                             </div>
                         </div>
-
                         <div className={styles.infoItem}>
                             <Phone size={18} className={styles.infoIcon} />
                             <div className={styles.infoContent}>
@@ -100,7 +96,6 @@ const ManagerDetailModal = ({ isOpen, onClose, manager, communityName }) => {
                                 <div className={styles.infoValue}>{manager.contact || 'N/A'}</div>
                             </div>
                         </div>
-
                         <div className={styles.infoItem}>
                             <Building2 size={18} className={styles.infoIcon} />
                             <div className={styles.infoContent}>
@@ -109,7 +104,6 @@ const ManagerDetailModal = ({ isOpen, onClose, manager, communityName }) => {
                             </div>
                         </div>
                     </div>
-
                     {/* Contact actions */}
                     <div className={styles.contactActions}>
                         {manager.email && manager.email !== 'N/A' && (
@@ -126,7 +120,6 @@ const ManagerDetailModal = ({ isOpen, onClose, manager, communityName }) => {
                         )}
                     </div>
                 </div>
-
                 {/* Footer */}
                 <div className={styles.footer}>
                     <button onClick={onClose}>Close</button>
@@ -135,5 +128,4 @@ const ManagerDetailModal = ({ isOpen, onClose, manager, communityName }) => {
         </div>
     );
 };
-
 export default ManagerDetailModal;

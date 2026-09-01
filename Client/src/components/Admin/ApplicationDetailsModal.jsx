@@ -1,19 +1,26 @@
-import React, { useState } from 'react';
-import { X, Mail, Phone, MapPin, Calendar, Building2, FileText, Image, CheckCircle, XCircle } from 'lucide-react';
+import { useState } from "react";
+import {
+  X,
+  Mail,
+  Phone,
+  MapPin,
+  Calendar,
+  Building2,
+  FileText,
+  Image,
+  CheckCircle,
+  XCircle
+} from "lucide-react";
 import Status from './Status';
 import styles from './Applications.module.css';
-
 export default function ApplicationDetailsModal({ application, onClose, onApprove, onReject }) {
   const [activePhoto, setActivePhoto] = useState(null);
-
   if (!application) return null;
-
   const handleBackdropClick = (e) => {
     if (e.target === e.currentTarget) {
       onClose();
     }
   };
-
   return (
     <>
       <div className={styles.modalBackdrop} onClick={handleBackdropClick}>
@@ -24,7 +31,6 @@ export default function ApplicationDetailsModal({ application, onClose, onApprov
               <X size={20} />
             </button>
           </div>
-
           <div className={styles.modalBody}>
             {/* Header Section */}
             <div className={styles.detailsHeader}>
@@ -38,7 +44,6 @@ export default function ApplicationDetailsModal({ application, onClose, onApprov
                 </div>
               </div>
             </div>
-
             {/* Contact Information */}
             <div className={styles.detailsSection}>
               <h5>Contact Information</h5>
@@ -53,7 +58,6 @@ export default function ApplicationDetailsModal({ application, onClose, onApprov
                 </div>
               </div>
             </div>
-
             {/* Community Information */}
             <div className={styles.detailsSection}>
               <h5>Community Information</h5>
@@ -72,7 +76,6 @@ export default function ApplicationDetailsModal({ application, onClose, onApprov
                 </div>
               </div>
             </div>
-
             {/* Description */}
             {application.description && (
               <div className={styles.detailsSection}>
@@ -83,7 +86,6 @@ export default function ApplicationDetailsModal({ application, onClose, onApprov
                 </div>
               </div>
             )}
-
             {/* Photos */}
             {application.photos && application.photos.length > 0 && (
               <div className={styles.detailsSection}>
@@ -104,7 +106,6 @@ export default function ApplicationDetailsModal({ application, onClose, onApprov
                 </div>
               </div>
             )}
-
             {/* Decision Details */}
             {(application.status === 'APPROVED' || application.status === 'REJECTED') && (
               <div className={styles.detailsSection}>
@@ -135,7 +136,6 @@ export default function ApplicationDetailsModal({ application, onClose, onApprov
               </div>
             )}
           </div>
-
           {/* Footer Actions */}
           {application.status === 'PENDING' && (
             <div className={styles.modalFooter}>
@@ -163,7 +163,6 @@ export default function ApplicationDetailsModal({ application, onClose, onApprov
           )}
         </div>
       </div>
-
       {/* Photo Viewer Modal */}
       {activePhoto && (
         <div className={styles.photoViewerBackdrop} onClick={() => setActivePhoto(null)}>

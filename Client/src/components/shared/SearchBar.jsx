@@ -1,6 +1,5 @@
-import React, { useRef } from 'react';
-import { Search } from 'lucide-react';
-
+import { useRef } from "react";
+import { Search } from "lucide-react";
 /**
  * SearchBar – mirrors Admin/SearchBar but uses user theme tokens
  *
@@ -12,7 +11,6 @@ import { Search } from 'lucide-react';
  */
 const SearchBar = ({ placeholder = 'Search…', value = '', onChange, width = '100%' }) => {
     const containerRef = useRef(null);
-
     return (
         <div
             ref={containerRef}
@@ -57,5 +55,4 @@ const SearchBar = ({ placeholder = 'Search…', value = '', onChange, width = '1
         </div>
     );
 };
-
 export default SearchBar;

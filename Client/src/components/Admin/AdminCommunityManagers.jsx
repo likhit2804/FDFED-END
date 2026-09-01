@@ -1,17 +1,15 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import Header from "./Header";
 import SearchBar from "./SearchBar";
 import AdminTable from "./AdminTables";
 import adminApiClient from "../../services/adminApiClient";
 import { useTableFilter } from "../../hooks/useAdminHooks";
 import { LoadingOverlay } from "../common/Loader";
-
 export default function CommunityManagers() {
   const [search, setSearch] = useState("");
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
   const columns = [
     { header: "Name", accessor: "name" },
     { header: "Email", accessor: "email" },
@@ -19,16 +17,13 @@ export default function CommunityManagers() {
     { header: "Assigned Communities", accessor: "assigned_communities" },
     { header: "Created Date", accessor: "date" },
   ];
-
   const actions = [];
-
   // Fetch Community Managers
   useEffect(() => {
     const fetchManagers = async () => {
       try {
         setLoading(true);
         const json = await adminApiClient.getCommunityManagers();
-
         if (json.success && json.data?.managers) {
           const formatted = json.data.managers.map((m) => ({
             id: m._id,
@@ -40,7 +35,6 @@ export default function CommunityManagers() {
               : "Unassigned",
             date: new Date(m.createdAt).toLocaleDateString("en-IN"),
           }));
-
           setData(formatted);
         }
       } catch (err) {
@@ -50,23 +44,19 @@ export default function CommunityManagers() {
         setLoading(false);
       }
     };
-
     fetchManagers();
   }, []);
-
   // Use custom filter hook
   const filteredData = useTableFilter(data, {
     search: search,
     searchFields: ['name', 'email', 'assigned_communities'],
   });
-
   return (
     <>
       {/* Header */}
       <div style={{ marginBottom: "20px" }}>
         <Header title="Community Managers" />
       </div>
-
       {/* Filters Row */}
       <div
         style={{
@@ -86,7 +76,6 @@ export default function CommunityManagers() {
           />
         </div>
       </div>
-
       {/* Data Table */}
       {loading ? (
         <LoadingOverlay message="Loading managers..." />

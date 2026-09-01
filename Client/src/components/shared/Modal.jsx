@@ -1,6 +1,5 @@
-import React, { useEffect, useRef } from 'react';
-import { X } from 'lucide-react';
-
+import { useEffect, useRef } from "react";
+import { X } from "lucide-react";
 /**
  * Modal – accessible slide-in dialog
  *
@@ -19,7 +18,6 @@ const SIZES = {
     lg: 640,
     xl: 780,
 };
-
 const Modal = ({
     isOpen,
     onClose,
@@ -30,7 +28,6 @@ const Modal = ({
     scrollable = true,
 }) => {
     const contentRef = useRef(null);
-
     // Close on Escape
     useEffect(() => {
         if (!isOpen) return;
@@ -38,7 +35,6 @@ const Modal = ({
         window.addEventListener('keydown', handler);
         return () => window.removeEventListener('keydown', handler);
     }, [isOpen, onClose]);
-
     // Lock body scroll
     useEffect(() => {
         if (isOpen) {
@@ -48,11 +44,8 @@ const Modal = ({
         }
         return () => { document.body.style.overflow = ''; };
     }, [isOpen]);
-
     if (!isOpen) return null;
-
     const maxW = SIZES[size] ?? SIZES.md;
-
     return (
         <div
             onClick={(e) => { if (e.target === e.currentTarget) onClose?.(); }}
@@ -68,7 +61,6 @@ const Modal = ({
             <style>{`
         @keyframes ue-modal-fade { from { opacity:0; transform:scale(0.96); } to { opacity:1; transform:scale(1); } }
       `}</style>
-
             <div
                 ref={contentRef}
                 style={{
@@ -105,7 +97,6 @@ const Modal = ({
                         <X size={15} />
                     </button>
                 </div>
-
                 {/* Body */}
                 <div style={{
                     padding: '14px 18px',
@@ -114,7 +105,6 @@ const Modal = ({
                 }}>
                     {children}
                 </div>
-
                 {/* Footer */}
                 {footer && (
                     <div style={{
@@ -135,5 +125,4 @@ const Modal = ({
         </div>
     );
 };
-
 export default Modal;

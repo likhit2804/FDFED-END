@@ -1,39 +1,21 @@
 import express from "express";
-import path from 'path';
-import { memoryUpload } from '../configs/multer.js';
-import { requirePermission } from '../middleware/rbac.js';
-import { validateCommunity, validateObjectId, validatePasswordChange } from '../middleware/validation.js';
+import { memoryUpload } from "../configs/multer.js";
+import { requirePermission } from "../middleware/rbac.js";
+import { validatePasswordChange } from "../middleware/validation.js";
 import { cacheRoute } from "../middleware/cacheMiddleware.js";
-
 import {
   getDashboard,
   getCommunitiesOverview,
-  getCommunityManagers,
   getPayments,
   getProfile,
   updateProfile,
   changePassword,
-  getAllCommunities,
-  getCommunityById,
-  createCommunity,
-  updateCommunity,
-  deleteCommunity,
-  getDeletePreview,
-  getManagersList,
-  getCommunityStats,
-  bulkUpdateStatus,
-  restoreCommunity,
-  getCommunityDetail,
   getAdminActivity,
-  getFailedLogins,
-} from '../controllers/admin/index.js';
+  getFailedLogins
+} from "../controllers/admin/index.js";
 import communityRegistrationRouter from '../pipelines/communityRegistration/router/manager.js';
 import { getSettings, updateSettings } from "../controllers/admin/settingsController.js";
-
 const AdminRouter = express.Router();
-
-
-
 /**
  * @swagger
  * /admin/api/dashboard:
@@ -47,7 +29,6 @@ const AdminRouter = express.Router();
  *         description: Dashboard stats (users, communities, payments, recent activity)
  */
 AdminRouter.get('/api/dashboard', cacheRoute(60), getDashboard);
-
 /**
  * @swagger
  * /admin/api/communities/overview:
@@ -61,7 +42,6 @@ AdminRouter.get('/api/dashboard', cacheRoute(60), getDashboard);
  *         description: Communities count, distribution, status breakdown
  */
 AdminRouter.get('/api/communities/overview', getCommunitiesOverview);
-
 /**
  * @swagger
  * /admin/api/payments:
@@ -75,10 +55,8 @@ AdminRouter.get('/api/communities/overview', getCommunitiesOverview);
  *         description: Payments list, revenue stats, trends, and plan distribution
  */
 AdminRouter.get('/api/payments', getPayments);
-
 // Community registration + subscription plans (delegated to pipeline)
 AdminRouter.use('/', communityRegistrationRouter);
-
 /**
  * @swagger
  * /admin/api/admin/activity:
@@ -100,7 +78,6 @@ AdminRouter.use('/', communityRegistrationRouter);
  *         description: Insufficient permissions
  */
 AdminRouter.get('/api/admin/activity', requirePermission('read:analytics'), getAdminActivity);
-
 /**
  * @swagger
  * /admin/api/admin/security/failed-logins:
@@ -120,7 +97,6 @@ AdminRouter.get('/api/admin/activity', requirePermission('read:analytics'), getA
  *         description: List of failed login attempts
  */
 AdminRouter.get('/api/admin/security/failed-logins', requirePermission('read:analytics'), getFailedLogins);
-
 /**
  * @swagger
  * /admin/api/profile:
@@ -134,7 +110,6 @@ AdminRouter.get('/api/admin/security/failed-logins', requirePermission('read:ana
  *         description: Admin profile data
  */
 AdminRouter.get('/api/profile', getProfile);
-
 /**
  * @swagger
  * /admin/api/profile/update:
@@ -161,7 +136,6 @@ AdminRouter.get('/api/profile', getProfile);
  *         description: Profile updated
  */
 AdminRouter.post('/api/profile/update', memoryUpload.single('image'), updateProfile);
-
 /**
  * @swagger
  * /admin/api/profile/change-password:
@@ -189,7 +163,6 @@ AdminRouter.post('/api/profile/update', memoryUpload.single('image'), updateProf
  *         description: Current password incorrect
  */
 AdminRouter.post('/api/profile/change-password', validatePasswordChange, changePassword);
-
 /**
  * @swagger
  * /admin/api/settings:
@@ -203,7 +176,6 @@ AdminRouter.post('/api/profile/change-password', validatePasswordChange, changeP
  *         description: Current system settings
  */
 AdminRouter.get('/api/settings', getSettings);
-
 /**
  * @swagger
  * /admin/api/settings/update:
@@ -223,6 +195,4 @@ AdminRouter.get('/api/settings', getSettings);
  *         description: Settings updated
  */
 AdminRouter.post('/api/settings/update', updateSettings);
-
-
 export default AdminRouter;

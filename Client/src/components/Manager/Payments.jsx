@@ -1,7 +1,6 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AlertCircle, BarChart3, Clock, DollarSign, ReceiptText } from "lucide-react";
 import axios from "axios";
-
 import { Loader } from "../Loader.jsx";
 import { Dropdown, EmptyState, GraphBar, GraphPie, Modal, SearchBar, StatCard, StatusBadge } from "../shared";
 import { UE_CHART_COLORS, UE_CHART_PALETTE } from "../shared/chartPalette";
@@ -10,7 +9,7 @@ import {
   buildPaymentTypeSplitData,
   filterPaymentsByFilters,
   PAYMENT_STATUS_OPTIONS,
-  PAYMENT_TYPE_OPTIONS,
+  PAYMENT_TYPE_OPTIONS
 } from "../shared/nonAdmin/paymentInsights";
 import {
   ManagerPageShell,
@@ -18,14 +17,12 @@ import {
   ManagerRecordGrid,
   ManagerSection,
   ManagerToolbar,
-  ManagerToolbarGrow,
+  ManagerToolbarGrow
 } from "./ui";
-
 const formatCurrency = (amount) => {
   if (amount === null || amount === undefined || amount === "") return "-";
   return `₹${amount}`;
 };
-
 const formatDate = (iso) => {
   if (!iso) return "-";
   try {
@@ -34,7 +31,6 @@ const formatDate = (iso) => {
     return iso;
   }
 };
-
 const PaymentsOverview = ({ stats }) => (
   <div className="ue-stat-grid">
     <StatCard
@@ -67,12 +63,10 @@ const PaymentsOverview = ({ stats }) => (
     />
   </div>
 );
-
 const PaymentsDetailsPopUp = ({ show, close, details }) => {
   if (!details) return null;
   const transactionId = details.ID || details.transactionId || details._id || "-";
   const penalty = details.penalty || {};
-
   return (
     <Modal isOpen={show} onClose={close} title="Payment Details" size="sm">
       <div className="details-grid">
@@ -127,26 +121,21 @@ const PaymentsDetailsPopUp = ({ show, close, details }) => {
     </Modal>
   );
 };
-
 const PaymentsHistory = ({ onStats, onRecords, filters = {} }) => {
   const [payments, setPayments] = useState([]);
   const [showPopup, setShowPopup] = useState(false);
   const [selected, setSelected] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
-
   useEffect(() => {
     let mounted = true;
-
     const fetchPayments = async () => {
       try {
         setLoading(true);
         setError(null);
-
         const response = await axios.get("/manager/api/payments");
         const data = response.data;
         if (!mounted) return;
-
         const records = data.payments || [];
         setPayments(records);
         onStats?.(data.stats || {});
@@ -160,16 +149,13 @@ const PaymentsHistory = ({ onStats, onRecords, filters = {} }) => {
         if (mounted) setLoading(false);
       }
     };
-
     fetchPayments();
     return () => {
       mounted = false;
     };
   }, [onStats]);
-
   const { search = "", status = "all", type = "all" } = filters;
   const normalizedSearch = search.trim().toLowerCase();
-
   const filteredPayments = filterPaymentsByFilters(
     payments,
     { search: normalizedSearch, status, type },
@@ -192,7 +178,6 @@ const PaymentsHistory = ({ onStats, onRecords, filters = {} }) => {
       ],
     },
   );
-
   if (loading) {
     return (
       <div className="manager-ui-empty">
@@ -200,11 +185,9 @@ const PaymentsHistory = ({ onStats, onRecords, filters = {} }) => {
       </div>
     );
   }
-
   if (error) {
     return <div className="manager-ui-empty text-danger">{error}</div>;
   }
-
   if (payments.length === 0 || filteredPayments.length === 0) {
     return (
       <EmptyState
@@ -214,7 +197,6 @@ const PaymentsHistory = ({ onStats, onRecords, filters = {} }) => {
       />
     );
   }
-
   return (
     <>
       <ManagerRecordGrid>
@@ -245,22 +227,18 @@ const PaymentsHistory = ({ onStats, onRecords, filters = {} }) => {
           />
         ))}
       </ManagerRecordGrid>
-
       <PaymentsDetailsPopUp show={showPopup} close={() => setShowPopup(false)} details={selected} />
     </>
   );
 };
-
 export const Payments = () => {
   const [stats, setStats] = useState(null);
   const [records, setRecords] = useState([]);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
   const [type, setType] = useState("all");
-
   const statusAmountData = useMemo(() => buildPaymentStatusAmountData(records), [records]);
   const typeSplitData = useMemo(() => buildPaymentTypeSplitData(records), [records]);
-
   return (
     <ManagerPageShell
       eyebrow="Payments"
@@ -272,7 +250,6 @@ export const Payments = () => {
       ]}
     >
       <PaymentsOverview stats={stats} />
-
       <ManagerSection
         eyebrow="Insights"
         title="Collection intelligence"
@@ -294,7 +271,6 @@ export const Payments = () => {
           />
         </div>
       </ManagerSection>
-
       <ManagerSection
         eyebrow="Transactions"
         title="Collections desk"
@@ -307,10 +283,8 @@ export const Payments = () => {
           <Dropdown options={PAYMENT_STATUS_OPTIONS} selected={status} onChange={setStatus} width="180px" />
           <Dropdown options={PAYMENT_TYPE_OPTIONS} selected={type} onChange={setType} width="180px" />
         </ManagerToolbar>
-
         <PaymentsHistory onStats={setStats} onRecords={setRecords} filters={{ search, status, type }} />
       </ManagerSection>
     </ManagerPageShell>
   );
 };
-

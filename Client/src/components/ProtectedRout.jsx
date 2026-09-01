@@ -1,12 +1,10 @@
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { toast } from "react-toastify";
-
 export const ProtectedRoute = ({ allowedUserType }) => {
   const { user, token } = useSelector((state) => state.auth);
   const location = useLocation();
-
   useEffect(() => {
     if (!token || !user) {
       const wasIntentionalLogout =
@@ -20,11 +18,9 @@ export const ProtectedRoute = ({ allowedUserType }) => {
       toast.warning("Unauthorized access — redirecting to your dashboard");
     }
   }, [token, user, allowedUserType, location]);
-
   if (!token) {
     return <Navigate to="/SignIn" replace />;
   }
-
   // If Community Manager without active subscription, force to subscription page
   if (
     user &&
@@ -39,9 +35,7 @@ export const ProtectedRoute = ({ allowedUserType }) => {
       return <Navigate to="/manager/subscription" replace />;
     }
   }
-
   // Structure setup is now optional - removed forced redirect
-
   // If Resident / Worker / Security without active subscription, show expiry page
   if (
     user &&
@@ -54,7 +48,6 @@ export const ProtectedRoute = ({ allowedUserType }) => {
       return <Navigate to="/subscription-expired" replace />;
     }
   }
-
   if (user.userType !== allowedUserType) {
     if (user.userType === "CommunityManager")
       return <Navigate to="/manager/dashboard" replace />;
@@ -65,6 +58,5 @@ export const ProtectedRoute = ({ allowedUserType }) => {
     if (user.userType === "Security")
       return <Navigate to="/security/dashboard" replace />;
   }
-
   return <Outlet />;
 };

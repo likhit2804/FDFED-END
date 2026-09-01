@@ -1,10 +1,7 @@
-import React from "react";
 
 import Input from "../Input";
-
 const getFieldKey = (field, index, prefix) =>
   field.key || field.id || field.name || `${prefix}-${index}`;
-
 const renderInput = (field, key, fallbackOnChange) => (
   <Input
     key={key}
@@ -20,11 +17,9 @@ const renderInput = (field, key, fallbackOnChange) => (
     disabled={Boolean(field.disabled)}
   />
 );
-
 const renderFields = (fields, fallbackOnChange, prefix) =>
   fields.map((field, index) => {
     const key = getFieldKey(field, index, prefix);
-
     if (field.render) {
       return (
         <div key={key} className="manager-ui-form-custom">
@@ -32,7 +27,6 @@ const renderFields = (fields, fallbackOnChange, prefix) =>
         </div>
       );
     }
-
     if (Array.isArray(field.group) && field.group.length > 0) {
       return (
         <div key={key} className="manager-ui-form-inline">
@@ -42,13 +36,10 @@ const renderFields = (fields, fallbackOnChange, prefix) =>
         </div>
       );
     }
-
     return renderInput(field, key, fallbackOnChange);
   });
-
 const Panel = ({ panel, fallbackOnChange, action }) => {
   if (!panel) return null;
-
   return (
     <div className="manager-ui-form-panel">
       <div className="manager-ui-form-panel__header">
@@ -57,14 +48,11 @@ const Panel = ({ panel, fallbackOnChange, action }) => {
           <h6 className="manager-ui-form-panel__title">{panel.title}</h6>
         </div>
       </div>
-
       <div className="manager-ui-form-fields">{renderFields(panel.fields || [], fallbackOnChange, panel.title || "panel")}</div>
-
       {action ? <div className="manager-ui-form-actions">{action}</div> : null}
     </div>
   );
 };
-
 export const ProfileEditPanels = ({
   leftPanel,
   rightPanel,

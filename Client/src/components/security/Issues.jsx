@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   PhoneCall,
   Plus,
@@ -7,18 +7,24 @@ import {
   CheckCircle,
   Wrench,
   Search,
-  Building,
-  Home,
-  User,
-  ShieldAlert,
   CheckCircle2,
-  Trash2,
+  Trash2
 } from "lucide-react";
 import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
 
 import { Loader } from "../Loader";
-import { StatCard, Modal, Tabs, EmptyState, EntityCard, IssueTimeline, IssueDetailsModal, Input, Select, Textarea } from "../shared";
+import {
+  StatCard,
+  Modal,
+  Tabs,
+  EmptyState,
+  EntityCard,
+  IssueDetailsModal,
+  Input,
+  Select,
+  Textarea
+} from "../shared";
 import { ManagerPageShell, ManagerSection, ManagerRecordGrid } from "../shared/roleUI";
 
 const R_CATEGORIES = ["Plumbing", "Electrical", "Security", "Maintenance", "Pest Control", "Waste Management", "Other"];

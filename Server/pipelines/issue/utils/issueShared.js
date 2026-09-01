@@ -60,3 +60,29 @@ export const logIssueActivity = (issue, action, performedBy, details = "", perfo
     });
 };
 
+/**
+ * Determine issue priority based on category, keywords, and time-of-day.
+ * Canonical source — imported by both resident.js and security.js controllers.
+ */
+export function determineIssuePriority(category, categoryType, description = "", title = "") {
+    const now = new Date();
+    const hour = now.getHours();
+    const isOffHours = hour < 8 || hour > 18 || now.getDay() === 0 || now.getDay() === 6;
+    const content = `${title} ${description}`.toLowerCase();
+    if (/(flood|sewage|major water leak|power outage|no electricity|electric|spark|shock|stuck in elevator|can't get out)/.test(content)) {
+        return "Urgent";
+    }
+    if (category === "Security") {
+        return isOffHours ? "Urgent" : "High";
+    }
+    if (category === "Elevator" && /stuck|not working/.test(content)) {
+        return "Urgent";
+    }
+    if (/(broken|not working|overflow|infestation|mold|rodents|health|safety)/.test(content)) {
+        return "High";
+    }
+    if (isOffHours && /(streetlight|dark|security)/.test(content)) {
+        return "High";
+    }
+    return "Normal";
+}

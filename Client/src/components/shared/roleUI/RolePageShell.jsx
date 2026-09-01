@@ -1,11 +1,8 @@
-import React from "react";
-import "../../../assets/css/role/shell.css";
-import { getCardFieldPresentation } from "../cardFieldUtils";
 
+import { getCardFieldPresentation } from "../cardFieldUtils";
 function joinClassNames(...classNames) {
   return classNames.filter(Boolean).join(" ");
 }
-
 export function RolePageShell({
   eyebrow,
   title,
@@ -22,16 +19,13 @@ export function RolePageShell({
             <h1 className="manager-ui-hero__title">{title}</h1>
             {/* Intentionally hide hero meta lines (description + chips) across role pages. */}
           </div>
-
           {actions ? <div className="manager-ui-hero__actions">{actions}</div> : null}
         </section>
-
         {children}
       </div>
     </main>
   );
 }
-
 export function RoleSection({
   eyebrow,
   title,
@@ -57,19 +51,15 @@ export function RoleSection({
     </section>
   );
 }
-
 export function RoleToolbar({ children, className = "" }) {
   return <div className={joinClassNames("manager-ui-toolbar", className)}>{children}</div>;
 }
-
 export function RoleToolbarGrow({ children, className = "" }) {
   return <div className={joinClassNames("manager-ui-toolbar__grow", className)}>{children}</div>;
 }
-
 export function RoleRecordGrid({ children, className = "" }) {
   return <div className={joinClassNames("manager-ui-record-grid", className)}>{children}</div>;
 }
-
 export function RoleRecordCard({
   title,
   subtitle,
@@ -83,7 +73,6 @@ export function RoleRecordCard({
   return (
     <article className={joinClassNames("manager-ui-record-card", className)}>
       {media ? <div className="manager-ui-record-card__media">{media}</div> : null}
-
       <div className="manager-ui-record-card__header">
         <div>
           <h3 className="manager-ui-record-card__title">{title}</h3>
@@ -91,7 +80,6 @@ export function RoleRecordCard({
         </div>
         {status ? <div className="manager-ui-record-card__status">{status}</div> : null}
       </div>
-
       {meta.length > 0 ? (
         <div className="manager-ui-record-card__meta">
           {meta.map((item, index) => (
@@ -125,14 +113,11 @@ export function RoleRecordCard({
           ))}
         </div>
       ) : null}
-
       {footer ? <div className="manager-ui-record-card__footer">{footer}</div> : null}
-
       {actions ? <div className="manager-ui-record-card__actions">{actions}</div> : null}
     </article>
   );
 }
-
 export function RoleActionButton({
   children,
   onClick,
@@ -152,7 +137,6 @@ export function RoleActionButton({
     </button>
   );
 }
-
 /* Backward-compatible aliases so existing non-admin pages need no immediate rewrites */
 export const ManagerPageShell = RolePageShell;
 export const ManagerSection = RoleSection;

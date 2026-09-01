@@ -1,5 +1,12 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { Clock, UserCheck, Users, PhoneCall, ShieldAlert, AlertTriangle, Plus, CheckCircle2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  Clock,
+  UserCheck,
+  Users,
+  PhoneCall,
+  Plus,
+  CheckCircle2
+} from "lucide-react";
 import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
 
@@ -7,7 +14,7 @@ import { useNavigate } from "react-router-dom";
 
 import { Loader } from "../Loader";
 import { DateRangeFilter, GraphBar, GraphPie, StatCard, Modal, Input, Select, Textarea } from "../shared";
-import { ManagerPageShell, ManagerSection, ManagerActionButton } from "../shared/roleUI";
+import { ManagerPageShell, ManagerSection } from "../shared/roleUI";
 import { UE_CHART_COLORS } from "../shared/chartPalette";
 
 const R_CATEGORIES = ["Plumbing", "Electrical", "Security", "Maintenance", "Pest Control", "Waste Management", "Other"];

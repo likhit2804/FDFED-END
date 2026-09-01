@@ -1,6 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { ChevronDown } from 'lucide-react';
-
+import { useState, useRef, useEffect } from "react";
+import { ChevronDown } from "lucide-react";
 /**
  * Dropdown – styled select dropdown for user theme
  *
@@ -14,17 +13,14 @@ import { ChevronDown } from 'lucide-react';
 const Dropdown = ({ options = [], selected, onChange, width = '180px', placeholder = 'Select…' }) => {
     const [open, setOpen] = useState(false);
     const ref = useRef(null);
-
     useEffect(() => {
         const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
         document.addEventListener('mousedown', handler);
         return () => document.removeEventListener('mousedown', handler);
     }, []);
-
     const toLabel = (opt) => (typeof opt === 'object' ? opt.label : opt);
     const toValue = (opt) => (typeof opt === 'object' ? opt.value : opt);
     const displayLabel = options.find(o => toValue(o) === selected) ? toLabel(options.find(o => toValue(o) === selected)) : (placeholder);
-
     return (
         <div ref={ref} style={{ position: 'relative', width, flexShrink: 0 }}>
             <button
@@ -52,7 +48,6 @@ const Dropdown = ({ options = [], selected, onChange, width = '180px', placehold
                 <span style={{ color: selected ? '#374151' : '#9ca3af' }}>{displayLabel}</span>
                 <ChevronDown size={15} color="#6b7280" style={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
             </button>
-
             {open && (
                 <div style={{
                     position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0,
@@ -89,5 +84,4 @@ const Dropdown = ({ options = [], selected, onChange, width = '180px', placehold
         </div>
     );
 };
-
 export default Dropdown;

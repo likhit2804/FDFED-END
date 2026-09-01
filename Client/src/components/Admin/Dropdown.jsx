@@ -1,10 +1,8 @@
-import React, { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { ChevronDown } from "lucide-react";
-
 export default function Dropdown({ options, selected, onChange }) {
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef(null);
-
   // ✅ Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -15,7 +13,6 @@ export default function Dropdown({ options, selected, onChange }) {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
   return (
     <div
       ref={dropdownRef}
@@ -68,7 +65,6 @@ export default function Dropdown({ options, selected, onChange }) {
           }}
         />
       </button>
-
       {/* Dropdown Menu */}
       {open && (
         <div

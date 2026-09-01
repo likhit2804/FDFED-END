@@ -1,25 +1,21 @@
-import React, { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
-import { SearchBar, Dropdown, EmptyState } from '../shared';
-import { ClipboardList } from 'lucide-react';
-import { ManagerPageShell, ManagerSection } from '../shared/roleUI';
-import { getResolvedIssues, HISTORY_SORT_OPTIONS } from '../shared/nonAdmin/taskInsights';
-
-
+import { SearchBar, Dropdown, EmptyState } from "../shared";
+import { ClipboardList } from "lucide-react";
+import { ManagerPageShell, ManagerSection } from "../shared/roleUI";
+import { getResolvedIssues, HISTORY_SORT_OPTIONS } from "../shared/nonAdmin/taskInsights";
 const TaskCard = ({ task, onClick, isSelected }) => {
     const statusClasses = {
         Resolved: 'border-success-subtle',
         'Review Pending': 'border-warning-subtle'
     };
-
     const StarRating = ({
         rating,
         totalStars = 5
     }) => {
         const fullStars = Math.floor(rating);
         const emptyStars = totalStars - fullStars;
-
         return (
             <div className="d-flex px-1 flex-column align-items-center"
                 style={
@@ -49,7 +45,6 @@ const TaskCard = ({ task, onClick, isSelected }) => {
             </div>
         );
     };
-
     return (
         <div onClick={onClick}
             className={
@@ -74,7 +69,6 @@ const TaskCard = ({ task, onClick, isSelected }) => {
                         task?.rating
                     } />
                 </div>
-
                 <div>
                     <h3 className="fs-6 fw-bold mb-1 text-dark">
                         {
@@ -93,13 +87,9 @@ const TaskCard = ({ task, onClick, isSelected }) => {
         </div>
     );
 };
-
 const TaskDetails = ({ task, onClose }) => {
     if (!task)
         return null;
-
-
-
     return (
         <motion.div initial={
             {
@@ -138,7 +128,6 @@ const TaskDetails = ({ task, onClose }) => {
                     className="btn-close"
                     aria-label="Close"></button>
             </div>
-
             <div className="d-grid gap-3 text-secondary">
                 <div className="d-flex justify-content-between align-items-center border-bottom pb-2">
                     <span className="fw-semibold">Resident:</span>
@@ -147,7 +136,6 @@ const TaskDetails = ({ task, onClose }) => {
                             task.resident?.name || 'N/A'
                         } </span>
                 </div>
-
                 <div className="d-flex justify-content-between align-items-center border-bottom pb-2">
                     <span className="fw-semibold">Resolved At:</span>
                     <span className="fw-medium text-dark">
@@ -155,7 +143,6 @@ const TaskDetails = ({ task, onClose }) => {
                             task.resolvedAt ? new Date(task.resolvedAt).toLocaleString() : 'N/A'
                         } </span>
                 </div>
-
                 <div className="d-flex justify-content-between align-items-center border-bottom pb-2">
                     <span className="fw-semibold">Status:</span>
                     <span className="fw-medium text-dark">
@@ -163,7 +150,6 @@ const TaskDetails = ({ task, onClose }) => {
                             task.status
                         }</span>
                 </div>
-
                 <div className="d-flex justify-content-between align-items-center border-bottom pb-2">
                     <span className="fw-semibold">Rating:</span>
                     <span className="fs-5 fw-bold text-danger">
@@ -173,7 +159,6 @@ const TaskDetails = ({ task, onClose }) => {
                         } </span>
                 </div>
             </div>
-
             <div className="mt-4">
                 <h3 className="fs-5 fw-bold text-dark mb-3">Client Notes</h3>
                 <div className="bg-light p-3 rounded border border-light-subtle"
@@ -187,13 +172,11 @@ const TaskDetails = ({ task, onClose }) => {
         </motion.div>
     );
 };
-
 export const History = () => {
     const [issues, setIssues] = useState([]);
     const [selectedTask, setSelectedTask] = useState(null);
     const [search, setSearch] = useState('');
     const [sortBy, setSortBy] = useState('date_desc'); // date_desc, date_asc, rating_desc, rating_asc
-
     useEffect(() => {
         const fetchHistory = async () => {
             try {
@@ -208,24 +191,18 @@ export const History = () => {
                 console.error('Error fetching worker history:', err);
             }
         };
-
         fetchHistory();
     }, []);
-
     const handleCardClick = (task) => {
         setSelectedTask(prev => (prev && prev._id === task._id ? null : task));
     };
-
     const handleCloseDetails = () => {
         setSelectedTask(null);
     };
-
     const resolvedIssues = getResolvedIssues(issues, search, sortBy);
-
     const taskGridCols = selectedTask ? 'row-cols-md-2' : 'row-cols-md-3';
     const leftColClasses = selectedTask ? 'col-lg-7 col-md-12' : 'col-12';
     const rightColClasses = selectedTask ? 'col-lg-5 col-md-12' : 'col-0';
-
     return (
         <ManagerPageShell
             eyebrow="Worker Desk"
@@ -255,8 +232,6 @@ export const History = () => {
                             width="180px"
                         />
                     </div>
-
-
                     <div className={
                         `row ${taskGridCols} g-3 overflow-auto pe-2 hide-scrollbar flex-grow-1`
                     }
@@ -296,7 +271,6 @@ export const History = () => {
                                 </motion.div>
                             )))
                         } </div>
-
                     {resolvedIssues.length === 0 && (
                         <EmptyState
                             icon={<ClipboardList size={48} />}
@@ -304,11 +278,7 @@ export const History = () => {
                             sub={issues.length === 0 ? "You haven't resolved any issues yet." : "No resolved issues match your search criteria."}
                         />
                     )}
-
-
-
                 </div>
-
                 <AnimatePresence> {
                     selectedTask && (
                         <motion.div key="task-details"
@@ -330,5 +300,3 @@ export const History = () => {
         </ManagerPageShell>
     );
 };
-
-

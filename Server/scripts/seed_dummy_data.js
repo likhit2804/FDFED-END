@@ -1,5 +1,8 @@
 import mongoose from "mongoose";
 import bcrypt from "bcrypt";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 // Import Models
 import CommunityManager from "../models/cManager.js";
@@ -16,13 +19,12 @@ import Visitor from "../models/visitors.js";
 import Interest from "../models/interestForm.js";
 import CommunitySubscription from "../models/communitySubscription.js";
 
-const MONGODB_URI =
-  "mongodb+srv://sathvikchiluka:UE123@urbanease.8evt9ty.mongodb.net/urbanEase?retryWrites=true&w=majority&appName=UrbanEase";
+const MONGODB_URI = process.env.MONGO_URI1 || process.env.MONGODB_URI || "mongodb://localhost:27017/urbanEase";
 
 async function insertSampleData() {
   try {
     await mongoose.connect(MONGODB_URI);
-    console.log("✅ Connected to MongoDB Atlas");
+    console.log("✅ Connected to MongoDB");
 
     // 1. CLEAR OLD DATA
     console.log("🧹 Clearing old data...");
@@ -83,7 +85,7 @@ async function insertSampleData() {
       planEndDate: nextYear,
     });
 
-    // 4. CREATE A SUBSCRIPTION RECORD (New Schema)
+    // 4. CREATE A SUBSCRIPTION RECORD
     console.log("💳 Creating Subscription Record...");
     await CommunitySubscription.create({
       communityId: community._id,
@@ -223,19 +225,10 @@ async function insertSampleData() {
     console.log("-----------------------------------");
 
   } catch (error) {
-    console.error("❌ Error inserting data:");
-    if (error.errors) {
-      for (const key in error.errors) {
-        console.error(
-          `-> Field: ${key}, Message: ${error.errors[key].message}`
-        );
-      }
-    } else {
-      console.error(error);
-    }
+    console.error("❌ Error inserting data:", error);
   } finally {
     await mongoose.disconnect();
-    console.log("🔌 Disconnected from MongoDB Atlas");
+    console.log("🔌 Disconnected from MongoDB");
   }
 }
 

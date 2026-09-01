@@ -1,5 +1,4 @@
-import { body, param, validationResult } from 'express-validator';
-
+import { body, param, validationResult } from "express-validator";
 /**
  * Middleware to handle validation errors
  */
@@ -17,7 +16,6 @@ export const handleValidationErrors = (req, res, next) => {
   }
   next();
 };
-
 /**
  * Validation rules for community operations
  */
@@ -44,7 +42,6 @@ export const validateCommunity = [
     .withMessage('Contact must be a valid 10-digit phone number'),
   handleValidationErrors
 ];
-
 /**
  * Validation rules for user operations
  */
@@ -67,7 +64,6 @@ export const validateUser = [
     .withMessage('Contact must be a valid 10-digit phone number'),
   handleValidationErrors
 ];
-
 /**
  * Validation rules for login
  */
@@ -83,7 +79,6 @@ export const validateLogin = [
     .withMessage('Password must be at least 6 characters'),
   handleValidationErrors
 ];
-
 /**
  * Validation rules for password change
  */
@@ -104,7 +99,6 @@ export const validatePasswordChange = [
     .withMessage('Passwords do not match'),
   handleValidationErrors
 ];
-
 /**
  * Validation rules for ObjectId parameters
  */
@@ -114,7 +108,6 @@ export const validateObjectId = [
     .withMessage('Invalid ID format'),
   handleValidationErrors
 ];
-
 /**
  * Validation rules for application approval/rejection
  */
@@ -130,7 +123,6 @@ export const validateApplicationAction = [
     .escape(),
   handleValidationErrors
 ];
-
 /**
  * Validation rules for issue creation
  */
@@ -179,20 +171,17 @@ export const validateIssue = [
     }),
   handleValidationErrors
 ];
-
 /**
  * Sanitize text input to prevent XSS
  */
 export const sanitizeTextInput = (text) => {
   if (typeof text !== 'string') return text;
-  
   return text
     .replace(/[<>]/g, '') // Remove angle brackets
     .replace(/javascript:/gi, '') // Remove javascript: protocol
     .replace(/on\w+\s*=/gi, '') // Remove event handlers
     .trim();
 };
-
 export default {
   validateCommunity,
   validateUser,

@@ -27,9 +27,9 @@ const getDashboardInfo = async (req, res) => {
                 community: req.user.community,
                 status: { $in: ["Active", "CheckedOut"] },
                 scheduledAt: range,
-            }).sort({ createdAt: -1 }),
+            }).sort({ createdAt: -1 }).lean(),
 
-            Security.findById(req.user.id),
+            Security.findById(req.user.id).lean(),
 
             visitor.countDocuments({
                 community: req.user.community,

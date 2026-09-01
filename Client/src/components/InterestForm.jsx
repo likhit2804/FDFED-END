@@ -1,8 +1,7 @@
-import { NavLink, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { NavLink, useNavigate } from "react-router-dom";
+import { useState } from "react";
 import axios from "axios";
 import '../assets/css/InterestForm.css';
-
 export const InterestForm = () => {
     const navigate = useNavigate();
     // Add CSS animation for loading spinner
@@ -22,7 +21,6 @@ export const InterestForm = () => {
             }
         }
     `;
-
     const [formData, setFormData] = useState({
         firstName: '',
         lastName: '',
@@ -36,7 +34,6 @@ export const InterestForm = () => {
     const [photos, setPhotos] = useState([]);
     const [loading, setLoading] = useState(false);
     const [alert, setAlert] = useState({ show: false, message: '', type: '' });
-
     const handleInputChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({
@@ -44,7 +41,6 @@ export const InterestForm = () => {
             [name]: value
         }));
     };
-
     const handleLocationChange = (e) => {
         const value = e.target.value;
         setFormData(prev => ({
@@ -53,12 +49,10 @@ export const InterestForm = () => {
             otherCity: value === 'Other' ? prev.otherCity : ''
         }));
     };
-
     const handlePhotoChange = (e) => {
         const files = Array.from(e.target.files);
         setPhotos(files);
     };
-
     const showAlert = (message, type = 'error') => {
         setAlert({ show: true, message, type });
         // Auto-hide success messages after 8 seconds, errors after 6 seconds
@@ -67,34 +61,27 @@ export const InterestForm = () => {
             setAlert({ show: false, message: '', type: '' });
         }, timeout);
     };
-
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
-
         try {
             // Create FormData object to send all data including photos
             const submitData = new FormData();
-
             // Add all form fields
             Object.keys(formData).forEach(key => {
                 if (key === 'otherCity' && formData.location !== 'Other') return;
                 submitData.append(key, formData[key]);
             });
-
             // If "Other" city is selected, use otherCity as location
             if (formData.location === 'Other' && formData.otherCity) {
                 submitData.set('location', formData.otherCity);
             }
-
             // Add photos directly to FormData
             photos.forEach(photo => {
                 submitData.append('photos', photo);
             });
-
             const response = await axios.post("/interest/submit", submitData);
             const result = response.data;
-
             if (result.success) {
                 showAlert('Application submitted successfully!', 'success');
                 setFormData({
@@ -131,7 +118,6 @@ export const InterestForm = () => {
         <div className='interestFormCon'>
             {/* Add CSS for spinner animation */}
             <style>{spinnerStyle}</style>
-
             {alert.show && (
                 <div
                     style={{
@@ -195,14 +181,12 @@ export const InterestForm = () => {
                     </button>
                 </div>
             )}
-
             <div className="container">
                 <form id="combinedForm" method="POST" encType="multipart/form-data" onSubmit={handleSubmit}>
                     <div className="header">
                         <h2>Community & Manager Registration</h2>
                         <p className="subtitle">Tell us about yourself and the community you manage</p>
                     </div>
-
                     <div className="form-content">
                         <div className="form-panel">
                             <h3 className="form-section-title">Personal Information</h3>
@@ -255,7 +239,6 @@ export const InterestForm = () => {
                                 </div>
                             </div>
                         </div>
-
                         <div className="form-panel">
                             <h3 className="form-section-title">Community Details</h3>
                             <div className="form-row">
@@ -270,7 +253,6 @@ export const InterestForm = () => {
                                         required
                                     />
                                 </div>
-
                                 <div className="form-group">
                                     <label htmlFor="location">City *</label>
                                     <select
@@ -292,7 +274,6 @@ export const InterestForm = () => {
                                     </select>
                                 </div>
                             </div>
-
                             {formData.location === 'Other' && (
                                 <div className="form-group" id="otherCityGroup">
                                     <label htmlFor="otherCity">Enter Your City *</label>
@@ -307,7 +288,6 @@ export const InterestForm = () => {
                                     />
                                 </div>
                             )}
-
                             <div className="form-group">
                                 <label htmlFor="description">Community Description *</label>
                                 <textarea
@@ -319,7 +299,6 @@ export const InterestForm = () => {
                                     required
                                 />
                             </div>
-
                             <div className="form-group">
                                 <label>Community Photos (Optional)</label>
                                 <div className="photo-upload-area" onClick={() => document.getElementById('photoInput').click()}>
@@ -349,7 +328,6 @@ export const InterestForm = () => {
                             </div>
                         </div>
                     </div>
-
                     <div className="form-footer">
                         {loading && (
                             <div style={{
@@ -375,7 +353,6 @@ export const InterestForm = () => {
                                 </span>
                             </div>
                         )}
-
                         <button
                             type="submit"
                             className="submit-btn"

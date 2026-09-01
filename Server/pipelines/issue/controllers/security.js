@@ -2,36 +2,9 @@ import Issue from "../../../models/issues.js";
 import Resident from "../../../models/resident.js";
 import Flat from "../../../models/flats.js";
 import CommunityManager from "../../../models/cManager.js";
-import {
-    autoAssignResidentIssue,
-    autoAssignCommunityIssue,
-} from "../../../utils/issueAutomation.js";
-import { getCommunityManagerForCommunity, emitIssueUpdate, logIssueActivity } from "../utils/issueShared.js";
+import { autoAssignResidentIssue, autoAssignCommunityIssue } from "../../../utils/issueAutomation.js";
+import { getCommunityManagerForCommunity, emitIssueUpdate, logIssueActivity, determineIssuePriority } from "../utils/issueShared.js";
 import { pushNotification } from "../../notifications/services/notificationService.js";
-
-function determineIssuePriority(category, categoryType, description = "", title = "") {
-    const now = new Date();
-    const hour = now.getHours();
-    const isOffHours = hour < 8 || hour > 18 || now.getDay() === 0 || now.getDay() === 6;
-    const content = `${title} ${description}`.toLowerCase();
-
-    if (/(flood|sewage|major water leak|power outage|no electricity|electric|spark|shock|stuck in elevator|can't get out)/.test(content)) {
-        return "Urgent";
-    }
-    if (category === "Security") {
-        return isOffHours ? "Urgent" : "High";
-    }
-    if (category === "Elevator" && /stuck|not working/.test(content)) {
-        return "Urgent";
-    }
-    if (/(broken|not working|overflow|infestation|mold|rodents|health|safety)/.test(content)) {
-        return "High";
-    }
-    if (isOffHours && /(streetlight|dark|security)/.test(content)) {
-        return "High";
-    }
-    return "Normal";
-}
 
 // --------------------------------------------------
 // SECURITY: Log Issue on Behalf of Resident / Common Area
@@ -226,5 +199,4 @@ export const deleteSecurityIssue = async (req, res) => {
         res.status(500).json({ success: false, message: "Failed to delete issue" });
     }
 };
-
 

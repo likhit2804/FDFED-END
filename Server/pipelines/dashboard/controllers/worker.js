@@ -10,9 +10,9 @@ export const getDashboardData = async (req, res) => {
             return res.status(400).json({ success: false, message: dateRange.error });
         }
 
-        const t = await Worker.findById(req.user.id);
+        const t = await Worker.findById(req.user.id).lean();
         const issueQuery = withDateRangeMatch({ workerAssigned: req.user.id }, "createdAt", dateRange.range);
-        const Issues = await Issue.find(issueQuery).sort({ createdAt: -1 });
+        const Issues = await Issue.find(issueQuery).sort({ createdAt: -1 }).lean();
         return res.json({
             success: true,
             worker: t,
@@ -40,7 +40,8 @@ export const getHistory = async (req, res) => {
 
         const issues = await Issue.find(issueQuery)
             .populate("workerAssigned")
-            .populate("resident");
+            .populate("resident")
+            .lean();
         return res.json({
             success: true,
             issues,

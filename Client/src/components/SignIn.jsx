@@ -1,17 +1,14 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate, NavLink } from 'react-router-dom';
-import '../assets/css/SignIn.css';
-import logo from '../imgs/Logo.png';
+import { useState, useEffect, useMemo } from "react";
+import { useNavigate, NavLink } from "react-router-dom";
 import showPass from '../imgs/showPass.svg';
 import hidePass from '../imgs/hidePass.svg';
-import { useSelector, useDispatch } from 'react-redux';
-import { ToastContainer, toast } from 'react-toastify';
-import { loginUser, verifyOtp } from '../slices/authSlice.js';
+import { useSelector, useDispatch } from "react-redux";
+import { ToastContainer, toast } from "react-toastify";
+import { loginUser, verifyOtp } from "../slices/authSlice.js";
 import axios from 'axios';
-import { Loader } from './Loader.jsx';
-import { OtpInput } from './SignIn/OtpInput';
-import { ForgotPasswordForm } from './SignIn/ForgotPasswordForm';
-
+import { Loader } from "./Loader.jsx";
+import { OtpInput } from "./SignIn/OtpInput";
+import { ForgotPasswordForm } from "./SignIn/ForgotPasswordForm";
 const ROLE_ROUTES = {
   communityManager: (user) => user?.subscriptionStatus && user.subscriptionStatus !== 'active' ? '/manager/subscription' : '/manager/dashboard',
   CommunityManager: (user) => user?.subscriptionStatus && user.subscriptionStatus !== 'active' ? '/manager/subscription' : '/manager/dashboard',
@@ -19,17 +16,14 @@ const ROLE_ROUTES = {
   Worker: () => '/worker/dashboard',
   Security: () => '/security/dashboard',
 };
-
 const navigateByRole = (navigate, role, user) => {
   const getRoute = ROLE_ROUTES[role];
   navigate(getRoute ? getRoute(user) : '/');
 };
-
 export const SignIn = () => {
   const dispatch = useDispatch();
   const { pending2fa, loading } = useSelector((state) => state.auth);
   const navigate = useNavigate();
-
   const [formData, setFormData] = useState({ email: '', password: '', userType: '' });
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
@@ -37,13 +31,11 @@ export const SignIn = () => {
   const [otpDigits, setOtpDigits] = useState(Array(6).fill(''));
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [isResending, setIsResending] = useState(false);
-
   // Forgot password
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [forgotPasswordEmail, setForgotPasswordEmail] = useState('');
   const [forgotPasswordUserType, setForgotPasswordUserType] = useState('');
   const [isSendingReset, setIsSendingReset] = useState(false);
-
   // OTP timer
   const initialTimer = 300;
   const [secondsLeft, setSecondsLeft] = useState(initialTimer);
@@ -54,14 +46,12 @@ export const SignIn = () => {
     const s = (secondsLeft % 60).toString().padStart(2, '0');
     return `${m}:${s}`;
   }, [secondsLeft]);
-
   useEffect(() => {
     if (!pending2fa) { setSecondsLeft(initialTimer); return; }
     setOtpDigits(Array(6).fill(''));
     const id = setInterval(() => setSecondsLeft((s) => s > 0 ? s - 1 : 0), 1000);
     return () => clearInterval(id);
   }, [pending2fa]);
-
   // Validation
   const validateForm = () => {
     const e = {};
@@ -73,7 +63,6 @@ export const SignIn = () => {
     setErrors(e);
     return Object.keys(e).length === 0;
   };
-
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((p) => ({ ...p, [name]: value }));
@@ -84,7 +73,6 @@ export const SignIn = () => {
       setErrors((p) => ({ ...p, email: err }));
     }
   };
-
   // Login
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -99,7 +87,6 @@ export const SignIn = () => {
       .catch((err) => toast.error(err || "Something went wrong"))
       .finally(() => setIsSendingEmail(false));
   };
-
   // OTP submit
   const submitOtp = async (e) => {
     e.preventDefault();
@@ -110,14 +97,12 @@ export const SignIn = () => {
       navigateByRole(navigate, result?.user?.userType || pending2fa?.userType, result?.user);
     } catch (err) { toast.error(err || 'Verification failed'); }
   };
-
   const resend = async () => {
     if (!pending2fa?.tempToken) return;
     try { setIsResending(true); await axios.post('/api/resend-otp', { tempToken: pending2fa.tempToken }); toast.success('OTP resent'); setSecondsLeft(initialTimer); }
     catch (e) { toast.error(e?.response?.data?.message || 'Failed to resend OTP'); }
     finally { setIsResending(false); }
   };
-
   const handleForgotPassword = async (e) => {
     e.preventDefault();
     if (!forgotPasswordEmail.trim()) { toast.error('Please enter your email'); return; }
@@ -130,7 +115,6 @@ export const SignIn = () => {
     } catch (err) { toast.error(err?.response?.data?.message || 'Failed to send reset email'); }
     finally { setIsSendingReset(false); }
   };
-
   return (
     <div className='SignInCon'>
       {(isSendingEmail || isResending) && (
@@ -140,7 +124,6 @@ export const SignIn = () => {
       )}
       <ToastContainer />
       {alertMessage && <div className={`alert ${alertMessage.type}`}>{alertMessage.text}</div>}
-
       <div className="signin-container">
         <div className="left-panel">
           <div className="logo"><img src={logo} alt="URBAN EASE" height="30px" width="130px" /></div>
@@ -193,7 +176,6 @@ export const SignIn = () => {
             </>
           )}
         </div>
-
         {showForgotPassword && (
           <ForgotPasswordForm email={forgotPasswordEmail} setEmail={setForgotPasswordEmail} userType={forgotPasswordUserType} setUserType={setForgotPasswordUserType} isSending={isSendingReset} onSubmit={handleForgotPassword} onCancel={() => setShowForgotPassword(false)} />
         )}

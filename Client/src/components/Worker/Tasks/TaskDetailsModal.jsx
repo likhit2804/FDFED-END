@@ -1,4 +1,4 @@
-import React from "react";
+
 import { IssueDetailsModal as UnifiedIssueDetailsModal, Input } from "../../shared";
 import { Play, CheckCircle2, AlertOctagon } from "lucide-react";
 import { STATUS_ASSIGNED, STATUS_IN_PROGRESS, STATUS_RESOLVED } from "./taskUtils";

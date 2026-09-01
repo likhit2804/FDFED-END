@@ -1,107 +1,87 @@
 import express from "express";
 import auth from "../controllers/shared/auth.js";
 import { authorizeRoles } from "../controllers/shared/authorization.js";
-
 // Import CRUD helpers for all models from the central index
 import {
-  // Admin
   createAdmin,
   listAdmins,
   getAdminById,
   updateAdminById,
   deleteAdminById,
-  // Amenities
   createAmenity,
   listAmenities,
   getAmenityById,
   updateAmenityById,
   deleteAmenityById,
-  // Community Manager
   createCommunityManager,
   listCommunityManagers,
   getCommunityManagerById,
   updateCommunityManagerById,
   deleteCommunityManagerById,
-  // Common Spaces
   createCommonSpace,
   listCommonSpaces,
   getCommonSpaceById,
   updateCommonSpaceById,
   deleteCommonSpaceById,
-  // Communities
   createCommunity,
   listCommunities,
   getCommunityById,
   updateCommunityById,
   deleteCommunityById,
-  // Community Subscriptions
   createCommunitySubscription,
   listCommunitySubscriptions,
   getCommunitySubscriptionById,
   updateCommunitySubscriptionById,
   deleteCommunitySubscriptionById,
-  // Interest forms
   createInterestForm,
   listInterestForms,
   getInterestFormById,
   updateInterestFormById,
   deleteInterestFormById,
-  // Issues
   createIssue,
   listIssues,
   getIssueById,
   updateIssueById,
   deleteIssueById,
-  // Notifications
   createNotification,
   listNotifications,
   getNotificationById,
   updateNotificationById,
   deleteNotificationById,
-  // Payments
   createPayment,
   listPayments,
   getPaymentById,
   updatePaymentById,
   deletePaymentById,
-  // Preapprovals
   createPreapproval,
   listPreapprovals,
   getPreapprovalById,
   updatePreapprovalById,
   deletePreapprovalById,
-  // Residents
   createResident,
   listResidents,
   getResidentById,
   updateResidentById,
   deleteResidentById,
-  // Security
   createSecurity,
   listSecurities,
   getSecurityById,
   updateSecurityById,
   deleteSecurityById,
-
-  // Visitors
   createVisitor,
   listVisitors,
   getVisitorById,
   updateVisitorById,
   deleteVisitorById,
-  // Workers
   createWorker,
   listWorkers,
   getWorkerById,
   updateWorkerById,
-  deleteWorkerById,
+  deleteWorkerById
 } from "../crud/index.js";
-
 const router = express.Router();
-
 // Apply auth + admin role to every route in this router
 router.use(auth, authorizeRoles("admin", "/AdminLogin"));
-
 // Helper to bind standard CRUD endpoints for a given base path
 const bindCrudRoutes = (basePath, { create, list, getById, updateById, deleteById }) => {
   // Create
@@ -114,7 +94,6 @@ const bindCrudRoutes = (basePath, { create, list, getById, updateById, deleteByI
       res.status(500).json({ success: false, message: "Server error", error: error.message });
     }
   });
-
   // List
   router.get(basePath, async (req, res) => {
     try {
@@ -125,7 +104,6 @@ const bindCrudRoutes = (basePath, { create, list, getById, updateById, deleteByI
       res.status(500).json({ success: false, message: "Server error", error: error.message });
     }
   });
-
   // Get by id
   router.get(`${basePath}/:id`, async (req, res) => {
     try {
@@ -139,7 +117,6 @@ const bindCrudRoutes = (basePath, { create, list, getById, updateById, deleteByI
       res.status(500).json({ success: false, message: "Server error", error: error.message });
     }
   });
-
   // Update by id
   router.put(`${basePath}/:id`, async (req, res) => {
     try {
@@ -153,7 +130,6 @@ const bindCrudRoutes = (basePath, { create, list, getById, updateById, deleteByI
       res.status(500).json({ success: false, message: "Server error", error: error.message });
     }
   });
-
   // Delete by id
   router.delete(`${basePath}/:id`, async (req, res) => {
     try {
@@ -168,7 +144,6 @@ const bindCrudRoutes = (basePath, { create, list, getById, updateById, deleteByI
     }
   });
 };
-
 // Bind CRUD routes for each model under /admin/api/*
 bindCrudRoutes("/admins", {
   create: createAdmin,
@@ -177,7 +152,6 @@ bindCrudRoutes("/admins", {
   updateById: updateAdminById,
   deleteById: deleteAdminById,
 });
-
 bindCrudRoutes("/amenities", {
   create: createAmenity,
   list: listAmenities,
@@ -185,7 +159,6 @@ bindCrudRoutes("/amenities", {
   updateById: updateAmenityById,
   deleteById: deleteAmenityById,
 });
-
 bindCrudRoutes("/community-managers", {
   create: createCommunityManager,
   list: listCommunityManagers,
@@ -193,7 +166,6 @@ bindCrudRoutes("/community-managers", {
   updateById: updateCommunityManagerById,
   deleteById: deleteCommunityManagerById,
 });
-
 bindCrudRoutes("/common-spaces", {
   create: createCommonSpace,
   list: listCommonSpaces,
@@ -201,7 +173,6 @@ bindCrudRoutes("/common-spaces", {
   updateById: updateCommonSpaceById,
   deleteById: deleteCommonSpaceById,
 });
-
 bindCrudRoutes("/communities", {
   create: createCommunity,
   list: listCommunities,
@@ -209,7 +180,6 @@ bindCrudRoutes("/communities", {
   updateById: updateCommunityById,
   deleteById: deleteCommunityById,
 });
-
 bindCrudRoutes("/community-subscriptions", {
   create: createCommunitySubscription,
   list: listCommunitySubscriptions,
@@ -217,7 +187,6 @@ bindCrudRoutes("/community-subscriptions", {
   updateById: updateCommunitySubscriptionById,
   deleteById: deleteCommunitySubscriptionById,
 });
-
 bindCrudRoutes("/interest-forms", {
   create: createInterestForm,
   list: listInterestForms,
@@ -225,7 +194,6 @@ bindCrudRoutes("/interest-forms", {
   updateById: updateInterestFormById,
   deleteById: deleteInterestFormById,
 });
-
 bindCrudRoutes("/issues", {
   create: createIssue,
   list: listIssues,
@@ -233,7 +201,6 @@ bindCrudRoutes("/issues", {
   updateById: updateIssueById,
   deleteById: deleteIssueById,
 });
-
 bindCrudRoutes("/notifications", {
   create: createNotification,
   list: listNotifications,
@@ -241,7 +208,6 @@ bindCrudRoutes("/notifications", {
   updateById: updateNotificationById,
   deleteById: deleteNotificationById,
 });
-
 bindCrudRoutes("/payments", {
   create: createPayment,
   list: listPayments,
@@ -249,7 +215,6 @@ bindCrudRoutes("/payments", {
   updateById: updatePaymentById,
   deleteById: deletePaymentById,
 });
-
 bindCrudRoutes("/preapprovals", {
   create: createPreapproval,
   list: listPreapprovals,
@@ -257,7 +222,6 @@ bindCrudRoutes("/preapprovals", {
   updateById: updatePreapprovalById,
   deleteById: deletePreapprovalById,
 });
-
 bindCrudRoutes("/residents", {
   create: createResident,
   list: listResidents,
@@ -265,7 +229,6 @@ bindCrudRoutes("/residents", {
   updateById: updateResidentById,
   deleteById: deleteResidentById,
 });
-
 bindCrudRoutes("/security", {
   create: createSecurity,
   list: listSecurities,
@@ -273,8 +236,6 @@ bindCrudRoutes("/security", {
   updateById: updateSecurityById,
   deleteById: deleteSecurityById,
 });
-
-
 bindCrudRoutes("/visitors", {
   create: createVisitor,
   list: listVisitors,
@@ -282,7 +243,6 @@ bindCrudRoutes("/visitors", {
   updateById: updateVisitorById,
   deleteById: deleteVisitorById,
 });
-
 bindCrudRoutes("/workers", {
   create: createWorker,
   list: listWorkers,
@@ -290,5 +250,4 @@ bindCrudRoutes("/workers", {
   updateById: updateWorkerById,
   deleteById: deleteWorkerById,
 });
-
 export default router;

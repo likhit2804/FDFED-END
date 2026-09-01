@@ -1,8 +1,8 @@
 {
   "type": "module",
   "scripts": {
-    "dev": "nodemon server.js",
-    "start": "node server.js",
+    "dev": "nodemon --env-file=.env server.js",
+    "start": "node --env-file=.env server.js",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "test:report": "node --experimental-vm-modules node_modules/jest/bin/jest.js --json --outputFile=test-report.json",
     "test:verbose": "node --experimental-vm-modules node_modules/jest/bin/jest.js --verbose",

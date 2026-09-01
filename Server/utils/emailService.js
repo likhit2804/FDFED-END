@@ -7,12 +7,11 @@
  * - Logging for all email operations
  * - Support for all email template types
  */
-
 import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import { fileURLToPath } from "url";
 import {
   createTemporaryPasswordTemplate,
   createApplicationApprovedTemplate,
@@ -20,28 +19,23 @@ import {
   createAccountActivatedTemplate,
   createPaymentLinkTemplate,
   createNotificationTemplate
-} from './emailTemplates.js';
-import { createOtpEmailByType } from './otpEmailTemplates.js';
-
+} from "./emailTemplates.js";
+import { createOtpEmailByType } from "./otpEmailTemplates.js";
 dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const OTP_LOGO_PATH = path.resolve(__dirname, '../../Client/src/imgs/logo_N_white_email.png');
 const EMAIL_LOGO_URL = process.env.EMAIL_LOGO_URL || '';
-
 function buildCloudinaryLogoUrl() {
   if (EMAIL_LOGO_URL.trim()) return EMAIL_LOGO_URL.trim();
   return '';
 }
-
 // Validate required environment variables
 const requiredEnvVars = ['EMAIL_USER', 'EMAIL_PASS'];
 const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
-
 if (missingVars.length > 0) {
   console.warn(`⚠️ Missing email configuration: ${missingVars.join(', ')}`);
 }
-
 /**
  * Create and configure the email transporter
  * Singleton pattern - reuse the same transporter across all email sends
@@ -50,7 +44,6 @@ const createTransporter = () => {
   if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
     throw new Error('Email credentials not configured. Check EMAIL_USER and EMAIL_PASS in .env');
   }
-
   return nodemailer.createTransport({
     host: 'smtp.gmail.com',
     port: 587,
@@ -67,10 +60,8 @@ const createTransporter = () => {
     maxMessages: 100
   });
 };
-
 // Single transporter instance
 let transporter = null;
-
 /**
  * Get or create the email transporter
  */
@@ -80,7 +71,6 @@ const getTransporter = () => {
   }
   return transporter;
 };
-
 /**
  * Base function to send any email
  * @param {Object} params
@@ -94,7 +84,6 @@ const getTransporter = () => {
 async function sendEmail({ to, subject, html, text = '', attachments = [] }) {
   try {
     const transporter = getTransporter();
-    
     const mailOptions = {
       from: process.env.EMAIL_FROM || '"Urban Ease" <no-reply@urbaneaseapp.com>',
       to,
@@ -103,7 +92,6 @@ async function sendEmail({ to, subject, html, text = '', attachments = [] }) {
       text: text || subject, // Fallback to subject if no text provided
       attachments,
     };
-
     const info = await transporter.sendMail(mailOptions);
     console.log(`✅ Email sent to ${to}: ${subject} (ID: ${info.messageId})`);
     return true;
@@ -112,7 +100,6 @@ async function sendEmail({ to, subject, html, text = '', attachments = [] }) {
     throw error;
   }
 }
-
 /**
  * Send OTP verification email
  * @param {string} email - Recipient email
@@ -144,7 +131,6 @@ export async function sendOTPEmail(
         ]
       : []
     : [];
-
   const html = createOtpEmailByType({
     otp,
     expiryMinutes,
@@ -159,7 +145,6 @@ export async function sendOTPEmail(
     general: 'Your OTP - Urban Ease'
   };
   const subject = subjectByType[type] || subjectByType.general;
-  
   return sendEmail({
     to: email,
     subject,
@@ -168,7 +153,6 @@ export async function sendOTPEmail(
     attachments,
   });
 }
-
 /**
  * Send temporary password email
  * @param {string} email - Recipient email
@@ -178,9 +162,7 @@ export async function sendTemporaryPasswordEmail(email, password) {
   const loginUrl = process.env.CLIENT_BASE_URL 
     ? `${process.env.CLIENT_BASE_URL}/SignIn` 
     : 'http://localhost:5173/SignIn';
-    
   const html = createTemporaryPasswordTemplate({ email, password, loginUrl });
-  
   return sendEmail({
     to: email,
     subject: 'Welcome to Urban Ease - Temporary Password',
@@ -188,7 +170,6 @@ export async function sendTemporaryPasswordEmail(email, password) {
     text: `Welcome to Urban Ease! Your temporary password is: ${password}. Please login and change it immediately. Login at: ${loginUrl}`
   });
 }
-
 /**
  * Send application approved email with payment link
  * @param {string} email - Recipient email
@@ -198,7 +179,6 @@ export async function sendTemporaryPasswordEmail(email, password) {
  */
 export async function sendApplicationApprovedEmail(email, adminName, paymentLink, message = '') {
   const html = createApplicationApprovedTemplate({ adminName, paymentLink, message });
-  
   return sendEmail({
     to: email,
     subject: 'Application Approved - Complete Your Payment',
@@ -206,7 +186,6 @@ export async function sendApplicationApprovedEmail(email, adminName, paymentLink
     text: `Your application has been approved by ${adminName}. Complete your payment to activate your account: ${paymentLink}`
   });
 }
-
 /**
  * Send application rejected email
  * @param {string} email - Recipient email
@@ -215,7 +194,6 @@ export async function sendApplicationApprovedEmail(email, adminName, paymentLink
  */
 export async function sendApplicationRejectedEmail(email, adminName, reason) {
   const html = createApplicationRejectedTemplate({ adminName, reason });
-  
   return sendEmail({
     to: email,
     subject: 'Application Status Update - Urban Ease',
@@ -223,7 +201,6 @@ export async function sendApplicationRejectedEmail(email, adminName, reason) {
     text: `Your application has been reviewed by ${adminName}. Reason: ${reason}`
   });
 }
-
 /**
  * Send account activated email with credentials
  * @param {string} email - Recipient email
@@ -233,9 +210,7 @@ export async function sendAccountActivatedEmail(email, password) {
   const loginUrl = process.env.CLIENT_BASE_URL 
     ? `${process.env.CLIENT_BASE_URL}/SignIn` 
     : 'http://localhost:5173/SignIn';
-    
   const html = createAccountActivatedTemplate({ email, password, loginUrl });
-  
   return sendEmail({
     to: email,
     subject: 'Account Activated - Welcome to Urban Ease!',
@@ -243,7 +218,6 @@ export async function sendAccountActivatedEmail(email, password) {
     text: `Your account is now active! Email: ${email}, Password: ${password}. Login at: ${loginUrl}`
   });
 }
-
 /**
  * Send payment link reminder email
  * @param {string} email - Recipient email
@@ -252,7 +226,6 @@ export async function sendAccountActivatedEmail(email, password) {
  */
 export async function sendPaymentLinkEmail(email, paymentLink, expiryDays = 7) {
   const html = createPaymentLinkTemplate({ paymentLink, expiryDays });
-  
   return sendEmail({
     to: email,
     subject: 'Reminder: Complete Your Payment - Urban Ease',
@@ -260,7 +233,6 @@ export async function sendPaymentLinkEmail(email, paymentLink, expiryDays = 7) {
     text: `Complete your subscription payment within ${expiryDays} days: ${paymentLink}`
   });
 }
-
 /**
  * Send generic notification email
  * @param {string} email - Recipient email
@@ -273,19 +245,16 @@ export async function sendPaymentLinkEmail(email, paymentLink, expiryDays = 7) {
 export async function sendNotificationEmail(email, title, message, options = {}) {
   const { icon = '🔔', type = 'info' } = options;
   const html = createNotificationTemplate({ title, message, icon, type });
-  
   return sendEmail({
     to: email,
     subject: title,
     html
   });
 }
-
 /**
  * Send login OTP (alias for backward compatibility)
  */
 export const sendLoginOtp = sendOTPEmail;
-
 /**
  * Close the transporter connection pool (for graceful shutdown)
  */
@@ -296,10 +265,8 @@ export function closeEmailService() {
     console.log('📧 Email service closed');
   }
 }
-
 // Export the base sendEmail function for custom use cases
 export { sendEmail };
-
 export default {
   sendOTPEmail,
   sendTemporaryPasswordEmail,

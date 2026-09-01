@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import {
   LayoutGrid,
   Users,
@@ -8,14 +8,13 @@ import {
   User,
   LogOut,
   ChevronLeft,
-  ChevronRight,
+  ChevronRight
 } from "lucide-react";
 import { useSidebar } from "../../context/AdminSidebarContext";
 import logoWhite from "../../imgs/logo_N_white.png";
 import logoWhiteCollapsed from "../../imgs/logo_white.png";
 import { useNavigate } from "react-router-dom";
 import { useAdminAuth } from "../../context/AdminAuthContext";
-
 export default function SidebarAdmin() {
   const {
     collapsed,
@@ -25,9 +24,7 @@ export default function SidebarAdmin() {
     hoveredItem,
     setHoveredItem,
   } = useSidebar();
-
   const { logout } = useAdminAuth();
-
   const navItems = [
     { icon: LayoutGrid, label: "Overview", path: "/admin/dashboard" },
     { icon: Users, label: "All Communities", path: "/admin/communities" },
@@ -35,20 +32,15 @@ export default function SidebarAdmin() {
     { icon: CreditCard, label: "Billing", path: "/admin/payments" },
     { icon: Tag, label: "Subscription Plans", path: "/admin/subscription-plans" },
   ];
-
   const bottomItems = [
     { icon: User, label: "My Profile", path: "/admin/profile" },
     { icon: LogOut, label: "Sign Out", path: "__logout__" },
   ];
-
-
   useEffect(() => {
     const currentPath = window.location.pathname;
     setActiveTab(currentPath);
   }, [setActiveTab]);
-
   const navigate = useNavigate();
-
   const handleClick = async (path) => {
     if (path === "__logout__") {
       await logout();
@@ -59,14 +51,12 @@ export default function SidebarAdmin() {
     setActiveTab(path);
     navigate(path);
   };
-
   const renderNavItem = (item, index) => {
     const isActive =
       activeTab === item.path ||
       (item.path === "/admin/dashboard" && (activeTab === "/admin" || activeTab === "/admin/"));
     const isHovered = hoveredItem === item.path;
     const Icon = item.icon;
-
     return (
       <li key={index} style={{ position: "relative", margin: "4px 0" }}>
         <button
@@ -124,7 +114,6 @@ export default function SidebarAdmin() {
               {item.label}
             </span>
           )}
-
           {/* Tooltip for collapsed sidebar */}
           {collapsed && isHovered && (
             <div
@@ -154,7 +143,6 @@ export default function SidebarAdmin() {
       </li>
     );
   };
-
   return (
     <aside
       style={{
@@ -207,7 +195,6 @@ export default function SidebarAdmin() {
             }}
           />
         </div>
-
         {/* Toggle Button */}
         <button
           onClick={toggleSidebar}
@@ -230,7 +217,6 @@ export default function SidebarAdmin() {
           {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
         </button>
       </div>
-
       {/* Main Navigation */}
       <div
         style={{
@@ -244,7 +230,6 @@ export default function SidebarAdmin() {
           {navItems.map((item, index) => renderNavItem(item, index))}
         </ul>
       </div>
-
       {/* Bottom Section */}
       <div
         style={{

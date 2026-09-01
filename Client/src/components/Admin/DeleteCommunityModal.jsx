@@ -1,17 +1,14 @@
-import { useState, useEffect, useRef } from 'react';
-import { X, AlertTriangle } from 'lucide-react';
-import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { useState, useEffect, useRef } from "react";
+import { X, AlertTriangle } from "lucide-react";
+import { useFocusTrap } from "../../hooks/useFocusTrap";
 import styles from './DeleteCommunityModal.module.css';
-
 const DeleteCommunityModal = ({ isOpen, onClose, community, deletionCounts, onConfirm, isDeleting }) => {
   const [confirmText, setConfirmText] = useState('');
   const [error, setError] = useState('');
   const modalRef = useRef(null);
   const inputRef = useRef(null);
-
   // Enable focus trap when modal is open
   useFocusTrap(modalRef, isOpen);
-
   // Focus input when modal opens
   useEffect(() => {
     if (isOpen && inputRef.current) {
@@ -19,31 +16,25 @@ const DeleteCommunityModal = ({ isOpen, onClose, community, deletionCounts, onCo
       setTimeout(() => inputRef.current?.focus(), 100);
     }
   }, [isOpen]);
-
   // Handle keyboard shortcuts
   useEffect(() => {
     if (!isOpen) return;
-
     const handleKeyDown = (e) => {
       // Escape key to close (if not deleting)
       if (e.key === 'Escape' && !isDeleting) {
         e.preventDefault();
         handleClose();
       }
-      
       // Enter key to confirm (if input matches and not deleting)
       if (e.key === 'Enter' && confirmText === community.name && !isDeleting) {
         e.preventDefault();
         handleConfirm();
       }
     };
-
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, confirmText, community.name, isDeleting]);
-
   if (!isOpen) return null;
-
   const handleConfirm = () => {
     if (confirmText !== community.name) {
       setError('Community name does not match');
@@ -51,7 +42,6 @@ const DeleteCommunityModal = ({ isOpen, onClose, community, deletionCounts, onCo
     }
     onConfirm();
   };
-
   const handleClose = () => {
     if (!isDeleting) {
       setConfirmText('');
@@ -59,7 +49,6 @@ const DeleteCommunityModal = ({ isOpen, onClose, community, deletionCounts, onCo
       onClose();
     }
   };
-
   return (
     <div 
       className={styles.overlay} 
@@ -91,17 +80,14 @@ const DeleteCommunityModal = ({ isOpen, onClose, community, deletionCounts, onCo
             <X size={18} aria-hidden="true" />
           </button>
         </div>
-
         <div className={styles.content}>
           <div className={styles.info} id="delete-modal-description">
             <strong>{community.name}</strong>
             <span>{community.location}</span>
           </div>
-
           <div className={styles.warning} role="alert" aria-live="polite">
             <p><strong>Warning:</strong> This will permanently delete all related data:</p>
           </div>
-
           <div className={styles.counts} aria-label="Deletion impact summary">
             {deletionCounts.residents > 0 && (
               <div>
@@ -160,7 +146,6 @@ const DeleteCommunityModal = ({ isOpen, onClose, community, deletionCounts, onCo
               </div>
             )}
           </div>
-
           <div className={styles.confirm}>
             <label htmlFor="confirm-input">
               Type <code>{community.name}</code> to confirm:
@@ -196,7 +181,6 @@ const DeleteCommunityModal = ({ isOpen, onClose, community, deletionCounts, onCo
             </div>
           </div>
         </div>
-
         <div className={styles.footer}>
           <button 
             onClick={handleClose} 
@@ -222,5 +206,4 @@ const DeleteCommunityModal = ({ isOpen, onClose, community, deletionCounts, onCo
     </div>
   );
 };
-
 export default DeleteCommunityModal;

@@ -1,6 +1,5 @@
-import React, { forwardRef } from 'react';
-import { ChevronDown } from 'lucide-react';
-
+import { forwardRef } from "react";
+import { ChevronDown } from "lucide-react";
 /**
  * Select – styled native dropdown
  *
@@ -33,7 +32,6 @@ const Select = forwardRef(({
                 {required && <span style={{ color: '#dc2626', marginLeft: 3 }}>*</span>}
             </label>
         )}
-
         <div style={{ position: 'relative' }}>
             <select
                 ref={ref}
@@ -71,11 +69,9 @@ const Select = forwardRef(({
                 }}
             />
         </div>
-
         {hint && !error && <p style={{ fontSize: 12, color: '#9ca3af', marginTop: 4, marginBottom: 0 }}>{hint}</p>}
         {error && <p style={{ fontSize: 12, color: '#dc2626', marginTop: 4, marginBottom: 0 }}>{error}</p>}
     </div>
 ));
-
 Select.displayName = 'Select';
 export default Select;

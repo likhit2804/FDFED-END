@@ -1,21 +1,17 @@
 
-import { createAuditLog } from '../../utils/auditLogger.js';
+import { createAuditLog } from "../../utils/auditLogger.js";
 import DeletedCommunityBackup from '../../models/deletedCommunityBackup.js';
 import cache from './adminCache.js';
+import { invalidateCache } from "../../middleware/cacheMiddleware.js";
 import {
   listCommunities,
   listCommunityManagers,
-  listInterestForms,
-  countResidents,
-  listCommunitySubscriptions,
-  aggregateCommunities,
   createCommunity as createCommunityCrud,
   updateCommunityById,
   updateManyCommunities,
-  getCommunityById as getCommunityByIdCrud,
-} from '../../crud/index.js';
-import { deleteCommunityCascade } from '../../utils/communityCascadeDelete.js';
-
+  getCommunityById as getCommunityByIdCrud
+} from "../../crud/index.js";
+import { deleteCommunityCascade } from "../../utils/communityCascadeDelete.js";
 export const getAllCommunities = async (req, res) => {
   try {
     const communities = await listCommunities({}, null, {});
@@ -25,7 +21,6 @@ export const getAllCommunities = async (req, res) => {
     res.status(500).json({ success: false, message: 'Failed to get communities' });
   }
 };
-
 export const getCommunityById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -39,7 +34,6 @@ export const getCommunityById = async (req, res) => {
     res.status(500).json({ success: false, message: 'Failed to get community' });
   }
 };
-
 export const getCommunityDetail = async (req, res) => {
   try {
     const { id } = req.params;
@@ -47,16 +41,13 @@ export const getCommunityDetail = async (req, res) => {
     if (!community) {
       return res.status(404).json({ success: false, message: 'Community not found' });
     }
-
     // Import models
     const Resident = (await import('../../models/resident.js')).default;
     const Worker = (await import('../../models/workers.js')).default;
     const Security = (await import('../../models/security.js')).default;
     const CommunityManager = (await import('../../models/cManager.js')).default;
-
     const Block = (await import('../../models/blocks.js')).default;
     const Flat = (await import('../../models/flats.js')).default;
-
     // Fetch all related people and structures concurrently
     const [residents, workers, securities, manager, blocksCount, totalFlats] = await Promise.all([
       Resident.find({ community: id }).select('residentFirstname residentLastname email contact uCode image').lean(),
@@ -68,7 +59,6 @@ export const getCommunityDetail = async (req, res) => {
       Block.countDocuments({ community: id }),
       Flat.countDocuments({ community: id })
     ]);
-
     res.json({
       success: true,
       data: {
@@ -132,15 +122,13 @@ export const getCommunityDetail = async (req, res) => {
     res.status(500).json({ success: false, message: 'Failed to get community detail' });
   }
 };
-
 export const createCommunity = async (req, res) => {
   try {
     const communityData = req.body;
     const newCommunity = await createCommunityCrud(communityData);
-
     // Invalidate cache
     cache.del('admin_dashboard');
-
+    await invalidateCache('cache:*');
     // Audit log
     await createAuditLog({
       adminId: req.user.id,
@@ -153,16 +141,13 @@ export const createCommunity = async (req, res) => {
       ip: req.ip,
       userAgent: req.headers['user-agent']
     });
-
     console.log(`Community created: ${newCommunity.name}`, { adminEmail: req.user.email });
-
     res.json({ success: true, message: 'Community created successfully', community: newCommunity });
   } catch (err) {
     console.error('Create community error:', err);
     res.status(500).json({ success: false, message: 'Failed to create community' });
   }
 };
-
 export const updateCommunity = async (req, res) => {
   try {
     const { id } = req.params;
@@ -171,13 +156,14 @@ export const updateCommunity = async (req, res) => {
     if (!updatedCommunity) {
       return res.status(404).json({ success: false, message: 'Community not found' });
     }
+    cache.del('admin_dashboard');
+    await invalidateCache('cache:*');
     res.json({ success: true, message: 'Community updated successfully', community: updatedCommunity });
   } catch (err) {
     console.error('Update community error:', err);
     res.status(500).json({ success: false, message: 'Failed to update community' });
   }
 };
-
 export const getDeletePreview = async (req, res) => {
   try {
     const { id } = req.params;
@@ -185,7 +171,6 @@ export const getDeletePreview = async (req, res) => {
     if (!community) {
       return res.status(404).json({ success: false, message: 'Community not found' });
     }
-
     // Import models for accurate counting
     const Resident = (await import('../../models/resident.js')).default;
     const Issue = (await import('../../models/issues.js')).default;
@@ -196,7 +181,6 @@ export const getDeletePreview = async (req, res) => {
     const CommonSpace = (await import('../../models/commonSpaces.js')).default;
     const Payment = (await import('../../models/payment.js')).default;
     const CommunitySubscription = (await import('../../models/communitySubscription.js')).default;
-
     // Execute all counts in parallel
     const [
       residents,
@@ -219,7 +203,6 @@ export const getDeletePreview = async (req, res) => {
       Payment.countDocuments({ community: id }),
       CommunitySubscription.countDocuments({ community: id })
     ]);
-
     res.json({
       success: true,
       community: { _id: community._id, name: community.name, location: community.location },
@@ -240,7 +223,6 @@ export const getDeletePreview = async (req, res) => {
     res.status(500).json({ success: false, message: 'Failed to get delete preview' });
   }
 };
-
 /**
  * DELETE COMMUNITY WITH CASCADE AND BACKUP
  * Route: DELETE /api/communities/:id
@@ -252,12 +234,10 @@ export const deleteCommunity = async (req, res) => {
     if (!community) {
       return res.status(404).json({ success: false, message: 'Community not found' });
     }
-
     console.log(`Starting community deletion: ${community.name}`, {
       adminEmail: req.user.email,
       communityId: id
     });
-
     // Get all related data before deletion for backup
     const Resident = (await import('../../models/resident.js')).default;
     const Issue = (await import('../../models/issues.js')).default;
@@ -272,7 +252,6 @@ export const deleteCommunity = async (req, res) => {
     const PreApproval = (await import('../../models/preapproval.js')).default;
     const Notification = (await import('../../models/Notifications.js')).default;
     const Ad = (await import('../../models/Ad.js')).default;
-
     // Fetch all related data
     const [residents, issues, workers, securities, managers, amenities, commonSpaces,
       payments, subscriptions, visitors, preapprovals, notifications, ads] = await Promise.all([
@@ -290,7 +269,6 @@ export const deleteCommunity = async (req, res) => {
         Notification.find({ community: id }).lean(),
         Ad.find({ community: id }).lean()
       ]);
-
     // Create backup before deletion
     const backup = await DeletedCommunityBackup.create({
       originalCommunityId: id,
@@ -331,15 +309,12 @@ export const deleteCommunity = async (req, res) => {
         }
       }
     });
-
     console.log(`Created deletion backup for community: ${community.name}`, { backupId: backup._id });
-
     // Perform cascade deletion
     const result = await deleteCommunityCascade(id);
-
     // Invalidate cache
     cache.del('admin_dashboard');
-
+    await invalidateCache('cache:*');
     // Audit log
     await createAuditLog({
       adminId: req.user.id,
@@ -358,12 +333,10 @@ export const deleteCommunity = async (req, res) => {
       ip: req.ip,
       userAgent: req.headers['user-agent']
     });
-
     console.log(`Community deleted successfully: ${community.name}`, {
       deletedCounts: result.deletedCounts,
       backupId: backup._id
     });
-
     res.json({
       success: true,
       message: 'Community deleted successfully. Can be restored within 30 days.',
@@ -378,7 +351,6 @@ export const deleteCommunity = async (req, res) => {
     res.status(500).json({ success: false, message: 'Failed to delete community', error: err.message });
   }
 };
-
 export const getManagersList = async (req, res) => {
   try {
     const managers = await listCommunityManagers({}, null, {});
@@ -388,7 +360,6 @@ export const getManagersList = async (req, res) => {
     res.status(500).json({ success: false, message: 'Failed to get managers list' });
   }
 };
-
 export const bulkUpdateStatus = async (req, res) => {
   try {
     const { ids, status } = req.body;
@@ -396,17 +367,15 @@ export const bulkUpdateStatus = async (req, res) => {
       return res.status(400).json({ success: false, message: 'IDs array and status are required' });
     }
     const result = await updateManyCommunities({ _id: { $in: ids } }, { status });
-
     // Invalidate cache
     cache.del('admin_dashboard');
-
+    await invalidateCache('cache:*');
     res.json({ success: true, message: `${result.modifiedCount} communities updated successfully` });
   } catch (err) {
     console.error('Bulk update status error:', err);
     res.status(500).json({ success: false, message: 'Failed to bulk update status' });
   }
 };
-
 /**
  * RESTORE DELETED COMMUNITY FROM BACKUP
  * Route: POST /api/communities/:backupId/restore
@@ -414,26 +383,20 @@ export const bulkUpdateStatus = async (req, res) => {
 export const restoreCommunity = async (req, res) => {
   try {
     const { backupId } = req.params;
-
     const backup = await DeletedCommunityBackup.findById(backupId);
     if (!backup) {
       return res.status(404).json({ success: false, message: 'Backup not found' });
     }
-
     if (backup.status === 'restored') {
       return res.status(400).json({ success: false, message: 'Community already restored' });
     }
-
     if (backup.status === 'permanently_deleted') {
       return res.status(400).json({ success: false, message: 'Backup permanently deleted, cannot restore' });
     }
-
     if (new Date() > backup.permanentDeleteAt) {
       return res.status(400).json({ success: false, message: 'Backup expired, cannot restore' });
     }
-
     console.log(`Starting community restoration from backup: ${backupId}`, { adminEmail: req.user.email });
-
     // Import models
     const Community = (await import('../../models/communities.js')).default;
     const Resident = (await import('../../models/resident.js')).default;
@@ -449,14 +412,11 @@ export const restoreCommunity = async (req, res) => {
     const PreApproval = (await import('../../models/preapproval.js')).default;
     const Notification = (await import('../../models/Notifications.js')).default;
     const Ad = (await import('../../models/Ad.js')).default;
-
     const { communityData } = backup;
     const restoredCounts = {};
-
     // Restore community
     const community = await Community.create(communityData.community);
     restoredCounts.community = 1;
-
     // Restore related data
     if (communityData.residents?.length) {
       await Resident.insertMany(communityData.residents);
@@ -510,16 +470,14 @@ export const restoreCommunity = async (req, res) => {
       await Ad.insertMany(communityData.ads);
       restoredCounts.ads = communityData.ads.length;
     }
-
     // Update backup status
     backup.status = 'restored';
     backup.restoredAt = new Date();
     backup.restoredBy = req.user.id;
     await backup.save();
-
     // Invalidate cache
     cache.del('admin_dashboard');
-
+    await invalidateCache('cache:*');
     // Audit log
     await createAuditLog({
       adminId: req.user.id,
@@ -532,9 +490,7 @@ export const restoreCommunity = async (req, res) => {
       ip: req.ip,
       userAgent: req.headers['user-agent']
     });
-
     console.log(`Community restored successfully: ${community.name}`, { restoredCounts });
-
     res.json({
       success: true,
       message: 'Community restored successfully',

@@ -1,25 +1,15 @@
-import React, { useEffect, useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
-
 import { fetchLeaves } from "../../slices/leaveSlice";
-import {
-  getLeaveSummary,
-  WorkerLeaveRequestCards,
-  WorkerLeaveSummaryCards,
-} from "../shared/nonAdmin/workerLeaveUI";
-
+import { getLeaveSummary, WorkerLeaveRequestCards, WorkerLeaveSummaryCards } from "../shared/nonAdmin/workerLeaveUI";
 export default function WorkerLeaveModal({ isOpen, onClose }) {
   const dispatch = useDispatch();
   const leaves = useSelector((state) => state.leave?.leaves || []);
-
   useEffect(() => {
     if (isOpen) dispatch(fetchLeaves());
   }, [isOpen, dispatch]);
-
   const leaveSummary = useMemo(() => getLeaveSummary(leaves), [leaves]);
-
   if (!isOpen) return null;
-
   return (
     <div className="modal d-block" style={{ backgroundColor: "rgba(0,0,0,0.5)" }} tabIndex="-1">
       <div className="modal-dialog modal-xl modal-dialog-centered">
@@ -32,7 +22,6 @@ export default function WorkerLeaveModal({ isOpen, onClose }) {
             <div className="mb-3">
               <WorkerLeaveSummaryCards summary={leaveSummary} />
             </div>
-
             <WorkerLeaveRequestCards
               leaves={leaves}
               compact

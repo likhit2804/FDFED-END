@@ -1,23 +1,16 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import axios from "axios";
-import '../../assets/css/SignIn.css';
-import logo from '../../imgs/Logo.png';
-
 export const ResidentRegister = () => {
   const navigate = useNavigate();
-
   // Step 1: code entry / Step 2: personal details
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
-
   // Step 1 state
   const [code, setCode] = useState("");
-
   // Flat preview returned from validate-code
   const [flatInfo, setFlatInfo] = useState(null);
-
   // Step 2 personal fields
   const [form, setForm] = useState({
     residentFirstname: "",
@@ -25,7 +18,6 @@ export const ResidentRegister = () => {
     contact: "",
     email: "",
   });
-
   // ---- Step 1: validate the registration code ----
   const handleValidateCode = async (e) => {
     e.preventDefault();
@@ -43,14 +35,12 @@ export const ResidentRegister = () => {
       setLoading(false);
     }
   };
-
   // ---- Step 2: submit personal details ----
   const handleComplete = async (e) => {
     e.preventDefault();
     const { residentFirstname, residentLastname, email } = form;
     if (!residentFirstname || !residentLastname || !email)
       return toast.error("First name, last name and email are required");
-
     setLoading(true);
     try {
       const res = await axios.post("/resident-register/complete", { ...form, registrationCode: flatInfo.registrationCode });
@@ -64,9 +54,7 @@ export const ResidentRegister = () => {
       setLoading(false);
     }
   };
-
   const handleChange = (e) => setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
-
   return (
     <div className='SignInCon'>
       <div className="signin-container">
@@ -79,12 +67,9 @@ export const ResidentRegister = () => {
             Welcome to your new home! Register with the code provided by your community manager to get started.
           </p>
         </div>
-
         <div className="div1"></div>
-
         {/* ---- RIGHT PANEL (Form) ---- */}
         <div className="right-panel">
-
           {/* ---- STEP 1: Enter Code ---- */}
           {step === 1 && (
             <>
@@ -117,13 +102,11 @@ export const ResidentRegister = () => {
               </div>
             </>
           )}
-
           {/* ---- STEP 2: Fill Personal Details ---- */}
           {step === 2 && flatInfo && (
             <>
               <h2>Complete Registration</h2>
               <p className="subtitle">Fill in your details to finish setting up your account.</p>
-
               {/* Flat preview card */}
               <div style={{
                 background: "#f8f9fa",
@@ -141,9 +124,7 @@ export const ResidentRegister = () => {
                 <div><strong>Flat:</strong> {flatInfo.flatNumber}</div>
                 <div><strong>Floor:</strong> {flatInfo.floor}</div>
               </div>
-
               <div className="divider">Personal Details</div>
-
               <form onSubmit={handleComplete}>
                 <div style={{ display: "flex", gap: "15px", marginBottom: "0" }}>
                   <input

@@ -1,9 +1,7 @@
-import React from 'react';
-import '../assets/css/Loader.css';
 
+import '../assets/css/Loader.css';
 export const Loader = ({ size = 44, label = '', className = '' }) => {
     const safeSize = Number(size) || 44;
-
     return (
         <div className={`ue-loader ${className}`.trim()} role="status" aria-live="polite">
             <span

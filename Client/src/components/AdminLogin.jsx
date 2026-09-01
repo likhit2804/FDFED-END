@@ -1,9 +1,8 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useDispatch } from "react-redux";
 import { setUser } from "../slices/authSlice";
 import { adminLogin, adminVerifyOtp, adminResendOtp } from "../services/adminService";
 import { useAdminAuth } from "../context/AdminAuthContext";
-
 const AdminLogin = () => {
   const dispatch = useDispatch();
   const { login } = useAdminAuth() || {};
@@ -11,34 +10,26 @@ const AdminLogin = () => {
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-
   // 2FA state
   const [otpStep, setOtpStep] = useState(false);
   const [otp, setOtp] = useState("");
   const [tempToken, setTempToken] = useState(null);
   const [resending, setResending] = useState(false);
-
   const handleChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
-
   // Step 1: Submit email + password
   const handleSubmit = async (e) => {
     e.preventDefault();
     const newErrors = {};
-
     if (!formData.email) newErrors.email = "Please enter a valid email";
     if (!formData.password) newErrors.password = "Please enter your password";
-
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
     }
-
     setErrors({});
     setLoading(true);
-
     const data = await adminLogin(formData.email, formData.password);
-
     if (data.requiresOtp) {
       // Credentials verified, move to OTP step
       setTempToken(data.tempToken);
@@ -55,24 +46,18 @@ const AdminLogin = () => {
     } else {
       setErrors({ password: data.message || "Invalid credentials" });
     }
-
     setLoading(false);
   };
-
   // Step 2: Submit OTP
   const handleOtpSubmit = async (e) => {
     e.preventDefault();
-
     if (!otp || otp.length < 4) {
       setErrors({ otp: "Please enter the OTP" });
       return;
     }
-
     setErrors({});
     setLoading(true);
-
     const data = await adminVerifyOtp(otp, tempToken);
-
     if (data.token || data.user) {
       const userPayload = data.user || { email: formData.email, userType: "admin" };
       if (data.token) localStorage.setItem("token", data.token);
@@ -84,10 +69,8 @@ const AdminLogin = () => {
     } else {
       setErrors({ otp: data.message || "Invalid OTP" });
     }
-
     setLoading(false);
   };
-
   // Resend OTP
   const handleResendOtp = async () => {
     setResending(true);
@@ -100,7 +83,6 @@ const AdminLogin = () => {
     }
     setResending(false);
   };
-
   // OTP Step UI
   if (otpStep) {
     return (
@@ -114,7 +96,6 @@ const AdminLogin = () => {
           <p className="text-center text-muted mb-4" style={{ fontSize: "13px" }}>
             Enter the OTP sent to <strong>{formData.email}</strong>
           </p>
-
           <div className="mb-3">
             <input
               type="text"
@@ -132,11 +113,9 @@ const AdminLogin = () => {
               </div>
             )}
           </div>
-
           <button type="submit" className="btn btn-dark w-100 mt-2" disabled={loading}>
             {loading ? "Verifying..." : "Verify & Login"}
           </button>
-
           <button
             type="button"
             className="btn btn-link w-100 mt-2 text-secondary"
@@ -146,7 +125,6 @@ const AdminLogin = () => {
           >
             {resending ? "Resending..." : "Resend OTP"}
           </button>
-
           <button
             type="button"
             className="btn btn-link w-100 text-secondary"
@@ -159,7 +137,6 @@ const AdminLogin = () => {
       </div>
     );
   }
-
   // Login Step UI
   return (
     <div className="d-flex justify-content-center align-items-center vh-100 bg-light">
@@ -169,7 +146,6 @@ const AdminLogin = () => {
         style={{ width: "320px" }}
       >
         <h4 className="text-center mb-4 fw-bold text-dark">Admin Login</h4>
-
         <div className="mb-3">
           <label>Email</label>
           <input
@@ -182,7 +158,6 @@ const AdminLogin = () => {
           />
           {errors.email && <div className="text-danger">{errors.email}</div>}
         </div>
-
         <div className="mb-3 position-relative">
           <label>Password</label>
           <input
@@ -201,7 +176,6 @@ const AdminLogin = () => {
           ></i>
           {errors.password && <div className="text-danger">{errors.password}</div>}
         </div>
-
         <button type="submit" className="btn btn-dark w-100 mt-3" disabled={loading}>
           {loading ? "Logging in..." : "Login"}
         </button>
@@ -209,5 +183,4 @@ const AdminLogin = () => {
     </div>
   );
 };
-
 export default AdminLogin;

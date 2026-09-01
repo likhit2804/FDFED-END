@@ -1,5 +1,4 @@
-import React, { forwardRef } from 'react';
-
+import { forwardRef } from "react";
 /**
  * Input – styled text/email/date/number/password/url input
  *
@@ -28,7 +27,6 @@ const Input = forwardRef(({
     ...rest
 }, ref) => {
     const hasWrap = icon || suffix;
-
     return (
         <div style={{ marginBottom: 16 }}>
             {label && (
@@ -37,7 +35,6 @@ const Input = forwardRef(({
                     {required && <span style={{ color: '#dc2626', marginLeft: 3 }}>*</span>}
                 </label>
             )}
-
             <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                 {icon && (
                     <span style={{
@@ -47,7 +44,6 @@ const Input = forwardRef(({
                         {icon}
                     </span>
                 )}
-
                 <input
                     ref={ref}
                     type={type}
@@ -71,7 +67,6 @@ const Input = forwardRef(({
                     onBlur={e => { e.target.style.borderColor = error ? '#fca5a5' : 'var(--ue-border, #e5e7eb)'; }}
                     {...rest}
                 />
-
                 {suffix && (
                     <span style={{
                         position: 'absolute', right: 10,
@@ -81,12 +76,10 @@ const Input = forwardRef(({
                     </span>
                 )}
             </div>
-
             {hint && !error && <p style={{ fontSize: 12, color: '#9ca3af', marginTop: 4, marginBottom: 0 }}>{hint}</p>}
             {error && <p style={{ fontSize: 12, color: '#dc2626', marginTop: 4, marginBottom: 0 }}>{error}</p>}
         </div>
     );
 });
-
 Input.displayName = 'Input';
 export default Input;

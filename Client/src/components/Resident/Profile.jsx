@@ -1,13 +1,11 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Building2, User } from "lucide-react";
 import { toast } from "react-toastify";
-
 import { Loader } from "../Loader";
 import { PasswordChangeForm, ProfileHeader } from "../shared";
 import { ProfileEditPanels } from "../shared/nonAdmin/ProfileEditPanels";
 import { buildDisplayName, getInitials } from "../shared/nonAdmin/profileUtils";
 import { ManagerPageShell, ManagerSection } from "../shared/roleUI";
-
 const mapResidentProfile = (resident = {}) => ({
   firstname: resident.firstname || "",
   lastname: resident.lastname || "",
@@ -17,7 +15,6 @@ const mapResidentProfile = (resident = {}) => ({
   communityName: resident.communityName || "",
   image: resident.image || "",
 });
-
 export const ResidentProfile = () => {
   const [formData, setFormData] = useState({
     firstname: "",
@@ -32,7 +29,6 @@ export const ResidentProfile = () => {
   const [isPassword, setIsPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
-
   useEffect(() => {
     const loadProfile = async () => {
       try {
@@ -53,15 +49,12 @@ export const ResidentProfile = () => {
         setIsLoading(false);
       }
     };
-
     loadProfile();
   }, []);
-
   const handleChange = (event) => {
     const { id, name, value } = event.target;
     setFormData((previous) => ({ ...previous, [id || name]: value }));
   };
-
   const handleImageChange = (file) => {
     if (!file) return;
     setSelectedImage(file);
@@ -69,7 +62,6 @@ export const ResidentProfile = () => {
     reader.onload = () => setFormData((previous) => ({ ...previous, image: reader.result }));
     reader.readAsDataURL(file);
   };
-
   const handleSaveProfile = async () => {
     try {
       const body = new FormData();
@@ -79,7 +71,6 @@ export const ResidentProfile = () => {
       body.append("email", formData.email);
       body.append("uCode", formData.uCode);
       if (selectedImage) body.append("image", selectedImage);
-
       const response = await fetch("/resident/profile", {
         method: "POST",
         credentials: "include",
@@ -96,13 +87,11 @@ export const ResidentProfile = () => {
       toast.error("Error updating profile");
     }
   };
-
   const handlePasswordSubmit = async ({ cp, np, cnp }) => {
     if (np !== cnp) {
       toast.error("New password and confirm password do not match");
       return;
     }
-
     try {
       const response = await fetch("/resident/change-password", {
         method: "POST",
@@ -121,9 +110,7 @@ export const ResidentProfile = () => {
       toast.error("Something went wrong while updating password");
     }
   };
-
   const residentName = buildDisplayName(formData.firstname, formData.lastname) || "Resident";
-
   if (isLoading) {
     return (
       <ManagerPageShell
@@ -137,7 +124,6 @@ export const ResidentProfile = () => {
       </ManagerPageShell>
     );
   }
-
   if (error) {
     return (
       <ManagerPageShell
@@ -149,7 +135,6 @@ export const ResidentProfile = () => {
       </ManagerPageShell>
     );
   }
-
   return (
     <ManagerPageShell
       eyebrow="Resident Desk"
@@ -172,7 +157,6 @@ export const ResidentProfile = () => {
             actionLabel={isPassword ? "Edit Profile" : "Change Password"}
             onAction={() => setIsPassword((previous) => !previous)}
           />
-
           {isPassword ? (
             <div className="ue-profile-block">
               <PasswordChangeForm onSubmit={handlePasswordSubmit} />

@@ -1,6 +1,6 @@
 // ============================================================
 // Shared component library – all non-admin user roles
-// Usage: import { Card, Button, Modal, Input } from '../shared';
+// Usage: import { Card, Button, Modal, Input } from "@/components/shared";
 // ============================================================
 
 // ── Layout & containers ──────────────────────────────────────
@@ -15,6 +15,7 @@ export { default as PasswordChangeForm } from './PasswordChangeForm';
 // ── Data display ─────────────────────────────────────────────
 export { default as StatCard } from './StatCard';
 export { default as StatusBadge } from './StatusBadge';
+export { default as PriorityPill, renderPriorityPill } from './PriorityPill';
 export { EntityCard } from './EntityCard';
 export { default as DataTable } from './DataTable';
 export { default as EmptyState } from './EmptyState';

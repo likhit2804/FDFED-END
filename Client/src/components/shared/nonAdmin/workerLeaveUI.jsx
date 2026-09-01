@@ -1,4 +1,3 @@
-import React from "react";
 
 const STATUS_META = {
   pending: {
@@ -17,38 +16,32 @@ const STATUS_META = {
     label: "Rejected",
   },
 };
-
 const getStatusMeta = (status) =>
   STATUS_META[String(status || "").toLowerCase()] || {
     borderColor: "#64748b",
     badgeClass: "bg-secondary",
     label: "Unknown",
   };
-
 const formatDate = (value) => {
   if (!value) return "-";
   return new Date(value).toLocaleDateString();
 };
-
 const formatDateTime = (value) => {
   if (!value) return "-";
   return new Date(value).toLocaleString();
 };
-
 const getLeaveDays = (start, end) => {
   if (!start || !end) return 0;
   const startDate = new Date(start);
   const endDate = new Date(end);
   return Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
 };
-
 export const getLeaveSummary = (leaves = []) => ({
   total: leaves.length,
   pending: leaves.filter((leave) => leave.status === "pending").length,
   approved: leaves.filter((leave) => leave.status === "approved").length,
   rejected: leaves.filter((leave) => leave.status === "rejected").length,
 });
-
 export const WorkerLeaveSummaryCards = ({ summary }) => (
   <div className="row g-3 mb-4">
     <div className="col-md-3">
@@ -85,10 +78,8 @@ export const WorkerLeaveSummaryCards = ({ summary }) => (
     </div>
   </div>
 );
-
 const LeaveCard = ({ leave, userLabel, compact }) => {
   const meta = getStatusMeta(leave.status);
-
   return (
     <div key={leave._id} className="card border-0 shadow-sm mb-3" style={{ borderLeft: `4px solid ${meta.borderColor}` }}>
       <div className="card-body">
@@ -112,7 +103,6 @@ const LeaveCard = ({ leave, userLabel, compact }) => {
             <span className={`badge fs-6 ${meta.badgeClass}`}>{meta.label}</span>
           </div>
         </div>
-
         {!compact ? (
           <div className="row mb-3">
             <div className="col-md-3 mb-2">
@@ -131,12 +121,10 @@ const LeaveCard = ({ leave, userLabel, compact }) => {
             </div>
           </div>
         ) : null}
-
         <div className={compact ? "mt-2" : "mb-3"}>
           <small className="text-muted d-block">Reason</small>
           <p className="mb-0">{leave.reason || "No reason provided"}</p>
         </div>
-
         {!compact ? (
           <div className="row text-muted small mb-3">
             <div className="col-md-6">
@@ -151,7 +139,6 @@ const LeaveCard = ({ leave, userLabel, compact }) => {
             ) : null}
           </div>
         ) : null}
-
         {leave.notes ? (
           <div className={`alert alert-info py-2 ${compact ? "mt-2 mb-0" : "mb-3"}`}>
             <small className="d-block text-muted mb-1">
@@ -164,7 +151,6 @@ const LeaveCard = ({ leave, userLabel, compact }) => {
     </div>
   );
 };
-
 export const WorkerLeaveRequestCards = ({
   leaves,
   emptyText,
@@ -177,7 +163,6 @@ export const WorkerLeaveRequestCards = ({
         <p className="text-muted mb-0">{emptyText}</p>
       </div>
     ) : null}
-
     {leaves.map((leave) => (
       <LeaveCard key={leave._id} leave={leave} compact={compact} userLabel={userLabel} />
     ))}

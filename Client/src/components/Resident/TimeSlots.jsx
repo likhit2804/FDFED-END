@@ -1,16 +1,13 @@
-import React, { useEffect, useState } from 'react';
-import { toast } from 'react-toastify';
-
+import { useEffect, useState } from "react";
+import { toast } from "react-toastify";
 const formatTime = (hour) => {
     if (hour === 0) return '12:00 AM';
     if (hour < 12) return `${hour}:00 AM`;
     if (hour === 12) return '12:00 PM';
     return `${hour - 12}:00 PM`;
 };
-
 export const TimeSlots = ({ selectedFacility, selectedDate, selectedSlots, setSelectedSlots }) => {
     const [availableSlots, setAvailableSlots] = useState([]);
-
     useEffect(() => {
         if (selectedFacility && selectedDate) {
             const bookedForDate = selectedFacility.bookedSlots?.find(
@@ -18,8 +15,6 @@ export const TimeSlots = ({ selectedFacility, selectedDate, selectedSlots, setSe
             );
             const bookedSlots = bookedForDate?.slots || [];
             const allSlots = Array.from({ length: 22 - 6 }, (_, i) => String(i + 6).padStart(2, '0') + ":00");
-            
-            
             const freeSlots = allSlots.filter(slot => !bookedSlots.includes(slot));
             setAvailableSlots(freeSlots);
             setSelectedSlots([]);
@@ -28,7 +23,6 @@ export const TimeSlots = ({ selectedFacility, selectedDate, selectedSlots, setSe
             setSelectedSlots([]);
         }
     }, [selectedFacility, selectedDate, setSelectedSlots]);
-
     const handleTimeSlotChange = (e) => {
         const value = e.target.value;
         const hour = parseInt(value.split(":")[0]);
@@ -50,16 +44,12 @@ export const TimeSlots = ({ selectedFacility, selectedDate, selectedSlots, setSe
             toast.warning("Please select adjacent time slots only.");
         }
     };
-
     const formatSelectedTime = () => {
         if (selectedSlots.length === 0) return "No time slots selected";
         const firstHour = parseInt(selectedSlots[0].split(':')[0]);
         const lastHour = parseInt(selectedSlots[selectedSlots.length - 1].split(':')[0]);
         return `${formatTime(firstHour)} - ${formatTime(lastHour + 1)}`;
     };
-
-    
-
     return (
         <div className="time-slots-container">
             <div className="time-slots-header">

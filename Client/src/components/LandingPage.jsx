@@ -1,11 +1,7 @@
-import React from "react";
-import "bootstrap/dist/css/bootstrap.min.css";
-import "bootstrap/dist/js/bootstrap.bundle.min.js";
-import "../assets/css/LandingPage.css";
+
 import { NavLink } from "react-router-dom";
 import logo from "../imgs/URBAN_EASE.png";
 import { ShieldCheck, CalendarCheck, Wrench, Bell } from "lucide-react";
-
 export const Landingpage = () => {
   return (
     <>
@@ -15,7 +11,6 @@ export const Landingpage = () => {
           <NavLink className="navbar-brand mx-2" to="/">
             <img src={logo} alt="URBAN EASE" />
           </NavLink>
-
           <button
             className="navbar-toggler ms-auto text-white border-white my-0"
             type="button"
@@ -24,7 +19,6 @@ export const Landingpage = () => {
           >
             <span className="navbar-toggler-icon"></span>
           </button>
-
           <div
             className="collapse navbar-collapse w-100 justify-content-end"
             id="navbarNav"
@@ -54,39 +48,31 @@ export const Landingpage = () => {
           </div>
         </div>
       </nav>
-
       <div className="gap"></div>
-
       {/* WRAPPER START */}
       <main className="landing-wrapper">
-
         {/* HERO SECTION */}
         <section id="home" className="hero page-section text-center">
           <div className="overlay"></div>
-
           <div className="hero-content">
             <h1 className="display-4 fw-bold mb-4">
               Modern Management for Smarter Communities
             </h1>
-
             <p className="lead mb-5">
               A unified platform that connects residents, security, community
               managers, and administrators — making gated communities efficient,
               secure, and easier to manage.
             </p>
-
             <div className="d-flex justify-content-center gap-3 flex-wrap">
               <NavLink to="/SignIn" className="btn btn-primary btn-lg">
                 Get Started
               </NavLink>
-
               <a href="#features" className="btn btn-outline-light btn-lg">
                 Learn More
               </a>
             </div>
           </div>
         </section>
-
         {/* FEATURES SECTION */}
         <section id="features" className="page-section">
           <div className="container py-5">
@@ -96,7 +82,6 @@ export const Landingpage = () => {
                 Tools that streamline daily operations in your community
               </p>
             </div>
-
             <div className="row g-4">
               {[
                 {
@@ -133,14 +118,12 @@ export const Landingpage = () => {
             </div>
           </div>
         </section>
-
         {/* ROLES SECTION */}
         <section id="roles" className="page-section bg-light">
           <div className="container py-5">
             <div className="text-center mb-5">
               <h2 className="display-5 fw-bold">Who Uses the Platform?</h2>
             </div>
-
             <div className="row g-4">
               {[
                 { role: "Admin", desc: "Full control over communities, users, and system settings." },
@@ -160,10 +143,8 @@ export const Landingpage = () => {
             </div>
           </div>
         </section>
-
       </main>
       {/* WRAPPER END */}
-
       {/* FOOTER */}
       <footer className="ue-footer">
         <div className=" py-5">
@@ -175,7 +156,6 @@ export const Landingpage = () => {
                 The premier platform for gated community management and discovery.
               </p>
             </div>
-
             {/* Right */}
             <div className="col-md-6 mb-4">
               <h5 className="footer-title">Resources</h5>
@@ -186,9 +166,7 @@ export const Landingpage = () => {
               </ul>
             </div>
           </div>
-
           <hr className="footer-divider" />
-
           <div className="text-center footer-copy">
             © 2025 URBAN EASE. All rights reserved.
           </div>

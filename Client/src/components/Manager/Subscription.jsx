@@ -1,10 +1,14 @@
-import React, { useEffect, useState } from "react";
-import { BadgeIndianRupee, Building2, CheckCircle2, Crown, Users } from "lucide-react";
+import { useEffect, useState } from "react";
+import {
+  BadgeIndianRupee,
+  CheckCircle2,
+  Crown,
+  Users
+} from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import axios from "axios";
-
 import { setUser } from "../../slices/authSlice";
 import { openRazorpayCheckout } from "../../services/razorpay";
 import { Loader } from "../Loader";
@@ -14,20 +18,17 @@ import {
   ManagerPageShell,
   ManagerRecordCard,
   ManagerRecordGrid,
-  ManagerSection,
+  ManagerSection
 } from "./ui";
-
 export const Subscription = () => {
   const { user } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
   const navigate = useNavigate();
-
   const [status, setStatus] = useState(null);
   const [plans, setPlans] = useState(null);
   const [loading, setLoading] = useState(true);
   const [paying, setPaying] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState("standard");
-
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -35,7 +36,6 @@ export const Subscription = () => {
           axios.get("/manager/subscription-status"),
           axios.get("/manager/subscription-plans"),
         ]);
-
         if (statusRes.data?.community) setStatus(statusRes.data.community);
         if (plansRes.data?.plans) setPlans(plansRes.data.plans);
       } catch (error) {
@@ -44,28 +44,22 @@ export const Subscription = () => {
         setLoading(false);
       }
     };
-
     fetchData();
   }, []);
-
   useEffect(() => {
     const effectiveStatus = status?.subscriptionStatus || user?.subscriptionStatus;
     if (effectiveStatus === "active") {
       navigate("/manager/dashboard", { replace: true });
     }
   }, [navigate, status, user]);
-
   const handlePay = async () => {
     if (!plans) return;
     const planKey = selectedPlan || "standard";
     const plan = plans[planKey];
     if (!plan) return;
-
     try {
       setPaying(true);
-
       const orderRes = await axios.post("/manager/subscription-payment/order", { subscriptionPlan: planKey });
-
       const paymentResponse = await openRazorpayCheckout({
         key: orderRes.data.data.key,
         orderId: orderRes.data.data.orderId,
@@ -83,14 +77,12 @@ export const Subscription = () => {
           plan: planKey,
         },
       });
-
       const response = await axios.post("/manager/subscription-payment", {
         subscriptionPlan: planKey,
         razorpayOrderId: paymentResponse.razorpay_order_id,
         razorpayPaymentId: paymentResponse.razorpay_payment_id,
         razorpaySignature: paymentResponse.razorpay_signature,
       });
-
       toast.success("Subscription activated successfully");
       dispatch(
         setUser({
@@ -105,7 +97,6 @@ export const Subscription = () => {
       setPaying(false);
     }
   };
-
   if (loading) {
     return (
       <ManagerPageShell
@@ -119,10 +110,8 @@ export const Subscription = () => {
       </ManagerPageShell>
     );
   }
-
   const currentStatus = status?.subscriptionStatus || user?.subscriptionStatus || "pending";
   const totalResidents = status?.totalMembers ?? 0;
-
   return (
     <ManagerPageShell
       eyebrow="Subscription"
@@ -141,7 +130,6 @@ export const Subscription = () => {
         <StatCard label="Residents" value={totalResidents} icon={<Users size={22} />} iconColor="var(--text-subtle)" iconBg="var(--surface-2)" />
         <StatCard label="Billing" value={status?.planPrice ? `₹${status.planPrice}` : "Pending"} icon={<BadgeIndianRupee size={22} />} iconColor="var(--danger-500)" iconBg="var(--danger-soft)" />
       </div>
-
       <ManagerSection
         eyebrow="Plans"
         title="Choose a community subscription"
@@ -156,7 +144,6 @@ export const Subscription = () => {
                 typeof maxResidents === "number" &&
                 typeof totalResidents === "number" &&
                 totalResidents > maxResidents;
-
               return (
                 <ManagerRecordCard
                   key={key}
@@ -207,7 +194,6 @@ export const Subscription = () => {
           <div className="manager-ui-empty">No plans are available right now.</div>
         )}
       </ManagerSection>
-
       <ManagerSection eyebrow="Community" title="Current subscription snapshot" description="Use this summary to confirm the present plan before collecting the next payment.">
         <div className="manager-ui-two-column">
           <div className="manager-ui-split-metrics">
@@ -228,7 +214,6 @@ export const Subscription = () => {
               <strong>{status?.name || "UrbanEase community"}</strong>
             </div>
           </div>
-
           <ManagerRecordCard
             title="Payment handoff"
             subtitle="External API integration"
@@ -245,6 +230,4 @@ export const Subscription = () => {
     </ManagerPageShell>
   );
 };
-
 export default Subscription;
-

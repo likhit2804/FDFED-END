@@ -1,8 +1,13 @@
-import React from 'react';
-import { FileText, CheckCircle, XCircle, Clock, CreditCard } from 'lucide-react';
+
+import {
+  FileText,
+  CheckCircle,
+  XCircle,
+  Clock,
+  CreditCard
+} from "lucide-react";
 import Card from './Card';
 import styles from './Applications.module.css';
-
 export default function ApplicationStats({ applications }) {
   const stats = {
     total: applications.length,
@@ -11,7 +16,6 @@ export default function ApplicationStats({ applications }) {
     rejected: applications.filter(app => app.status === 'REJECTED').length,
     awaitingPayment: applications.filter(app => app.uiStatus === 'AWAITING PAYMENT').length,
   };
-
   return (
     <div className={styles.statsGrid}>
       <Card
@@ -47,4 +51,3 @@ export default function ApplicationStats({ applications }) {
     </div>
   );
 }
-

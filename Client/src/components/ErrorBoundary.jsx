@@ -1,6 +1,5 @@
 import React from 'react';
-import { AlertTriangle } from 'lucide-react';
-
+import { AlertTriangle } from "lucide-react";
 class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
@@ -11,20 +10,16 @@ class ErrorBoundary extends React.Component {
       errorCount: 0
     };
   }
-
   static getDerivedStateFromError(error) {
     return { hasError: true };
   }
-
   componentDidCatch(error, errorInfo) {
     console.error('Error caught by boundary:', error, errorInfo);
-    
     this.setState(prevState => ({
       error,
       errorInfo,
       errorCount: prevState.errorCount + 1
     }));
-
     // Log to console in development
     if (process.env.NODE_ENV === 'development') {
       console.error('Error details:', {
@@ -33,41 +28,32 @@ class ErrorBoundary extends React.Component {
         componentStack: errorInfo.componentStack
       });
     }
-
     // TODO: Send to error tracking service (e.g., Sentry)
     // sendErrorToService(error, errorInfo);
   }
-
   handleReload = () => {
     window.location.reload();
   };
-
   handleGoBack = () => {
     window.history.back();
   };
-
   handleDismiss = () => {
     this.setState({ hasError: false, error: null, errorInfo: null });
   };
-
   render() {
     if (this.state.hasError) {
       const isDev = process.env.NODE_ENV === 'development';
-
       return (
         <div style={styles.container}>
           <div style={styles.card}>
             <div style={styles.iconContainer}>
               <AlertTriangle size={64} color="var(--danger-500)" />
             </div>
-
             <h1 style={styles.title}>Something went wrong</h1>
-
             <p style={styles.message}>
               We're sorry, but something unexpected happened. 
               {this.state.errorCount > 1 && ` This has happened ${this.state.errorCount} times.`}
             </p>
-
             {isDev && this.state.error && (
               <details style={styles.details}>
                 <summary style={styles.summary}>Error Details (Dev Only)</summary>
@@ -88,7 +74,6 @@ class ErrorBoundary extends React.Component {
                 </div>
               </details>
             )}
-
             <div style={styles.buttonGroup}>
               <button onClick={this.handleReload} style={styles.primaryButton}>
                 Reload Page
@@ -102,7 +87,6 @@ class ErrorBoundary extends React.Component {
                 </button>
               )}
             </div>
-
             {this.state.errorCount > 2 && (
               <p style={styles.warningText}>
                 ⚠️ This error keeps occurring. Please contact support if the problem persists.
@@ -112,11 +96,9 @@ class ErrorBoundary extends React.Component {
         </div>
       );
     }
-
     return this.props.children;
   }
 }
-
 const styles = {
   container: {
     minHeight: '100vh',
@@ -239,6 +221,4 @@ const styles = {
     fontWeight: '600',
   },
 };
-
 export default ErrorBoundary;
-

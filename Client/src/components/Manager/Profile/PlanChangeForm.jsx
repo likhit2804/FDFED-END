@@ -1,6 +1,5 @@
-import React from "react";
-import { Loader } from "../../Loader";
 
+import { Loader } from "../../Loader";
 /**
  * Subscription plan change form — shown inline on the profile page.
  */
@@ -19,11 +18,9 @@ export const PlanChangeForm = ({
         <p className="text-secondary mb-3">
             Select a new plan for your community. Changes will take effect immediately after payment.
         </p>
-
         {planError && (
             <div className="alert alert-danger" role="alert">{planError}</div>
         )}
-
         {planLoading ? (
             <div className="text-secondary d-flex justify-content-center py-2">
                 <Loader label="Loading plans..." size={34} />

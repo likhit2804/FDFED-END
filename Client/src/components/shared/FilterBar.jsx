@@ -1,4 +1,3 @@
-import React from 'react';
 
 /**
  * FilterBar – shared search + select filters row
@@ -25,7 +24,6 @@ const FilterBar = ({
             value={searchValue}
             onChange={(e) => onSearchChange?.(e.target.value)}
         />
-
         {filters.map((f, i) => (
             <select
                 key={i}
@@ -40,9 +38,7 @@ const FilterBar = ({
                 ))}
             </select>
         ))}
-
         {right && <div style={{ marginLeft: 'auto' }}>{right}</div>}
     </div>
 );
-
 export default FilterBar;

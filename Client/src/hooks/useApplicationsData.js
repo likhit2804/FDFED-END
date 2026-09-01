@@ -1,18 +1,14 @@
-import { useState, useEffect } from 'react';
-import { resolveApiBaseUrl } from '../utils/apiBaseUrl';
-
+import { useState, useEffect } from "react";
+import { resolveApiBaseUrl } from "../utils/apiBaseUrl";
 export function useApplicationsData() {
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-
   const API_BASE_URL = resolveApiBaseUrl();
-
   const fetchApplications = async () => {
     try {
       setLoading(true);
       setError('');
-
       const res = await fetch(`${API_BASE_URL}/admin/api/interests`, {
         method: 'GET',
         credentials: 'include',
@@ -21,13 +17,11 @@ export function useApplicationsData() {
           Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
         },
       });
-
       if (res.status === 401) {
         localStorage.removeItem('token');
         window.location.href = '/adminLogin';
         return;
       }
-
       const json = await res.json();
       if (json.success && Array.isArray(json.data)) {
         const formatted = json.data.map((app) => ({
@@ -71,7 +65,6 @@ export function useApplicationsData() {
       setLoading(false);
     }
   };
-
   const handleApprove = async (appId) => {
     try {
       const res = await fetch(`${API_BASE_URL}/admin/api/interests/${appId}/approve`, {
@@ -82,7 +75,6 @@ export function useApplicationsData() {
           Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
         },
       });
-
       if (res.ok) {
         setApplications((prev) =>
           prev.map((app) =>
@@ -101,7 +93,6 @@ export function useApplicationsData() {
       return { success: false, error: err.message };
     }
   };
-
   const handleReject = async (appId, reason) => {
     try {
       const res = await fetch(`${API_BASE_URL}/admin/api/interests/${appId}/reject`, {
@@ -113,7 +104,6 @@ export function useApplicationsData() {
         },
         body: JSON.stringify({ reason }),
       });
-
       if (res.ok) {
         setApplications((prev) =>
           prev.map((app) =>
@@ -132,11 +122,9 @@ export function useApplicationsData() {
       return { success: false, error: err.message };
     }
   };
-
   useEffect(() => {
     fetchApplications();
   }, []);
-
   return {
     applications,
     loading,

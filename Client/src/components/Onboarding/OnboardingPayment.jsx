@@ -1,17 +1,13 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-toastify";
-import "../../assets/css/SignIn.css";
-import logo from "../../imgs/Logo.png";
 import { openRazorpayCheckout } from "../../services/razorpay";
 import { Loader } from "../Loader";
-
 const OnboardingPayment = () => {
     const [searchParams] = useSearchParams();
     const token = searchParams.get("token");
     const navigate = useNavigate();
-
     const [loading, setLoading] = useState(true);
     const [details, setDetails] = useState(null);
     const [plans, setPlans] = useState(null);
@@ -19,14 +15,12 @@ const OnboardingPayment = () => {
     const [paying, setPaying] = useState(false);
     const [success, setSuccess] = useState(false);
     const [errorMsg, setErrorMsg] = useState("");
-
     useEffect(() => {
         if (!token) {
             setErrorMsg("No onboarding token provided.");
             setLoading(false);
             return;
         }
-
         const fetchDetails = async () => {
             try {
                 const res = await axios.get(`/interest/onboarding/${token}`);
@@ -41,23 +35,19 @@ const OnboardingPayment = () => {
                 setLoading(false);
             }
         };
-
         fetchDetails();
     }, [token]);
-
     const handlePay = async () => {
         if (!plans) return;
         const planKey = selectedPlan;
         const plan = plans[planKey];
         if (!plan) return;
-
         setPaying(true);
         try {
             const orderRes = await axios.post("/interest/onboarding/create-order", {
                 token,
                 plan: planKey,
             });
-
             const paymentResponse = await openRazorpayCheckout({
                 key: orderRes.data.data.key,
                 orderId: orderRes.data.data.orderId,
@@ -76,7 +66,6 @@ const OnboardingPayment = () => {
                     plan: planKey,
                 },
             });
-
             const res = await axios.post("/interest/onboarding/complete", {
                 token,
                 plan: planKey,
@@ -84,7 +73,6 @@ const OnboardingPayment = () => {
                 razorpayPaymentId: paymentResponse.razorpay_payment_id,
                 razorpaySignature: paymentResponse.razorpay_signature,
             });
-
             if (res.data.success) {
                 setSuccess(true);
                 toast.success("Account activated successfully!");
@@ -96,7 +84,6 @@ const OnboardingPayment = () => {
             setPaying(false);
         }
     };
-
     if (loading) {
         return (
             <div className="SignInCon">
@@ -104,7 +91,6 @@ const OnboardingPayment = () => {
             </div>
         );
     }
-
     if (errorMsg) {
         return (
             <div className="SignInCon">
@@ -118,7 +104,6 @@ const OnboardingPayment = () => {
             </div>
         );
     }
-
     if (success) {
         return (
             <div className="SignInCon">
@@ -135,7 +120,6 @@ const OnboardingPayment = () => {
             </div>
         );
     }
-
     return (
         <div className="SignInCon">
             <div
@@ -155,13 +139,10 @@ const OnboardingPayment = () => {
                         Welcome to UrbanEase. <br /> Let&apos;s set up your community workspace.
                     </p>
                 </div>
-
                 <div className="div1"></div>
-
                 <div className="right-panel" style={{ overflow: "visible" }}>
                     <h2>Activate Account</h2>
                     <p className="subtitle">Welcome, {details?.firstName}. Choose a plan to start.</p>
-
                     <div className="d-flex flex-column gap-3 mb-4">
                         {plans && Object.entries(plans).map(([key, plan]) => (
                             <div
@@ -188,14 +169,11 @@ const OnboardingPayment = () => {
                             </div>
                         ))}
                     </div>
-
                     <div className="divider">Payment</div>
-
                     <div className="d-flex justify-content-between mb-3 align-items-center bg-light p-3 rounded">
                         <span className="text-muted">Total Payable</span>
                         <span className="fw-bold fs-5 text-success">{"\u20B9"}{plans?.[selectedPlan]?.price?.toLocaleString?.() || 0}</span>
                     </div>
-
                     <button className="continue-btn" disabled={paying} onClick={handlePay}>
                         {paying ? "Opening Razorpay..." : "Pay with Razorpay"}
                     </button>
@@ -207,5 +185,4 @@ const OnboardingPayment = () => {
         </div>
     );
 };
-
 export default OnboardingPayment;

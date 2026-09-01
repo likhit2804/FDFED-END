@@ -1,4 +1,4 @@
-import React from "react";
+
 import { IssueDetailsModal as UnifiedIssueDetailsModal } from "../../shared";
 import { UserCheck, RefreshCw } from "lucide-react";
 

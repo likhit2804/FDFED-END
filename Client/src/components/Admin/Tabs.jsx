@@ -1,4 +1,3 @@
-import React from "react";
 
 export default function Tabs({ options, active, onChange }) {
   return (
@@ -14,7 +13,6 @@ export default function Tabs({ options, active, onChange }) {
     >
       {options.map((option) => {
         const isActive = active === option;
-
         return (
           <button
             key={option}

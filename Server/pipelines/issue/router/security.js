@@ -1,9 +1,9 @@
 import express from "express";
 import {
-    logPhoneOrIntercomIssue,
-    getCommunityFlatsForSecurity,
-    getSecurityLoggedIssues,
-    deleteSecurityIssue,
+  logPhoneOrIntercomIssue,
+  getCommunityFlatsForSecurity,
+  getSecurityLoggedIssues,
+  deleteSecurityIssue
 } from "../controllers/security.js";
 
 const issueSecurityRouter = express.Router();

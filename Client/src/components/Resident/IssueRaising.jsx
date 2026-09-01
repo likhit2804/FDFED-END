@@ -1,31 +1,39 @@
-import React, { Suspense, lazy, useEffect, useState } from "react";
+import {
+  Suspense,
+  lazy,
+  useEffect,
+  useState
+} from "react";
 import { useForm } from "react-hook-form";
 import { toast, ToastContainer } from "react-toastify";
 import { useDispatch, useSelector } from "react-redux";
 import axios from "axios";
 import { fetchIssues, raiseIssue, submitFeedback } from "../../slices/IssueSlice";
-import { AlertCircle, CheckCircle, ListChecks, PhoneCall, ShieldAlert, Clock, AlertTriangle } from "lucide-react";
+import {
+  AlertCircle,
+  CheckCircle,
+  ListChecks,
+  PhoneCall,
+  ShieldAlert,
+  Clock
+} from "lucide-react";
 import { Loader } from "../Loader";
 import { useSocket } from "../../hooks/useSocket";
 import { EmptyState, Modal, Input, Select, StatCard, Textarea, Tabs } from "../shared";
 import { ResidentIssueCard } from "./IssueRaising/ResidentIssueCard";
 import { ManagerActionButton, ManagerPageShell, ManagerRecordGrid, ManagerSection } from "../shared/roleUI";
 import "../../assets/css/Resident/IssueRaising.css";
-
 const LazyResidentIssueDetailsModal = lazy(() =>
   import("./IssueRaising/ResidentIssueDetailsModal").then((module) => ({
     default: module.ResidentIssueDetailsModal,
   })),
 );
-
 const R_CATEGORIES = ["Plumbing", "Electrical", "Security", "Maintenance", "Pest Control", "Waste Management"];
 const C_CATEGORIES = ["Streetlight", "Elevator", "Garden", "Common Area"];
-
 export const IssueRaising = () => {
   const dispatch = useDispatch();
   const { issues, loading } = useSelector((state) => state.Issue);
   const socket = useSocket("");
-
   const [isIssueFormOpen, setIsIssueFormOpen] = useState(false);
   const [isDetailsPopupOpen, setIsDetailsPopupOpen] = useState(false);
   const [selectedIssue, setSelectedIssue] = useState(null);
@@ -38,12 +46,10 @@ export const IssueRaising = () => {
     estateOffice: { name: "Estate Office", contact: "101", extension: "101" },
     securityGate: { name: "Main Security Gate", contact: "100", extension: "100" },
   });
-
   const { register, handleSubmit, reset, watch } = useForm({
     defaultValues: { title: "", category: "", description: "", location: "", otherCategory: "" },
   });
   const category = watch("category");
-
   // Data loading
   useEffect(() => { dispatch(fetchIssues()); }, [dispatch]);
   useEffect(() => {
@@ -56,7 +62,6 @@ export const IssueRaising = () => {
       })
       .catch((err) => console.error("Failed to load emergency contacts:", err));
   }, []);
-
   useEffect(() => {
     if (!socket) return;
     const refresh = () => {
@@ -66,11 +71,9 @@ export const IssueRaising = () => {
     socket.on("issue:updated", refresh);
     return () => socket.off("issue:updated", refresh);
   }, [socket, dispatch]);
-
   useEffect(() => {
     if (formSubmitting && !loading) { setFormSubmitting(false); setIsIssueFormOpen(false); reset(); }
   }, [loading, formSubmitting, reset]);
-
   // Actions
   const onSubmit = (data) => {
     setFormSubmitting(true);
@@ -79,7 +82,6 @@ export const IssueRaising = () => {
       .then(() => toast.success("Issue raised successfully!"))
       .catch((err) => { setFormSubmitting(false); toast.error(err || "Failed to raise issue."); });
   };
-
   const handleIssueAction = async (payloadOrId, action) => {
     const id = typeof payloadOrId === "object" ? payloadOrId.id : payloadOrId;
     const body = typeof payloadOrId === "object" ? { rating: payloadOrId.rating, feedback: payloadOrId.feedback } : {};
@@ -95,7 +97,6 @@ export const IssueRaising = () => {
       dispatch(fetchIssues());
     } catch (err) { toast.error(err.response?.data?.message || err.message || "Action not allowed"); }
   };
-
   const handleFeedbackSubmit = async () => {
     setFeedbackSubmitting(true);
     dispatch(submitFeedback({ id: selectedIssue._id, feedback: feedbackText, rating: feedbackRating }))
@@ -104,17 +105,14 @@ export const IssueRaising = () => {
       .catch((err) => toast.error(err || "Failed to submit feedback."))
       .finally(() => setFeedbackSubmitting(false));
   };
-
   const closeIssueForm = () => { if (!formSubmitting) { setIsIssueFormOpen(false); reset(); } };
   const showDetails = (issue) => { setSelectedIssue(issue); setIsDetailsPopupOpen(true); };
-
   // Derived data
   const filteredIssues = issues
     ?.filter((i) => i?.categoryType === activeTab)
     ?.sort((a, b) => new Date(b.createdAt || b.updatedAt || 0) - new Date(a.createdAt || a.updatedAt || 0));
   const pendingCount = issues?.filter((i) => i?.status === "Pending")?.length || 0;
   const resolvedCount = issues?.filter((i) => i?.status === "Resolved")?.length || 0;
-
   return (
     <ManagerPageShell
       eyebrow="Issues"
@@ -124,7 +122,6 @@ export const IssueRaising = () => {
       className="resident-ui-page resident-issues-page"
     >
       <ToastContainer position="top-center" />
-
       <ManagerSection
         eyebrow="Issue Desk"
         title="Issue management"
@@ -161,7 +158,6 @@ export const IssueRaising = () => {
               </p>
             </div>
           </div>
-
           <div className="d-flex align-items-center gap-2 flex-wrap flex-shrink-0">
             <a
               href={`tel:${emergencyContacts?.securityGate?.contact || "100"}`}
@@ -181,7 +177,6 @@ export const IssueRaising = () => {
             </a>
           </div>
         </div>
-
         {/* Tabs */}
         <Tabs
           tabs={[
@@ -191,14 +186,12 @@ export const IssueRaising = () => {
           active={activeTab}
           onChange={setActiveTab}
         />
-
         {/* Stats */}
         <div className="ue-stat-grid mb-4">
           <StatCard label="Total Issues" value={issues?.length || 0} icon={<ListChecks size={22} />} iconColor="var(--brand-500)" iconBg="var(--info-soft)" />
           <StatCard label="Pending Issues" value={pendingCount} icon={<AlertCircle size={22} />} iconColor="var(--danger-500)" iconBg="var(--danger-soft)" />
           <StatCard label="Resolved Issues" value={resolvedCount} icon={<CheckCircle size={22} />} iconColor="var(--info-600)" iconBg="var(--surface-2)" />
         </div>
-
         {/* Issues List */}
         <div className="d-flex align-items-center justify-content-between mb-3">
           <h4 className="manager-ui-section__title mb-0">{activeTab} issues (Latest First)</h4>
@@ -223,7 +216,6 @@ export const IssueRaising = () => {
           )}
       </ManagerRecordGrid>
       </ManagerSection>
-
       {/* Raise Issue Modal */}
       <Modal isOpen={isIssueFormOpen} onClose={closeIssueForm} title="Raise an Issue" size="md"
         footer={
@@ -257,7 +249,6 @@ export const IssueRaising = () => {
         <Input label={`Location${activeTab === "Community" ? " *" : " (Optional)"}`} id="location" placeholder="e.g., Block A, Floor 3, Apt 302" disabled={formSubmitting} {...register("location", { required: activeTab === "Community" })} />
         <Textarea label="Description" required id="description" rows={5} placeholder="Detailed description of the issue..." disabled={formSubmitting} {...register("description", { required: true })} />
       </Modal>
-
       {/* Details Modal */}
       {isDetailsPopupOpen ? (
         <Suspense fallback={<Loader label="Loading issue details..." size={24} />}>
@@ -273,5 +264,3 @@ export const IssueRaising = () => {
     </ManagerPageShell>
   );
 };
-
-

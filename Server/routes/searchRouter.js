@@ -1,8 +1,6 @@
 import express from 'express';
-import { SearchService } from '../services/searchService.js';
-
+import { SearchService } from "../services/searchService.js";
 const searchRouter = express.Router();
-
 /**
  * @swagger
  * /api/search:
@@ -42,14 +40,11 @@ searchRouter.get('/', async (req, res) => {
   try {
     const { q, type = 'all' } = req.query;
     const limit = Math.min(parseInt(req.query.limit) || 10, 50);
-
     if (!q || q.trim().length === 0) {
       return res.status(400).json({ success: false, message: 'Search query (q) is required' });
     }
-
     const term = q.trim();
     const userType = req.user?.userType;
-    
     const userContext = {
       userType,
       communityId: req.user?.community,
@@ -60,17 +55,14 @@ searchRouter.get('/', async (req, res) => {
       isWorker: userType === 'Worker',
       isSecurity: userType === 'Security'
     };
-
     // Offload to concurrent Search Service layer
     const results = await SearchService.executeMultiSearch({
       term, type, limit, userContext
     });
-
     const totalResults = Object.values(results).reduce(
       (sum, arr) => sum + (Array.isArray(arr) ? arr.length : 0),
       0
     );
-
     return res.json({
       success: true,
       query: term,
@@ -81,7 +73,6 @@ searchRouter.get('/', async (req, res) => {
       ),
       results,
     });
-
   } catch (error) {
     console.error('Search router error:', error);
     return res.status(500).json({
@@ -91,5 +82,4 @@ searchRouter.get('/', async (req, res) => {
     });
   }
 });
-
 export default searchRouter;

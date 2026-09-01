@@ -1,4 +1,3 @@
-import React from 'react';
 
 /**
  * Card – generic container card for the user theme
@@ -19,7 +18,6 @@ const SHADOWS = {
     md: '0 4px 12px rgba(0,0,0,0.09)',
     lg: '0 8px 24px rgba(0,0,0,0.12)',
 };
-
 const Card = ({
     children,
     padding = '20px',
@@ -46,5 +44,4 @@ const Card = ({
         {children}
     </div>
 );
-
 export default Card;

@@ -1,4 +1,3 @@
-import React from "react";
 
 const toTone = (iconColor = "") => {
   const normalized = String(iconColor).toLowerCase();
@@ -7,7 +6,6 @@ const toTone = (iconColor = "") => {
   }
   return "brand";
 };
-
 /**
  * StatCard - shared summary card with icon, label, and value
  *
@@ -26,13 +24,9 @@ const StatCard = ({
   loading = false,
 }) => {
   const tone = toTone(iconColor);
-
   const toneColor = tone === "danger" ? "var(--danger-500)" : "var(--brand-500)";
-
   const toneBg = tone === "danger" ? "var(--danger-soft)" : "var(--info-soft)";
-
   const resolvedBg = toneBg;
-
   return (
     <div className="ue-stat-card">
       <div
@@ -46,5 +40,4 @@ const StatCard = ({
     </div>
   );
 };
-
 export default StatCard;

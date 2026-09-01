@@ -1,4 +1,3 @@
-import React from 'react';
 
 /**
  * Tabs – user-themed tab bar (underline style, matching the IssueResolving look)
@@ -55,7 +54,6 @@ const Tabs = ({ tabs = [], active, onChange, variant = 'underline' }) => {
             </div>
         );
     }
-
     // Underline variant (default)
     return (
         <div style={{
@@ -102,5 +100,4 @@ const Tabs = ({ tabs = [], active, onChange, variant = 'underline' }) => {
         </div>
     );
 };
-
 export default Tabs;

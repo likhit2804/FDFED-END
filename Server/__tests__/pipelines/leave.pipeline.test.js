@@ -1,5 +1,5 @@
-import { connect, disconnect, clearDatabase } from '../setup.js';
-import mongoose from 'mongoose';
+import { connect, disconnect, clearDatabase } from "../setup.js";
+
 import Leave from '../../models/leave.js';
 import Worker from '../../models/workers.js';
 import Resident from '../../models/resident.js';
@@ -7,31 +7,15 @@ import CommunityManager from '../../models/cManager.js';
 import Community from '../../models/communities.js';
 import Issue from '../../models/issues.js';
 
-import {
-  applyLeave,
-  listLeaves as listWorkerLeaves,
-} from '../../pipelines/workerLeave/controllers/resident.js';
+import { applyLeave } from "../../pipelines/workerLeave/controllers/resident.js";
 
-import {
-  listLeaves as listManagerLeaves,
-  getLeaveById,
-  approveLeave,
-  rejectLeave,
-} from '../../pipelines/workerLeave/controllers/manager.js';
+import { approveLeave, rejectLeave } from "../../pipelines/workerLeave/controllers/manager.js";
 
-import {
-  autoAssignResidentIssue,
-  autoAssignCommunityIssue,
-} from '../../utils/issueAutomation.js';
+import { autoAssignResidentIssue } from "../../utils/issueAutomation.js";
 
-import {
-  assignIssue,
-} from '../../pipelines/issue/controllers/manager.js';
+import { assignIssue } from "../../pipelines/issue/controllers/manager.js";
 
-import {
-  startIssue,
-  resolveIssue,
-} from '../../pipelines/issue/controllers/worker.js';
+import { startIssue, resolveIssue } from "../../pipelines/issue/controllers/worker.js";
 
 function createMockReqRes(reqData = {}) {
   const req = {

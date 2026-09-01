@@ -1,16 +1,25 @@
-import React, { Suspense, lazy, useEffect, useMemo, useState } from "react";
+import {
+  Suspense,
+  lazy,
+  useEffect,
+  useMemo,
+  useState
+} from "react";
 import axios from "axios";
-import "react-day-picker/dist/style.css";
-
-import { EntityCard, StatCard, Modal, Input, Select, EmptyState } from "../shared";
+import {
+  EntityCard,
+  StatCard,
+  Modal,
+  Input,
+  Select,
+  EmptyState
+} from "../shared";
 import { Loader } from "../Loader";
 import { Calendar, Clock, QrCode, Users, XCircle } from "lucide-react";
 import { ManagerActionButton, ManagerPageShell, ManagerSection } from "../shared/roleUI";
-
 const LazyDayPicker = lazy(() =>
   import("react-day-picker").then((module) => ({ default: module.DayPicker })),
 );
-
 export function PreApproval() {
   const [visitors, setVisitors] = useState([]);
   const [counts, setCounts] = useState({ Approved: 0, Pending: 0, Rejected: 0 });
@@ -24,7 +33,6 @@ export function PreApproval() {
     now.setHours(0, 0, 0, 0);
     return now;
   });
-
   const todayDate = useMemo(() => {
     const now = new Date();
     now.setHours(0, 0, 0, 0);
@@ -35,14 +43,12 @@ export function PreApproval() {
     () => new Date().toTimeString().slice(0, 5),
     [form.dateOfVisit],
   );
-
   const toIsoDate = (date) => {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, "0");
     const day = String(date.getDate()).padStart(2, "0");
     return `${year}-${month}-${day}`;
   };
-
   async function loadVisitors() {
     try {
       const res = await axios.get("/resident/preApprovals");
@@ -53,9 +59,7 @@ export function PreApproval() {
     } catch (err) { console.error("Fetch error:", err); }
     finally { setLoading(false); }
   }
-
   useEffect(() => { loadVisitors(); }, []);
-
   async function cancelRequest(id) {
     if (!window.confirm("Cancel this visitor request?")) return;
     try {
@@ -64,7 +68,6 @@ export function PreApproval() {
       if (data.ok) loadVisitors();
     } catch (err) { console.error("Cancel error:", err); }
   }
-
   async function viewQR(id) {
     try {
       const res = await axios.get(`/resident/preapproval/qr/${id}`);
@@ -73,7 +76,6 @@ export function PreApproval() {
       setShowQR(true);
     } catch (err) { console.error("QR Fetch error:", err); }
   }
-
   function openPreApprovalForm() {
     setSelectedVisitDate(todayDate);
     setForm({
@@ -85,7 +87,6 @@ export function PreApproval() {
     });
     setShowForm(true);
   }
-
   function handleVisitDateSelect(day) {
     if (!day) return;
     const picked = new Date(day);
@@ -93,7 +94,6 @@ export function PreApproval() {
     setSelectedVisitDate(picked);
     setForm((previous) => ({ ...previous, dateOfVisit: toIsoDate(picked) }));
   }
-
   async function handleSubmit(e) {
     e.preventDefault();
     if (form.dateOfVisit && form.dateOfVisit < todayIso) {
@@ -110,11 +110,9 @@ export function PreApproval() {
       }
     } catch (err) { console.error("Form submit error:", err); }
   }
-
   const handleChange = (e) => setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
   const formatDate = (value) => value ? new Date(value).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "N/A";
   const formatTime = (value) => value ? new Date(value).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }) : "N/A";
-
   return (
     <ManagerPageShell
       eyebrow="Pre Approval"
@@ -135,14 +133,12 @@ export function PreApproval() {
           </ManagerActionButton>
         }
       >
-
       {/* Stats */}
       <div className="ue-stat-grid mb-4">
         <StatCard label="Approved Requests" value={counts.Approved} icon={<Users size={22} />} iconColor="var(--brand-500)" iconBg="var(--info-soft)" />
         <StatCard label="Pending Requests" value={counts.Pending} icon={<Clock size={22} />} iconColor="var(--info-600)" iconBg="var(--surface-2)" />
         <StatCard label="Rejected Requests" value={counts.Rejected} icon={<XCircle size={22} />} iconColor="var(--danger-500)" iconBg="var(--danger-soft)" />
       </div>
-
       {/* Visitor Cards */}
       <div className="table-container manager-ui-section--muted" style={{ borderRadius: 18, padding: 16, border: "1px solid var(--manager-border)" }}>
         <div className="section-header">Your visitor requests</div>
@@ -187,7 +183,6 @@ export function PreApproval() {
         </div>
       </div>
       </ManagerSection>
-
       {/* Pre-Approve Form Modal */}
       {showForm ? (
         <Modal
@@ -251,7 +246,6 @@ export function PreApproval() {
           />
         </Modal>
       ) : null}
-
       {/* QR Code Modal */}
       {showQR ? (
         <Modal
@@ -276,5 +270,3 @@ export function PreApproval() {
     </ManagerPageShell>
   );
 }
-
-

@@ -1,10 +1,14 @@
-import React, { Suspense, lazy, useEffect, useMemo, useState } from "react";
+import {
+  Suspense,
+  lazy,
+  useEffect,
+  useMemo,
+  useState
+} from "react";
 import { useForm } from "react-hook-form";
 import { useDispatch, useSelector } from "react-redux";
 import { ToastContainer, toast } from "react-toastify";
 import { BarChart3, Building2, Calendar, CheckCircle, Eye, Plus, Trash2 } from "lucide-react";
-import "react-day-picker/dist/style.css";
-
 import {
   AddSpace,
   cancelBookingByManager,
@@ -12,7 +16,7 @@ import {
   EditSpace,
   fetchDataforManager,
   optimisticDeleteSpace,
-  updateSpaceAvailabilityControls,
+  updateSpaceAvailabilityControls
 } from "../../slices/CommonSpaceSlice";
 import {
   Button,
@@ -24,7 +28,7 @@ import {
   SearchBar,
   Select,
   StatCard,
-  Textarea,
+  Textarea
 } from "../shared";
 import { Loader } from "../Loader";
 import {
@@ -34,7 +38,7 @@ import {
   ManagerRecordGrid,
   ManagerSection,
   ManagerToolbar,
-  ManagerToolbarGrow,
+  ManagerToolbarGrow
 } from "./ui";
 import { UE_CHART_COLORS, UE_CHART_PALETTE } from "../shared/chartPalette";
 import {
@@ -49,20 +53,17 @@ import {
   normalizeBookingStatusLabel,
   parseClosedSlotsInput,
   toDateFromIso,
-  toDateInputValue,
+  toDateInputValue
 } from "../shared/commonSpace/commonSpaceUtils";
-
 const LazyDayPicker = lazy(() =>
   import("react-day-picker").then((module) => ({ default: module.DayPicker })),
 );
 const LazyGraphBar = lazy(() => import("../shared/GraphBar"));
 const LazyGraphLine = lazy(() => import("../shared/GraphLine"));
 const LazyGraphPie = lazy(() => import("../shared/GraphPie"));
-
 export const CommonSpace = () => {
   const dispatch = useDispatch();
   const { avalaibleSpaces = [], Bookings = [] } = useSelector((state) => state.CommonSpace);
-
   const [isManagementVisible, setIsManagementVisible] = useState(false);
   const [isSpaceFormOpen, setIsSpaceFormOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -90,13 +91,10 @@ export const CommonSpace = () => {
   const [availabilitySaving, setAvailabilitySaving] = useState(false);
   const [toggleRent, setToggleRent] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-
   const occupancyRate = useMemo(() => getOccupancyRate(Bookings), [Bookings]);
   const bookingStatusData = useMemo(() => getBookingStatusData(Bookings), [Bookings]);
   const bookingTrendData = useMemo(() => getBookingTrendData(Bookings), [Bookings]);
   const facilityUsageData = useMemo(() => getFacilityUsageData(Bookings), [Bookings]);
-
-
   const { register, handleSubmit, reset, watch } = useForm({
     defaultValues: {
       spaceType: "",
@@ -107,24 +105,20 @@ export const CommonSpace = () => {
       Type: "",
     },
   });
-
   useEffect(() => {
     dispatch(fetchDataforManager());
   }, [dispatch]);
-
   const bookingType = watch("Type");
   useEffect(() => {
     if (bookingType === "Slot") setToggleRent(false);
     else if (bookingType === "Subscription") setToggleRent(true);
   }, [bookingType]);
-
   const filteredBookings = Bookings.filter((booking) => {
     const searchLower = searchQuery.toLowerCase();
     const spaceName = booking.name?.toLowerCase() || "";
     const bookingDate = formatBookingDate(booking.Date).toLowerCase();
     const bookingStatus = booking.status?.toLowerCase() || "";
     const bookingId = booking.ID?.toLowerCase() || "";
-
     return (
       spaceName.includes(searchLower) ||
       bookingDate.includes(searchLower) ||
@@ -132,9 +126,7 @@ export const CommonSpace = () => {
       bookingId.includes(searchLower)
     );
   });
-
   const getSelectedControlDateKey = () => toDateInputValue(selectedControlDate);
-
   const blackoutModifierDays = useMemo(
     () =>
       (availabilityControlsDraft?.blackoutDates || [])
@@ -142,7 +134,6 @@ export const CommonSpace = () => {
         .filter(Boolean),
     [availabilityControlsDraft],
   );
-
   const overrideModifierDays = useMemo(
     () =>
       (availabilityControlsDraft?.dateSlotOverrides || [])
@@ -150,12 +141,10 @@ export const CommonSpace = () => {
         .filter(Boolean),
     [availabilityControlsDraft],
   );
-
   const openAvailabilityModal = (space) => {
     const today = new Date();
     const todayKey = toDateInputValue(today);
     const controls = getAvailabilityDraftControls(space);
-
     setAvailabilitySpace(space);
     setAvailabilityControlsDraft(controls);
     setSelectedControlDate(today);
@@ -163,7 +152,6 @@ export const CommonSpace = () => {
     setDayControlDraft(getDayControlDraft(controls, todayKey));
     setIsAvailabilityModalOpen(true);
   };
-
   const updateSlotConfigDraft = (field, value) => {
     setAvailabilityControlsDraft((previous) => ({
       ...previous,
@@ -173,7 +161,6 @@ export const CommonSpace = () => {
       },
     }));
   };
-
   const updatePolicyDraft = (field, value) => {
     setAvailabilityControlsDraft((previous) => ({
       ...previous,
@@ -183,37 +170,30 @@ export const CommonSpace = () => {
       },
     }));
   };
-
-
   useEffect(() => {
     if (!isAvailabilityModalOpen || !availabilityControlsDraft) return;
     const selectedDateKey = getSelectedControlDateKey();
     if (!selectedDateKey) return;
-
     setDayControlDraft(getDayControlDraft(availabilityControlsDraft, selectedDateKey));
   }, [
     isAvailabilityModalOpen,
     availabilityControlsDraft,
     selectedControlDate,
   ]);
-
   const applySelectedDayControls = () => {
     const selectedDateKey = getSelectedControlDateKey();
     if (!selectedDateKey) {
       toast.error("Select a valid date on calendar.");
       return;
     }
-
     const parsedSlots = parseClosedSlotsInput(dayControlDraft.closedSlots);
     if (!parsedSlots.valid) {
       toast.error(parsedSlots.message);
       return;
     }
-
     const normalizedSlots = dayControlDraft.closedAllDay ? [] : parsedSlots.slots;
     const shouldPersistOverride =
       dayControlDraft.closedAllDay || normalizedSlots.length > 0;
-
     setAvailabilityControlsDraft((previous) => {
       const blackoutByDate = new Map(
         (previous.blackoutDates || []).map((entry) => [entry.date, entry]),
@@ -226,7 +206,6 @@ export const CommonSpace = () => {
       } else {
         blackoutByDate.delete(selectedDateKey);
       }
-
       const overrideByDate = new Map(
         (previous.dateSlotOverrides || []).map((entry) => [entry.date, entry]),
       );
@@ -240,7 +219,6 @@ export const CommonSpace = () => {
       } else {
         overrideByDate.delete(selectedDateKey);
       }
-
       return {
         ...previous,
         blackoutDates: [...blackoutByDate.values()].sort((a, b) =>
@@ -253,11 +231,9 @@ export const CommonSpace = () => {
     });
     toast.success(`Updated controls for ${selectedDateKey}`);
   };
-
   const clearSelectedDayControls = () => {
     const selectedDateKey = getSelectedControlDateKey();
     if (!selectedDateKey) return;
-
     setAvailabilityControlsDraft((previous) => ({
       ...previous,
       blackoutDates: (previous.blackoutDates || []).filter(
@@ -267,7 +243,6 @@ export const CommonSpace = () => {
         (entry) => entry.date !== selectedDateKey,
       ),
     }));
-
     setDayControlDraft({
       isBlackout: false,
       blackoutReason: "",
@@ -275,13 +250,10 @@ export const CommonSpace = () => {
       closedSlots: "",
       overrideReason: "",
     });
-
     toast.success(`Cleared controls for ${selectedDateKey}`);
   };
-
   const saveAvailabilityControls = async () => {
     if (!availabilitySpace?._id || !availabilityControlsDraft) return;
-
     const payload = {
       slotConfig: {
         startTime: availabilityControlsDraft.slotConfig.startTime,
@@ -303,12 +275,10 @@ export const CommonSpace = () => {
         reason: entry.reason || "",
       })),
     };
-
     if (payload.bookingPolicy.maxAdvanceDays < 1) {
       toast.error("Max advance days should be at least 1.");
       return;
     }
-
     try {
       setAvailabilitySaving(true);
       const result = await dispatch(
@@ -327,7 +297,6 @@ export const CommonSpace = () => {
       setAvailabilitySaving(false);
     }
   };
-
   const onSubmit = (data) => {
     const payload = { ...data, bookable: data.bookable === "true" };
     if (isEditing) {
@@ -340,7 +309,6 @@ export const CommonSpace = () => {
     setIsSpaceFormOpen(false);
     reset();
   };
-
   const handleEditSpace = (space) => {
     setIsEditing(true);
     reset({
@@ -354,20 +322,16 @@ export const CommonSpace = () => {
     });
     setIsSpaceFormOpen(true);
   };
-
   const handleDeleteSpace = (space) => {
     if (!window.confirm(`Are you sure you want to delete the space "${space.name}"?`)) return;
-
     dispatch(optimisticDeleteSpace(space._id));
     dispatch(DeleteSpace(space._id))
       .unwrap()
       .then(() => toast.success("Space deleted successfully"));
   };
-
   const handleApprove = (bookingId) => {
     console.log("Approving booking:", bookingId);
   };
-
   const openRejectPopup = (booking) => {
     setBookingToReject(booking);
     setRejectionReason("");
@@ -376,13 +340,11 @@ export const CommonSpace = () => {
     setRefundAmount("");
     setIsRejectionPopupOpen(true);
   };
-
   const handleRejectionSubmit = async () => {
     if (!rejectionReason.trim()) {
       toast.error("Please provide a cancellation reason.");
       return;
     }
-
     if (refundType === "partial") {
       const parsedPercentage =
         refundPercentage !== "" ? Number(refundPercentage) : NaN;
@@ -392,7 +354,6 @@ export const CommonSpace = () => {
         parsedPercentage >= 0 &&
         parsedPercentage <= 100;
       const hasValidAmount = Number.isFinite(parsedAmount) && parsedAmount >= 0;
-
       if (!hasValidPercentage && !hasValidAmount) {
         toast.error(
           "For partial refund, provide valid refund % (0-100) or refund amount.",
@@ -400,7 +361,6 @@ export const CommonSpace = () => {
         return;
       }
     }
-
     try {
       setManagerCancelLoading(true);
       const result = await dispatch(
@@ -412,7 +372,6 @@ export const CommonSpace = () => {
           refundAmount: refundType === "partial" ? refundAmount : undefined,
         }),
       ).unwrap();
-
       toast.success(
         result?.message ||
           "Booking cancelled successfully with manager decision.",
@@ -429,17 +388,14 @@ export const CommonSpace = () => {
       setManagerCancelLoading(false);
     }
   };
-
   const selectedControlDateKey = getSelectedControlDateKey();
   const minControlDate = new Date();
   minControlDate.setHours(0, 0, 0, 0);
   const maxControlDate = new Date(minControlDate);
   maxControlDate.setDate(maxControlDate.getDate() + 365);
-
   return (
     <>
       <ToastContainer position="top-center" autoClose={1500} />
-
       <ManagerPageShell
         eyebrow="Common Spaces"
         title="Manage amenities, booking requests, and usage visibility from one desk."
@@ -511,14 +467,12 @@ export const CommonSpace = () => {
             )}
           </ManagerSection>
         ) : null}
-
         <div className="ue-stat-grid">
           <StatCard label="Total Bookings" value={Bookings.length} icon={<Calendar size={22} />} iconColor="var(--brand-500)" iconBg="var(--info-soft)" />
           <StatCard label="Occupancy Rate" value={`${occupancyRate}%`} icon={<BarChart3 size={22} />} iconColor="var(--info-600)" iconBg="var(--surface-2)" />
           <StatCard label="Approved" value={Bookings.filter((booking) => booking.status === "Approved").length} icon={<CheckCircle size={22} />} iconColor="var(--text-subtle)" iconBg="var(--surface-2)" />
           <StatCard label="Amenities" value={avalaibleSpaces.length} icon={<Building2 size={22} />} iconColor="var(--danger-500)" iconBg="var(--danger-soft)" />
         </div>
-
         <ManagerSection
           eyebrow="Insights"
           title="Booking trends"
@@ -556,7 +510,6 @@ export const CommonSpace = () => {
             </Suspense>
           </div>
         </ManagerSection>
-
         <ManagerSection
           eyebrow="Booking Queue"
           title="Resident requests"
@@ -570,7 +523,6 @@ export const CommonSpace = () => {
               Clear
             </Button>
           </ManagerToolbar>
-
           {filteredBookings.length > 0 ? (
             <ManagerRecordGrid>
               {filteredBookings.map((booking) => {
@@ -638,7 +590,6 @@ export const CommonSpace = () => {
             />
           )}
         </ManagerSection>
-
         <Modal
           isOpen={isSpaceFormOpen}
           onClose={() => setIsSpaceFormOpen(false)}
@@ -697,7 +648,6 @@ export const CommonSpace = () => {
           </FormSection>
           <Textarea label="Booking Rules" rows={3} {...register("bookingRules")} />
         </Modal>
-
         <Modal
           isOpen={isAvailabilityModalOpen}
           onClose={() => setIsAvailabilityModalOpen(false)}
@@ -814,7 +764,6 @@ export const CommonSpace = () => {
                     />
                   </Suspense>
                 </div>
-
                 <div className="manager-ui-surface">
                   <h4 className="manager-ui-title-sm">
                     Selected Date: {selectedControlDateKey || "-"}
@@ -856,7 +805,6 @@ export const CommonSpace = () => {
                       placeholder="Optional reason"
                       disabled={!dayControlDraft.isBlackout}
                     />
-
                     <label
                       style={{
                         display: "flex",
@@ -921,7 +869,6 @@ export const CommonSpace = () => {
             </div>
           ) : null}
         </Modal>
-
         <ConfirmModal
           isOpen={isRejectionPopupOpen}
           onClose={() => setIsRejectionPopupOpen(false)}
@@ -974,7 +921,6 @@ export const CommonSpace = () => {
             </div>
           }
         />
-
         <Modal
           isOpen={bookingDetailsOpen}
           onClose={() => setBookingDetailsOpen(false)}
@@ -1045,5 +991,3 @@ export const CommonSpace = () => {
     </>
   );
 };
-
-

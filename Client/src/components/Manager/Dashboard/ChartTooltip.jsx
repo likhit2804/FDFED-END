@@ -1,4 +1,3 @@
-import React from "react";
 
 /**
  * Unified chart tooltip — used by both PieChart (revenue) and LineChart (trends).
@@ -8,7 +7,6 @@ import React from "react";
 export const ChartTooltip = ({ variant = "line", totalAmount = 0 }) => {
     const TooltipInner = ({ active, payload, label }) => {
         if (!active || !payload?.length) return null;
-
         if (variant === "pie") {
             const d = payload[0];
             return (
@@ -19,7 +17,6 @@ export const ChartTooltip = ({ variant = "line", totalAmount = 0 }) => {
                 </div>
             );
         }
-
         // Line variant
         return (
             <div style={{ backgroundColor: "white", padding: "12px 16px", border: "2px solid #e5e7eb", borderRadius: "8px", boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }}>
@@ -33,6 +30,5 @@ export const ChartTooltip = ({ variant = "line", totalAmount = 0 }) => {
             </div>
         );
     };
-
     return TooltipInner;
 };

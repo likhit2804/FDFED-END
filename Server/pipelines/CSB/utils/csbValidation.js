@@ -60,3 +60,13 @@ export const validateBookingPayload = (newBooking) => {
 
     return { valid: true, bookingDate };
 };
+
+/**
+ * Normalize a date value to a YYYY-MM-DD string (date-only, no time component).
+ * Canonical source — imported by both manager.js and resident.js.
+ */
+export const normalizeDateOnly = (value) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toISOString().split("T")[0];
+};

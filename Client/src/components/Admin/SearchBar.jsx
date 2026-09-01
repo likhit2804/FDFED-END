@@ -1,9 +1,7 @@
-import React, { useRef } from "react";
+import { useRef } from "react";
 import { Search } from "lucide-react";
-
 export default function SearchBar({ placeholder, value, onChange }) {
   const containerRef = useRef(null);
-
   return (
     <div
       ref={containerRef}
@@ -22,7 +20,6 @@ export default function SearchBar({ placeholder, value, onChange }) {
       }}
     >
       <Search size={16} color="#94a3b8" style={{ marginRight: 8 }} />
-
       <input
         type="text"
         placeholder={placeholder}

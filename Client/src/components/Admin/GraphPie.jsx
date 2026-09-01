@@ -1,6 +1,5 @@
-import React from "react";
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
 
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
 export default function GraphPie({
   data,
   dataKey = "value",
@@ -27,7 +26,6 @@ export default function GraphPie({
       marginBottom: "12px",
     },
   };
-
   return (
     <div style={styles.container}>
       <h4 style={styles.title}>{title}</h4>

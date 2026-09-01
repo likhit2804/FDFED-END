@@ -1,7 +1,6 @@
-import React from "react";
+
 import { motion } from "framer-motion";
 import { getCardFieldPresentation } from "./cardFieldUtils";
-
 /**
  * EntityCard — unified card component used across all pages.
  *
@@ -40,7 +39,6 @@ export const EntityCard = ({
     const badgeClass =
         statusClass ||
         `status-badge ${(status || "").toLowerCase().replace(/[\s()]/g, "-")}`;
-
     return (
         <motion.div
             className={`ue-entity-card ${className}`}
@@ -59,17 +57,14 @@ export const EntityCard = ({
                     {badges}
                 </div>
             </div>
-
             {/* Optional title */}
             {title && <h3 className="ue-entity-card__title">{title}</h3>}
-
             {/* Detail rows — data-driven */}
             {details.length > 0 && (
                 <div className="ue-entity-card__details">
                     {details.map(({ label, value, render }, i) => {
                         const resolvedValue = render ? render() : value;
                         const field = getCardFieldPresentation(label, resolvedValue);
-
                         return (
                             <div
                                 className={`ue-entity-card__detail ue-entity-card__detail--${field.tone}${field.wide ? " ue-entity-card__detail--wide" : ""}`}
@@ -90,9 +85,7 @@ export const EntityCard = ({
                     })}
                 </div>
             )}
-
             {children}
-
             {/* Action buttons */}
             {actions.length > 0 && (
                 <div className="ue-entity-card__actions">

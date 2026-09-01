@@ -3,15 +3,22 @@ import { Users, UserCheck, UserX, Plus } from "lucide-react";
 import { toast } from "react-toastify";
 import axios from "axios";
 import { Loader } from "../Loader";
-import { StatCard, SearchBar, Tabs, EmptyState, Modal, Input, Select } from '../shared';
+import {
+  StatCard,
+  SearchBar,
+  Tabs,
+  EmptyState,
+  Modal,
+  Input,
+  Select
+} from "../shared";
 import {
   ManagerActionButton,
   ManagerPageShell,
   ManagerRecordCard,
   ManagerRecordGrid,
-  ManagerSection,
+  ManagerSection
 } from "../shared/roleUI";
-
 const VisitorManagement = () => {
   const [showModal, setShowModal] = useState(false);
   const [visitors, setVisitors] = useState([]);
@@ -20,11 +27,9 @@ const VisitorManagement = () => {
   const [submitting, setSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState("all");
   const [search, setSearch] = useState("");
-
   const [formData, setFormData] = useState({
     visitorType: "", fullName: "", contact: "", email: "", vehicleNo: ""
   });
-
   // ── Fetch visitors ──────────────────────────────────────────
   const fetchVisitors = useCallback(async () => {
     try {
@@ -40,9 +45,7 @@ const VisitorManagement = () => {
       setLoading(false);
     }
   }, []);
-
   useEffect(() => { fetchVisitors(); }, [fetchVisitors]);
-
   // ── Handle Check-in / Check-out ─────────────────────────────
   const handleStatusChange = async (id, action) => {
     try {
@@ -58,12 +61,10 @@ const VisitorManagement = () => {
       toast.error(err.response?.data?.message || "Something went wrong");
     }
   };
-
   // ── Add Visitor ─────────────────────────────────────────────
   const handleChange = (e) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
-
   const handleSubmit = async () => {
     if (!formData.fullName || !formData.contact || !formData.visitorType) {
       toast.error("Name, contact and type are required");
@@ -87,7 +88,6 @@ const VisitorManagement = () => {
       setSubmitting(false);
     }
   };
-
   // ── Filter ──────────────────────────────────────────────────
   const filtered = visitors.filter((v) => {
     const matchTab =
@@ -101,7 +101,6 @@ const VisitorManagement = () => {
       v.ID?.toLowerCase().includes(search.toLowerCase());
     return matchTab && matchSearch;
   });
-
   const statusBadge = (status) => {
     const map = {
       Active: { bg: "var(--success-soft)", color: "var(--success-500)" },
@@ -115,7 +114,6 @@ const VisitorManagement = () => {
       </span>
     );
   };
-
   return (
     <ManagerPageShell
       eyebrow="Security Desk"
@@ -137,11 +135,9 @@ const VisitorManagement = () => {
           <StatCard label="Checked Out" value={stats.checkedOut} icon={<UserX size={22} />} iconColor="var(--warning-700)" iconBg="var(--warning-soft)" />
           <StatCard label="Active Visitors" value={stats.active} icon={<UserCheck size={22} />} iconColor="var(--info-600)" iconBg="var(--info-soft)" />
         </div>
-
         <div style={{ marginBottom: 8 }}>
           <SearchBar placeholder="Search by name or ID..." value={search} onChange={setSearch} />
         </div>
-
         <Tabs
           tabs={[
             { label: "All Visitors", value: "all", count: visitors.length },
@@ -152,7 +148,6 @@ const VisitorManagement = () => {
           active={activeTab}
           onChange={setActiveTab}
         />
-
         {loading ? (
           <div className="manager-ui-empty"><Loader label="Loading visitors..." /></div>
         ) : filtered.length === 0 ? (
@@ -188,7 +183,6 @@ const VisitorManagement = () => {
           </ManagerRecordGrid>
         )}
       </ManagerSection>
-
       {showModal ? (
         <Modal
           isOpen={showModal}
@@ -231,7 +225,4 @@ const VisitorManagement = () => {
     </ManagerPageShell>
   );
 };
-
 export { VisitorManagement };
-
-

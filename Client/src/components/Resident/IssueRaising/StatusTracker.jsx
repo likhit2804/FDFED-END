@@ -1,4 +1,3 @@
-import React from "react";
 
 // Status flow definitions
 const STATUS_FLOW_RESIDENT = [
@@ -10,7 +9,6 @@ const STATUS_FLOW_RESIDENT = [
     { key: "Closed", label: "Closed", icon: "bi-check-circle-fill" },
     { key: "Payment Completed", label: "Payment Completed", icon: "bi-cash-stack" },
 ];
-
 const STATUS_FLOW_COMMUNITY = [
     { key: "Pending Assignment", label: "Pending", icon: "bi-hourglass-split" },
     { key: "Assigned", label: "Assigned", icon: "bi-person-check" },
@@ -18,15 +16,12 @@ const STATUS_FLOW_COMMUNITY = [
     { key: "Resolved", label: "Resolved", icon: "bi-check-circle" },
     { key: "Closed", label: "Closed", icon: "bi-check-circle-fill" },
 ];
-
 const SPECIAL_STATUSES = ["On Hold", "Reopened", "Rejected", "Auto-Closed"];
-
 const getStatusIndex = (status, categoryType) => {
     const flow = categoryType === "Community" ? STATUS_FLOW_COMMUNITY : STATUS_FLOW_RESIDENT;
     const index = flow.findIndex((s) => s.key === status);
     return index !== -1 ? index : 0;
 };
-
 /**
  * Visual progress tracker for issue status.
  */
@@ -34,7 +29,6 @@ export const StatusTracker = ({ issue }) => {
     const flow = issue.categoryType === "Community" ? STATUS_FLOW_COMMUNITY : STATUS_FLOW_RESIDENT;
     const currentIndex = getStatusIndex(issue.status, issue.categoryType);
     const progressPercent = (currentIndex / (flow.length - 1)) * 100;
-
     return (
         <div className="status-tracker">
             <div className="tracker-container">

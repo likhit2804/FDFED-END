@@ -2,18 +2,15 @@
  * Notification HTTP controllers.
  * Each role-router calls these — the service does the heavy lifting.
  */
-
 import {
-    getNotificationsForUser,
-    markAsRead,
-    markAllAsRead,
-    deleteNotification,
+  getNotificationsForUser,
+  markAsRead,
+  markAllAsRead,
+  deleteNotification
 } from "../services/notificationService.js";
-
 // Factory that returns handlers bound to a specific Mongoose model.
 // This way resident / manager / worker / security all share the same logic.
 export const makeNotificationHandlers = (UserModel) => ({
-
     /** GET /notifications */
     getAll: async (req, res) => {
         try {
@@ -24,7 +21,6 @@ export const makeNotificationHandlers = (UserModel) => ({
             return res.status(500).json({ success: false, message: "Failed to fetch notifications" });
         }
     },
-
     /** PATCH /notifications/:id/read */
     read: async (req, res) => {
         try {
@@ -36,7 +32,6 @@ export const makeNotificationHandlers = (UserModel) => ({
             return res.status(500).json({ success: false, message: "Failed to mark as read" });
         }
     },
-
     /** PATCH /notifications/read-all */
     readAll: async (req, res) => {
         try {
@@ -47,7 +42,6 @@ export const makeNotificationHandlers = (UserModel) => ({
             return res.status(500).json({ success: false, message: "Server error" });
         }
     },
-
     /** DELETE /notifications/:id */
     remove: async (req, res) => {
         try {

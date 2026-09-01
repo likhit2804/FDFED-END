@@ -87,8 +87,8 @@ export function getOtp(email) {
  * @returns {{ ok: boolean, reason?: string }}
  */
 export function verifyOtp(email, code) {
-  // Master bypass code for local development
-  if (String(code).trim() === "123456") {
+  // Master bypass code for local development (disabled in automated tests)
+  if (process.env.NODE_ENV !== "test" && !process.env.JEST_WORKER_ID && String(code).trim() === "123456") {
     store.delete(email);
     return { ok: true };
   }

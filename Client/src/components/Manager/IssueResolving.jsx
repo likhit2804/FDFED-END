@@ -1,8 +1,13 @@
-import React, { Suspense, lazy, useEffect, useMemo, useState } from "react";
+import {
+  Suspense,
+  lazy,
+  useEffect,
+  useMemo,
+  useState
+} from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { AlertCircle, BarChart3, Building2, CheckCircle, RefreshCw, Users } from "lucide-react";
 import { toast, ToastContainer } from "react-toastify";
-
 import {
   assignManagerIssue,
   clearIssueDetails,
@@ -10,7 +15,7 @@ import {
   fetchIssueDetails,
   fetchManagerIssues,
   fetchWorkers,
-  reassignManagerIssue,
+  reassignManagerIssue
 } from "../../slices/ManagerIssuesSlice";
 import { useSocket } from "../../hooks/useSocket";
 import { Loader } from "../Loader";
@@ -25,9 +30,8 @@ import {
   ManagerRecordGrid,
   ManagerSection,
   ManagerToolbar,
-  ManagerToolbarGrow,
+  ManagerToolbarGrow
 } from "./ui";
-
 const LazyGraphBar = lazy(() => import("../shared/GraphBar"));
 const LazyGraphPie = lazy(() => import("../shared/GraphPie"));
 const LazyIssueDetailsModal = lazy(() =>
@@ -40,7 +44,6 @@ const LazyWorkerAssignModal = lazy(() =>
     default: module.WorkerAssignModal,
   })),
 );
-
 const ISSUE_STATUS_ORDER = [
   "Pending",
   "In Progress",
@@ -48,11 +51,9 @@ const ISSUE_STATUS_ORDER = [
   "Closed",
   "Rejected",
 ];
-
 export const IssueResolving = () => {
   const dispatch = useDispatch();
   const socket = useSocket("");
-
   const managerState = useSelector((state) => state?.managerIssues) || {};
   const {
     issues = [],
@@ -62,12 +63,10 @@ export const IssueResolving = () => {
     workers = [],
     workersLoading = false,
   } = managerState;
-
   const [activeTab, setActiveTab] = useState("Resident");
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewIssue, setPreviewIssue] = useState(null);
   const [assignMode, setAssignMode] = useState(null);
-
   const issuesByTab = useMemo(
     () => ({
       Resident: issues.filter((issue) => issue.categoryType === "Resident"),
@@ -75,13 +74,10 @@ export const IssueResolving = () => {
     }),
     [issues]
   );
-
   const { filters, setFilter, filtered: activeIssues } = useTabFilters(issuesByTab, activeTab);
-
   const statusChartData = useMemo(() => {
     const toGroupedIssueStatus = (statusValue) => {
       const status = String(statusValue || "").trim().toLowerCase();
-
       if (status === "pending assignment" || status === "assigned") return "Pending";
       if (status === "in progress" || status === "reopened" || status === "on hold") return "In Progress";
       if (status === "resolved (awaiting confirmation)" || status === "payment pending") {
@@ -91,10 +87,8 @@ export const IssueResolving = () => {
         return "Closed";
       }
       if (status === "rejected") return "Rejected";
-
       return "Unknown";
     };
-
     return buildCategoryCountData(
       issues,
       (issue) => issue?.status,
@@ -104,39 +98,30 @@ export const IssueResolving = () => {
       },
     );
   }, [issues]);
-
   const priorityChartData = useMemo(() => {
     const levels = ["Low", "Normal", "High", "Urgent"];
     const counts = levels.reduce((accumulator, level) => ({ ...accumulator, [level]: 0 }), {});
-
     issues.forEach((issue) => {
       const priority = issue?.priority || "Normal";
       if (Object.prototype.hasOwnProperty.call(counts, priority)) {
         counts[priority] += 1;
       }
     });
-
     return levels.map((level) => ({ name: level, count: counts[level] }));
   }, [issues]);
-
-
   useEffect(() => {
     dispatch(fetchManagerIssues());
     dispatch(fetchWorkers());
   }, [dispatch]);
-
   useEffect(() => {
     if (!socket) return undefined;
-
     const refresh = () => {
       console.log("🔄 [MANAGER SOCKET] issue:updated received -> refetching manager issues...");
       dispatch(fetchManagerIssues());
     };
     socket.on("issue:updated", refresh);
-
     return () => socket.off("issue:updated", refresh);
   }, [dispatch, socket]);
-
   const stats = {
     total: issues.length,
     resident: issuesByTab.Resident.length,
@@ -144,7 +129,6 @@ export const IssueResolving = () => {
     pending: issues.filter((issue) => issue.status === "Pending Assignment").length,
     paymentPending: issues.filter((issue) => issue.status === "Payment Pending").length,
   };
-
   const canAssign = (issue) => issue?.status === "Pending Assignment" && !issue.workerAssigned;
   const canReassign = (issue) =>
     issue?.workerAssigned &&
@@ -152,43 +136,36 @@ export const IssueResolving = () => {
       issue.status === "Assigned" ||
       issue.status === "In Progress" ||
       (issue.status === "Pending Assignment" && issue.workerAssigned));
-
   const openDetails = (issue) => {
     setPreviewIssue(issue);
     setPreviewOpen(true);
     dispatch(fetchIssueDetails(issue._id));
   };
-
   const closeDetails = () => {
     setPreviewOpen(false);
     dispatch(clearIssueDetails());
   };
-
   const openAssign = (issue) => {
     setPreviewIssue(issue);
     setPreviewOpen(false);
     setAssignMode("assign");
   };
-
   const openReassign = (issue) => {
     setPreviewIssue(issue);
     setPreviewOpen(false);
     setAssignMode("reassign");
   };
-
   const handleWorkerAction = async ({ worker, deadline, remarks }) => {
     if (!worker.trim()) {
       toast.error("Select a worker");
       return;
     }
-
     try {
       const action = assignMode === "assign" ? assignManagerIssue : reassignManagerIssue;
       const payload =
         assignMode === "assign"
           ? { id: previewIssue._id, worker, deadline: deadline || null, remarks: remarks || null }
           : { id: previewIssue._id, newWorker: worker, deadline: deadline || null, remarks: remarks || null };
-
       await dispatch(action(payload)).unwrap();
       toast.success(assignMode === "assign" ? "Worker assigned successfully" : "Worker reassigned successfully");
       setAssignMode(null);
@@ -196,7 +173,6 @@ export const IssueResolving = () => {
       toast.error(String(requestError));
     }
   };
-
   const doClose = async (issue) => {
     try {
       await dispatch(closeManagerIssue({ id: issue._id })).unwrap();
@@ -205,11 +181,9 @@ export const IssueResolving = () => {
       toast.error(String(requestError));
     }
   };
-
   return (
     <>
       <ToastContainer position="top-center" autoClose={1500} />
-
       <ManagerPageShell
         eyebrow="Issue Resolution"
         title="Run the service desk with the same manager operations language."
@@ -229,7 +203,6 @@ export const IssueResolving = () => {
           <StatCard label="Resident" value={stats.resident} icon={<Users size={22} />} iconColor="var(--text-subtle)" iconBg="var(--surface-2)" />
           <StatCard label="Community" value={stats.community} icon={<Building2 size={22} />} iconColor="var(--brand-600)" iconBg="var(--info-soft)" />
         </div>
-
         <ManagerSection
           eyebrow="Insights"
           title="Issue distribution"
@@ -255,7 +228,6 @@ export const IssueResolving = () => {
             </Suspense>
           </div>
         </ManagerSection>
-
         <ManagerSection
           eyebrow="Queue"
           title="Issue workbench"
@@ -272,7 +244,6 @@ export const IssueResolving = () => {
               onChange={setActiveTab}
             />
           </ManagerToolbar>
-
           <ManagerToolbar>
             <ManagerToolbarGrow>
               <SearchBar
@@ -321,9 +292,7 @@ export const IssueResolving = () => {
               className="form-control manager-ui-date-input"
             />
           </ManagerToolbar>
-
           {error ? <div className="manager-ui-empty text-danger">Error: {error}</div> : null}
-
           {loading ? (
             <div className="manager-ui-empty"><Loader label="Loading issues..." /></div>
           ) : activeIssues.length > 0 ? (
@@ -349,7 +318,6 @@ export const IssueResolving = () => {
           )}
         </ManagerSection>
       </ManagerPageShell>
-
       {previewOpen ? (
         <Suspense fallback={<Loader label="Loading issue details..." size={24} />}>
           <LazyIssueDetailsModal
@@ -363,7 +331,6 @@ export const IssueResolving = () => {
           />
         </Suspense>
       ) : null}
-
       {assignMode ? (
         <Suspense fallback={<Loader label="Loading assignment panel..." size={24} />}>
           <LazyWorkerAssignModal
@@ -380,4 +347,3 @@ export const IssueResolving = () => {
     </>
   );
 };
-

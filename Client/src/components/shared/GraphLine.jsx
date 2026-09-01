@@ -1,11 +1,23 @@
-import React from 'react';
-import {
-    ResponsiveContainer, LineChart, AreaChart,
-    Line, Area, CartesianGrid, XAxis, YAxis, Tooltip, Legend,
-} from 'recharts';
-import Card from './Card';
-import { UE_CHART_AXIS, UE_CHART_GRID, UE_CHART_PALETTE, UE_CHART_TOOLTIP_BORDER } from './chartPalette';
 
+import {
+  ResponsiveContainer,
+  LineChart,
+  AreaChart,
+  Line,
+  Area,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Legend
+} from "recharts";
+import Card from './Card';
+import {
+  UE_CHART_AXIS,
+  UE_CHART_GRID,
+  UE_CHART_PALETTE,
+  UE_CHART_TOOLTIP_BORDER
+} from "./chartPalette";
 /**
  * GraphLine – line/area chart for user pages (mirrors Admin/GraphLine)
  *
@@ -33,10 +45,8 @@ const GraphLine = ({
 }) => {
     // Fallback: if caller passes a single yKey instead of lines array
     const resolvedLines = lines.length > 0 ? lines : [];
-
     const ChartComp = showArea ? AreaChart : LineChart;
     const SeriesComp = showArea ? Area : Line;
-
     return (
         <Card shadow="md" style={{ padding: '20px 24px' }}>
             {title && (
@@ -75,5 +85,4 @@ const GraphLine = ({
         </Card>
     );
 };
-
 export default GraphLine;

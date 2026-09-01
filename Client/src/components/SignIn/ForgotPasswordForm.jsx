@@ -1,4 +1,3 @@
-import React from "react";
 
 const ROLE_OPTIONS = [
     { value: "Resident", label: "Resident" },
@@ -6,7 +5,6 @@ const ROLE_OPTIONS = [
     { value: "Worker", label: "Worker" },
     { value: "communityManager", label: "Community Manager" },
 ];
-
 /**
  * Forgot password modal overlay.
  */

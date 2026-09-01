@@ -1,4 +1,3 @@
-import React from 'react';
 
 /**
  * FormSection – groups related form fields under a titled section
@@ -31,5 +30,4 @@ const FormSection = ({ title, subtitle, columns = 1, children }) => (
         </div>
     </div>
 );
-
 export default FormSection;

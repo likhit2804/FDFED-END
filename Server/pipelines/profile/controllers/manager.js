@@ -1,37 +1,29 @@
 ﻿import CommunityManager from "../../../models/cManager.js";
-import Community from "../../../models/communities.js";
 import { sendError, sendSuccess } from "../../shared/helpers.js";
 import { handleProfileImageUpload, handlePasswordChange } from "../utils/profileShared.js";
-
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_REGEX = /^[0-9]{10}$/;
 const STRONG_PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[\d!@#$%^&*]).{8,}$/;
-
 export const getManagerProfile = async (req, res) => {
     try {
         const manager = await CommunityManager.findById(req.user.id)
             .populate("assignedCommunity");
-
         if (!manager) {
             return sendError(res, 404, "Manager not found");
         }
-
         return sendSuccess(res, "Profile fetched successfully", { manager });
     } catch (err) {
         console.error("Error fetching profile:", err);
         return sendError(res, 500, "Server error", err);
     }
 };
-
 export const getProfileWithCommunity = async (req, res) => {
     try {
         const managerId = req.user.id;
         const manager = await CommunityManager.findById(managerId); // Profile still needs the manager object for name/email
         const community = req.community;
-
         await community.rotateCodeIfExpired();
         const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
-
         res.json({
             success: true,
             manager: {
@@ -54,7 +46,6 @@ export const getProfileWithCommunity = async (req, res) => {
         return sendError(res, 500, "Failed to fetch profile", error);
     }
 };
-
 export const updateManagerProfile = async (req, res) => {
     try {
         const { name, email, contact, location, address } = req.body;
@@ -64,7 +55,6 @@ export const updateManagerProfile = async (req, res) => {
         const safeContact = String(contact || "").trim();
         const safeLocation = String(location || "").trim();
         const safeAddress = String(address || "").trim();
-
         if (safeName && safeName.length < 2) {
             return sendError(res, 400, "Name must be at least 2 characters");
         }
@@ -74,18 +64,15 @@ export const updateManagerProfile = async (req, res) => {
         if (safeContact && !PHONE_REGEX.test(safeContact)) {
             return sendError(res, 400, "Contact must be a 10-digit number");
         }
-
         const manager = await CommunityManager.findById(managerId);
         if (!manager) {
             return sendError(res, 404, "Manager not found");
         }
-
         manager.name = safeName || manager.name;
         manager.email = safeEmail || manager.email;
         manager.contact = safeContact || manager.contact;
         manager.location = safeLocation || manager.location;
         manager.address = safeAddress || manager.address;
-
         if (req.file && req.file.buffer) {
             try {
                 const uploadData = await handleProfileImageUpload(req.file, "profiles/manager");
@@ -97,9 +84,7 @@ export const updateManagerProfile = async (req, res) => {
                 return sendError(res, 500, err.message, err);
             }
         }
-
         await manager.save();
-
         res.json({
             success: true,
             message: "Profile updated successfully",
@@ -116,7 +101,6 @@ export const updateManagerProfile = async (req, res) => {
         return sendError(res, 500, "Failed to update profile", error);
     }
 };
-
 export const changePassword = async (req, res) => {
     const { cp, np, cnp } = req.body;
     if (!cp || !np || !cnp) {

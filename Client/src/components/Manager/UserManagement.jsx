@@ -1,8 +1,7 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Briefcase, Key, Pencil, Shield, Trash2, Users } from "lucide-react";
 import { toast } from "react-toastify";
 import axios from "axios";
-
 import { Loader } from "../Loader";
 import { ConfirmModal, Input, Modal, StatCard, Tabs, Textarea } from "../shared";
 import { RegistrationCodesModal } from "./UserManagement/RegistrationCodesModal";
@@ -12,29 +11,24 @@ import {
   ManagerRecordCard,
   ManagerRecordGrid,
   ManagerSection,
-  ManagerToolbar,
+  ManagerToolbar
 } from "./ui";
-
 const DynamicForm = ({ fields, initial = {}, onSubmit, submitLabel = "Save" }) => {
   const [form, setForm] = useState(() =>
     fields.reduce((accumulator, field) => ({ ...accumulator, [field.key]: initial[field.key] ?? "" }), {})
   );
   const [errors, setErrors] = useState({});
-
   useEffect(() => {
     setForm(fields.reduce((accumulator, field) => ({ ...accumulator, [field.key]: initial[field.key] ?? "" }), {}));
     setErrors({});
   }, [fields, initial]);
-
   const handleChange = (key, value) => {
     setForm((previous) => ({ ...previous, [key]: value }));
     setErrors((previous) => ({ ...previous, [key]: "" }));
   };
-
   const validate = () => {
     const nextErrors = {};
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
     fields.forEach((field) => {
       const value = String(form[field.key] ?? "").trim();
       if (field.required && !value) {
@@ -49,11 +43,9 @@ const DynamicForm = ({ fields, initial = {}, onSubmit, submitLabel = "Save" }) =
         nextErrors[field.key] = field.error || `Invalid ${field.label.toLowerCase()}`;
       }
     });
-
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
   };
-
   return (
     <form
       className="um-form"
@@ -91,7 +83,6 @@ const DynamicForm = ({ fields, initial = {}, onSubmit, submitLabel = "Save" }) =
     </form>
   );
 };
-
 const ENTITY_CONFIG = {
   resident: {
     label: "Resident",
@@ -172,9 +163,7 @@ const ENTITY_CONFIG = {
     }),
   },
 };
-
 const TAB_TO_ENTITY = { residents: "resident", security: "security", workers: "worker" };
-
 export default function UserManagement() {
   const [activeTab, setActiveTab] = useState("residents");
   const [lists, setLists] = useState({ resident: [], security: [], worker: [] });
@@ -183,7 +172,6 @@ export default function UserManagement() {
   const [confirmVisible, setConfirmVisible] = useState(false);
   const [confirmPayload, setConfirmPayload] = useState(null);
   const [loading, setLoading] = useState(false);
-
   const [codesVisible, setCodesVisible] = useState(false);
   const [codesList, setCodesList] = useState([]);
   const [codesLoading, setCodesLoading] = useState(false);
@@ -191,10 +179,8 @@ export default function UserManagement() {
   const [codesSearch, setCodesSearch] = useState("");
   const [selectedFlats, setSelectedFlats] = useState(new Set());
   const [isRegenerating, setIsRegenerating] = useState(false);
-
   const currentEntity = TAB_TO_ENTITY[activeTab];
   const config = ENTITY_CONFIG[currentEntity];
-
   const stats = useMemo(
     () => ({
       residents: lists.resident.length,
@@ -204,8 +190,6 @@ export default function UserManagement() {
     }),
     [lists]
   );
-
-
   const fetchLists = async () => {
     try {
       setLoading(true);
@@ -220,11 +204,9 @@ export default function UserManagement() {
       setLoading(false);
     }
   };
-
   useEffect(() => {
     fetchLists();
   }, []);
-
   const fetchRegistrationCodes = async () => {
     setCodesLoading(true);
     try {
@@ -238,14 +220,12 @@ export default function UserManagement() {
       setCodesLoading(false);
     }
   };
-
   const regenerateCode = async (flatNumber, flatNumbers = null) => {
     try {
       setIsRegenerating(true);
       const payload = flatNumbers ? { flatNumbers } : { flatNumber: flatNumber ?? undefined };
       const response = await axios.post("/manager/registration-codes/regenerate", payload);
       const data = response.data;
-
       if (flatNumber && !flatNumbers) {
         if (data.success && data.newCode) {
           setCodesList((previous) =>
@@ -262,7 +242,6 @@ export default function UserManagement() {
       setIsRegenerating(false);
     }
   };
-
   const toggleSelectFlat = (flatNumber) => {
     setSelectedFlats((previous) => {
       const next = new Set(previous);
@@ -271,41 +250,34 @@ export default function UserManagement() {
       return next;
     });
   };
-
   const toggleSelectAll = (filtered) => {
     setSelectedFlats(
       selectedFlats.size >= filtered.length ? new Set() : new Set(filtered.map((flat) => flat.flatNumber))
     );
   };
-
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
     toast.success("Code copied to clipboard!");
   };
-
   const openCodesModal = () => {
     setCodesVisible(true);
     setCodesSearch("");
     setSelectedFlats(new Set());
     fetchRegistrationCodes();
   };
-
   const setListForEntity = (entity, updater) => {
     setLists((previous) => ({ ...previous, [entity]: updater(previous[entity]) }));
   };
-
   const openAdd = () => {
     setModalConfig({ entity: currentEntity, mode: "add", fields: config.fields, initial: {}, id: null });
     setModalVisible(true);
   };
-
   const openEdit = async (id) => {
     try {
       setLoading(true);
       const response = await axios.get(`/manager/userManagement/${config.endpoint}/${id}`);
       const data = response.data;
       const payload = data.r || data[currentEntity] || data;
-
       setModalConfig({
         entity: currentEntity,
         mode: "edit",
@@ -320,20 +292,17 @@ export default function UserManagement() {
       setLoading(false);
     }
   };
-
   const saveEntity = async (values, idForUpdate) => {
     try {
       setLoading(true);
       const payload = { ...values };
       if (idForUpdate) payload[config.idKey] = idForUpdate;
-
       const response = await axios.post(`/manager/userManagement/${config.endpoint}`, payload);
       const data = response.data;
       if (!data?.success) {
         toast.error(data?.message || "Save failed");
         return;
       }
-
       const saved = data[currentEntity];
       setListForEntity(currentEntity, (previous) =>
         data.isUpdate ? previous.map((item) => (item._id === saved._id ? saved : item)) : [saved, ...previous]
@@ -344,15 +313,12 @@ export default function UserManagement() {
       setLoading(false);
     }
   };
-
   const askDelete = (id) => {
     setConfirmPayload({ entity: currentEntity, id });
     setConfirmVisible(true);
   };
-
   const doDelete = async () => {
     if (!confirmPayload) return;
-
     try {
       setLoading(true);
       const { entity, id } = confirmPayload;
@@ -363,7 +329,6 @@ export default function UserManagement() {
         toast.error("Delete failed");
         return;
       }
-
       setListForEntity(entity, (previous) => previous.filter((item) => item._id !== id));
       setConfirmVisible(false);
       setConfirmPayload(null);
@@ -371,9 +336,7 @@ export default function UserManagement() {
       setLoading(false);
     }
   };
-
   const currentList = lists[currentEntity] || [];
-
   return (
     <ManagerPageShell
       eyebrow="User Management"
@@ -387,7 +350,6 @@ export default function UserManagement() {
         <StatCard label="Workers" value={stats.workers} icon={<Briefcase size={22} />} iconColor="var(--text-subtle)" iconBg="var(--surface-2)" />
         <StatCard label="Total Records" value={stats.total} icon={<Users size={22} />} iconColor="var(--danger-500)" iconBg="var(--danger-soft)" />
       </div>
-
       <ManagerSection
         eyebrow="Directory"
         title="Community people records"
@@ -418,7 +380,6 @@ export default function UserManagement() {
             onChange={setActiveTab}
           />
         </ManagerToolbar>
-
         {currentList.length > 0 ? (
           <ManagerRecordGrid>
             {currentList.map((item) => (
@@ -446,7 +407,6 @@ export default function UserManagement() {
           <div className="manager-ui-empty">No {activeTab} records have been created yet.</div>
         )}
       </ManagerSection>
-
       <Modal
         isOpen={modalVisible}
         onClose={() => {
@@ -465,7 +425,6 @@ export default function UserManagement() {
           />
         ) : null}
       </Modal>
-
       <ConfirmModal
         isOpen={confirmVisible}
         onClose={() => setConfirmVisible(false)}
@@ -476,7 +435,6 @@ export default function UserManagement() {
         confirmText="Delete"
         variant="danger"
       />
-
       <RegistrationCodesModal
         visible={codesVisible}
         onClose={() => setCodesVisible(false)}
@@ -492,7 +450,6 @@ export default function UserManagement() {
         isRegenerating={isRegenerating}
         copyToClipboard={copyToClipboard}
       />
-
       {loading ? (
         <div className="um-loading-overlay">
           <div className="um-loading">
@@ -503,4 +460,3 @@ export default function UserManagement() {
     </ManagerPageShell>
   );
 }
-

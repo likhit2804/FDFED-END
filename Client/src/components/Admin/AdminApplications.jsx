@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import axios from "axios";
 import {
   X,
@@ -7,9 +7,8 @@ import {
   ClipboardCheck,
   Clock,
   CheckCircle2,
-  XCircle,
+  XCircle
 } from "lucide-react";
-
 // Spinner component
 const Spinner = ({ size = 16 }) => (
   <div
@@ -24,7 +23,6 @@ const Spinner = ({ size = 16 }) => (
     }}
   />
 );
-
 // Add CSS animation
 const spinAnimation = `
 @keyframes spin {
@@ -42,19 +40,15 @@ const spinAnimation = `
   }
 }
 `;
-
 // Inject CSS
 if (typeof document !== 'undefined') {
   const style = document.createElement('style');
   style.textContent = spinAnimation;
   document.head.appendChild(style);
 }
-import "bootstrap/dist/css/bootstrap.min.css";
-import Header from "./Header";
 import Card from "./Card";
 import Tabs from "./Tabs";
 import Status from "./Status";
-
 export default function ManagerApplications() {
   // ===== State Management =====
   const [applications, setApplications] = useState([]);
@@ -68,21 +62,17 @@ export default function ManagerApplications() {
   const [actionType, setActionType] = useState(null); // 'approve' or 'reject'
   const [rejectionReason, setRejectionReason] = useState("");
   const [showRejectModal, setShowRejectModal] = useState(false);
-
   // ===== Fetch Applications =====
   useEffect(() => {
     const fetchApplications = async () => {
       try {
         setLoading(true);
-
         const res = await axios.get("/admin/api/interests");
-
         if (res.status === 401) {
           localStorage.removeItem("token");
           window.location.href = "/adminLogin";
           return;
         }
-
         const json = res.data;
         if (json.success && Array.isArray(json.data)) {
           const formatted = json.data.map((app) => ({
@@ -123,17 +113,14 @@ export default function ManagerApplications() {
         setLoading(false);
       }
     };
-
     fetchApplications();
   }, []);
-
   // ===== Approval Function =====
   const handleApprove = async (appId) => {
     try {
       setActionLoading(appId);
       setActionType('approve');
       const res = await axios.post(`/admin/api/interests/${appId}/approve`);
-
       if (res.data?.success) {
         const updatedApp = { ...selectedApp, status: "APPROVED", uiStatus: "AWAITING PAYMENT", paymentStatus: "pending" };
         setApplications(prev =>
@@ -160,19 +147,16 @@ export default function ManagerApplications() {
       setActionLoading(null);
     }
   };
-
   // ===== Rejection Function =====
   const handleReject = async (appId) => {
     if (!rejectionReason.trim()) {
       setError("Please provide a rejection reason");
       return;
     }
-
     try {
       setActionLoading(appId);
       setActionType('reject');
       const res = await axios.post(`/admin/api/interests/${appId}/reject`, { reason: rejectionReason });
-
       if (res.data?.success) {
         const updatedApp = { ...selectedApp, status: "REJECTED", rejectionReason };
         setApplications(prev =>
@@ -202,16 +186,13 @@ export default function ManagerApplications() {
       setActionType(null);
     }
   };
-
   // ===== Derived Stats =====
   const total = applications.length;
   const approved = applications.filter((a) => a.status === "APPROVED").length;
   const pending = applications.filter((a) => a.status === "PENDING").length;
-
   // ===== Tab Filtering =====
   const filteredApps = useMemo(() => {
     if (activeTab === "All") return applications;
-
     return applications.filter((a) => {
       // Map tab names to status checks
       if (activeTab === "Approved") return a.status === "APPROVED" && a.paymentStatus !== "pending"; // Legacy
@@ -220,7 +201,6 @@ export default function ManagerApplications() {
       return a.uiStatus === activeTab.toUpperCase() || a.status === activeTab.toUpperCase();
     });
   }, [activeTab, applications]);
-
   // ===== Inline Styles =====
   const styles = {
     container: {
@@ -253,12 +233,10 @@ export default function ManagerApplications() {
     },
     name: { fontWeight: 600, fontSize: "15px", color: "#0f172a" },
   };
-
   return (
     <div style={styles.container}>
       {/* Header */}
       <Header title="Community Manager Applications" />
-
       {/* ===== Left Pane ===== */}
       <div style={styles.listPane}>
         {/* === Summary Cards (Occupy full horizontal width) === */}
@@ -290,14 +268,12 @@ export default function ManagerApplications() {
             borderColor="#fbbf24"
           />
         </div>
-
         {/* === Tabs === */}
         <Tabs
           options={["All", "Pending", "Awaiting Payment", "Completed", "Rejected"]}
           active={activeTab}
           onChange={setActiveTab}
         />
-
         {/* === Applications List === */}
         {loading ? (
           <div className="text-center py-5 text-muted fw-semibold">
@@ -352,7 +328,6 @@ export default function ManagerApplications() {
           ))
         )}
       </div>
-
       {/* ===== Right Pane (Preview) ===== */}
       {selectedApp && (
         <div style={styles.previewPane}>
@@ -373,7 +348,6 @@ export default function ManagerApplications() {
               onClick={() => setSelectedApp(null)}
             />
           </div>
-
           <div style={{ marginBottom: "8px", color: "#475569" }}>
             <strong>Email:</strong> {selectedApp.email}
           </div>
@@ -392,7 +366,6 @@ export default function ManagerApplications() {
           <div style={{ marginBottom: "16px", color: "#475569" }}>
             <strong>Description:</strong> {selectedApp.description}
           </div>
-
           {/* Photos Section */}
           {selectedApp.photos && selectedApp.photos.length > 0 && (
             <div style={{ marginBottom: "16px" }}>
@@ -431,7 +404,6 @@ export default function ManagerApplications() {
                   </div>
                 ))}
               </div>
-
               {/* Large photo preview */}
               {activePhoto && (
                 <div style={{
@@ -455,7 +427,6 @@ export default function ManagerApplications() {
               )}
             </div>
           )}
-
           {/* Resend Link Button */}
           {selectedApp.uiStatus === "AWAITING PAYMENT" && (
             <div style={{ display: "flex", gap: "12px", marginTop: "16px" }}>
@@ -505,9 +476,6 @@ export default function ManagerApplications() {
               </button>
             </div>
           )}
-
-
-
           {/* Action Buttons */}
           {selectedApp.status === "PENDING" && (
             <div style={{ display: "flex", gap: "12px", marginTop: "16px" }}>
@@ -562,7 +530,6 @@ export default function ManagerApplications() {
               </button>
             </div>
           )}
-
           {/* Show approval/rejection details */}
           {selectedApp.status === "APPROVED" && selectedApp.approvedBy && (
             <div style={{ marginTop: "16px", color: "#22c55e", fontSize: "14px", display: "flex", alignItems: "center", gap: "6px" }}>
@@ -583,7 +550,6 @@ export default function ManagerApplications() {
           )}
         </div>
       )}
-
       {/* Rejection Modal */}
       {showRejectModal && selectedApp && (
         <div style={{
@@ -620,14 +586,12 @@ export default function ManagerApplications() {
                 }}
               />
             </div>
-
             <div style={{ marginBottom: "16px", color: "#475569" }}>
               <strong>Applicant:</strong> {selectedApp.name}
             </div>
             <div style={{ marginBottom: "16px", color: "#475569" }}>
               <strong>Community:</strong> {selectedApp.communityName}
             </div>
-
             <div style={{ marginBottom: "16px" }}>
               <label style={{ display: "block", marginBottom: "8px", fontWeight: "500", color: "#374151" }}>
                 Rejection Reason *
@@ -649,7 +613,6 @@ export default function ManagerApplications() {
                 }}
               />
             </div>
-
             {error && (
               <div style={{
                 backgroundColor: "#fef2f2",
@@ -663,7 +626,6 @@ export default function ManagerApplications() {
                 {error}
               </div>
             )}
-
             <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end" }}>
               <button
                 onClick={() => {

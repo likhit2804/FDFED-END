@@ -1,4 +1,4 @@
-import { connect, disconnect, clearDatabase } from '../setup.js';
+import { connect, disconnect, clearDatabase } from "../setup.js";
 import mongoose from 'mongoose';
 import CommonSpaces from '../../models/commonSpaces.js';
 import Amenity from '../../models/Amenities.js';
@@ -7,21 +7,9 @@ import CommunityManager from '../../models/cManager.js';
 import Community from '../../models/communities.js';
 import Payment from '../../models/payment.js';
 
-import {
-  createBooking,
-  getResidentCommonSpaces,
-  getBookingById,
-  cancelBooking,
-} from '../../pipelines/CSB/controllers/resident.js';
+import { createBooking } from "../../pipelines/CSB/controllers/resident.js";
 
-import {
-  createSpace,
-  getCommonSpaces,
-  getBookingDetails,
-  rejectBooking,
-  updateSpace,
-  deleteSpace,
-} from '../../pipelines/CSB/controllers/manager.js';
+import { getCommonSpaces, rejectBooking } from "../../pipelines/CSB/controllers/manager.js";
 
 function createMockReqRes(reqData = {}) {
   const req = {

@@ -1,12 +1,14 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState
+} from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { ChevronDown, LogOut, Menu, User, X } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
-
 import logo from "../imgs/Logo.png";
-import "../assets/css/Navbar.css";
 import { logout } from "../slices/authSlice";
-
 const NAV_ITEMS = {
   admin: [
     { to: "/admin/dashboard", label: "Dashboard" },
@@ -40,7 +42,6 @@ const NAV_ITEMS = {
     { to: "/security/issues", label: "Issues Desk" },
   ],
 };
-
 export const Navbar = ({ userType }) => {
   const dispatch = useDispatch();
   const user = useSelector((state) => state.auth?.user);
@@ -49,7 +50,6 @@ export const Navbar = ({ userType }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const profileRef = useRef(null);
-
   const links = useMemo(() => NAV_ITEMS[userType] || [], [userType]);
   const profileRoute = useMemo(() => {
     if (userType === "manager") return "/manager/profile";
@@ -59,7 +59,6 @@ export const Navbar = ({ userType }) => {
     if (userType === "admin") return "/admin/profile";
     return "/";
   }, [userType]);
-
   const displayName = useMemo(() => {
     if (!user) return "Profile";
     return (
@@ -71,32 +70,26 @@ export const Navbar = ({ userType }) => {
       "Profile"
     );
   }, [user]);
-
   const avatarSrc = user?.image || user?.profilePic || user?.avatar || user?.photo || "";
   const avatarFallback = (displayName || "P").trim().charAt(0).toUpperCase();
-
   useEffect(() => {
     setMenuOpen(false);
     setProfileOpen(false);
   }, [location.pathname]);
-
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (profileRef.current && !profileRef.current.contains(event.target)) {
         setProfileOpen(false);
       }
     };
-
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
   const handleLogout = () => {
     sessionStorage.setItem("ue:intentionalLogout", "1");
     dispatch(logout());
     navigate("/SignIn");
   };
-
   return (
     <header className="app-navbar">
       <div className="app-navbar__inner">
@@ -104,7 +97,6 @@ export const Navbar = ({ userType }) => {
           <NavLink to={links[0]?.to || "/"} className="app-navbar__brand" aria-label="UrbanEase home">
             <img src={logo} alt="UrbanEase" />
           </NavLink>
-
           <div className="app-navbar__controls">
             <button
               type="button"
@@ -117,7 +109,6 @@ export const Navbar = ({ userType }) => {
             </button>
           </div>
         </div>
-
         <div className={`app-navbar__panel${menuOpen ? " is-open" : ""}`}>
           <nav className="app-navbar__nav" aria-label={`${userType || "App"} navigation`}>
             {links.length > 0 ? (
@@ -136,7 +127,6 @@ export const Navbar = ({ userType }) => {
               <span className="app-navbar__empty">No links available</span>
             )}
           </nav>
-
           <div className="app-navbar__profile" ref={profileRef}>
             <button
               type="button"
@@ -157,7 +147,6 @@ export const Navbar = ({ userType }) => {
               </span>
               <ChevronDown size={16} className={`app-navbar__profile-chevron${profileOpen ? " is-open" : ""}`} />
             </button>
-
             <div className={`app-navbar__profile-menu${profileOpen ? " is-open" : ""}`}>
               <button
                 type="button"

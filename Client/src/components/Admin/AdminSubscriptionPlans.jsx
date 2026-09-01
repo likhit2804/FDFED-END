@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Tag, Plus, Save, Trash2, Edit2, X, Check, RefreshCw } from "lucide-react";
 import { toast } from "react-toastify";
 import axios from "axios";
-
 export default function AdminSubscriptionPlans() {
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -17,11 +16,9 @@ export default function AdminSubscriptionPlans() {
     features: "",
     isActive: true,
   });
-
   useEffect(() => {
     fetchPlans();
   }, []);
-
   const fetchPlans = async () => {
     try {
       setLoading(true);
@@ -40,7 +37,6 @@ export default function AdminSubscriptionPlans() {
       setLoading(false);
     }
   };
-
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData((prev) => ({
@@ -48,7 +44,6 @@ export default function AdminSubscriptionPlans() {
       [name]: type === "checkbox" ? checked : value,
     }));
   };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -56,7 +51,6 @@ export default function AdminSubscriptionPlans() {
         .split("\n")
         .map((f) => f.trim())
         .filter((f) => f);
-
       const payload = {
         planKey: formData.planKey.toLowerCase().trim(),
         name: formData.name.trim(),
@@ -66,7 +60,6 @@ export default function AdminSubscriptionPlans() {
         features: featuresArray,
         isActive: formData.isActive,
       };
-
       const res = editingPlan
         ? await axios.put(`/admin/api/subscription-plans/${editingPlan._id}`, payload)
         : await axios.post("/admin/api/subscription-plans", payload);
@@ -83,7 +76,6 @@ export default function AdminSubscriptionPlans() {
       toast.error(error.response?.data?.message || "Error saving plan");
     }
   };
-
   const handleEdit = (plan) => {
     setEditingPlan(plan);
     setFormData({
@@ -98,10 +90,8 @@ export default function AdminSubscriptionPlans() {
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
-
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this plan?")) return;
-
     try {
       const res = await axios.delete(`/admin/api/subscription-plans/${id}`);
       const json = res.data;
@@ -116,7 +106,6 @@ export default function AdminSubscriptionPlans() {
       toast.error(error.response?.data?.message || "Error deleting plan");
     }
   };
-
   const resetForm = () => {
     setFormData({
       planKey: "",
@@ -130,7 +119,6 @@ export default function AdminSubscriptionPlans() {
     setEditingPlan(null);
     setShowForm(false);
   };
-
   const styles = {
     header: {
       marginBottom: "32px",
@@ -477,7 +465,6 @@ export default function AdminSubscriptionPlans() {
       borderRadius: "50%",
     },
   };
-
   if (loading && plans.length === 0) {
     return (
       <div style={{ textAlign: "center", padding: "64px 0" }}>
@@ -485,7 +472,6 @@ export default function AdminSubscriptionPlans() {
       </div>
     );
   }
-
   return (
     <div style={{ fontFamily: 'inherit' }}>
       {/* Header */}
@@ -550,8 +536,6 @@ export default function AdminSubscriptionPlans() {
           </button>
         </div>
       </div>
-
-
       {/* Form */}
       {showForm && (
         <div style={styles.formCard}>
@@ -577,7 +561,6 @@ export default function AdminSubscriptionPlans() {
                   onBlur={(e) => (e.target.style.borderColor = "#e2e8f0")}
                 />
               </div>
-
               <div style={styles.inputGroup}>
                 <label style={styles.label}>Plan Name *</label>
                 <input
@@ -592,7 +575,6 @@ export default function AdminSubscriptionPlans() {
                   onBlur={(e) => (e.target.style.borderColor = "#e2e8f0")}
                 />
               </div>
-
               <div style={styles.inputGroup}>
                 <label style={styles.label}>Price (₹) *</label>
                 <input
@@ -608,7 +590,6 @@ export default function AdminSubscriptionPlans() {
                   onBlur={(e) => (e.target.style.borderColor = "#e2e8f0")}
                 />
               </div>
-
               <div style={styles.inputGroup}>
                 <label style={styles.label}>Duration *</label>
                 <select
@@ -622,7 +603,6 @@ export default function AdminSubscriptionPlans() {
                   <option value="yearly">Yearly</option>
                 </select>
               </div>
-
               <div style={styles.inputGroup}>
                 <label style={styles.label}>
                   Max Residents <span style={{ fontSize: "12px", fontWeight: 400, color: "#64748b" }}>(leave empty for unlimited)</span>
@@ -639,9 +619,7 @@ export default function AdminSubscriptionPlans() {
                   onBlur={(e) => (e.target.style.borderColor = "#e2e8f0")}
                 />
               </div>
-
             </div>
-
             <div style={styles.inputGroup}>
               <label style={styles.label}>
                 Active Status
@@ -674,7 +652,6 @@ export default function AdminSubscriptionPlans() {
                 </span>
               </div>
             </div>
-
             <div style={{ ...styles.inputGroup, marginTop: "20px" }}>
               <label style={styles.label}>
                 Features * <span style={{ fontSize: "12px", fontWeight: 400, color: "#64748b" }}>(one per line)</span>
@@ -690,7 +667,6 @@ export default function AdminSubscriptionPlans() {
                 onBlur={(e) => (e.target.style.borderColor = "#e2e8f0")}
               />
             </div>
-
             <div style={styles.buttonGroup}>
               <button
                 type="submit"
@@ -721,7 +697,6 @@ export default function AdminSubscriptionPlans() {
           </form>
         </div>
       )}
-
       {/* Plans Grid */}
       {plans.length === 0 ? (
         <div style={styles.emptyState}>
@@ -756,13 +731,11 @@ export default function AdminSubscriptionPlans() {
                   {plan.isActive ? "Active" : "Inactive"}
                 </span>
               </div>
-
               {/* Price */}
               <div style={styles.priceSection}>
                 <div style={styles.price}>₹{plan.price}</div>
                 <div style={styles.duration}>per {plan.duration}</div>
               </div>
-
               {/* Info */}
               <div style={{ marginBottom: "20px" }}>
                 <div style={styles.infoRow}>
@@ -770,7 +743,6 @@ export default function AdminSubscriptionPlans() {
                   <span style={styles.infoValue}>{plan.maxResidents || "Unlimited"}</span>
                 </div>
               </div>
-
               {/* Features */}
               <div style={styles.featuresSection}>
                 <div style={styles.featuresTitle}>Features</div>
@@ -783,7 +755,6 @@ export default function AdminSubscriptionPlans() {
                   ))}
                 </ul>
               </div>
-
               {/* Actions */}
               <div style={styles.actionsRow}>
                 <button
@@ -812,4 +783,3 @@ export default function AdminSubscriptionPlans() {
     </div>
   );
 }
-

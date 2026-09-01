@@ -3,13 +3,11 @@
  * @fileoverview Worker Dashboard Component
  * @copyright All rights reserved
  */
-
 import { useEffect, useMemo, useState } from "react";
 import { CircleAlert, CircleCheck, ClipboardList } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-
 import LeaveApplyForm from "../LeaveApplyForm";
 import { Loader } from "../Loader";
 import { DateRangeFilter, EmptyState, GraphPie, StatCard } from "../shared";
@@ -19,16 +17,15 @@ import {
   getAverageIssueRating,
   getRecentIssues,
   getStatusSplitData,
-  getWorkerTaskSummary,
+  getWorkerTaskSummary
 } from "../shared/nonAdmin/taskInsights";
 import {
   ManagerActionButton,
   ManagerPageShell,
   ManagerRecordCard,
   ManagerRecordGrid,
-  ManagerSection,
+  ManagerSection
 } from "../shared/roleUI";
-
 export const WorkerDashboard = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -37,18 +34,15 @@ export const WorkerDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
-
   const fetchData = async (from = "", to = "") => {
     try {
       setLoading(true);
       const params = {};
       if (from) params.from = from;
       if (to) params.to = to;
-
       const response = await axios.get("/worker/getDashboardData", { params });
       const data = response.data;
       if (!data.success) return;
-
       dispatch(setDashboardData(data.worker));
       dispatch(setIssues(data.issues || []));
     } catch (error) {
@@ -57,20 +51,16 @@ export const WorkerDashboard = () => {
       setLoading(false);
     }
   };
-
   useEffect(() => {
     fetchData();
   }, [dispatch]);
-
   const summary = useMemo(() => getWorkerTaskSummary(issues), [issues]);
   const workerRating = useMemo(() => getAverageIssueRating(issues), [issues]);
   const statusSplitData = useMemo(() => getStatusSplitData(issues), [issues]);
   const recentQueue = useMemo(() => getRecentIssues(issues, 4), [issues]);
-
   return (
     <>
       <LeaveApplyForm isOpen={showLeaveModal} onClose={() => setShowLeaveModal(false)} />
-
       <ManagerPageShell
         eyebrow="Worker Desk"
         title="Track work progress and performance in one unified dashboard."
@@ -99,7 +89,6 @@ export const WorkerDashboard = () => {
             <StatCard label="Completed" value={summary.completed} icon={<CircleCheck size={22} />} iconColor="var(--success-500)" iconBg="var(--success-soft)" />
           </div>
         </ManagerSection>
-
         <ManagerSection
           eyebrow="Insights"
           title="Performance analytics"
@@ -135,7 +124,6 @@ export const WorkerDashboard = () => {
             />
           )}
         </ManagerSection>
-
         <div className="manager-ui-two-column">
           <ManagerSection
             eyebrow="Queue"
@@ -161,7 +149,6 @@ export const WorkerDashboard = () => {
               </ManagerRecordGrid>
             )}
           </ManagerSection>
-
           <ManagerSection
             eyebrow="Score"
             title="Worker performance score"
@@ -193,5 +180,3 @@ export const WorkerDashboard = () => {
     </>
   );
 };
-
-

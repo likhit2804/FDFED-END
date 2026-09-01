@@ -1,13 +1,11 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Building2, User } from "lucide-react";
 import { toast } from "react-toastify";
-
 import { Loader } from "../Loader";
 import { PasswordChangeForm, ProfileHeader } from "../shared";
 import { ProfileEditPanels } from "../shared/nonAdmin/ProfileEditPanels";
 import { getInitials } from "../shared/nonAdmin/profileUtils";
 import { ManagerPageShell, ManagerSection } from "../shared/roleUI";
-
 const mapSecurityProfile = (security = {}) => ({
   name: security.name || "",
   email: security.email || "",
@@ -16,7 +14,6 @@ const mapSecurityProfile = (security = {}) => ({
   communityName: security.community?.communityName || "",
   image: security.image || "",
 });
-
 export const SecurityProfile = () => {
   const [formData, setFormData] = useState({
     name: "",
@@ -28,7 +25,6 @@ export const SecurityProfile = () => {
   });
   const [isPassword, setIsPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-
   useEffect(() => {
     const loadProfile = async () => {
       try {
@@ -47,15 +43,12 @@ export const SecurityProfile = () => {
         setIsLoading(false);
       }
     };
-
     loadProfile();
   }, []);
-
   const handleChange = (event) => {
     const { id, name, value } = event.target;
     setFormData((previous) => ({ ...previous, [id || name]: value }));
   };
-
   const handleSaveProfile = async () => {
     try {
       const response = await fetch("/security/profile", {
@@ -80,13 +73,11 @@ export const SecurityProfile = () => {
       toast.error("Error updating profile");
     }
   };
-
   const handlePasswordSubmit = async ({ cp, np, cnp }) => {
     if (np !== cnp) {
       toast.error("Passwords do not match");
       return;
     }
-
     try {
       const response = await fetch("/security/change-password", {
         method: "POST",
@@ -105,7 +96,6 @@ export const SecurityProfile = () => {
       toast.error("Something went wrong while updating password");
     }
   };
-
   if (isLoading) {
     return (
       <ManagerPageShell
@@ -119,7 +109,6 @@ export const SecurityProfile = () => {
       </ManagerPageShell>
     );
   }
-
   return (
     <ManagerPageShell
       eyebrow="Security Desk"
@@ -141,7 +130,6 @@ export const SecurityProfile = () => {
             actionLabel={isPassword ? "Edit Profile" : "Change Password"}
             onAction={() => setIsPassword((previous) => !previous)}
           />
-
           {isPassword ? (
             <div className="ue-profile-block">
               <PasswordChangeForm onSubmit={handlePasswordSubmit} />

@@ -1,4 +1,3 @@
-import React from 'react';
 
 /**
  * Button – user-themed button
@@ -25,13 +24,11 @@ const VARIANTS = {
     ghost: { bg: 'transparent', color: '#6b7280', border: 'none', hover: '#f3f4f6' },
     outline: { bg: 'transparent', color: '#2563eb', border: '1px solid #2563eb', hover: '#eff6ff' },
 };
-
 const SIZES = {
     sm: { padding: '6px 14px', fontSize: 13, height: 34 },
     md: { padding: '9px 18px', fontSize: 14, height: 40 },
     lg: { padding: '11px 24px', fontSize: 15, height: 46 },
 };
-
 const Button = ({
     children,
     variant = 'primary',
@@ -48,7 +45,6 @@ const Button = ({
     const v = VARIANTS[variant] || VARIANTS.primary;
     const s = SIZES[size] || SIZES.md;
     const isDisabled = disabled || loading;
-
     return (
         <button
             type={type}
@@ -92,5 +88,4 @@ const Button = ({
         </button>
     );
 };
-
 export default Button;

@@ -1,8 +1,14 @@
-import React from 'react';
-import { Eye, CheckCircle2, XCircle, Clock, CreditCard, Inbox } from 'lucide-react';
+
+import {
+  Eye,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  CreditCard,
+  Inbox
+} from "lucide-react";
 import Status from './Status';
 import styles from './Applications.module.css';
-
 export default function ApplicationsTable({ applications, onViewDetails, onApprove, onReject, actionLoading }) {
   const getStatusIcon = (status) => {
     switch (status) {
@@ -18,7 +24,6 @@ export default function ApplicationsTable({ applications, onViewDetails, onAppro
         return <Clock size={16} color="#9ca3af" />;
     }
   };
-
   if (applications.length === 0) {
     return (
       <div className={styles.emptyState}>
@@ -28,7 +33,6 @@ export default function ApplicationsTable({ applications, onViewDetails, onAppro
       </div>
     );
   }
-
   return (
     <div className={styles.tableContainer}>
       <table className={styles.table}>
@@ -73,7 +77,6 @@ export default function ApplicationsTable({ applications, onViewDetails, onAppro
                   >
                     <Eye size={16} />
                   </button>
-
                   {app.status === 'PENDING' && (
                     <>
                       <button

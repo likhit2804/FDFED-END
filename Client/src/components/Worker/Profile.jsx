@@ -1,13 +1,11 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Briefcase, User } from "lucide-react";
 import { toast } from "react-toastify";
-
 import { Loader } from "../Loader";
 import { PasswordChangeForm, ProfileHeader } from "../shared";
 import { ProfileEditPanels } from "../shared/nonAdmin/ProfileEditPanels";
 import { getInitials } from "../shared/nonAdmin/profileUtils";
 import { ManagerPageShell, ManagerSection } from "../shared/roleUI";
-
 const mapWorkerProfile = (worker = {}) => ({
   name: worker.name || "",
   email: worker.email || "",
@@ -17,7 +15,6 @@ const mapWorkerProfile = (worker = {}) => ({
   shift: worker.shift || "",
   image: worker.image || "",
 });
-
 export const WorkerProfile = () => {
   const [formData, setFormData] = useState({
     name: "",
@@ -31,7 +28,6 @@ export const WorkerProfile = () => {
   const [imageFile, setImageFile] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isPassword, setIsPassword] = useState(false);
-
   useEffect(() => {
     const loadProfile = async () => {
       try {
@@ -50,15 +46,12 @@ export const WorkerProfile = () => {
         setIsLoading(false);
       }
     };
-
     loadProfile();
   }, []);
-
   const handleChange = (event) => {
     const { id, name, value } = event.target;
     setFormData((previous) => ({ ...previous, [id || name]: value }));
   };
-
   const handleImageChange = (file) => {
     if (!file) return;
     setImageFile(file);
@@ -66,7 +59,6 @@ export const WorkerProfile = () => {
     reader.onload = () => setFormData((previous) => ({ ...previous, image: reader.result }));
     reader.readAsDataURL(file);
   };
-
   const handleSubmit = async () => {
     try {
       const body = new FormData();
@@ -75,19 +67,16 @@ export const WorkerProfile = () => {
       body.append("contact", formData.contact);
       body.append("address", formData.address);
       if (imageFile) body.append("image", imageFile);
-
       const response = await fetch("/worker/profile", {
         method: "POST",
         credentials: "include",
         body,
       });
       const data = await response.json();
-
       if (!data.success) {
         toast.error(data.message || "Failed to update profile");
         return;
       }
-
       toast.success(data.message || "Profile updated successfully");
       if (data.worker) {
         setFormData((previous) => ({ ...previous, ...mapWorkerProfile(data.worker) }));
@@ -97,13 +86,11 @@ export const WorkerProfile = () => {
       toast.error("Something went wrong while updating profile");
     }
   };
-
   const handlePasswordSubmit = async ({ cp, np, cnp }) => {
     if (np !== cnp) {
       toast.error("Passwords do not match");
       return;
     }
-
     try {
       const response = await fetch("/worker/change-password", {
         method: "POST",
@@ -118,7 +105,6 @@ export const WorkerProfile = () => {
       toast.error("Something went wrong while changing password");
     }
   };
-
   if (isLoading) {
     return (
       <ManagerPageShell
@@ -132,7 +118,6 @@ export const WorkerProfile = () => {
       </ManagerPageShell>
     );
   }
-
   return (
     <ManagerPageShell
       eyebrow="Worker Desk"
@@ -155,7 +140,6 @@ export const WorkerProfile = () => {
             actionLabel={isPassword ? "Edit Profile" : "Change Password"}
             onAction={() => setIsPassword((previous) => !previous)}
           />
-
           {isPassword ? (
             <div className="ue-profile-block">
               <PasswordChangeForm onSubmit={handlePasswordSubmit} />

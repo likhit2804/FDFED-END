@@ -1,17 +1,27 @@
-import { useState, useEffect, useRef } from 'react';
-import { X, Mail, Phone, Users, Wrench, Shield, Info, MapPin, Calendar, Building2, Image as ImageIcon, Key } from 'lucide-react';
+import { useState, useEffect, useRef } from "react";
+import {
+  X,
+  Mail,
+  Phone,
+  Users,
+  Wrench,
+  Shield,
+  Info,
+  MapPin,
+  Calendar,
+  Building2,
+  Image as ImageIcon,
+  Key
+} from "lucide-react";
 import adminApiClient from '../../services/adminApiClient';
 import styles from './CommunityDetailModal.module.css';
-
 const CommunityDetailModal = ({ isOpen, onClose, communityId, communityName }) => {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(false);
     const [activeTab, setActiveTab] = useState('overview');
     const modalRef = useRef(null);
-
     useEffect(() => {
         if (!isOpen || !communityId) return;
-
         const fetchDetail = async () => {
             try {
                 setLoading(true);
@@ -25,11 +35,9 @@ const CommunityDetailModal = ({ isOpen, onClose, communityId, communityName }) =
                 setLoading(false);
             }
         };
-
         fetchDetail();
         setActiveTab('overview');
     }, [isOpen, communityId]);
-
     useEffect(() => {
         if (!isOpen) return;
         const handleKeyDown = (e) => {
@@ -41,9 +49,7 @@ const CommunityDetailModal = ({ isOpen, onClose, communityId, communityName }) =
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [isOpen, onClose]);
-
     if (!isOpen) return null;
-
     const getInitials = (name) => {
         return name
             .split(' ')
@@ -52,7 +58,6 @@ const CommunityDetailModal = ({ isOpen, onClose, communityId, communityName }) =
             .toUpperCase()
             .slice(0, 2);
     };
-
     const getStatusClass = (status) => {
         switch (status?.toLowerCase()) {
             case 'active': return styles.statusActive;
@@ -61,7 +66,6 @@ const CommunityDetailModal = ({ isOpen, onClose, communityId, communityName }) =
             default: return styles.statusPending;
         }
     };
-
     const formatDate = (dateStr) => {
         if (!dateStr) return 'N/A';
         return new Date(dateStr).toLocaleDateString('en-IN', {
@@ -70,14 +74,12 @@ const CommunityDetailModal = ({ isOpen, onClose, communityId, communityName }) =
             year: 'numeric',
         });
     };
-
     const tabs = [
         { key: 'overview', label: 'Overview', icon: Info },
         { key: 'residents', label: 'Residents', icon: Users },
         { key: 'workers', label: 'Workers', icon: Wrench },
         { key: 'securities', label: 'Security', icon: Shield },
     ];
-
     const renderPersonCard = (person, extraInfo) => (
         <div key={person._id} className={styles.personCard}>
             <div className={styles.personAvatar}>
@@ -105,12 +107,10 @@ const CommunityDetailModal = ({ isOpen, onClose, communityId, communityName }) =
             </div>
         </div>
     );
-
     const renderOverview = () => {
         if (!data) return null;
         const c = data.community;
         const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
-
         return (
             <div className={styles.overviewSection}>
                 {/* Community Photos */}
@@ -143,7 +143,6 @@ const CommunityDetailModal = ({ isOpen, onClose, communityId, communityName }) =
                         </div>
                     </div>
                 )}
-
                 {/* Details Grid */}
                 <div className={styles.overviewBlock}>
                     <h4 className={styles.overviewTitle}>
@@ -169,7 +168,6 @@ const CommunityDetailModal = ({ isOpen, onClose, communityId, communityName }) =
                         </div>
                     </div>
                 </div>
-
                 {/* Description */}
                 {c.description && (
                     <div className={styles.overviewBlock}>
@@ -177,7 +175,6 @@ const CommunityDetailModal = ({ isOpen, onClose, communityId, communityName }) =
                         <p className={styles.descriptionText}>{c.description}</p>
                     </div>
                 )}
-
                 {/* Structure */}
                 {c.hasStructure && (
                     <div className={styles.overviewBlock}>
@@ -197,7 +194,6 @@ const CommunityDetailModal = ({ isOpen, onClose, communityId, communityName }) =
                         </div>
                     </div>
                 )}
-
                 {/* Subscription */}
                 <div className={styles.overviewBlock}>
                     <h4 className={styles.overviewTitle}>Subscription</h4>
@@ -232,7 +228,6 @@ const CommunityDetailModal = ({ isOpen, onClose, communityId, communityName }) =
                         )}
                     </div>
                 </div>
-
                 {/* Manager */}
                 {data.manager && (
                     <div className={styles.overviewBlock}>
@@ -243,12 +238,9 @@ const CommunityDetailModal = ({ isOpen, onClose, communityId, communityName }) =
             </div>
         );
     };
-
     const renderTabContent = () => {
         if (!data) return null;
-
         if (activeTab === 'overview') return renderOverview();
-
         const lists = {
             residents: {
                 items: data.residents,
@@ -263,19 +255,16 @@ const CommunityDetailModal = ({ isOpen, onClose, communityId, communityName }) =
                 getExtra: (s) => `Shift: ${s.shift} · ${s.contact}`,
             },
         };
-
         const current = lists[activeTab];
         if (!current || current.items.length === 0) {
             return <div className={styles.emptyState}>No {activeTab} found in this community.</div>;
         }
-
         return (
             <div className={styles.personList}>
                 {current.items.map(person => renderPersonCard(person, current.getExtra(person)))}
             </div>
         );
     };
-
     return (
         <div className={styles.overlay} onClick={onClose}>
             <div ref={modalRef} className={styles.modal} onClick={(e) => e.stopPropagation()}>
@@ -298,7 +287,6 @@ const CommunityDetailModal = ({ isOpen, onClose, communityId, communityName }) =
                         <X size={18} />
                     </button>
                 </div>
-
                 {loading ? (
                     <div className={styles.loading}>
                         <div className={styles.spinner} />
@@ -306,8 +294,6 @@ const CommunityDetailModal = ({ isOpen, onClose, communityId, communityName }) =
                     </div>
                 ) : data ? (
                     <>
-
-
                         {/* Tabs */}
                         <div className={styles.tabs}>
                             {tabs.map(tab => {
@@ -325,14 +311,12 @@ const CommunityDetailModal = ({ isOpen, onClose, communityId, communityName }) =
                                 );
                             })}
                         </div>
-
                         {/* Content */}
                         <div className={styles.content}>
                             {renderTabContent()}
                         </div>
                     </>
                 ) : null}
-
                 {/* Footer */}
                 <div className={styles.footer}>
                     <button onClick={onClose}>Close</button>
@@ -341,5 +325,4 @@ const CommunityDetailModal = ({ isOpen, onClose, communityId, communityName }) =
         </div>
     );
 };
-
 export default CommunityDetailModal;

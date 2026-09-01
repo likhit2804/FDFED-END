@@ -1,16 +1,13 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
-import "../../assets/css/Resident/PaymentPopUp.css";
 import { ConfirmBooking, optimisticAddBooking } from "../../slices/CommonSpaceSlice";
 import { useDispatch } from "react-redux";
 import { toast } from "react-toastify";
-
 const PAYMENT_POLICY_CONTENT = `
 1. All payments are processed through a secure third-party gateway.
 3. By submitting payment, you authorize the charge to your selected method.
 4. Payment status update may take up to 30 minutes to reflect in the app.
 `;
-
 const CANCELLATION_POLICY_CONTENT = `
 1. Slot-Based Amenities: Refunds are based on cancellation time and credited to your Flat Advance Account, not your bank.
    - 48+ Hours before Start: 100% Refund.
@@ -20,7 +17,6 @@ const CANCELLATION_POLICY_CONTENT = `
 2. Subscription-Based Amenities (Gym/Pool): Subscriptions are non-refundable after activation. Cancellation only stops auto-renewal.
 3. Security deposits are 100% refundable upon cancellation/completion, provided no damage is incurred.
 `;
-
 const PaymentPopUp = ({ setonClose, paymentDetails, newBooking, clearBookingFormState }) => {
   const dispatch = useDispatch();
   const { register, handleSubmit, watch, reset, formState: { errors } } = useForm({
@@ -34,11 +30,9 @@ const PaymentPopUp = ({ setonClose, paymentDetails, newBooking, clearBookingForm
       agree: false,
     },
   });
-
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [next, setNext] = useState(false);
   const paymentMethod = watch("paymentMethod");
-
   useEffect(() => {
     if (paymentDetails && Object.keys(paymentDetails).length > 0) {
       reset({
@@ -52,7 +46,6 @@ const PaymentPopUp = ({ setonClose, paymentDetails, newBooking, clearBookingForm
       });
     }
   }, [paymentDetails, reset]);
-
   const closepopUp = () => {
     if (window.confirm("Do you want to abort your booking?")) {
       setonClose(false);
@@ -60,21 +53,17 @@ const PaymentPopUp = ({ setonClose, paymentDetails, newBooking, clearBookingForm
       clearBookingFormState();
     }
   };
-
   const onSubmit = async (data) => {
     if (!data.agree) {
       toast.error("Please agree to the payment and cancellation policy.");
       return;
     }
-
     try {
       setIsSubmitting(true);
-
       const requestId = new Date().getTime();
       dispatch(optimisticAddBooking({ bookingData: newBooking, requestId }));
       toast.success("Booking approved");
       dispatch(ConfirmBooking({ data, newBooking, requestId }));
-
       setonClose(false);
       clearBookingFormState();
     } catch (error) {
@@ -83,7 +72,6 @@ const PaymentPopUp = ({ setonClose, paymentDetails, newBooking, clearBookingForm
       setIsSubmitting(false);
     }
   };
-
   return (
     <div id="paymentFormPopup" className="popup">
       <div className="popup-content">
@@ -91,25 +79,20 @@ const PaymentPopUp = ({ setonClose, paymentDetails, newBooking, clearBookingForm
           &times;
         </span>
         <h3 className="form-title">Make Payment</h3>
-
         <form id="paymentForm" onSubmit={handleSubmit(onSubmit)}>
           {next ? (
             <div className="px-3 py-2">
               <div className="fw-4">
                 <i onClick={() => setNext(false)} className="bi bi-arrow-left" style={{ cursor: "pointer" }}></i>
               </div>
-
               <div className="policy-box px-4 mt-2">
-
                 <div className="policy-content">
                   <h3 className="m-0">Payment Policy</h3>
                   <pre className="policy-text">{PAYMENT_POLICY_CONTENT}</pre>
-
                   <h3 className="m-0">Cancellation Policy</h3>
                   <pre className="policy-text">{CANCELLATION_POLICY_CONTENT}</pre>
                 </div>
               </div>
-
               <div className="form-group-checkbox mt-3">
                 <input
                   className="m-0"
@@ -132,7 +115,6 @@ const PaymentPopUp = ({ setonClose, paymentDetails, newBooking, clearBookingForm
                 <label htmlFor="bill">Bill:</label>
                 <input type="text" id="bill" {...register("bill")} readOnly />
               </div>
-
               {/* PAYMENT METHOD */}
               <div className="form-group">
                 <label htmlFor="paymentMethod">Payment Method:</label>
@@ -145,7 +127,6 @@ const PaymentPopUp = ({ setonClose, paymentDetails, newBooking, clearBookingForm
                 </select>
                 {errors.paymentMethod && <p className="error">Select a payment method</p>}
               </div>
-
               {/* CARD DETAILS */}
               {(paymentMethod === "Credit" || paymentMethod === "Debit") && (
                 <div id="cardFields">
@@ -163,7 +144,6 @@ const PaymentPopUp = ({ setonClose, paymentDetails, newBooking, clearBookingForm
                     />
                     {errors.cardNumber && <p className="error">Enter a valid card number</p>}
                   </div>
-
                   <div className="row">
                     <div className="col form-group">
                       <label htmlFor="expiryDate">Expiry Date:</label>
@@ -193,13 +173,11 @@ const PaymentPopUp = ({ setonClose, paymentDetails, newBooking, clearBookingForm
                   </div>
                 </div>
               )}
-
               {/* AMOUNT */}
               <div className="form-group">
                 <label htmlFor="amount">Amount:</label>
                 <input type="text" id="amount" {...register("amount")} readOnly />
               </div>
-
               <div className="form-group-checkbox mb-2">
                 <input
                   className="m-0"
@@ -213,7 +191,6 @@ const PaymentPopUp = ({ setonClose, paymentDetails, newBooking, clearBookingForm
               </div>
             </>
           )}
-
           <button type="submit" className="btn btn-success" disabled={isSubmitting}>
             <i className="bi bi-credit-card me-2"></i>{" "}
             {isSubmitting ? "Processing..." : "Pay Now"}
@@ -223,5 +200,4 @@ const PaymentPopUp = ({ setonClose, paymentDetails, newBooking, clearBookingForm
     </div>
   );
 };
-
 export default PaymentPopUp;

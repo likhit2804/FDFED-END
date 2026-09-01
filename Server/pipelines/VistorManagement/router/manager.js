@@ -2,14 +2,8 @@ import express from "express";
 import mongoose from "mongoose";
 import visitor from "../../../models/visitors.js";
 import { generateVisitorID } from "../../../utils/idGenerator.js";
-import {
-    getVisitorManagementPage,
-    getVisitorsApi,
-    updateVisitorStatus,
-} from "../controllers/manager.js";
-
+import { getVisitorManagementPage, getVisitorsApi, updateVisitorStatus } from "../controllers/manager.js";
 const visitorManagementSecurityRouter = express.Router();
-
 // POST /security/addVisitor (moved from securityRouter)
 visitorManagementSecurityRouter.post("/addVisitor", async (req, res) => {
     const { visitorType, fullName, contact, email, vehicleNo } = req.body;
@@ -32,14 +26,10 @@ visitorManagementSecurityRouter.post("/addVisitor", async (req, res) => {
         return res.status(500).json({ success: false, message: "Server error" });
     }
 });
-
 // Visitor management page (initial load)
 visitorManagementSecurityRouter.get("/visitorManagement", getVisitorManagementPage);
-
 // API: auto-refresh visitor list + stats
 visitorManagementSecurityRouter.get("/visitorManagement/api/visitors", getVisitorsApi);
-
 // Check-in / check-out action
 visitorManagementSecurityRouter.get("/visitorManagement/:action/:id", updateVisitorStatus);
-
 export default visitorManagementSecurityRouter;

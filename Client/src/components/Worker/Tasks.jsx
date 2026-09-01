@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { toast, ToastContainer } from "react-toastify";
 import { AnimatePresence } from "framer-motion";
 import axios from "axios";
@@ -7,7 +7,7 @@ import { ClipboardList, Play, CheckCircle, AlertTriangle } from "lucide-react";
 import { Loader } from "../Loader";
 import { StatCard, SearchBar, Dropdown, EmptyState } from "../shared";
 import { ManagerPageShell, ManagerSection } from "../shared/roleUI";
-import { STATUS_ASSIGNED, STATUS_IN_PROGRESS, STATUS_RESOLVED } from "./Tasks/taskUtils";
+import { STATUS_IN_PROGRESS, STATUS_RESOLVED } from "./Tasks/taskUtils";
 import { TaskCard } from "./Tasks/TaskCard";
 import { TaskDetailsModal } from "./Tasks/TaskDetailsModal";
 import {
@@ -16,9 +16,8 @@ import {
   sortTasks,
   TASK_PRIORITY_FILTER_OPTIONS,
   TASK_SORT_OPTIONS,
-  TASK_STATUS_FILTER_OPTIONS,
+  TASK_STATUS_FILTER_OPTIONS
 } from "../shared/nonAdmin/taskInsights";
-
 export const Tasks = () => {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -27,13 +26,11 @@ export const Tasks = () => {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [estimatedCost, setEstimatedCost] = useState("");
   const socket = useSocket("");
-
   const [statusFilter, setStatusFilter] = useState("All");
   const [priorityFilter, setPriorityFilter] = useState("All");
   const [sortBy, setSortBy] = useState("priority");
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState("grid");
-
   // Data fetching
   const fetchTasks = async (showSpinner = true) => {
     if (showSpinner) setLoading(true);
@@ -44,7 +41,6 @@ export const Tasks = () => {
     } catch (err) { toast.error(err.response?.data?.message || err.message || "Error loading tasks"); }
     if (showSpinner) setLoading(false);
   };
-
   useEffect(() => { fetchTasks(true); }, []);
   useEffect(() => {
     if (!socket) return;
@@ -55,7 +51,6 @@ export const Tasks = () => {
     socket.on("issue:updated", refresh);
     return () => socket.off("issue:updated", refresh);
   }, [socket]);
-
   // Filter and sort
   const filteredTasks = useMemo(
     () =>
@@ -69,13 +64,10 @@ export const Tasks = () => {
       ),
     [tasks, statusFilter, priorityFilter, searchTerm, sortBy],
   );
-
   const taskStats = useMemo(() => getWorkerTaskSummary(tasks), [tasks]);
-
   // Actions
   const openTaskModal = (task) => { setSelectedTask(task); setEstimatedCost(task?.estimatedCost ?? ""); setIsDetailModalOpen(true); };
   const closeTaskModal = () => { setIsDetailModalOpen(false); setSelectedTask(null); setEstimatedCost(""); };
-
   const updateTaskStatus = async (taskId, newStatus, costValue = estimatedCost) => {
     setActionLoading(true);
     try {
@@ -84,11 +76,9 @@ export const Tasks = () => {
         task?.categoryType === "Community" ||
         task?.category === "Waste Management" ||
         task?.category === "Security";
-
       const endpoint = newStatus === STATUS_IN_PROGRESS ? "start" : "resolve";
       const finalCost = isFree ? 0 : Math.max(0, Number(costValue) || 0);
       const payload = newStatus === STATUS_RESOLVED ? { estimatedCost: finalCost } : null;
-
       const res = await axios.post(`/worker/issue/${endpoint}/${taskId}`, payload || undefined);
       const data = res.data;
       if (!data.success) throw new Error(data.message);
@@ -97,7 +87,6 @@ export const Tasks = () => {
     } catch (err) { toast.error(err.response?.data?.message || err.message || "Failed to update task"); }
     setActionLoading(false);
   };
-
   const handleMisassigned = async (id) => {
     setActionLoading(true);
     try {
@@ -109,7 +98,6 @@ export const Tasks = () => {
     } catch (err) { toast.error(err.response?.data?.message || err.message || "Failed to flag as misassigned"); }
     setActionLoading(false);
   };
-
   return (
     <>
       <ToastContainer position="top-center" autoClose={1500} />
@@ -130,7 +118,6 @@ export const Tasks = () => {
             <StatCard label="In Progress" value={taskStats.inProgress} icon={<CheckCircle size={22} />} iconColor="var(--success-500)" iconBg="var(--success-soft)" />
             <StatCard label="Urgent" value={taskStats.urgent} icon={<AlertTriangle size={22} />} iconColor="var(--danger-500)" iconBg="var(--danger-soft)" />
           </div>
-
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginBottom: 12 }}>
             <div style={{ flex: 1, minWidth: 200 }}>
               <SearchBar placeholder="Search tasks by title, location, or category..." value={searchTerm} onChange={setSearchTerm} />
@@ -143,7 +130,6 @@ export const Tasks = () => {
               <button onClick={() => setViewMode("list")} style={{ padding: "6px 12px", border: "none", borderRadius: 6, background: viewMode === "list" ? "#0b1220" : "transparent", color: viewMode === "list" ? "#fff" : "#374151", cursor: "pointer" }}>List</button>
             </div>
           </div>
-
           {loading ? (
             <div className="manager-ui-empty"><Loader label="Loading your tasks..." /></div>
           ) : filteredTasks.length === 0 ? (
@@ -158,11 +144,8 @@ export const Tasks = () => {
             </div>
           )}
         </ManagerSection>
-
         <TaskDetailsModal task={tasks?.find((t) => t._id === selectedTask?._id) || selectedTask} isOpen={isDetailModalOpen} onClose={closeTaskModal} estimatedCost={estimatedCost} setEstimatedCost={setEstimatedCost} actionLoading={actionLoading} onUpdateStatus={updateTaskStatus} onMisassigned={handleMisassigned} />
       </ManagerPageShell>
     </>
   );
 };
-
-

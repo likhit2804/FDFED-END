@@ -1,11 +1,9 @@
-import React, { useState } from 'react';
-import { X, AlertTriangle } from 'lucide-react';
+import { useState } from "react";
+import { X, AlertTriangle } from "lucide-react";
 import styles from './Applications.module.css';
-
 export default function RejectApplicationModal({ application, onConfirm, onCancel, isLoading }) {
   const [reason, setReason] = useState('');
   const [error, setError] = useState('');
-
   const handleSubmit = () => {
     if (!reason.trim()) {
       setError('Please provide a reason for rejection');
@@ -17,13 +15,11 @@ export default function RejectApplicationModal({ application, onConfirm, onCance
     }
     onConfirm(reason);
   };
-
   const handleBackdropClick = (e) => {
     if (e.target === e.currentTarget && !isLoading) {
       onCancel();
     }
   };
-
   return (
     <div className={styles.modalBackdrop} onClick={handleBackdropClick}>
       <div className={`${styles.modal} ${styles.rejectModal}`}>
@@ -41,13 +37,11 @@ export default function RejectApplicationModal({ application, onConfirm, onCance
             <X size={20} />
           </button>
         </div>
-
         <div className={styles.modalBody}>
           <p className={styles.rejectWarning}>
             You are about to reject the application from <strong>{application?.name}</strong>. 
             This action requires a reason and will notify the applicant.
           </p>
-
           <div className={styles.formGroup}>
             <label htmlFor="rejectionReason">
               Reason for Rejection <span className={styles.required}>*</span>
@@ -70,7 +64,6 @@ export default function RejectApplicationModal({ application, onConfirm, onCance
             </div>
           </div>
         </div>
-
         <div className={styles.modalFooter}>
           <button
             className={`${styles.btn} ${styles.btnSecondary}`}

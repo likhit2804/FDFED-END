@@ -1,8 +1,7 @@
-import React from "react";
+
 import { Loader } from "../Loader";
 import Card from "./Card";
 import StatusBadge from "./StatusBadge";
-
 /**
  * DataTable - generic sortable table for user pages
  *
@@ -95,5 +94,4 @@ const DataTable = ({
         </div>
     </Card>
 );
-
 export default DataTable;

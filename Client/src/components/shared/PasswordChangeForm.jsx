@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
-import { Eye, EyeOff } from 'lucide-react';
-
+import { useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 /**
  * PasswordChangeForm – shared across Manager, Resident, Worker
  *
@@ -12,11 +11,9 @@ import { Eye, EyeOff } from 'lucide-react';
  */
 const PasswordChangeForm = ({ onSubmit, message = '', loading = false, fieldMap = {} }) => {
     const fields = { cp: 'cp', np: 'np', cnp: 'cnp', ...fieldMap };
-
     const [data, setData] = useState({ [fields.cp]: '', [fields.np]: '', [fields.cnp]: '' });
     const [validation, setValidation] = useState({ minLength: false, caseMix: false, numberSpecial: false });
     const [show, setShow] = useState({ cp: false, np: false, cnp: false });
-
     const handleChange = (e) => {
         const { name, value } = e.target;
         setData((prev) => ({ ...prev, [name]: value }));
@@ -28,16 +25,12 @@ const PasswordChangeForm = ({ onSubmit, message = '', loading = false, fieldMap 
             });
         }
     };
-
     const toggleShow = (key) => setShow((prev) => ({ ...prev, [key]: !prev[key] }));
-
     const handleSubmit = (e) => {
         e.preventDefault();
         if (onSubmit) onSubmit({ ...data });
     };
-
     const isSuccess = message.toLowerCase().includes('success');
-
     const PasswordField = ({ label, fieldKey }) => (
         <div className="mb-3">
             <label className="form-label fw-semibold" style={{ fontSize: '0.875rem' }}>{label}</label>
@@ -62,7 +55,6 @@ const PasswordChangeForm = ({ onSubmit, message = '', loading = false, fieldMap 
             </div>
         </div>
     );
-
     return (
         <form className="ue-pwd-form" onSubmit={handleSubmit}>
             {message && (
@@ -70,7 +62,6 @@ const PasswordChangeForm = ({ onSubmit, message = '', loading = false, fieldMap 
                     {message}
                 </div>
             )}
-
             <PasswordField label="Current Password" fieldKey="cp" />
             <div className="d-flex gap-3 flex-wrap">
                 <div style={{ flex: 1, minWidth: 200 }}>
@@ -80,7 +71,6 @@ const PasswordChangeForm = ({ onSubmit, message = '', loading = false, fieldMap 
                     <PasswordField label="Confirm Password" fieldKey="cnp" />
                 </div>
             </div>
-
             {/* Live validation checklist */}
             <ul className="ue-pwd-requirements">
                 <li className={validation.minLength ? 'valid' : 'invalid'}>
@@ -96,7 +86,6 @@ const PasswordChangeForm = ({ onSubmit, message = '', loading = false, fieldMap 
                     One number or special character
                 </li>
             </ul>
-
             <div className="d-flex justify-content-end">
                 <button type="submit" className="ue-btn ue-btn--primary" disabled={loading}>
                     <i className="bi bi-key me-1" />
@@ -106,5 +95,4 @@ const PasswordChangeForm = ({ onSubmit, message = '', loading = false, fieldMap 
         </form>
     );
 };
-
 export default PasswordChangeForm;

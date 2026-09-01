@@ -1,4 +1,4 @@
-import React from "react";
+
 import {
   ResponsiveContainer,
   LineChart,
@@ -9,9 +9,8 @@ import {
   Tooltip,
   Legend,
   AreaChart,
-  Area,
+  Area
 } from "recharts";
-
 export default function GraphLine({
   data,
   xKey = "x",
@@ -39,7 +38,6 @@ export default function GraphLine({
       marginBottom: "12px",
     },
   };
-
   return (
     <div style={styles.container}>
       <h4 style={styles.title}>{title}</h4>

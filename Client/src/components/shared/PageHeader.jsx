@@ -1,4 +1,3 @@
-import React from 'react';
 
 /**
  * PageHeader – shared page title + subtitle + optional action button slot
@@ -17,5 +16,4 @@ const PageHeader = ({ title, subtitle, actions }) => (
         {actions && <div className="d-flex gap-2 flex-wrap">{actions}</div>}
     </div>
 );
-
 export default PageHeader;

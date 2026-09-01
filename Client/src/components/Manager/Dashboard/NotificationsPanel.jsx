@@ -1,19 +1,15 @@
-import React, { memo } from "react";
+import { memo } from "react";
 import { Bell, Calendar, AlertTriangle, Loader2 } from "lucide-react";
-
 const NOTIFICATION_STYLES = {
     CommonSpaces: { icon: Calendar, colorClass: "text-primary", bg: "var(--info-soft)" },
     Issues: { icon: AlertTriangle, colorClass: "text-warning", bg: "var(--warning-soft)" },
     default: { icon: Bell, colorClass: "text-info", bg: "#e0f2fe" },
 };
 const NOTIFICATION_LIMIT = 5;
-
 const getStyle = (type) => NOTIFICATION_STYLES[type] || NOTIFICATION_STYLES.default;
-
 function NotificationsPanel({ data, loading, bookings = [] }) {
     const notifications = data?.notifications || [];
     const visibleNotifications = notifications.slice(0, NOTIFICATION_LIMIT);
-
     return (
         <aside className="h-100">
             <div className="card shadow-lg border-0 h-100" style={{ borderRadius: "12px", overflow: "hidden" }}>
@@ -64,6 +60,4 @@ function NotificationsPanel({ data, loading, bookings = [] }) {
         </aside>
     );
 }
-
 export const MemoizedNotificationsPanel = memo(NotificationsPanel);
-

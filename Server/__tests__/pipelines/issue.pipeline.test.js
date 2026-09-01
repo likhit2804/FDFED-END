@@ -1,4 +1,4 @@
-import { connect, disconnect, clearDatabase } from '../setup.js';
+import { connect, disconnect, clearDatabase } from "../setup.js";
 import mongoose from 'mongoose';
 import Issue from '../../models/issues.js';
 import Resident from '../../models/resident.js';
@@ -13,25 +13,14 @@ import {
   confirmIssue,
   rejectIssueResolution,
   deleteIssue,
-  getEmergencyContacts,
-} from '../../pipelines/issue/controllers/resident.js';
+  getEmergencyContacts
+} from "../../pipelines/issue/controllers/resident.js";
 
-import {
-  assignIssue,
-  reassignIssue,
-  closeIssueByManager,
-} from '../../pipelines/issue/controllers/manager.js';
+import { assignIssue, reassignIssue, closeIssueByManager } from "../../pipelines/issue/controllers/manager.js";
 
-import {
-  startIssue,
-  resolveIssue,
-  getWorkerTasks,
-} from '../../pipelines/issue/controllers/worker.js';
+import { startIssue, resolveIssue, getWorkerTasks } from "../../pipelines/issue/controllers/worker.js";
 
-import {
-  logPhoneOrIntercomIssue,
-  getCommunityFlatsForSecurity,
-} from '../../pipelines/issue/controllers/security.js';
+import { logPhoneOrIntercomIssue, getCommunityFlatsForSecurity } from "../../pipelines/issue/controllers/security.js";
 
 // Helper to mock express req / res
 function createMockReqRes(reqData = {}) {

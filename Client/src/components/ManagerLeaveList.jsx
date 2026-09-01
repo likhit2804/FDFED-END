@@ -1,8 +1,7 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import { CheckCircle, Clock, FileText, XCircle } from "lucide-react";
-
 import { approveLeave, fetchLeaves, rejectLeave } from "../slices/leaveSlice";
 import { useSocket } from "../hooks/useSocket";
 import { EmptyState, StatCard, StatusBadge, Textarea } from "./shared";
@@ -11,9 +10,8 @@ import {
   ManagerPageShell,
   ManagerRecordCard,
   ManagerRecordGrid,
-  ManagerSection,
+  ManagerSection
 } from "./shared/roleUI";
-
 const formatDate = (value) => {
   if (!value) return "-";
   return new Date(value).toLocaleDateString("en-IN", {
@@ -22,7 +20,6 @@ const formatDate = (value) => {
     year: "numeric",
   });
 };
-
 const formatDateTime = (value) => {
   if (!value) return "-";
   return new Date(value).toLocaleString("en-IN", {
@@ -33,44 +30,37 @@ const formatDateTime = (value) => {
     minute: "2-digit",
   });
 };
-
 export default function ManagerLeaveList() {
   const dispatch = useDispatch();
   const leaves = useSelector((state) => state.leave?.leaves || []);
   const [loading, setLoading] = useState(false);
   const [notes, setNotes] = useState({});
   const [filter, setFilter] = useState("all");
-
   useEffect(() => {
     dispatch(fetchLeaves());
   }, [dispatch]);
-
   // Real-time synchronization when a worker applies for leave
   useSocket("leave:applied", (payload) => {
     console.log("⚡ [ManagerLeaveList] Received leave:applied event:", payload);
     dispatch(fetchLeaves());
     toast.info("A worker has submitted a new leave application.");
   });
-
   const stats = useMemo(() => ({
     total: leaves.length,
     pending: leaves.filter((leave) => leave.status === "pending").length,
     approved: leaves.filter((leave) => leave.status === "approved").length,
     rejected: leaves.filter((leave) => leave.status === "rejected").length,
   }), [leaves]);
-
   const filteredLeaves = useMemo(() => {
     if (filter === "all") return leaves;
     return leaves.filter((leave) => String(leave.status).toLowerCase() === filter);
   }, [leaves, filter]);
-
   const calculateDays = (start, end) => {
     if (!start || !end) return 0;
     const startDate = new Date(start);
     const endDate = new Date(end);
     return Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
   };
-
   const updateLeave = async (mode, id) => {
     setLoading(true);
     try {
@@ -88,7 +78,6 @@ export default function ManagerLeaveList() {
       setLoading(false);
     }
   };
-
   return (
     <ManagerPageShell
       eyebrow="Leaves"
@@ -101,7 +90,6 @@ export default function ManagerLeaveList() {
         <StatCard label="Pending" value={stats.pending} icon={<Clock size={22} />} iconColor="var(--warning-700)" iconBg="var(--warning-soft)" />
         <StatCard label="Approved" value={stats.approved} icon={<CheckCircle size={22} />} iconColor="var(--success-500)" iconBg="var(--success-soft)" />
       </div>
-
       <div className="d-flex align-items-center gap-2 mb-3">
         {["all", "pending", "approved", "rejected"].map((tab) => (
           <button
@@ -125,7 +113,6 @@ export default function ManagerLeaveList() {
           </button>
         ))}
       </div>
-
       <ManagerSection
         eyebrow="Requests"
         title="Leave approvals"
@@ -195,5 +182,3 @@ export default function ManagerLeaveList() {
     </ManagerPageShell>
   );
 }
-
-

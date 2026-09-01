@@ -1,6 +1,6 @@
-import React from "react";
+
 import { EntityCard } from "../../shared";
-import { Clock, ShieldAlert, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Clock, ShieldAlert, AlertTriangle } from "lucide-react";
 
 /**
  * Helper to get SLA and color-coded priority badge

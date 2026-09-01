@@ -1,22 +1,29 @@
-import React, { useState, useEffect } from 'react';
-import { Activity, AlertTriangle, Clock, TrendingUp, Trash2, Plus, Edit3, Lock, RefreshCw, FileText } from 'lucide-react';
+import { useState, useEffect } from "react";
+import {
+  Activity,
+  AlertTriangle,
+  Clock,
+  TrendingUp,
+  Trash2,
+  Plus,
+  Edit3,
+  Lock,
+  RefreshCw,
+  FileText
+} from "lucide-react";
 import adminApiClient from '../../services/adminApiClient.js';     
-
 import styles from './AdminActivityWidget.module.css';
-
 export default function AdminActivityWidget() {
   const [recentActions, setRecentActions] = useState([]);
   const [failedLogins, setFailedLogins] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
   useEffect(() => {
     fetchActivityData();
     // Refresh every 30 seconds
     const interval = setInterval(fetchActivityData, 30000);
     return () => clearInterval(interval);
   }, []);
-
   const fetchActivityData = async () => {
     try {
       setLoading(true);
@@ -24,15 +31,12 @@ export default function AdminActivityWidget() {
         adminApiClient.getAdminActivity({ limit: 5 }),
         adminApiClient.getFailedLogins(24)
       ]);
-
       if (activityRes.success) {
         setRecentActions(activityRes.data || []);
       }
-
       if (failedLoginsRes.success) {
         setFailedLogins(failedLoginsRes.data || []);
       }
-
       setError(null);
     } catch (err) {
       console.error('Error fetching activity data:', err);
@@ -41,7 +45,6 @@ export default function AdminActivityWidget() {
       setLoading(false);
     }
   };
-
   const getActionIcon = (action) => {
     if (action.includes('delete')) return <Trash2 size={15} />;
     if (action.includes('create')) return <Plus size={15} />;
@@ -50,14 +53,12 @@ export default function AdminActivityWidget() {
     if (action.includes('restore')) return <RefreshCw size={15} />;
     return <FileText size={15} />;
   };
-
   const getActionColor = (action) => {
     if (action.includes('delete')) return '#dc2626';
     if (action.includes('create')) return '#16a34a';
     if (action.includes('failed')) return '#f59e0b';
     return '#3b82f6';
   };
-
   const formatTimeAgo = (timestamp) => {
     const seconds = Math.floor((new Date() - new Date(timestamp)) / 1000);
     if (seconds < 60) return `${seconds}s ago`;
@@ -65,7 +66,6 @@ export default function AdminActivityWidget() {
     if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
     return `${Math.floor(seconds / 86400)}d ago`;
   };
-
   if (loading && recentActions.length === 0) {
     return (
       <div className={styles.widget}>
@@ -77,7 +77,6 @@ export default function AdminActivityWidget() {
       </div>
     );
   }
-
   return (
     <div className={styles.widgetContainer}>
       {/* Recent Actions */}
@@ -87,14 +86,12 @@ export default function AdminActivityWidget() {
           <h3>Recent Actions</h3>
           <span className={styles.badge}>{recentActions.length}</span>
         </div>
-
         {error && (
           <div className={styles.error}>
             <AlertTriangle size={16} />
             <span>Failed to load activity</span>
           </div>
         )}
-
         <div className={styles.actionsList}>
           {recentActions.length === 0 ? (
             <div className={styles.empty}>No recent activity</div>
@@ -123,14 +120,12 @@ export default function AdminActivityWidget() {
             ))
           )}
         </div>
-
         {recentActions.length > 0 && (
           <button className={styles.viewAllBtn} onClick={() => window.location.href = '/admin/activity-logs'}>
             View All Activity
           </button>
         )}
       </div>
-
       {/* Failed Logins */}
       <div className={styles.widget}>
         <div className={styles.header}>
@@ -140,7 +135,6 @@ export default function AdminActivityWidget() {
             <span className={`${styles.badge} ${styles.badgeWarning}`}>{failedLogins.length}</span>
           )}
         </div>
-
         <div className={styles.alertsList}>
           {failedLogins.length === 0 ? (
             <div className={styles.success}>

@@ -1,19 +1,15 @@
-import React, { useMemo } from "react";
+import { useMemo } from "react";
 import { Check, Copy, Home, Key, Layers, RefreshCw } from "lucide-react";
-
 import { Loader } from "../../Loader";
 import { Modal, SearchBar } from "../../shared";
 import "./registrationCodesModal.css";
-
 const normalize = (value) => String(value ?? "").toLowerCase();
-
 const occupancyTone = (status) => {
   const normalized = normalize(status);
   if (normalized === "vacant") return "vacant";
   if (normalized === "occupied") return "occupied";
   return "neutral";
 };
-
 function SelectionCheckbox({ checked, onChange, label }) {
   return (
     <label className="rcm-checkbox" aria-label={label}>
@@ -22,7 +18,6 @@ function SelectionCheckbox({ checked, onChange, label }) {
     </label>
   );
 }
-
 export const RegistrationCodesModal = ({
   visible,
   onClose,
@@ -39,24 +34,20 @@ export const RegistrationCodesModal = ({
   copyToClipboard,
 }) => {
   if (!visible) return null;
-
   const filtered = useMemo(() => {
     const query = normalize(codesSearch).trim();
     if (!query) return codesList;
-
     return codesList.filter((flat) => {
       const flatNumber = normalize(flat?.flatNumber);
       const block = normalize(flat?.block);
       return flatNumber.includes(query) || block.includes(query);
     });
   }, [codesList, codesSearch]);
-
   const selectedVisibleCount = useMemo(
     () => filtered.filter((flat) => selectedFlats.has(flat.flatNumber)).length,
     [filtered, selectedFlats]
   );
   const allSelected = filtered.length > 0 && selectedVisibleCount === filtered.length;
-
   return (
     <Modal isOpen={visible} onClose={onClose} title="Registration Codes" size="xl">
       <div className="rcm">
@@ -75,7 +66,6 @@ export const RegistrationCodesModal = ({
             <span className="manager-ui-status-pill">{selectedFlats.size} selected</span>
           </div>
         </div>
-
         <div className="manager-ui-toolbar rcm__toolbar">
           <div className="manager-ui-toolbar__grow">
             <SearchBar placeholder="Search by flat number or block..." value={codesSearch} onChange={setCodesSearch} />
@@ -95,7 +85,6 @@ export const RegistrationCodesModal = ({
             {isRegenerating ? "Regenerating..." : `Regenerate (${selectedFlats.size})`}
           </button>
         </div>
-
         {codesLoading ? (
           <div className="manager-ui-empty"><Loader label="Fetching registration codes..." /></div>
         ) : (
@@ -119,7 +108,6 @@ export const RegistrationCodesModal = ({
               <tbody>
                 {filtered.map((flat) => {
                   const isSelected = selectedFlats.has(flat.flatNumber);
-
                   return (
                     <tr key={flat.flatNumber} className={isSelected ? "rcm__row rcm__row--selected" : "rcm__row"}>
                       <td className="rcm__check-col">
@@ -179,7 +167,6 @@ export const RegistrationCodesModal = ({
             {filtered.length === 0 ? <div className="manager-ui-empty rcm__empty">No flats match your search.</div> : null}
           </div>
         )}
-
         <div className="rcm__footer-note">
           <p>{selectedVisibleCount} of {filtered.length} visible flats selected.</p>
         </div>

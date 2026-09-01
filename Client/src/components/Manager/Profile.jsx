@@ -1,6 +1,5 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import axios from "axios";
-
 import { openRazorpayCheckout } from "../../services/razorpay";
 import { Loader } from "../Loader";
 import { PasswordChangeForm, ProfileHeader } from "../shared";
@@ -11,9 +10,8 @@ import {
   ManagerActionButton,
   ManagerPageShell,
   ManagerRecordCard,
-  ManagerSection,
+  ManagerSection
 } from "./ui";
-
 export const ManagerProfile = () => {
   const [formData, setFormData] = useState({
     name: "",
@@ -30,7 +28,6 @@ export const ManagerProfile = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [passwordMessage, setPasswordMessage] = useState("");
-
   const [subscriptionInfo, setSubscriptionInfo] = useState(null);
   const [showPlanForm, setShowPlanForm] = useState(false);
   const [plans, setPlans] = useState(null);
@@ -38,11 +35,9 @@ export const ManagerProfile = () => {
   const [planLoading, setPlanLoading] = useState(false);
   const [planSubmitting, setPlanSubmitting] = useState(false);
   const [planError, setPlanError] = useState("");
-
   useEffect(() => {
     setLoading(true);
     setError(null);
-
     axios.get("/manager/profile/api")
       .then((response) => response.data)
       .then((data) => {
@@ -64,7 +59,6 @@ export const ManagerProfile = () => {
       })
       .catch((error) => setError(error.response?.data?.message || "Failed to load profile data"))
       .finally(() => setLoading(false));
-
     axios.get("/manager/subscription-status")
       .then((response) => response.data)
       .then((sub) => {
@@ -74,11 +68,9 @@ export const ManagerProfile = () => {
       })
       .catch(() => {});
   }, []);
-
   const handleChange = (event) => {
     setFormData((previous) => ({ ...previous, [event.target.name]: event.target.value }));
   };
-
   const handleSubmit = () => {
     const form = new FormData();
     form.append("name", formData.name);
@@ -86,7 +78,6 @@ export const ManagerProfile = () => {
     form.append("contact", formData.phone);
     form.append("location", formData.location);
     form.append("address", formData.address);
-
     axios.post("/manager/profile", form)
       .then((response) => response.data)
       .then((data) => {
@@ -96,14 +87,12 @@ export const ManagerProfile = () => {
       })
       .catch((error) => setError(error.response?.data?.message || "Failed to update profile"));
   };
-
   const handlePasswordSubmit = async ({ cp, np, cnp }) => {
     setPasswordMessage("");
     if (np !== cnp) {
       setPasswordMessage("Passwords do not match!");
       return;
     }
-
     try {
       const response = await axios.post("/manager/profile/changePassword", { cp, np, cnp });
       const data = response.data;
@@ -120,12 +109,10 @@ export const ManagerProfile = () => {
       setPasswordMessage(requestError.response?.data?.message || "Failed to change password");
     }
   };
-
   const openPlanForm = () => {
     setShowPlanForm(true);
     setPlanError("");
     if (plans) return;
-
     setPlanLoading(true);
     axios.get("/manager/subscription-plans")
       .then((response) => response.data)
@@ -139,31 +126,25 @@ export const ManagerProfile = () => {
       .catch((error) => setPlanError(error.response?.data?.message || "Failed to load plans"))
       .finally(() => setPlanLoading(false));
   };
-
   const submitPlanChange = (event) => {
     event.preventDefault();
     setPlanError("");
-
     if (!subscriptionInfo?._id) {
       setPlanError("Community information not available");
       return;
     }
-
     if (!plans?.[selectedPlan]) {
       setPlanError("Please select a valid plan");
       return;
     }
-
     const plan = plans[selectedPlan];
     setPlanSubmitting(true);
-
     axios.post("/manager/subscription-payment/order", { subscriptionPlan: selectedPlan })
       .then((response) => response.data)
       .then(async (orderData) => {
         if (!orderData.success) {
           throw new Error(orderData.message || "Failed to create payment order");
         }
-
         const paymentResponse = await openRazorpayCheckout({
           key: orderData.data.key,
           orderId: orderData.data.orderId,
@@ -181,7 +162,6 @@ export const ManagerProfile = () => {
             plan: selectedPlan,
           },
         });
-
         return axios.post("/manager/subscription-payment", {
           subscriptionPlan: selectedPlan,
           razorpayOrderId: paymentResponse.razorpay_order_id,
@@ -210,9 +190,7 @@ export const ManagerProfile = () => {
       .catch((requestError) => setPlanError(requestError.response?.data?.message || requestError.message || "Failed to update plan"))
       .finally(() => setPlanSubmitting(false));
   };
-
   const initials = getInitials(formData.name);
-
   if (loading) {
     return (
       <ManagerPageShell
@@ -226,7 +204,6 @@ export const ManagerProfile = () => {
       </ManagerPageShell>
     );
   }
-
   if (error && !isPassword) {
     return (
       <ManagerPageShell eyebrow="Profile" title="Manager profile" description="The profile could not be loaded.">
@@ -234,7 +211,6 @@ export const ManagerProfile = () => {
       </ManagerPageShell>
     );
   }
-
   return (
     <ManagerPageShell
       eyebrow="Profile"
@@ -258,7 +234,6 @@ export const ManagerProfile = () => {
               onAction={() => setIsPassword((previous) => !previous)}
             />
           </ManagerSection>
-
           <ManagerSection
             eyebrow="Community Controls"
             title="Subscription"
@@ -283,7 +258,6 @@ export const ManagerProfile = () => {
             />
           </ManagerSection>
         </div>
-
         {showPlanForm ? (
           <PlanChangeForm
             plans={plans}
@@ -296,7 +270,6 @@ export const ManagerProfile = () => {
             onCancel={() => setShowPlanForm(false)}
           />
         ) : null}
-
         <ManagerSection
           eyebrow={isPassword ? "Security" : "Profile Form"}
           title={isPassword ? "Change password" : "Edit manager profile"}

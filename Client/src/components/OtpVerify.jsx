@@ -1,25 +1,21 @@
-import React, { useState, useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
-import { verifyOtp } from '../slices/authSlice';
-import { ToastContainer, toast } from 'react-toastify';
+import { useState, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
+import { verifyOtp } from "../slices/authSlice";
+import { ToastContainer, toast } from "react-toastify";
 import 'react-toastify/dist/ReactToastify.css';
-
 const OtpVerify = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { pending2fa, loading } = useSelector((s) => s.auth);
   const [otp, setOtp] = useState('');
-
   useEffect(() => {
     if (!pending2fa) {
       // If no pending 2FA, go back to login
       navigate('/SignIn');
     }
   }, [pending2fa, navigate]);
-
   if (!pending2fa) return null;
-
   const onSubmit = async (e) => {
     e.preventDefault();
     if (!otp || otp.length !== 6) {
@@ -40,7 +36,6 @@ const OtpVerify = () => {
       toast.error(err || 'Verification failed');
     }
   };
-
   return (
     <div className="SignInCon" style={{ display:'flex', alignItems:'center', justifyContent:'center', minHeight:'60vh' }}>
       <ToastContainer />
@@ -64,5 +59,4 @@ const OtpVerify = () => {
     </div>
   );
 };
-
 export default OtpVerify;

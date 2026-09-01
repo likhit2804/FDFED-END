@@ -1,4 +1,3 @@
-import React from 'react';
 
 /**
  * SectionHeader – card-row header with title, optional subtitle and right-side actions
@@ -28,5 +27,4 @@ const SectionHeader = ({ title, subtitle, actions, divider = false }) => (
         {actions && <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>{actions}</div>}
     </div>
 );
-
 export default SectionHeader;

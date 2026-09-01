@@ -1,6 +1,5 @@
-import React from 'react';
-import { Camera } from 'lucide-react';
 
+import { Camera } from "lucide-react";
 /**
  * ProfileHeader – shared across Manager, Resident, Worker, Security
  *
@@ -25,12 +24,10 @@ const ProfileHeader = ({
   onAction,
 }) => {
   const inputId = `ue-profile-img-${Math.random().toString(36).slice(2)}`;
-
   const handleFile = (e) => {
     const file = e.target.files?.[0];
     if (file && onImageChange) onImageChange(file);
   };
-
   return (
     <div className="ue-card ue-profile-header">
       <div className="ue-profile-header__left">
@@ -56,7 +53,6 @@ const ProfileHeader = ({
             </>
           )}
         </div>
-
         {/* Text info */}
         <div>
           <p className="ue-profile-header__name">{name || 'Loading…'}</p>
@@ -64,7 +60,6 @@ const ProfileHeader = ({
           {subtitle && <p className="ue-profile-header__role" style={{ marginTop: 2 }}>{subtitle}</p>}
         </div>
       </div>
-
       {/* Toggle action button */}
       {onAction && (
         <button className="ue-btn ue-btn--outline" onClick={onAction}>
@@ -74,5 +69,4 @@ const ProfileHeader = ({
     </div>
   );
 };
-
 export default ProfileHeader;

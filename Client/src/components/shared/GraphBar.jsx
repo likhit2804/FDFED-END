@@ -1,11 +1,21 @@
-import React from 'react';
-import {
-    ResponsiveContainer, BarChart, Bar, CartesianGrid,
-    XAxis, YAxis, Tooltip, Legend,
-} from 'recharts';
-import Card from './Card';
-import { UE_CHART_AXIS, UE_CHART_CURSOR, UE_CHART_GRID, UE_CHART_PALETTE, UE_CHART_TOOLTIP_BORDER } from './chartPalette';
 
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Legend
+} from "recharts";
+import {
+  UE_CHART_AXIS,
+  UE_CHART_CURSOR,
+  UE_CHART_GRID,
+  UE_CHART_PALETTE,
+  UE_CHART_TOOLTIP_BORDER
+} from "./chartPalette";
 /**
  * GraphBar – bar chart for user pages (no Admin equivalent — new component)
  *
@@ -96,5 +106,4 @@ const GraphBar = ({
         </ResponsiveContainer>
     </div>
 );
-
 export default GraphBar;

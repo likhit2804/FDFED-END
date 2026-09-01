@@ -1,6 +1,5 @@
-import React from 'react';
-import { AlertTriangle, X } from 'lucide-react';
 
+import { AlertTriangle, X } from "lucide-react";
 /**
  * ConfirmModal – reusable confirmation dialog (delete/cancel/action)
  *
@@ -20,7 +19,6 @@ const VARIANT_COLORS = {
     warning: { bg: '#fef3c7', icon: '#d97706', btn: '#d97706', btnHover: '#b45309' },
     primary: { bg: '#dbeafe', icon: '#2563eb', btn: '#2563eb', btnHover: '#1d4ed8' },
 };
-
 const ConfirmModal = ({
     isOpen,
     onClose,
@@ -34,7 +32,6 @@ const ConfirmModal = ({
 }) => {
     if (!isOpen) return null;
     const c = VARIANT_COLORS[variant] || VARIANT_COLORS.danger;
-
     return (
         <div
             onClick={onClose}
@@ -69,10 +66,8 @@ const ConfirmModal = ({
                         <X size={20} />
                     </button>
                 </div>
-
                 <h3 style={{ margin: '0 0 8px', fontSize: 17, fontWeight: 700, color: '#111827' }}>{title}</h3>
                 <p style={{ margin: '0 0 24px', fontSize: 14, color: '#6b7280', lineHeight: 1.6 }}>{message}</p>
-
                 {/* Actions */}
                 <div style={{ display: 'flex', gap: 10 }}>
                     <button
@@ -102,5 +97,4 @@ const ConfirmModal = ({
         </div>
     );
 };
-
 export default ConfirmModal;

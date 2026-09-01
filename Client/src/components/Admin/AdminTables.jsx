@@ -1,7 +1,5 @@
-import React from "react";
-import { Edit, Trash } from "lucide-react";
-import Status from "./Status"; // ✅ imported here
 
+import Status from "./Status"; // ✅ imported here
 export default function AdminTable({ columns, data, actions }) {
   return (
     <div
@@ -80,7 +78,6 @@ export default function AdminTable({ columns, data, actions }) {
                   )}
                 </td>
               ))}
-
               {actions && actions.length > 0 && (
                 <td
                   style={{

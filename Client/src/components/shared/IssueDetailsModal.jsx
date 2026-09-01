@@ -1,4 +1,4 @@
-import React from "react";
+
 import { Modal } from "./index";
 import { IssueTimeline } from "./IssueTimeline";
 import {

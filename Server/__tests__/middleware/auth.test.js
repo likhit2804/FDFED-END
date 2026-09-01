@@ -1,12 +1,9 @@
-import { jest } from '@jest/globals';
+import { jest } from "@jest/globals";
 import jwt from 'jsonwebtoken';
-
 // Set JWT_SECRET for tests
 process.env.JWT_SECRET = 'test-secret-key-for-jest';
-
 // Import auth middleware
 const auth = (await import('../../controllers/shared/auth.js')).default;
-
 // Helper to create mock req/res/next
 function createMocks(overrides = {}) {
   const req = {
@@ -24,7 +21,6 @@ function createMocks(overrides = {}) {
   const next = jest.fn();
   return { req, res, next };
 }
-
 describe('Auth Middleware', () => {
   test('should reject request with no token (API request)', async () => {
     const { req, res, next } = createMocks();
@@ -32,16 +28,14 @@ describe('Auth Middleware', () => {
     expect(res.status).toHaveBeenCalledWith(401);
     expect(next).not.toHaveBeenCalled();
   });
-
   test('should reject invalid/expired token', async () => {
     const { req, res, next } = createMocks({
       cookies: { token: 'invalid-token-string' },
     });
     await auth(req, res, next);
     expect(res.status).toHaveBeenCalledWith(401);
-    expect(res.clearCookie).toHaveBeenCalledWith('token');
+    expect(res.clearCookie).toHaveBeenCalledWith('token', expect.any(Object));
   });
-
   test('should set req.user on valid token from cookie', async () => {
     const payload = { id: '123', email: 'test@test.com', userType: 'Resident' };
     const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
@@ -53,7 +47,6 @@ describe('Auth Middleware', () => {
     expect(req.user.email).toBe('test@test.com');
     expect(req.user.userType).toBe('Resident');
   });
-
   test('should accept token from Authorization header', async () => {
     const payload = { id: '456', email: 'bearer@test.com', userType: 'CommunityManager' };
     const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
@@ -64,7 +57,6 @@ describe('Auth Middleware', () => {
     expect(next).toHaveBeenCalled();
     expect(req.user.email).toBe('bearer@test.com');
   });
-
   test('should prefer cookie token over header when both exist', async () => {
     const cookiePayload = { id: '1', email: 'cookie@test.com', userType: 'Resident' };
     const headerPayload = { id: '2', email: 'header@test.com', userType: 'Worker' };

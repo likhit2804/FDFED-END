@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { IssueDetailsModal, Textarea } from "../../shared";
 import { CheckCircle2, XCircle, Star, MessageSquareQuote } from "lucide-react";
 

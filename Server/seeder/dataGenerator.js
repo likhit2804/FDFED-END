@@ -1,17 +1,13 @@
 
-import { faker } from '@faker-js/faker';
-
+import { faker } from "@faker-js/faker";
 export const generateCommunity = () => {
     const name = faker.location.city() + ' ' + faker.helpers.arrayElement(['Heights', 'Residency', 'Apartments', 'Villas', 'Enclave']);
     const location = faker.location.streetAddress();
-
     // subscriptionStatus: active, pending, expired
     const subscriptionStatus = faker.helpers.arrayElement(['active', 'active', 'active', 'expired', 'pending']);
-
     const planStartDate = faker.date.past({ years: 1 });
     const planEndDate = new Date(planStartDate);
     planEndDate.setFullYear(planEndDate.getFullYear() + 1);
-
     return {
         name,
         location,
@@ -27,7 +23,6 @@ export const generateCommunity = () => {
         blocks: [] // Will be populated by main seeder or here
     };
 };
-
 export const generateManager = (communityId) => {
     const firstName = faker.person.firstName();
     const lastName = faker.person.lastName();
@@ -39,12 +34,10 @@ export const generateManager = (communityId) => {
         assignedCommunity: communityId
     };
 };
-
 export const generateResident = (communityId, blockName, flatNumber) => {
     const firstName = faker.person.firstName();
     const lastName = faker.person.lastName();
     const uCode = `${blockName}-${flatNumber}`;
-
     return {
         residentFirstname: firstName,
         residentLastname: lastName,
@@ -56,11 +49,9 @@ export const generateResident = (communityId, blockName, flatNumber) => {
         // Add other fields as needed
     };
 };
-
 export const generatePayment = (residentId, managerId, communityId, date) => {
     const amount = faker.number.int({ min: 1000, max: 5000 });
     const isPaid = faker.datatype.boolean(0.8); // 80% chance of being paid
-
     return {
         title: faker.helpers.arrayElement(['Monthly Maintenance', 'Water Bill', 'Electricity Bill', 'Event Contribution']),
         sender: residentId,
@@ -74,14 +65,12 @@ export const generatePayment = (residentId, managerId, communityId, date) => {
         transactionId: isPaid ? faker.string.alphanumeric(10).toUpperCase() : null
     };
 };
-
 export const generateWorker = (communityId) => {
     const firstName = faker.person.firstName();
     const lastName = faker.person.lastName();
     const jobRole = faker.helpers.arrayElement([
         "Plumber", "Electrician", "Security", "Maintenance", "Pest Control", "Waste Management"
     ]);
-
     return {
         name: `${firstName} ${lastName}`,
         email: faker.internet.email({ firstName, lastName, provider: 'worker.com' }).toLowerCase(),
@@ -95,12 +84,10 @@ export const generateWorker = (communityId) => {
         isActive: true
     };
 };
-
 export const generateSecurity = (communityId) => {
     const firstName = faker.person.firstName();
     const lastName = faker.person.lastName();
     const shift = faker.helpers.arrayElement(["Day", "Night"]);
-
     return {
         name: `${firstName} ${lastName}`,
         email: faker.internet.email({ firstName, lastName, provider: 'security.com' }).toLowerCase(),
@@ -113,12 +100,10 @@ export const generateSecurity = (communityId) => {
         joiningDate: faker.date.past({ years: 1 })
     };
 };
-
 export const generateAmenity = (communityId) => {
     const type = faker.helpers.arrayElement([
         "Clubhouse", "Gym", "Banquet Hall", "Swimming Pool", "Tennis Court", "Badminton Court"
     ]);
-
     return {
         name: `${type} - ${faker.location.city()}`,
         type: type,
@@ -130,16 +115,13 @@ export const generateAmenity = (communityId) => {
         bookedSlots: []
     };
 };
-
 export const generateIssue = (residentId, communityId, categoryType = "Resident") => {
     const category = categoryType === "Resident"
         ? faker.helpers.arrayElement(["Plumbing", "Electrical", "Maintenance", "Pest Control"])
         : faker.helpers.arrayElement(["Streetlight", "Elevator", "Garden", "Common Area"]);
-
     const status = faker.helpers.arrayElement([
         "Pending Assignment", "Assigned", "In Progress", "Closed", "Resolved (Awaiting Confirmation)"
     ]);
-
     return {
         title: `${category} Issue`,
         description: faker.lorem.paragraph(),
@@ -153,10 +135,8 @@ export const generateIssue = (residentId, communityId, categoryType = "Resident"
         estimatedCost: faker.number.int({ min: 0, max: 2000 })
     };
 };
-
 export const generateVisitor = (communityId, residentId, securityId) => {
     const status = faker.helpers.arrayElement(["Pending", "Approved", "Active", "CheckedOut"]);
-
     return {
         name: faker.person.fullName(),
         contactNumber: faker.phone.number(),
@@ -171,11 +151,9 @@ export const generateVisitor = (communityId, residentId, securityId) => {
         checkOutAt: status === 'CheckedOut' ? faker.date.recent() : null,
     };
 };
-
 export const generateInterest = () => {
     const firstName = faker.person.firstName();
     const lastName = faker.person.lastName();
-
     return {
         firstName,
         lastName,
@@ -188,20 +166,17 @@ export const generateInterest = () => {
         paymentStatus: 'pending'
     };
 };
-
 export const generateCommunitySubscription = (communityId, date) => {
     const plan = faker.helpers.arrayElement([
         { name: 'Standard', type: 'standard', amount: 1999 },
         { name: 'Premium', type: 'premium', amount: 3999 },
         { name: 'Enterprise', type: 'enterprise', amount: 9999 }
     ]);
-
     const duration = faker.helpers.arrayElement(['monthly', 'yearly']);
     const planStartDate = new Date(date);
     const planEndDate = new Date(date);
     if (duration === 'monthly') planEndDate.setMonth(planEndDate.getMonth() + 1);
     else planEndDate.setFullYear(planEndDate.getFullYear() + 1);
-
     return {
         communityId,
         transactionId: 'TXN-' + faker.string.uuid(),

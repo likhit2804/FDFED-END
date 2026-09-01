@@ -1,10 +1,7 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
-import validator from 'validator';
 import crypto from 'crypto';
 import admin from '../models/admin.js';
-
-
 const InterestSchema = new mongoose.Schema({
   firstName: {
     type: String,
@@ -88,13 +85,11 @@ const InterestSchema = new mongoose.Schema({
     default: Date.now
   }
 });
-
 // Update the updatedAt field before saving
 InterestSchema.pre('save', function (next) {
   this.updatedAt = Date.now();
   next();
 });
-
 // Query middleware to populate admin fields
 InterestSchema.pre(/^find/, function (next) {
   this.populate({
@@ -103,12 +98,9 @@ InterestSchema.pre(/^find/, function (next) {
   });
   next();
 });
-
-
 // Password encryption middleware
 InterestSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
-
   this.password = await bcrypt.hash(this.password, 12);
   this.passwordChangedAt = Date.now() - 1000; // Ensures token is created after password change
   next();
@@ -116,31 +108,23 @@ InterestSchema.pre('save', async function (next) {
 // Generate verification token
 InterestSchema.methods.createVerificationToken = function () {
   const verificationToken = crypto.randomBytes(32).toString('hex');
-
   this.verificationToken = crypto
     .createHash('sha256')
     .update(verificationToken)
     .digest('hex');
-
   this.verificationTokenExpires = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
-
   return verificationToken;
 };
-
 // Generate password reset token
 InterestSchema.methods.createPasswordResetToken = function () {
   const resetToken = crypto.randomBytes(32).toString('hex');
-
   this.passwordResetToken = crypto
     .createHash('sha256')
     .update(resetToken)
     .digest('hex');
-
   this.passwordResetExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
-
   return resetToken;
 };
-
 // Generate temporary password
 InterestSchema.methods.generateTemporaryPassword = function () {
   const tempPassword = crypto.randomBytes(4).toString('hex');
@@ -148,12 +132,10 @@ InterestSchema.methods.generateTemporaryPassword = function () {
   this.passwordChangedAt = Date.now();
   return tempPassword;
 };
-
 // Check password
 InterestSchema.methods.correctPassword = async function (candidatePassword, userPassword) {
   return await bcrypt.compare(candidatePassword, userPassword);
 };
-
 // Check if password was changed after token was issued
 InterestSchema.methods.changedPasswordAfter = function (JWTTimestamp) {
   if (this.passwordChangedAt) {
@@ -162,7 +144,6 @@ InterestSchema.methods.changedPasswordAfter = function (JWTTimestamp) {
   }
   return false;
 };
-
 // Query middleware to populate approvedBy admin
 InterestSchema.pre(/^find/, function (next) {
   this.populate({
@@ -171,10 +152,8 @@ InterestSchema.pre(/^find/, function (next) {
   });
   next();
 });
-
 InterestSchema.index({ status: 1, createdAt: -1 });
 InterestSchema.index({ email: 1 });
 InterestSchema.index({ firstName: 'text', lastName: 'text', email: 'text', communityName: 'text', location: 'text', description: 'text' });
-
 const Interest = mongoose.model('Interest', InterestSchema);
 export default Interest;

@@ -1,7 +1,12 @@
-import React from 'react';
-import styles from './Toast.module.css';
-import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from 'lucide-react';
 
+import styles from './Toast.module.css';
+import {
+  X,
+  CheckCircle,
+  AlertCircle,
+  Info,
+  AlertTriangle
+} from "lucide-react";
 const Toast = ({ message, type = 'info', onClose }) => {
   const icons = {
     success: <CheckCircle size={20} />,
@@ -9,7 +14,6 @@ const Toast = ({ message, type = 'info', onClose }) => {
     warning: <AlertTriangle size={20} />,
     info: <Info size={20} />,
   };
-
   return (
     <div className={`${styles.toast} ${styles[type]}`}>
       <div className={styles.icon}>{icons[type]}</div>
@@ -20,10 +24,8 @@ const Toast = ({ message, type = 'info', onClose }) => {
     </div>
   );
 };
-
 export const ToastContainer = ({ toasts, onRemove }) => {
   if (!toasts || toasts.length === 0) return null;
-
   return (
     <div className={styles.container}>
       {toasts.map((toast) => (
@@ -37,5 +39,4 @@ export const ToastContainer = ({ toasts, onRemove }) => {
     </div>
   );
 };
-
 export default Toast;

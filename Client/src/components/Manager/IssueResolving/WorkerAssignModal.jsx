@@ -1,13 +1,11 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Loader } from "../../Loader";
 import { Modal, Select, Input, Textarea } from "../../shared";
-
 /**
  * Formats a worker's jobRole (string or array) into a display string.
  */
 const formatRole = (w) =>
     Array.isArray(w.jobRole) ? w.jobRole.join(", ") : w.jobRole;
-
 /**
  * Build the <Select> options list, disabling the currently‑assigned and
  * previously‑misassigned workers where applicable.
@@ -15,7 +13,6 @@ const formatRole = (w) =>
 const buildWorkerOptions = (issue, allWorkers, mode) => {
     const disabledIds = new Set();
     const opts = [];
-
     // Current / previous worker (disabled)
     if (issue.workerAssigned) {
         disabledIds.add(issue.workerAssigned._id);
@@ -26,7 +23,6 @@ const buildWorkerOptions = (issue, allWorkers, mode) => {
             disabled: true,
         });
     }
-
     // Misassigned workers (only relevant for assign mode)
     if (mode === "assign" && issue.misassignedBy) {
         issue.misassignedBy.forEach((w) => {
@@ -38,7 +34,6 @@ const buildWorkerOptions = (issue, allWorkers, mode) => {
             });
         });
     }
-
     // Available workers
     allWorkers
         .filter((w) => !disabledIds.has(w._id))
@@ -50,10 +45,8 @@ const buildWorkerOptions = (issue, allWorkers, mode) => {
                 disabled: onLeave,
             });
         });
-
     return opts;
 };
-
 /**
  * Unified modal for both "assign" and "reassign" flows.
  *
@@ -71,7 +64,6 @@ export const WorkerAssignModal = ({
     const [selectedWorker, setSelectedWorker] = useState("");
     const [deadline, setDeadline] = useState("");
     const [remarks, setRemarks] = useState("");
-
     // Reset fields whenever modal opens with a new issue
     useEffect(() => {
         if (!isOpen || !issue) return;
@@ -84,14 +76,11 @@ export const WorkerAssignModal = ({
             setRemarks("");
         }
     }, [isOpen, issue?._id, mode]);
-
     const isAssign = mode === "assign";
     const title = isAssign ? "Assign Worker" : "Reassign Worker";
-
     const handleSubmit = () => {
         onSubmit({ worker: selectedWorker, deadline, remarks });
     };
-
     return (
         <Modal
             isOpen={isOpen && !!issue}
@@ -141,7 +130,6 @@ export const WorkerAssignModal = ({
                             </p>
                         </>
                     )}
-
                     {/* Worker dropdown */}
                     <Select
                         label={isAssign ? "Select Worker" : "Select New Worker"}
@@ -156,7 +144,6 @@ export const WorkerAssignModal = ({
                             <Loader label="Loading workers..." size={24} />
                         </div>
                     ) : null}
-
                     {/* Shared fields */}
                     <Input type="date" label="Deadline (optional)" value={deadline} onChange={(e) => setDeadline(e.target.value)} />
                     <Textarea
@@ -171,4 +158,3 @@ export const WorkerAssignModal = ({
         </Modal>
     );
 };
-

@@ -1,6 +1,5 @@
-import React from "react";
-import { Modal, StatusBadge } from "../../shared";
 
+import { Modal, StatusBadge } from "../../shared";
 const DETAIL_FIELDS = [
     { label: "Booking ID", render: (b) => `#${b._id?.slice(-6)}` },
     { label: "Status", render: (b) => <StatusBadge status={b.status} /> },
@@ -10,14 +9,12 @@ const DETAIL_FIELDS = [
     { label: "Created", render: (b) => b.created, icon: "bi-person-circle" },
     { label: "Purpose", render: (b) => b.purpose, icon: "bi-card-text", full: true },
 ];
-
 /**
  * Booking details modal with payment and cancellation info.
  */
 export const BookingDetailsModal = ({ booking, isOpen, onClose, onPayment }) => {
     const isCancelled = booking?.isCancelled || false;
     const paymentRequired = booking?.paymentStatus !== "Completed" && booking?.amount > 0;
-
     return (
         <Modal
             isOpen={isOpen}
@@ -43,7 +40,6 @@ export const BookingDetailsModal = ({ booking, isOpen, onClose, onPayment }) => 
                             </div>
                         ))}
                     </div>
-
                     {isCancelled && (
                         <div className="cancellation-box">
                             <h4>Cancellation Details</h4>
@@ -52,7 +48,6 @@ export const BookingDetailsModal = ({ booking, isOpen, onClose, onPayment }) => 
                             <div className="detail-item"><span className="detail-label">Cancelled On</span><span className="detail-value">2025-10-18</span></div>
                         </div>
                     )}
-
                     {!isCancelled && paymentRequired && (
                         <div className="payment-section">
                             <h4>Payment Information</h4>

@@ -1,6 +1,5 @@
-import React from 'react';
-import styles from './Loader.module.css';
 
+import styles from './Loader.module.css';
 export const Spinner = ({ size = 24, color = '#3b82f6' }) => {
   return (
     <div
@@ -14,7 +13,6 @@ export const Spinner = ({ size = 24, color = '#3b82f6' }) => {
     />
   );
 };
-
 export const LoadingOverlay = ({ message = 'Loading...' }) => {
   return (
     <div className={styles.overlay}>
@@ -25,7 +23,6 @@ export const LoadingOverlay = ({ message = 'Loading...' }) => {
     </div>
   );
 };
-
 export const SkeletonLoader = ({ width = '100%', height = '20px', borderRadius = '4px' }) => {
   return (
     <div
@@ -34,7 +31,6 @@ export const SkeletonLoader = ({ width = '100%', height = '20px', borderRadius =
     />
   );
 };
-
 export const TableSkeleton = ({ rows = 5, columns = 5 }) => {
   return (
     <div className={styles.tableSkeleton}>
@@ -48,5 +44,4 @@ export const TableSkeleton = ({ rows = 5, columns = 5 }) => {
     </div>
   );
 };
-
 export default Spinner;

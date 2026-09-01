@@ -1,14 +1,18 @@
-import React, { memo, useCallback, useEffect, useState } from "react";
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useState
+} from "react";
 import { toast } from "react-toastify";
 import axios from "axios";
 import {
   AlertCircle,
   Briefcase,
-  Calendar,
   ChevronRight,
   CircleDollarSign,
   UserCheck,
-  Users,
+  Users
 } from "lucide-react";
 import {
   Bar,
@@ -21,27 +25,21 @@ import {
   ResponsiveContainer,
   Tooltip,
   XAxis,
-  YAxis,
+  YAxis
 } from "recharts";
 import { useNavigate } from "react-router-dom";
-import "bootstrap/dist/css/bootstrap.min.css";
-import "../../assets/css/Manager/Dashboard.css";
-
 import { Loader } from "../Loader";
 import { DateRangeFilter } from "../shared";
 import { useSocket } from "../../hooks/useSocket";
-
 const CURRENCY_FORMATTER = new Intl.NumberFormat("en-IN", {
   maximumFractionDigits: 0,
 });
-
 const TIME_FORMATTER = new Intl.DateTimeFormat("en-IN", {
   day: "2-digit",
   month: "short",
   hour: "numeric",
   minute: "2-digit",
 });
-
 const CHART_PALETTE = {
   plum: "#0F766E",
   emerald: "#15803D",
@@ -50,11 +48,9 @@ const CHART_PALETTE = {
   danger: "#C94F45",
 };
 const NOTIFICATION_LIMIT = 5;
-
 function formatCurrency(value = 0) {
   return `\u20B9${CURRENCY_FORMATTER.format(Number(value) || 0)}`;
 }
-
 function formatTimestamp(value) {
   if (!value) return "Just now";
   try {
@@ -63,35 +59,29 @@ function formatTimestamp(value) {
     return "Just now";
   }
 }
-
 function formatCompactPercent(value) {
   if (!Number.isFinite(value)) return "0%";
   return `${Math.round(value)}%`;
 }
-
 function getCollectionRate(payments = {}) {
   const total = payments.paid + payments.pending + payments.overdue;
   if (!total) return 0;
   return (payments.paid / total) * 100;
 }
-
 function getBookingApprovalRate(bookings = {}) {
   const total = bookings.pending + bookings.approved;
   if (!total) return 0;
   return (bookings.approved / total) * 100;
 }
-
 function getServiceStability(issues = {}) {
   const total = issues.pending + issues.resolved;
   if (!total) return 0;
   return (issues.resolved / total) * 100;
 }
-
 function buildAttentionItems(data) {
   const payments = data?.payments || {};
   const issues = data?.issues || {};
   const bookings = data?.bookings || {};
-
   return [
     {
       title: "Overdue collections",
@@ -128,7 +118,6 @@ function buildAttentionItems(data) {
     },
   ];
 }
-
 function buildTimeline(data) {
   const issueItems = (data?.issues?.recent || []).map((issue) => ({
     id: `issue-${issue._id}`,
@@ -138,7 +127,6 @@ function buildTimeline(data) {
     timestamp: issue.createdAt,
     tone: issue.priority === "High" ? "danger" : "warning",
   }));
-
   const bookingItems = (data?.bookings?.recent || []).map((booking) => ({
     id: `booking-${booking._id}`,
     type: "Booking",
@@ -147,12 +135,10 @@ function buildTimeline(data) {
     timestamp: booking.createdAt,
     tone: booking.status === "Pending" ? "accent" : "success",
   }));
-
   return [...issueItems, ...bookingItems]
     .sort((left, right) => new Date(right.timestamp) - new Date(left.timestamp))
     .slice(0, 6);
 }
-
 const HeroBanner = memo(function HeroBanner({ data, onNavigate }) {
   return (
     <section className="manager-hero">
@@ -160,7 +146,6 @@ const HeroBanner = memo(function HeroBanner({ data, onNavigate }) {
         <div className="manager-hero__eyebrow">Manager Dashboard</div>
         <h1 className="manager-hero__title">Stay ahead of daily community operations.</h1>
       </div>
-
       <div className="manager-hero__actions">
         <button type="button" className="manager-hero__button" onClick={() => onNavigate("/manager/userManagement")}>
           Add Resident
@@ -179,7 +164,6 @@ const HeroBanner = memo(function HeroBanner({ data, onNavigate }) {
     </section>
   );
 });
-
 const OpsStrip = memo(function OpsStrip({ data, loading }) {
   const cards = [
     {
@@ -218,7 +202,6 @@ const OpsStrip = memo(function OpsStrip({ data, loading }) {
       tone: "rose",
     },
   ];
-
   return (
     <section className="manager-ops-strip">
       {cards.map((card) => {
@@ -239,10 +222,8 @@ const OpsStrip = memo(function OpsStrip({ data, loading }) {
     </section>
   );
 });
-
 const AttentionQueue = memo(function AttentionQueue({ data, onNavigate, loading }) {
   const items = buildAttentionItems(data);
-
   return (
     <section className="manager-panel manager-panel--queue">
       <div className="manager-panel__header">
@@ -251,7 +232,6 @@ const AttentionQueue = memo(function AttentionQueue({ data, onNavigate, loading 
           <h2 className="manager-panel__title">What needs action now</h2>
         </div>
       </div>
-
       <div className="manager-queue">
         {items.map((item) => {
           return (
@@ -274,7 +254,6 @@ const AttentionQueue = memo(function AttentionQueue({ data, onNavigate, loading 
     </section>
   );
 });
-
 const CommunityPulse = memo(function CommunityPulse({ data, loading }) {
   const pulseStats = [
     {
@@ -296,9 +275,7 @@ const CommunityPulse = memo(function CommunityPulse({ data, loading }) {
       tone: "amber",
     },
   ];
-
   const timeline = buildTimeline(data);
-
   return (
     <section className="manager-panel manager-panel--pulse">
       <div className="manager-panel__header">
@@ -307,7 +284,6 @@ const CommunityPulse = memo(function CommunityPulse({ data, loading }) {
           <h2 className="manager-panel__title">Live health across the campus</h2>
         </div>
       </div>
-
       <div className="manager-pulse-grid">
         <div className="manager-pulse-card">
           <div className="manager-pulse-card__title">Operational balance</div>
@@ -328,7 +304,6 @@ const CommunityPulse = memo(function CommunityPulse({ data, loading }) {
             ))}
           </div>
         </div>
-
         <div className="manager-pulse-card manager-pulse-card--timeline">
           <div className="manager-pulse-card__title">Today&apos;s movement</div>
           <div className="manager-timeline">
@@ -359,11 +334,9 @@ const CommunityPulse = memo(function CommunityPulse({ data, loading }) {
     </section>
   );
 });
-
 const LiveDesk = memo(function LiveDesk({ data, loading, bookings, onNavigate }) {
   const notifications = data?.notifications || [];
   const recentBookings = bookings || [];
-
   return (
     <aside className="manager-panel manager-panel--desk manager-live-desk">
       <div className="manager-panel__header">
@@ -372,7 +345,6 @@ const LiveDesk = memo(function LiveDesk({ data, loading, bookings, onNavigate })
           <h2 className="manager-panel__title">Updates the manager should not miss</h2>
         </div>
       </div>
-
       <div className="manager-live-desk__section">
         <div className="manager-live-desk__section-head">
           <span>Notification rail</span>
@@ -401,7 +373,6 @@ const LiveDesk = memo(function LiveDesk({ data, loading, bookings, onNavigate })
           )}
         </div>
       </div>
-
       <div className="manager-live-desk__section">
         <div className="manager-live-desk__section-head">
           <span>Booking pulse</span>
@@ -436,7 +407,6 @@ const LiveDesk = memo(function LiveDesk({ data, loading, bookings, onNavigate })
     </aside>
   );
 });
-
 const RevenuePanel = memo(function RevenuePanel({ data, loading }) {
   const payments = data?.payments || {};
   const paymentData = [
@@ -444,9 +414,7 @@ const RevenuePanel = memo(function RevenuePanel({ data, loading }) {
     { name: "Pending", value: payments.amounts?.pending || 0, color: CHART_PALETTE.plum },
     { name: "Overdue", value: payments.amounts?.overdue || 0, color: CHART_PALETTE.danger },
   ].filter((item) => item.value > 0);
-
   const totalAmount = paymentData.reduce((sum, item) => sum + item.value, 0);
-
   const renderTooltip = ({ active, payload }) => {
     if (!active || !payload?.length) return null;
     const item = payload[0];
@@ -457,7 +425,6 @@ const RevenuePanel = memo(function RevenuePanel({ data, loading }) {
       </div>
     );
   };
-
   return (
     <section className="manager-panel manager-panel--chart">
       <div className="manager-panel__header">
@@ -466,7 +433,6 @@ const RevenuePanel = memo(function RevenuePanel({ data, loading }) {
           <h2 className="manager-panel__title">Collections and dues mix</h2>
         </div>
       </div>
-
       <div className="manager-chart-summary">
         <div>
           <div className="manager-chart-summary__label">Recovered</div>
@@ -477,7 +443,6 @@ const RevenuePanel = memo(function RevenuePanel({ data, loading }) {
           <div className="manager-chart-summary__value">{loading ? "\u2014" : formatCurrency(totalAmount)}</div>
         </div>
       </div>
-
       <div className="manager-chart-area">
         {loading ? (
           <div className="manager-chart-empty">
@@ -518,7 +483,6 @@ const RevenuePanel = memo(function RevenuePanel({ data, loading }) {
     </section>
   );
 });
-
 const OperationsChart = memo(function OperationsChart({ data, loading }) {
   const chartData = [
     {
@@ -537,7 +501,6 @@ const OperationsChart = memo(function OperationsChart({ data, loading }) {
       attention: data?.payments?.overdue || 0,
     },
   ];
-
   const renderTooltip = ({ active, payload, label }) => {
     if (!active || !payload?.length) return null;
     return (
@@ -551,7 +514,6 @@ const OperationsChart = memo(function OperationsChart({ data, loading }) {
       </div>
     );
   };
-
   return (
     <section className="manager-panel manager-panel--chart">
       <div className="manager-panel__header">
@@ -560,7 +522,6 @@ const OperationsChart = memo(function OperationsChart({ data, loading }) {
           <h2 className="manager-panel__title">Stable load vs items needing intervention</h2>
         </div>
       </div>
-
       <div className="manager-chart-summary">
         <div>
           <div className="manager-chart-summary__label">Urgent issues</div>
@@ -571,7 +532,6 @@ const OperationsChart = memo(function OperationsChart({ data, loading }) {
           <div className="manager-chart-summary__value">{loading ? "\u2014" : data?.bookings?.pending || 0}</div>
         </div>
       </div>
-
       <div className="manager-chart-area">
         {loading ? (
           <div className="manager-chart-empty">
@@ -624,7 +584,6 @@ const OperationsChart = memo(function OperationsChart({ data, loading }) {
     </section>
   );
 });
-
 export function ManagerDashboard() {
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -634,28 +593,22 @@ export function ManagerDashboard() {
   const [toDate, setToDate] = useState("");
   const socket = useSocket("");
   const navigate = useNavigate();
-
   const fetchDashboardData = useCallback(async (from = "", to = "") => {
     try {
       setLoading(true);
       setError(null);
-
       const params = {};
       if (from) params.from = from;
       if (to) params.to = to;
-
       const response = await axios.get("/manager/api/dashboard", { params });
       const result = response.data;
-
       if (response.status === 401) {
         setError("Unauthorized: Please log in again");
         return;
       }
-
       if (!result.success) {
         throw new Error(result.message || "Failed to fetch dashboard data");
       }
-
       setDashboardData(result.data);
       setBookingNotifications(result.data.bookings?.recent || []);
     } catch (requestError) {
@@ -664,32 +617,25 @@ export function ManagerDashboard() {
       setLoading(false);
     }
   }, []);
-
   useEffect(() => {
     if (!socket) return;
-
     socket.on("booking:new", (data) => {
       setBookingNotifications((prev) => [data, ...prev.slice(0, 9)]);
       toast.success(data.message);
     });
-
     return () => socket.off("booking:new");
   }, [socket]);
-
   useEffect(() => {
     fetchDashboardData();
   }, [fetchDashboardData]);
-
   const handleApplyRange = () => {
     fetchDashboardData(fromDate, toDate);
   };
-
   const handleResetRange = () => {
     setFromDate("");
     setToDate("");
     fetchDashboardData("", "");
   };
-
   if (error) {
     return (
       <div className="alert alert-danger alert-dismissible fade show m-3" role="alert">
@@ -699,7 +645,6 @@ export function ManagerDashboard() {
       </div>
     );
   }
-
   return (
     <main className="manager-dashboard-shell">
       <div className="manager-dashboard-shell__inner">
@@ -729,13 +674,11 @@ export function ManagerDashboard() {
             loading={loading}
           />
         </section>
-
         <section className="manager-dashboard-grid">
           <div className="manager-dashboard-grid__main">
             <AttentionQueue data={dashboardData} onNavigate={navigate} loading={loading} />
             <CommunityPulse data={dashboardData} loading={loading} />
           </div>
-
           <div className="manager-dashboard-grid__side">
             <LiveDesk
               data={dashboardData}
@@ -745,7 +688,6 @@ export function ManagerDashboard() {
             />
           </div>
         </section>
-
         <section className="manager-dashboard-charts">
           <RevenuePanel data={dashboardData} loading={loading} />
           <OperationsChart data={dashboardData} loading={loading} />

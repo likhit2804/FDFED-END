@@ -1,42 +1,31 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Calendar, CheckCircle, Clock, FileText, Plus, XCircle } from "lucide-react";
-
+import { Plus } from "lucide-react";
 import LeaveApplyForm from "../LeaveApplyForm";
 import { fetchLeaves } from "../../slices/leaveSlice";
 import { useSocket } from "../../hooks/useSocket";
-import {
-  getLeaveSummary,
-  WorkerLeaveRequestCards,
-  WorkerLeaveSummaryCards,
-} from "../shared/nonAdmin/workerLeaveUI";
+import { getLeaveSummary, WorkerLeaveRequestCards, WorkerLeaveSummaryCards } from "../shared/nonAdmin/workerLeaveUI";
 import "../../assets/css/Leave.css";
-
 export default function WorkerLeaveList() {
   const dispatch = useDispatch();
   const leaves = useSelector((state) => state.leave?.leaves || []);
   const user = useSelector((state) => state.auth?.user);
   const [applyOpen, setApplyOpen] = useState(false);
   const [filter, setFilter] = useState("all");
-
   useEffect(() => {
     dispatch(fetchLeaves());
   }, [dispatch]);
-
   // Real-time synchronization for leave updates
   useSocket("leave:updated", (payload) => {
     console.log("⚡ [WorkerLeaveList] Received leave:updated event:", payload);
     dispatch(fetchLeaves());
   });
-
   const leaveSummary = useMemo(() => getLeaveSummary(leaves), [leaves]);
   const userLabel = user?.name || user?.email || "You";
-
   const filteredLeaves = useMemo(() => {
     if (filter === "all") return leaves;
     return leaves.filter((leave) => String(leave.status).toLowerCase() === filter);
   }, [leaves, filter]);
-
   return (
     <div className="container-fluid px-4 py-4">
       <div className="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
@@ -57,9 +46,7 @@ export default function WorkerLeaveList() {
           </button>
         </div>
       </div>
-
       <WorkerLeaveSummaryCards summary={leaveSummary} />
-
       <div className="d-flex align-items-center gap-2 mb-3">
         {["all", "pending", "approved", "rejected"].map((tab) => (
           <button
@@ -83,7 +70,6 @@ export default function WorkerLeaveList() {
           </button>
         ))}
       </div>
-
       <div className="row">
         <div className="col-12">
           <WorkerLeaveRequestCards
@@ -97,7 +83,6 @@ export default function WorkerLeaveList() {
           />
         </div>
       </div>
-
       <LeaveApplyForm
         isOpen={applyOpen}
         onClose={() => {

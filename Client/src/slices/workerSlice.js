@@ -1,16 +1,10 @@
-import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
-
-
+import { createSlice } from "@reduxjs/toolkit";
 const initialState = {
   Worker:[],
   Issues:[],
   loading: false,
   error: null,
 };
-
-
-
-
 const WorkerSlice = createSlice({
   name: "CommonSpace",
   initialState,
@@ -23,8 +17,5 @@ const WorkerSlice = createSlice({
     },
   }
 });
-
-
 export const { setDashboardData,setIssues } = WorkerSlice.actions;
-
 export default WorkerSlice.reducer;

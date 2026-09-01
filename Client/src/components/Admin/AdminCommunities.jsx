@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Trash2, Eye, UserCog } from "lucide-react";
 import Header from "./Header";
 import Tabs from "./Tabs";
@@ -11,7 +11,6 @@ import ManagerDetailModal from "./ManagerDetailModal";
 import adminApiClient from "../../services/adminApiClient";
 import { useTableFilter } from "../../hooks/useAdminHooks";
 import { LoadingOverlay } from "../common/Loader";
-
 export default function Communities() {
   const [activeTab, setActiveTab] = useState("All");
   const [search, setSearch] = useState("");
@@ -21,25 +20,20 @@ export default function Communities() {
   const [rawCommunities, setRawCommunities] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
   // Delete modal state
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [communityToDelete, setCommunityToDelete] = useState(null);
   const [deletionCounts, setDeletionCounts] = useState({});
   const [isDeleting, setIsDeleting] = useState(false);
-
   // Community detail modal state
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [selectedCommunityId, setSelectedCommunityId] = useState(null);
   const [selectedCommunityName, setSelectedCommunityName] = useState("");
-
   // Manager detail modal state
   const [managerModalOpen, setManagerModalOpen] = useState(false);
   const [selectedManager, setSelectedManager] = useState(null);
   const [selectedManagerCommunity, setSelectedManagerCommunity] = useState("");
-
   const tabs = ["All", "Active", "Pending", "Expired"];
-
   const columns = [
     { header: "Name", accessor: "name" },
     { header: "Location", accessor: "location" },
@@ -48,20 +42,16 @@ export default function Communities() {
     { header: "Subscription Status", accessor: "status" },
     { header: "Manager", accessor: "manager" },
   ];
-
   // Fetch Communities Data
   useEffect(() => {
     const fetchCommunities = async () => {
       try {
         setLoading(true);
         setError("");
-
         const json = await adminApiClient.getCommunities();
-
         if (json.success && json.data?.allCommunities) {
           // Store raw data for manager lookup
           setRawCommunities(json.data.allCommunities);
-
           const formatted = json.data.allCommunities.map((c) => ({
             id: c._id,
             name: c.name,
@@ -71,7 +61,6 @@ export default function Communities() {
             status: c.subscriptionStatus?.toUpperCase() || "PENDING",
             manager: c.communityManager ? c.communityManager.name : "Unassigned",
           }));
-
           setData(formatted);
           setLocations([
             "All Locations",
@@ -87,10 +76,8 @@ export default function Communities() {
         setLoading(false);
       }
     };
-
     fetchCommunities();
   }, []);
-
   // Use custom filter hook
   const filteredData = useTableFilter(data, {
     tab: activeTab,
@@ -98,7 +85,6 @@ export default function Communities() {
     searchFields: ['name', 'manager'],
     custom: location !== "All Locations" ? { location: location } : {},
   });
-
   // Handle delete click
   const handleDeleteClick = async (community) => {
     try {
@@ -120,22 +106,18 @@ export default function Communities() {
       setLoading(false);
     }
   };
-
   // Handle delete confirmation
   const handleDeleteConfirm = async () => {
     try {
       setIsDeleting(true);
       const result = await adminApiClient.deleteCommunity(communityToDelete.id);
-
       if (result.success) {
         // Remove from local state
         setData(prev => prev.filter(c => c.id !== communityToDelete.id));
-
         // Show success message
         alert(`Community deleted successfully!\n\nDeleted:\n${Object.entries(result.deleted)
           .map(([key, count]) => `${key}: ${count}`)
           .join('\n')}`);
-
         // Close modal
         setDeleteModalOpen(false);
         setCommunityToDelete(null);
@@ -148,25 +130,21 @@ export default function Communities() {
       setIsDeleting(false);
     }
   };
-
   // Handle view community details
   const handleViewDetails = (community) => {
     setSelectedCommunityId(community.id);
     setSelectedCommunityName(community.name);
     setDetailModalOpen(true);
   };
-
   // Handle view manager details
   const handleViewManager = (community) => {
     // Find the raw community to get manager details
     const raw = rawCommunities.find(c => c._id === community.id);
     const managerData = raw?.communityManager || null;
-
     setSelectedManager(managerData || community.manager);
     setSelectedManagerCommunity(community.name);
     setManagerModalOpen(true);
   };
-
   const actions = [
     {
       component: ({ row }) => (
@@ -238,14 +216,12 @@ export default function Communities() {
       ),
     },
   ];
-
   return (
     <>
       {/* Header */}
       <div style={{ marginBottom: "20px" }}>
         <Header title="Communities" />
       </div>
-
       {/* Filters Row */}
       <div
         style={{
@@ -264,11 +240,9 @@ export default function Communities() {
             onChange={setSearch}
           />
         </div>
-
         <div style={{ flex: "0 1 340px", minWidth: "260px" }}>
           <Tabs options={tabs} active={activeTab} onChange={setActiveTab} />
         </div>
-
         <div style={{ flex: "0 0 180px", minWidth: "150px" }}>
           <Dropdown
             options={locations}
@@ -277,7 +251,6 @@ export default function Communities() {
           />
         </div>
       </div>
-
       {/* Data Table */}
       {loading ? (
         <LoadingOverlay message="Loading communities..." />
@@ -286,7 +259,6 @@ export default function Communities() {
       ) : (
         <AdminTable columns={columns} data={filteredData} actions={actions} />
       )}
-
       {/* Delete Confirmation Modal */}
       {communityToDelete && (
         <DeleteCommunityModal
@@ -302,7 +274,6 @@ export default function Communities() {
           isDeleting={isDeleting}
         />
       )}
-
       {/* Community Detail Modal */}
       <CommunityDetailModal
         isOpen={detailModalOpen}
@@ -314,7 +285,6 @@ export default function Communities() {
         communityId={selectedCommunityId}
         communityName={selectedCommunityName}
       />
-
       {/* Manager Detail Modal */}
       <ManagerDetailModal
         isOpen={managerModalOpen}

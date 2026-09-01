@@ -1,11 +1,9 @@
-import React, { useRef, useState, useEffect } from "react";
-
+import { useRef } from "react";
 /**
  * 6-digit OTP input with auto-focus, backspace navigation, and paste support.
  */
 export const OtpInput = ({ digits, setDigits }) => {
     const refs = useRef([]);
-
     const handleChange = (index) => (e) => {
         const val = e.target.value.replace(/\D/g, "");
         setDigits((prev) => {
@@ -15,7 +13,6 @@ export const OtpInput = ({ digits, setDigits }) => {
         });
         if (val && index < 5) refs.current?.[index + 1]?.focus();
     };
-
     const handleKeyDown = (index) => (e) => {
         if (e.key === "Backspace") {
             if (digits[index]) {
@@ -27,7 +24,6 @@ export const OtpInput = ({ digits, setDigits }) => {
         } else if (e.key === "ArrowLeft" && index > 0) refs.current?.[index - 1]?.focus();
         else if (e.key === "ArrowRight" && index < 5) refs.current?.[index + 1]?.focus();
     };
-
     const handlePaste = (e) => {
         const text = e.clipboardData.getData("text");
         const d = text.replace(/\D/g, "").slice(0, 6).split("");
@@ -38,7 +34,6 @@ export const OtpInput = ({ digits, setDigits }) => {
         setDigits(next);
         setTimeout(() => refs.current?.[Math.min(d.length, 5)]?.focus(), 0);
     };
-
     return (
         <div className="otp-inputs" onPaste={handlePaste} style={{ display: "flex", gap: 8, justifyContent: "center", marginBottom: 8 }}>
             {digits.map((d, i) => (

@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
 import Header from "./Header";
 import { getSystemSettings, updateSystemSettings } from "../../services/adminService";
-
 export default function AdminProfile() {
   const [formData, setFormData] = useState({
     name: "",
@@ -15,21 +14,17 @@ export default function AdminProfile() {
   });
   const [profileImage, setProfileImage] = useState(null);
   const [previewUrl, setPreviewUrl] = useState("/default-profile.png");
-
   const [passwordData, setPasswordData] = useState({
     current: "",
     new: "",
     confirm: "",
   });
-
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
-
   const [systemSettings, setSystemSettings] = useState({ skip2FA: false });
   const [settingsLoading, setSettingsLoading] = useState(false);
-
   // ===== Fetch Admin Profile =====
   useEffect(() => {
     const fetchProfile = async () => {
@@ -37,7 +32,6 @@ export default function AdminProfile() {
         setLoading(true);
         const res = await axios.get("/admin/api/profile");
         const json = res.data;
-
         if (json && json.admin) {
           const { name, email, image } = json.admin;
           setFormData({ name, email });
@@ -51,10 +45,8 @@ export default function AdminProfile() {
         setLoading(false);
       }
     };
-
     fetchProfile();
   }, []);
-
   // ===== Fetch System Settings =====
   useEffect(() => {
     const fetchSettings = async () => {
@@ -72,7 +64,6 @@ export default function AdminProfile() {
     };
     fetchSettings();
   }, []);
-
   const handleToggle2FA = async () => {
     try {
       const newStatus = !systemSettings.skip2FA;
@@ -90,14 +81,11 @@ export default function AdminProfile() {
       setSettingsLoading(false);
     }
   };
-
   // ===== Input Handlers =====
   const handleProfileChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
-
   const handlePasswordChange = (e) =>
     setPasswordData({ ...passwordData, [e.target.name]: e.target.value });
-
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -113,7 +101,6 @@ export default function AdminProfile() {
       setPreviewUrl(URL.createObjectURL(file));
     }
   };
-
   // ===== Detect if any change made =====
   const isFormChanged = () => {
     const imageChanged = profileImage !== null;
@@ -123,26 +110,21 @@ export default function AdminProfile() {
       imageChanged
     );
   };
-
   // ===== Save Profile (API) =====
   const handleSaveProfile = async (e) => {
     e.preventDefault();
     setErrorMsg("");
     setSuccessMsg("");
     setLoading(true);
-
     try {
       const formDataToSend = new FormData();
       formDataToSend.append("name", formData.name);
       formDataToSend.append("email", formData.email);
       if (profileImage) formDataToSend.append("image", profileImage);
-
       const res = await axios.post("/admin/api/profile/update", formDataToSend);
       const json = res.data;
-
       setSuccessMsg("Profile updated successfully!");
       if (json.admin.image) setPreviewUrl(json.admin.image);
-
       // Reset original data to latest saved version
       setOriginalData({
         name: formData.name,
@@ -157,19 +139,16 @@ export default function AdminProfile() {
       setLoading(false);
     }
   };
-
   // ===== Change Password (API) =====
   const handleChangePassword = async (e) => {
     e.preventDefault();
     setErrors({});
     setErrorMsg("");
     setSuccessMsg("");
-
     if (passwordData.new !== passwordData.confirm) {
       setErrors({ confirm: "Passwords do not match" });
       return;
     }
-
     try {
       const res = await axios.post("/admin/api/profile/change-password", {
         currentPassword: passwordData.current,
@@ -177,7 +156,6 @@ export default function AdminProfile() {
         confirmPassword: passwordData.confirm,
       });
       const json = res.data;
-
       setSuccessMsg("Password updated successfully!");
       setPasswordData({ current: "", new: "", confirm: "" });
     } catch (err) {
@@ -185,14 +163,12 @@ export default function AdminProfile() {
       setErrorMsg(err.response?.data?.message || err.message);
     }
   };
-
   return (
     <div style={{ width: "100%" }}>
       {/* ===== Header ===== */}
       <div style={{ marginBottom: "20px" }}>
         <Header title="Profile Management" />
       </div>
-
       <div className="row g-3">
         {/* ===== Left: Profile Info ===== */}
         <div className="col-lg-6">
@@ -210,7 +186,6 @@ export default function AdminProfile() {
               <i className="bi bi-person-circle me-2 text-primary"></i>
               Profile Information
             </h6>
-
             <div className="text-center mb-3">
               <label htmlFor="imageUpload" style={{ cursor: "pointer" }}>
                 <div
@@ -253,7 +228,6 @@ export default function AdminProfile() {
               />
               <div style={{ fontSize: "11.5px", color: "#64748b", marginTop: "4px" }}>Click to change photo</div>
             </div>
-
             <form onSubmit={handleSaveProfile}>
               <div className="mb-2">
                 <label style={{ fontSize: "12.5px", fontWeight: 600, color: "#334155", marginBottom: "4px" }}>Name</label>
@@ -267,7 +241,6 @@ export default function AdminProfile() {
                   required
                 />
               </div>
-
               <div className="mb-3">
                 <label style={{ fontSize: "12.5px", fontWeight: 600, color: "#334155", marginBottom: "4px" }}>Email Address</label>
                 <input
@@ -280,14 +253,12 @@ export default function AdminProfile() {
                   required
                 />
               </div>
-
               {successMsg && (
                 <div className="alert alert-success py-1 px-2 small mb-2">{successMsg}</div>
               )}
               {errorMsg && (
                 <div className="alert alert-danger py-1 px-2 small mb-2">{errorMsg}</div>
               )}
-
               <button
                 type="submit"
                 disabled={loading || !isFormChanged()}
@@ -309,7 +280,6 @@ export default function AdminProfile() {
             </form>
           </div>
         </div>
-
         {/* ===== Right: Change Password ===== */}
         <div className="col-lg-6">
           <div
@@ -326,7 +296,6 @@ export default function AdminProfile() {
               <i className="bi bi-shield-lock-fill text-primary me-2"></i>
               Change Password
             </h6>
-
             <form onSubmit={handleChangePassword}>
               <div className="mb-2">
                 <label style={{ fontSize: "12.5px", fontWeight: 600, color: "#334155", marginBottom: "4px" }}>
@@ -343,7 +312,6 @@ export default function AdminProfile() {
                   required
                 />
               </div>
-
               <div className="mb-2">
                 <label style={{ fontSize: "12.5px", fontWeight: 600, color: "#334155", marginBottom: "4px" }}>New Password</label>
                 <input
@@ -357,7 +325,6 @@ export default function AdminProfile() {
                   required
                 />
               </div>
-
               <div className="mb-3">
                 <label style={{ fontSize: "12.5px", fontWeight: 600, color: "#334155", marginBottom: "4px" }}>
                   Confirm Password
@@ -376,7 +343,6 @@ export default function AdminProfile() {
                   <div className="invalid-feedback small">{errors.confirm}</div>
                 )}
               </div>
-
               <button
                 type="submit"
                 style={{
@@ -399,7 +365,6 @@ export default function AdminProfile() {
           </div>
         </div>
       </div>
-
       {/* ===== System Settings Row ===== */}
       <div className="row g-3 mt-1">
         <div className="col-12">
@@ -416,7 +381,6 @@ export default function AdminProfile() {
               <i className="bi bi-gear-fill me-2 text-primary"></i>
               System Settings
             </h6>
-
             <div className="d-flex justify-content-between align-items-center p-3 bg-light rounded-3">
               <div>
                 <h6 style={{ fontWeight: 600, fontSize: "13.5px", margin: "0 0 2px 0" }}>Skip 2FA (OTP) for Non-Admin Users</h6>

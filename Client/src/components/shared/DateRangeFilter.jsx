@@ -1,4 +1,3 @@
-import React from "react";
 
 const containerStyle = {
   display: "flex",
@@ -6,7 +5,6 @@ const containerStyle = {
   flexWrap: "wrap",
   gap: "8px",
 };
-
 const inputStyle = {
   minWidth: "150px",
   height: "38px",
@@ -16,7 +14,6 @@ const inputStyle = {
   fontSize: "14px",
   background: "#fff",
 };
-
 const buttonBase = {
   height: "38px",
   borderRadius: "10px",
@@ -27,7 +24,6 @@ const buttonBase = {
   cursor: "pointer",
   background: "#fff",
 };
-
 export default function DateRangeFilter({
   fromDate,
   toDate,
@@ -80,4 +76,3 @@ export default function DateRangeFilter({
     </div>
   );
 }
-

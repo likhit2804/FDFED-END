@@ -4,21 +4,17 @@ import Security from "../../../models/security.js";
 import Leave from "../../../models/leave.js";
 import bcrypt from "bcrypt";
 import { sendPassword } from "../../../controllers/shared/OTP.js";
-import { sendError, sendSuccess } from "../../shared/helpers.js";
+import { sendError } from "../../shared/helpers.js";
 import { handleMongooseError } from "../../../controllers/shared/errorHandler.js";
-
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_REGEX = /^[0-9]{10}$/;
-
 const toSafeText = (value, max = 120) => String(value || "").trim().slice(0, max);
-
 const validateResidentPayload = (payload) => {
     const firstName = toSafeText(payload.residentFirstname, 60);
     const lastName = toSafeText(payload.residentLastname, 60);
     const email = toSafeText(payload.email, 120).toLowerCase();
     const uCode = toSafeText(payload.uCode, 32).toUpperCase();
     const contact = toSafeText(payload.contact, 20);
-
     if (!firstName || !lastName || !email || !uCode) {
         return { error: "First name, last name, email, and UCode are required" };
     }
@@ -28,10 +24,8 @@ const validateResidentPayload = (payload) => {
     if (contact && !PHONE_REGEX.test(contact)) {
         return { error: "Contact number must be a 10-digit value" };
     }
-
     return { value: { firstName, lastName, email, uCode, contact } };
 };
-
 const validateWorkerPayload = (payload) => {
     const name = toSafeText(payload.workerName, 80);
     const email = toSafeText(payload.workerEmail, 120).toLowerCase();
@@ -40,7 +34,6 @@ const validateWorkerPayload = (payload) => {
     const address = toSafeText(payload.workerAddress, 200);
     const salaryRaw = payload.workerSalary;
     const salary = Number(salaryRaw);
-
     if (!name || !email || !jobRole) {
         return { error: "Name, email, and job role are required" };
     }
@@ -53,7 +46,6 @@ const validateWorkerPayload = (payload) => {
     if (salaryRaw !== undefined && salaryRaw !== "" && (!Number.isFinite(salary) || salary < 0)) {
         return { error: "Worker salary must be a non-negative number" };
     }
-
     return {
         value: {
             name,
@@ -65,15 +57,12 @@ const validateWorkerPayload = (payload) => {
         }
     };
 };
-
 export const getUserManagement = async (req, res) => {
     const R = await Resident.find({ community: req.user.community });
     const W = await Worker.find({ community: req.user.community });
     const S = await Security.find({ community: req.user.community });
-
     res.json({ R, W, S });
 };
-
 export const createResident = async (req, res) => {
     try {
         const { Rid, residentFirstname, residentLastname, email, uCode, contact } =
@@ -89,19 +78,16 @@ export const createResident = async (req, res) => {
             return sendError(res, 400, parsed.error);
         }
         const { firstName, lastName, email: safeEmail, uCode: safeUCode, contact: safeContact } = parsed.value;
-
         if (Rid) {
             const r = await Resident.findOne({ _id: Rid, community: req.user.community });
             if (!r) {
                 return sendError(res, 404, `Resident with ID ${Rid} not found`);
             }
-
             r.residentFirstname = firstName;
             r.residentLastname = lastName;
             r.email = safeEmail;
             r.uCode = safeUCode;
             r.contact = safeContact;
-
             await r.save();
             res.json({ success: true, resident: r, isUpdate: true });
         } else {
@@ -113,12 +99,10 @@ export const createResident = async (req, res) => {
                 uCode: safeUCode,
                 community: req.user.community,
             });
-
             const password = await sendPassword({ email: safeEmail, userType: "Resident" });
             const hashedPassword = await bcrypt.hash(password, 10);
             r.password = hashedPassword;
             await r.save();
-
             res.json({ success: true, resident: r });
         }
     } catch (err) {
@@ -126,19 +110,16 @@ export const createResident = async (req, res) => {
         return handleMongooseError(err, res);
     }
 };
-
 export const getResident = async (req, res) => {
     const id = req.params.id;
     const r = await Resident.findById(id);
     res.status(200).json({ success: true, r });
 };
-
 export const deleteResident = async (req, res) => {
     const id = req.params.id;
     await Resident.deleteOne({ _id: id });
     res.status(200).json({ ok: true });
 };
-
 export const createSecurity = async (req, res) => {
     try {
         const {
@@ -150,20 +131,17 @@ export const createSecurity = async (req, res) => {
             securityShift,
             gate,
         } = req.body;
-
         if (Sid) {
             const s = await Security.findById(Sid);
             if (!s) {
                 return sendError(res, 404, `Security staff with ID ${Sid} not found`);
             }
-
             s.name = securityName;
             s.email = securityEmail;
             s.contact = securityContact;
             s.address = securityAddress;
             s.shift = securityShift;
             s.workplace = gate;
-
             await s.save();
             res.json({ success: true, security: s, isUpdate: true });
         } else {
@@ -176,7 +154,6 @@ export const createSecurity = async (req, res) => {
                 workplace: gate,
                 community: req.user.community,
             });
-
             const password = await sendPassword({
                 email: securityEmail,
                 userType: "Security",
@@ -184,7 +161,6 @@ export const createSecurity = async (req, res) => {
             const hashedPassword = await bcrypt.hash(password, 10);
             s.password = hashedPassword;
             await s.save();
-
             res.status(200).json({ success: true, security: s });
         }
     } catch (err) {
@@ -192,19 +168,16 @@ export const createSecurity = async (req, res) => {
         return handleMongooseError(err, res);
     }
 };
-
 export const getSecurity = async (req, res) => {
     const id = req.params.id;
     const r = await Security.findById(id);
     res.status(200).json({ success: true, r });
 };
-
 export const deleteSecurity = async (req, res) => {
     const id = req.params.id;
     await Security.deleteOne({ _id: id });
     res.status(200).json({ ok: true });
 };
-
 export const createWorker = async (req, res) => {
     try {
         const {
@@ -228,13 +201,11 @@ export const createWorker = async (req, res) => {
             return sendError(res, 400, parsed.error);
         }
         const { name, email, jobRole, contact, address, salary } = parsed.value;
-
         if (Wid) {
             const w = await Worker.findOne({ _id: Wid, community: req.user.community });
             if (!w) {
                 return sendError(res, 404, `Worker with ID ${Wid} not found`);
             }
-
             w.name = name;
             w.email = email;
             w.jobRole = jobRole;
@@ -255,16 +226,13 @@ export const createWorker = async (req, res) => {
                 salary,
                 community: req.user.community,
             });
-
             const password = await sendPassword({
                 email,
                 userType: "Worker",
             });
-
             const hashedPassword = await bcrypt.hash(password, 10);
             w.password = hashedPassword;
             await w.save();
-
             res.json({ success: true, worker: w });
         }
     } catch (err) {
@@ -272,19 +240,16 @@ export const createWorker = async (req, res) => {
         return handleMongooseError(err, res);
     }
 };
-
 export const getWorker = async (req, res) => {
     const id = req.params.id;
     const r = await Worker.findById(id);
     res.status(200).json({ success: true, r });
 };
-
 export const deleteWorker = async (req, res) => {
     const id = req.params.id;
     await Worker.deleteOne({ _id: id });
     res.status(200).json({ ok: true });
 };
-
 export const getWorkers = async (req, res) => {
     try {
         const today = new Date();
@@ -295,23 +260,19 @@ export const getWorkers = async (req, res) => {
             endDate: { $gte: today },
         }).select("worker");
         const onLeaveSet = new Set(activeLeaves.map((l) => l.worker?.toString()));
-
         const workers = await Worker.find({
             community: req.user.community,
             isActive: true
         }).select('name jobRole _id');
-
         const workersWithLeaveStatus = workers.map((w) => ({
             _id: w._id,
             name: w.name,
             jobRole: w.jobRole,
             isOnLeave: onLeaveSet.has(w._id.toString()),
         }));
-
         res.json({ success: true, workers: workersWithLeaveStatus });
     } catch (error) {
         console.error("Error fetching workers:", error);
         return sendError(res, 500, "Server error", error);
     }
 };
-

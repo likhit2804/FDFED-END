@@ -1,10 +1,8 @@
-import { connect, disconnect, clearDatabase } from '../setup.js';
+import { connect, disconnect, clearDatabase } from "../setup.js";
 import bcrypt from 'bcrypt';
 import mongoose from 'mongoose';
-
 let Resident, CommunityManager, Worker, Security, Admin;
 let VerifyR, VerifyC, VerifyW, VerifyS, VerifyA;
-
 beforeAll(async () => {
   await connect();
   Resident = (await import('../../models/resident.js')).default;
@@ -12,7 +10,6 @@ beforeAll(async () => {
   Worker = (await import('../../models/workers.js')).default;
   Security = (await import('../../models/security.js')).default;
   Admin = (await import('../../models/admin.js')).default;
-  
   const loginModule = await import('../../controllers/shared/loginController.js');
   VerifyR = loginModule.VerifyR;
   VerifyC = loginModule.VerifyC;
@@ -20,13 +17,10 @@ beforeAll(async () => {
   VerifyS = loginModule.VerifyS;
   VerifyA = loginModule.VerifyA;
 });
-
 afterEach(async () => await clearDatabase());
 afterAll(async () => await disconnect());
-
 const hashedPw = await bcrypt.hash('password123', 10);
 const communityId = new mongoose.Types.ObjectId();
-
 describe('Login Verification', () => {
   test('should verify Resident credentials', async () => {
     await Resident.create({
@@ -38,7 +32,6 @@ describe('Login Verification', () => {
     expect(result.userPayload.email).toBe('r@test.com');
     expect(result.userPayload.userType).toBe('Resident');
   });
-
   test('should verify CommunityManager credentials', async () => {
     await CommunityManager.create({
       name: 'Test Manager', email: 'cm@test.com', password: hashedPw,
@@ -48,7 +41,6 @@ describe('Login Verification', () => {
     expect(result).not.toBeNull();
     expect(result.userPayload.userType).toBe('CommunityManager');
   });
-
   test('should verify Admin credentials', async () => {
     await Admin.create({
       name: 'Admin', email: 'admin@test.com', password: hashedPw,
@@ -56,7 +48,6 @@ describe('Login Verification', () => {
     const result = await VerifyA('admin@test.com', 'password123');
     expect(result).not.toBeNull();
   });
-
   test('should verify Worker credentials', async () => {
     await Worker.create({
       name: 'Worker', email: 'w@test.com', password: hashedPw,
@@ -66,7 +57,6 @@ describe('Login Verification', () => {
     const result = await VerifyW('w@test.com', 'password123');
     expect(result).not.toBeNull();
   });
-
   test('should verify Security credentials', async () => {
     await Security.create({
       name: 'Guard', email: 's@test.com', password: hashedPw,
@@ -75,7 +65,6 @@ describe('Login Verification', () => {
     const result = await VerifyS('s@test.com', 'password123');
     expect(result).not.toBeNull();
   });
-
   test('should reject wrong password', async () => {
     await Resident.create({
       residentFirstname: 'Shape', residentLastname: 'User', email: 'wrong@test.com', password: hashedPw,
@@ -84,12 +73,10 @@ describe('Login Verification', () => {
     const result = await VerifyR('wrong@test.com', 'wrongpassword');
     expect(result).toBeNull();
   });
-
   test('should reject non-existent email', async () => {
     const result = await VerifyR('ghost@test.com', 'password123');
     expect(result).toBeNull();
   });
-
   test('should return userPayload with id, email, userType', async () => {
     await Resident.create({
       residentFirstname: 'Shape', residentLastname: 'User', email: 'shape@test.com', password: hashedPw,
@@ -100,7 +87,6 @@ describe('Login Verification', () => {
     expect(result.userPayload).toHaveProperty('email');
     expect(result.userPayload).toHaveProperty('userType');
   });
-
   test('should include community for Resident', async () => {
     await Resident.create({
       residentFirstname: 'Com', residentLastname: 'User', email: 'com@test.com', password: hashedPw,
@@ -110,7 +96,6 @@ describe('Login Verification', () => {
     expect(result.userPayload.community).toBeDefined();
     expect(result.userPayload.community.toString()).toBe(communityId.toString());
   });
-
   test('should include assignedCommunity for CommunityManager', async () => {
     await CommunityManager.create({
       name: 'CM', email: 'cm2@test.com', password: hashedPw,

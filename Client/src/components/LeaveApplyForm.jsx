@@ -1,10 +1,14 @@
-import React, { useMemo, useState } from 'react';
-import { useDispatch } from 'react-redux';
-import { toast } from 'react-toastify';
-import { Calendar, Clock, FileText } from 'lucide-react';
-import { applyLeave } from '../slices/leaveSlice';
-import { Modal, Select, Input, Textarea } from './shared';
-
+import { useMemo, useState } from "react";
+import { useDispatch } from "react-redux";
+import { toast } from "react-toastify";
+import { Calendar } from "lucide-react";
+import { applyLeave } from "../slices/leaveSlice";
+import {
+  Modal,
+  Select,
+  Input,
+  Textarea
+} from "./shared";
 export default function LeaveApplyForm({ isOpen, onClose }) {
   const dispatch = useDispatch();
   const [type, setType] = useState('casual');
@@ -12,9 +16,7 @@ export default function LeaveApplyForm({ isOpen, onClose }) {
   const [endDate, setEndDate] = useState('');
   const [reason, setReason] = useState('');
   const [loading, setLoading] = useState(false);
-
   const today = useMemo(() => new Date().toISOString().split('T')[0], []);
-
   const totalDays = useMemo(() => {
     if (!startDate || !endDate) return 0;
     const start = new Date(startDate);
@@ -22,7 +24,6 @@ export default function LeaveApplyForm({ isOpen, onClose }) {
     if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end < start) return 0;
     return Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
   }, [startDate, endDate]);
-
   const handleStartDateChange = (e) => {
     const val = e.target.value;
     setStartDate(val);
@@ -30,7 +31,6 @@ export default function LeaveApplyForm({ isOpen, onClose }) {
       setEndDate(val);
     }
   };
-
   const submit = async (e) => {
     e.preventDefault();
     if (!startDate || !endDate) {
@@ -49,7 +49,6 @@ export default function LeaveApplyForm({ isOpen, onClose }) {
       toast.warning('Please provide a brief reason for your leave.');
       return;
     }
-
     setLoading(true);
     try {
       await dispatch(applyLeave({ type, startDate, endDate, reason })).unwrap();
@@ -65,7 +64,6 @@ export default function LeaveApplyForm({ isOpen, onClose }) {
       setLoading(false);
     }
   };
-
   return (
     <Modal
       isOpen={isOpen}
@@ -125,7 +123,6 @@ export default function LeaveApplyForm({ isOpen, onClose }) {
             { label: 'Other', value: 'other' },
           ]}
         />
-
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
           <Input
             type="date"
@@ -144,7 +141,6 @@ export default function LeaveApplyForm({ isOpen, onClose }) {
             onChange={(e) => setEndDate(e.target.value)}
           />
         </div>
-
         {totalDays > 0 && (
           <div
             style={{
@@ -166,7 +162,6 @@ export default function LeaveApplyForm({ isOpen, onClose }) {
             </span>
           </div>
         )}
-
         <Textarea
           label="Reason / Notes"
           placeholder="State the reason for taking leave..."

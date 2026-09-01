@@ -1,8 +1,6 @@
-import React from "react";
+
 import { Briefcase, User } from "lucide-react";
-
 import { ProfileEditPanels } from "../../shared/nonAdmin/ProfileEditPanels";
-
 export const ProfileEditSection = ({ formData, onChange, onSave }) => (
   <ProfileEditPanels
     leftPanel={{

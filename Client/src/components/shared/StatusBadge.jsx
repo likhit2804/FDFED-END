@@ -1,4 +1,3 @@
-import React from 'react';
 
 /**
  * StatusBadge – mirrors Admin/Status.jsx but extended with all user-role statuses
@@ -13,7 +12,6 @@ const STATUS_MAP = {
     inactive: { bg: '#fee2e2', color: '#991b1b' },
     online: { bg: '#dcfce7', color: '#166534' },
     offline: { bg: '#f3f4f6', color: '#374151' },
-
     // Issues
     pending: { bg: '#fef3c7', color: '#92400e' },
     'pending assignment': { bg: '#fef3c7', color: '#92400e' },
@@ -24,7 +22,6 @@ const STATUS_MAP = {
     closed: { bg: '#f3f4f6', color: '#374151' },
     reopened: { bg: '#fee2e2', color: '#991b1b' },
     'payment pending': { bg: '#fef3c7', color: '#92400e' },
-
     // Payments / Bookings
     completed: { bg: '#dcfce7', color: '#166534' },
     approved: { bg: '#dcfce7', color: '#065f46' },
@@ -32,24 +29,20 @@ const STATUS_MAP = {
     cancelled: { bg: '#f3f4f6', color: '#374151' },
     overdue: { bg: '#fee2e2', color: '#991b1b' },
     'payment completed': { bg: '#dcfce7', color: '#166534' },
-
     // Subscription
     expired: { bg: '#fee2e2', color: '#991b1b' },
     processing: { bg: '#fef3c7', color: '#92400e' },
     on_hold: { bg: '#fef3c7', color: '#92400e' },
     refunded: { bg: '#e0f2fe', color: '#0369a1' },
-
     // Verification
     verified: { bg: '#dcfce7', color: '#15803d' },
     unverified: { bg: '#fef9c3', color: '#854d0e' },
     under_review: { bg: '#e0f2fe', color: '#0369a1' },
 };
-
 const StatusBadge = ({ status = '', uppercase = false }) => {
     const key = (status || '').toLowerCase().trim().replace(/_/g, ' ');
     const style = STATUS_MAP[key] || { bg: '#f3f4f6', color: '#374151' };
     const label = uppercase ? (status || '').toUpperCase() : (status || '—');
-
     return (
         <span style={{
             display: 'inline-block',
@@ -66,5 +59,4 @@ const StatusBadge = ({ status = '', uppercase = false }) => {
         </span>
     );
 };
-
 export default StatusBadge;

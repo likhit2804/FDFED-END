@@ -1,6 +1,5 @@
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import axios from "axios";
-
 import { Loader } from "../Loader";
 import { Modal, Tabs, StatusBadge, EmptyState } from "../shared";
 import {
@@ -8,9 +7,8 @@ import {
   ManagerPageShell,
   ManagerRecordCard,
   ManagerRecordGrid,
-  ManagerSection,
+  ManagerSection
 } from "../shared/roleUI";
-
 export function SecurityPreApproval() {
   const [tab, setTab] = useState("Pending");
   const [list, setList] = useState([]);
@@ -18,7 +16,6 @@ export function SecurityPreApproval() {
   const [showScanner, setShowScanner] = useState(false);
   const [scannerLoading, setScannerLoading] = useState(false);
   const scannerRef = useRef(null);
-
   const openScanner = async () => {
     setShowScanner(true);
     setScannerLoading(true);
@@ -34,7 +31,6 @@ export function SecurityPreApproval() {
       }
     }, 100);
   };
-
   const closeScanner = () => {
     setShowScanner(false);
     setScannerLoading(false);
@@ -46,7 +42,6 @@ export function SecurityPreApproval() {
       scannerRef.current = null;
     }
   };
-
   const onScanSuccess = async (decodedText) => {
     try {
       const res = await axios.post("/security/verify-qr", { token: decodedText });
@@ -57,9 +52,7 @@ export function SecurityPreApproval() {
       fetchData();
     } catch (err) { console.error(err); }
   };
-
   const onScanError = (err) => { console.warn("QR Scan Error:", err); };
-
   const fetchData = async () => {
     try {
       const res = await axios.get("/security/preApproval");
@@ -69,9 +62,7 @@ export function SecurityPreApproval() {
     } catch (err) { console.error("Error loading pre-approvals:", err); }
     finally { setLoading(false); }
   };
-
   useEffect(() => { fetchData(); }, []);
-
   const handleAction = async (id, status) => {
     try {
       const res = await axios.post("/security/preApproval/action", { ID: id, status });
@@ -79,11 +70,8 @@ export function SecurityPreApproval() {
       if (data.success) fetchData();
     } catch (err) { console.error("Action error:", err); }
   };
-
   const filtered = list.filter((v) => v.status === tab);
-
   const tabItems = ["Pending", "Approved", "Rejected"].map(t => ({ label: t, value: t }));
-
   useEffect(() => () => {
     try {
       scannerRef.current?.clear();
@@ -93,7 +81,6 @@ export function SecurityPreApproval() {
       scannerRef.current = null;
     }
   }, []);
-
   return (
     <>
       <ManagerPageShell
@@ -112,7 +99,6 @@ export function SecurityPreApproval() {
           }
         >
           <Tabs tabs={tabItems} active={tab} onChange={setTab} />
-
           {loading ? (
             <div className="manager-ui-empty"><Loader label="Loading requests..." /></div>
           ) : filtered.length === 0 ? (
@@ -123,7 +109,6 @@ export function SecurityPreApproval() {
                 const visitDate = visitor.scheduledAt
                   ? `${new Date(visitor.scheduledAt).toLocaleDateString("en-GB")} ${new Date(visitor.scheduledAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
                   : "-";
-
                 return (
                   <ManagerRecordCard
                     key={visitor._id}
@@ -154,7 +139,6 @@ export function SecurityPreApproval() {
           )}
         </ManagerSection>
       </ManagerPageShell>
-
       <Modal isOpen={showScanner} onClose={closeScanner} title="Scan QR Code" size="sm">
         {scannerLoading ? (
           <div className="manager-ui-empty">
@@ -167,4 +151,3 @@ export function SecurityPreApproval() {
     </>
   );
 }
-

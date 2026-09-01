@@ -13,7 +13,18 @@ export default class CrudService {
 
   // Read: single document by id
   async findById(id, projection = null, options = {}) {
-    return await this.Model.findById(id, projection, options).exec();
+    let query = this.Model.findById(id, projection, options);
+    if (options.populate) {
+      if (Array.isArray(options.populate)) {
+        options.populate.forEach(pop => (query = query.populate(pop)));
+      } else {
+        query = query.populate(options.populate);
+      }
+    }
+    if (options.lean) {
+      query = query.lean();
+    }
+    return await query.exec();
   }
 
   // Read: list documents by filter
@@ -21,10 +32,13 @@ export default class CrudService {
     let query = this.Model.find(filter, projection, options);
     if (options.populate) {
       if (Array.isArray(options.populate)) {
-        options.populate.forEach(pop => query = query.populate(pop));
+        options.populate.forEach(pop => (query = query.populate(pop)));
       } else {
         query = query.populate(options.populate);
       }
+    }
+    if (options.lean) {
+      query = query.lean();
     }
     return await query.exec();
   }

@@ -1,17 +1,15 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AlertCircle, Bell, CalendarCheck2, Clock3 } from "lucide-react";
 import axios from "axios";
-
 import { Loader } from "../Loader";
 import { DateRangeFilter, EmptyState, GraphBar, StatCard } from "../shared";
 import {
   ManagerPageShell,
   ManagerRecordCard,
   ManagerRecordGrid,
-  ManagerSection,
+  ManagerSection
 } from "../shared/roleUI";
 import { UE_CHART_COLORS } from "../shared/chartPalette";
-
 const formatTimestamp = (value) => {
   if (!value) return "Just now";
   try {
@@ -20,7 +18,6 @@ const formatTimestamp = (value) => {
     return "Just now";
   }
 };
-
 export const ResidentDashboard = () => {
   const LIST_LIMIT = 5;
   const [recents, setRecents] = useState([]);
@@ -28,18 +25,15 @@ export const ResidentDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
-
   const loadDashboard = async (from = "", to = "") => {
     try {
       setLoading(true);
       const params = {};
       if (from) params.from = from;
       if (to) params.to = to;
-
       const response = await axios.get("/resident/api/dashboard", { params });
       const data = response.data;
       if (!data.success) return;
-
       setRecents(data.recents || []);
       setNotifications(data.notifications || []);
     } catch (error) {
@@ -48,11 +42,9 @@ export const ResidentDashboard = () => {
       setLoading(false);
     }
   };
-
   useEffect(() => {
     loadDashboard();
   }, []);
-
   const issueCount = useMemo(
     () =>
       recents.filter((item) =>
@@ -60,7 +52,6 @@ export const ResidentDashboard = () => {
       ).length,
     [recents]
   );
-
   const paymentCount = useMemo(
     () =>
       recents.filter((item) =>
@@ -68,7 +59,6 @@ export const ResidentDashboard = () => {
       ).length,
     [recents]
   );
-
   const preApprovalCount = useMemo(
     () =>
       recents.filter((item) =>
@@ -76,7 +66,6 @@ export const ResidentDashboard = () => {
       ).length,
     [recents]
   );
-
   const activityGraphData = useMemo(
     () => [
       { name: "Issues", count: issueCount },
@@ -89,7 +78,6 @@ export const ResidentDashboard = () => {
     ],
     [issueCount, paymentCount, preApprovalCount, recents]
   );
-
   return (
     <ManagerPageShell
       eyebrow="Resident Desk"
@@ -134,7 +122,6 @@ export const ResidentDashboard = () => {
           />
         </div>
       </ManagerSection>
-
       <ManagerSection
         eyebrow="Insights"
         title="Activity graph"
@@ -169,7 +156,6 @@ export const ResidentDashboard = () => {
           />
         )}
       </ManagerSection>
-
       <div className="manager-ui-two-column">
         <ManagerSection
           eyebrow="Activity"
@@ -195,7 +181,6 @@ export const ResidentDashboard = () => {
             </ManagerRecordGrid>
           )}
         </ManagerSection>
-
         <ManagerSection
           eyebrow="Live Desk"
           title="Notifications"
@@ -224,5 +209,3 @@ export const ResidentDashboard = () => {
     </ManagerPageShell>
   );
 };
-
-

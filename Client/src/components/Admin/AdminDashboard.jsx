@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import Card from "./Card";
 import GraphLine from "./GraphLine";
 import GraphPie from "./GraphPie";
@@ -7,7 +7,6 @@ import { Building2, Users, FileText, Wallet, RefreshCw } from "lucide-react";
 import adminApiClient from "../../services/adminApiClient";
 import { Spinner } from "../common/Loader";
 import styles from "./AdminDashboard.module.css";
-
 export default function DashboardOverview() {
   const [period, setPeriod] = useState("6M");
   const [loading, setLoading] = useState(false);
@@ -22,21 +21,17 @@ export default function DashboardOverview() {
     revenueData: [],
     applicationsStatus: { approved: 0, pending: 0, rejected: 0 },
   });
-
   // Fetch dashboard data
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
       const json = await adminApiClient.getDashboard();
-
       if (json.success) {
         const { kpis, chartData } = json.data;
-
         const fullRevenueData = chartData.growthChart.labels.map((label, i) => ({
           x: label,
           y: chartData.growthChart.revenue[i],
         }));
-
         setKpis(kpis);
         setChartData({
           fullRevenueData,
@@ -50,15 +45,12 @@ export default function DashboardOverview() {
       setLoading(false);
     }
   };
-
   // Fetch chart for selected period
   const fetchChartPeriod = (selectedPeriod) => {
     setPeriod(selectedPeriod);
-
     setChartData((prev) => {
       const full = prev.fullRevenueData;
       let sliced;
-
       if (selectedPeriod === "6M") {
         sliced = full.slice(-6);
       } else if (selectedPeriod === "1Y") {
@@ -66,18 +58,14 @@ export default function DashboardOverview() {
       } else {
         sliced = full;
       }
-
       return { ...prev, revenueData: sliced };
     });
   };
-
   useEffect(() => {
     fetchDashboardData();
   }, []);
-
   const { totalCommunities, totalResidents, pendingApplications, monthlyRevenue } = kpis;
   const { revenueData, applicationsStatus } = chartData;
-
   return (
     <>
       {/* Header */}
@@ -93,7 +81,6 @@ export default function DashboardOverview() {
           {loading ? "Refreshing..." : "Refresh"}
         </button>
       </div>
-
       {/* KPI Cards */}
       <div className={styles.cardsRow}>
         <Card
@@ -121,7 +108,6 @@ export default function DashboardOverview() {
           borderColor="var(--info-600)"
         />
       </div>
-
       {/* Charts */}
       <div className={styles.chartRow}>
         {/* Revenue Chart */}
@@ -151,11 +137,9 @@ export default function DashboardOverview() {
             />
           </div>
         </div>
-
         {/* Applications Overview */}
         <div className={styles.chartCard}>
           <h5 className={styles.chartCardTitle}>Applications Overview</h5>
-
           <div className={styles.statsGrid}>
             <div>
               <div className={styles.statValue}>
@@ -178,7 +162,6 @@ export default function DashboardOverview() {
               <div className={styles.statLabel}>Rejected</div>
             </div>
           </div>
-
           <div className={styles.chartWrapper}>
             <GraphPie
               data={[
@@ -191,10 +174,8 @@ export default function DashboardOverview() {
           </div>
         </div>
       </div>
-
       {/* Activity Monitoring Widgets */}
       <AdminActivityWidget />
     </>
   );
 }
-

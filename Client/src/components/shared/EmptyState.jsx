@@ -1,4 +1,3 @@
-import React from 'react';
 
 /**
  * EmptyState – centered empty slot with icon, title, and optional sub-text
@@ -17,5 +16,4 @@ const EmptyState = ({ icon, title = 'Nothing here yet', sub, action }) => (
         {action && <div style={{ marginTop: 16 }}>{action}</div>}
     </div>
 );
-
 export default EmptyState;

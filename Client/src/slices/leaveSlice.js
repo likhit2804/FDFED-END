@@ -1,26 +1,21 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import leaveService from '../services/leaveService';
-
 export const applyLeave = createAsyncThunk('leave/apply', async (payload, thunkAPI) => {
   const res = await leaveService.applyLeave(payload);
   return res.data;
 });
-
 export const fetchLeaves = createAsyncThunk('leave/fetch', async (params, thunkAPI) => {
   const res = await leaveService.listLeaves(params);
   return res.data;
 });
-
 export const approveLeave = createAsyncThunk('leave/approve', async ({ id, notes }, thunkAPI) => {
   const res = await leaveService.approveLeave(id, { notes });
   return res.data;
 });
-
 export const rejectLeave = createAsyncThunk('leave/reject', async ({ id, notes }, thunkAPI) => {
   const res = await leaveService.rejectLeave(id, { notes });
   return res.data;
 });
-
 const leaveSlice = createSlice({
   name: 'leave',
   initialState: { leaves: [], status: 'idle', error: null },
@@ -45,5 +40,4 @@ const leaveSlice = createSlice({
       });
   }
 });
-
 export default leaveSlice.reducer;

@@ -7,6 +7,7 @@ import Resident from "../../../models/resident.js";
 import mongoose from "mongoose";
 import { generateRefundId } from "../../../utils/idGenerator.js";
 import { pushNotification } from "../../notifications/services/notificationService.js";
+import { normalizeDateOnly } from "../utils/csbValidation.js";
 
 export const sendSuccess = (res, message, data = {}, statusCode = 200) =>
   res.status(statusCode).json({ success: true, message, ...data });
@@ -40,12 +41,6 @@ const getManagerCommunityId = async (req) => {
     .lean();
 
   return normalizeObjectId(manager?.assignedCommunity || req.user.community);
-};
-
-const normalizeDateOnly = (value) => {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return null;
-  return date.toISOString().split("T")[0];
 };
 
 const parseSlotTimeToMinutes = (timeValue) => {
