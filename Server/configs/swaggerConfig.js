@@ -12,6 +12,9 @@ const options = {
       },
     },
     servers: [
+      ...(process.env.BACKEND_URL || process.env.API_BASE_URL
+        ? [{ url: process.env.BACKEND_URL || process.env.API_BASE_URL, description: 'Configured API Server' }]
+        : []),
       {
         url: 'https://urbanease-backend-6gff.onrender.com',
         description: 'Production Server',

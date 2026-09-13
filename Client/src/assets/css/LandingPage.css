@@ -1,218 +1,861 @@
-/* ------------------------- */
-/* GLOBAL RESET */
-/* ------------------------- */
+/* ============================================================
+   URBANEASE - CLEAN AUTHENTIC LANDING PAGE STYLESHEET
+   Signature Royal Blue & Midnight Navy Palette
+   ============================================================ */
 
-/* Remove Bootstrap background leak */
-body {
+:root {
+  --primary-blue: #155e75;
+  --primary-blue-hover: #0f4f68;
+  --primary-gradient: linear-gradient(135deg, #0e7490 0%, #155e75 100%);
+  --primary-gradient-hover: linear-gradient(135deg, #155e75 0%, #083344 100%);
+
+  --dark-navy: #0f172a;
+  --dark-navy-surface: #1e293b;
+  --text-dark: #0f172a;
+  --text-body: #334155;
+  --text-muted: #64748b;
+
+  --bg-page: #f8fafc;
+  --bg-surface: #ffffff;
+  --bg-subtle: #f1f5f9;
+  --border-color: #cbd5e1;
+
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+
+  --shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.04);
+  --shadow-md: 0 8px 24px rgba(15, 23, 42, 0.08);
+  --shadow-hover: 0 16px 36px rgba(21, 94, 117, 0.16);
+}
+
+.ue-root {
+  font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: var(--bg-page);
+  color: var(--text-body);
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+.ue-root * {
+  box-sizing: border-box;
+}
+
+/* ------------------------------------------------------------
+   NAVBAR (Midnight Navy with Royal Blue Accent)
+   ------------------------------------------------------------ */
+.ue-header {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  background: rgba(10, 15, 36, 0.96);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.ue-nav-inner {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 0.85rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ue-logo-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  text-decoration: none;
+}
+
+.ue-logo-img {
+  height: 42px;
+  width: auto;
+  object-fit: contain;
+}
+
+.ue-menu-links {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  list-style: none;
   margin: 0;
   padding: 0;
-  font-family: "Inter", sans-serif;
-  scroll-behavior: smooth;
-  background: #f2f4f7;   /* Page background */
 }
 
-/* Prevent white wrapper blocking footer */
-.landing-wrapper {
-  width: 100%;
-  background: var(--surface-0);
-  padding-top: 60px;
-  padding-bottom: 0;
-  z-index: 1;
-  position: relative;
-}
-
-
-
-/* ------------------------- */
-/* NAVBAR */
-/* ------------------------- */
-
-.navbar {
-  background: var(--text-strong);
-  backdrop-filter: blur(10px);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
-}
-
-.navbar-brand img {
-  height: 50px;
-}
-
-.nav-link {
-  color: #e0e0e0 !important;
+.ue-menu-link {
+  color: #cbd5e1;
+  text-decoration: none;
+  font-size: 0.95rem;
   font-weight: 500;
-  transition: all 0.25s ease;
+  transition: all 0.2s ease;
 }
-.nav-link:hover {
-  color: var(--surface-0) !important;
+
+.ue-menu-link:hover {
+  color: #ffffff;
+}
+
+.ue-nav-buttons {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+/* Buttons */
+.ue-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  font-size: 0.92rem;
+  border-radius: var(--radius-sm);
+  padding: 0.58rem 1.25rem;
+  text-decoration: none;
+  transition: all 0.25s ease;
+  cursor: pointer;
+  border: none;
+}
+
+.ue-button-primary {
+  background: var(--primary-gradient);
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(51, 88, 255, 0.35);
+}
+
+.ue-button-primary:hover {
+  background: var(--primary-gradient-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(51, 88, 255, 0.45);
+  color: #ffffff;
+}
+
+.ue-button-secondary {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.ue-button-secondary:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
   transform: translateY(-1px);
 }
 
-
-
-/* ------------------------- */
-/* BUTTONS */
-/* ------------------------- */
-
-.btn-primary {
-  background: linear-gradient(135deg, #4d7cff, #3358ff);
-  border: none;
-}
-.btn-primary:hover {
-  background: linear-gradient(135deg, #3358ff, #1934cc);
+.ue-button-outline {
+  background: transparent;
+  color: #cbd5e1;
+  border: 1px solid rgba(255, 255, 255, 0.25);
 }
 
-.btn-secondary {
-  background: var(--surface-0);
-  color: var(--text-strong);
-  border: none;
-  font-weight: 600;
-}
-.btn-secondary:hover {
-  background: #dcdcdc;
+.ue-button-outline:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
 }
 
+.ue-hamburger {
+  display: none;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  padding: 0.4rem 0.6rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
 
+.ue-mobile-dropdown {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.2rem 1.5rem 1.5rem;
+  background: var(--dark-navy);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
 
-/* ------------------------- */
-/* HERO */
-/* ------------------------- */
-
-.hero {
+/* ------------------------------------------------------------
+   HERO SECTION
+   ------------------------------------------------------------ */
+.ue-hero-section {
   position: relative;
-  background: url("https://images.unsplash.com/photo-1554995207-c18c203602cb")
-    center/cover no-repeat;
-  height: 100vh;
-  color: white;
+  min-height: 84vh;
   display: flex;
   align-items: center;
   justify-content: center;
+  background: url("https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=1920&q=80")
+    center/cover no-repeat;
+  color: #ffffff;
+  text-align: center;
+  padding: 5rem 1.5rem;
 }
 
-.hero .overlay {
+.ue-hero-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(10, 15, 36, 0.65);
+  background: linear-gradient(
+    180deg,
+    rgba(10, 15, 36, 0.88) 0%,
+    rgba(10, 15, 36, 0.78) 50%,
+    rgba(10, 15, 36, 0.95) 100%
+  );
   backdrop-filter: blur(3px);
 }
 
-.hero-content {
+.ue-hero-container {
   position: relative;
-  max-width: 850px;
-  padding: 0 20px;
   z-index: 2;
+  max-width: 880px;
+  margin: 0 auto;
 }
 
-
-
-/* ------------------------- */
-/* FEATURES */
-/* ------------------------- */
-
-#features {
-  background: var(--surface-1);
-  padding: 80px 0;
+.ue-hero-tag {
+  display: inline-block;
+  font-size: 0.84rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #a3ceff;
+  background: rgba(51, 88, 255, 0.2);
+  border: 1px solid rgba(77, 124, 255, 0.4);
+  padding: 0.35rem 0.9rem;
+  border-radius: 9999px;
+  margin-bottom: 1.5rem;
 }
 
-#features .card {
-  border-radius: 14px;
-  background: linear-gradient(130deg, var(--surface-0), var(--surface-2));
-  border: none;
-  padding: 1.8rem 1.4rem;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.08);
-  transition: all 0.3s ease;
+.ue-hero-heading {
+  font-size: 3.4rem;
+  font-weight: 800;
+  line-height: 1.15;
+  color: #ffffff;
+  letter-spacing: -0.02em;
+  margin-bottom: 1.4rem;
 }
 
-#features .card:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 10px 26px rgba(10, 15, 36, 0.22);
+.ue-hero-highlight {
+  color: #60a5fa;
+  background: linear-gradient(135deg, #93c5fd 0%, #3b82f6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
-.feature-icon {
-  width: 70px;
-  height: 70px;
-  margin: 0 auto 1.2rem auto;
-  border-radius: 50%;
-  background: rgba(10, 15, 36, 0.10);
+.ue-hero-subheading {
+  font-size: 1.2rem;
+  color: #e2e8f0;
+  line-height: 1.7;
+  max-width: 760px;
+  margin: 0 auto 2.4rem;
+}
+
+.ue-hero-actions {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #0A0F24;
+  gap: 1.2rem;
+  flex-wrap: wrap;
+  margin-bottom: 0;
 }
 
-
-
-/* ------------------------- */
-/* ROLES */
-/* ------------------------- */
-
-#roles {
-  background: #f2f4f7;
-  padding: 40px 0;
+/* ------------------------------------------------------------
+   SECTIONS
+   ------------------------------------------------------------ */
+.ue-section {
+  padding: 5.5rem 1.5rem;
+  max-width: 1240px;
+  margin: 0 auto;
 }
 
-#roles .card {
-  border-radius: 14px;
+.ue-section-title-wrap {
+  text-align: center;
+  max-width: 700px;
+  margin: 0 auto 3.5rem;
+}
+
+.ue-section-kicker {
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--primary-blue);
+  margin-bottom: 0.5rem;
+  display: block;
+}
+
+.ue-section-heading {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: var(--text-dark);
+  margin-bottom: 0.8rem;
+  letter-spacing: -0.02em;
+}
+
+.ue-section-paragraph {
+  font-size: 1.08rem;
+  color: var(--text-body);
+}
+
+/* ------------------------------------------------------------
+   FEATURES GRID (Clean, high-contrast cards)
+   ------------------------------------------------------------ */
+/* ------------------------------------------------------------
+   FEATURES BENTO GRID (2x2 Asymmetric Capability Layout)
+   ------------------------------------------------------------ */
+.ue-features-bento {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.8rem;
+}
+
+.ue-feature-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 2.2rem 2.2rem;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.28s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.ue-feature-card:hover {
+  transform: translateY(-4px);
+  border-color: #94a3b8;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.09);
+}
+
+.ue-feature-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+}
+
+.ue-feature-icon-box {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  background: rgba(21, 94, 117, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary-blue);
+}
+
+.ue-feature-badge {
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 0.35rem 0.8rem;
+  border-radius: 9999px;
+  background: rgba(21, 94, 117, 0.08);
+  color: var(--primary-blue);
+  border: 1px solid rgba(21, 94, 117, 0.15);
+}
+
+.ue-feature-category {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--primary-blue);
+  margin-bottom: 0.35rem;
+}
+
+.ue-feature-card-title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-bottom: 0.75rem;
+}
+
+.ue-feature-card-desc {
+  font-size: 0.95rem;
+  color: var(--text-body);
+  line-height: 1.6;
+  margin-bottom: 1.25rem;
+}
+
+.ue-feature-points {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 1.1rem;
+}
+
+.ue-feature-points li {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  font-size: 0.92rem;
+  color: var(--text-body);
+}
+
+.ue-point-check {
+  color: #16a34a;
+  flex-shrink: 0;
+}
+
+/* ------------------------------------------------------------
+   ROLES SECTION (Interactive Tabbed Experience)
+   ------------------------------------------------------------ */
+.ue-roles-section {
+  padding-top: 1rem;
+}
+
+.ue-role-tabs-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+  margin-bottom: 2.2rem;
+}
+
+.ue-role-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.8rem 1.4rem;
+  border-radius: 9999px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-surface);
+  color: var(--text-body);
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: var(--shadow-sm);
+}
+
+.ue-role-tab-btn:hover {
+  border-color: var(--primary-blue);
+  color: var(--primary-blue);
+}
+
+.ue-role-tab-btn.active {
+  background: var(--dark-navy);
+  color: #ffffff;
+  border-color: var(--dark-navy);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.18);
+}
+
+.ue-role-tab-btn.active .ue-role-tab-icon {
+  color: #38bdf8;
+}
+
+.ue-role-spotlight-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 3.2rem 3rem;
+  box-shadow: var(--shadow-md);
+  display: grid;
+  grid-template-columns: 1.25fr 1fr;
+  gap: 3.5rem;
+  align-items: center;
+}
+
+.ue-role-pill-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(21, 94, 117, 0.08);
+  color: var(--primary-blue);
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 0.45rem 1rem;
+  border-radius: 9999px;
+  margin-bottom: 1.25rem;
+  border: 1px solid rgba(21, 94, 117, 0.15);
+}
+
+.ue-role-spotlight-headline {
+  font-size: 1.95rem;
+  font-weight: 800;
+  color: var(--text-dark);
+  line-height: 1.3;
+  margin-bottom: 1rem;
+  letter-spacing: -0.01em;
+}
+
+.ue-role-spotlight-summary {
+  font-size: 1.05rem;
+  color: var(--text-body);
+  line-height: 1.65;
+  margin-bottom: 1.8rem;
+}
+
+.ue-role-highlights-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  margin-bottom: 2.2rem;
+}
+
+.ue-role-highlight-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  font-size: 0.96rem;
+  color: var(--text-body);
+}
+
+.ue-highlight-check {
+  color: #16a34a;
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+
+.ue-role-spotlight-cta {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* Right-side Authentic Live Workflow Preview */
+.ue-workflow-preview-card {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-md);
+  padding: 2.4rem 2.2rem;
+  color: #ffffff;
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.22);
+}
+
+.ue-workflow-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 1.25rem;
+}
+
+.ue-workflow-code {
+  font-family: monospace;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.15);
+  padding: 0.2rem 0.6rem;
+  border-radius: 4px;
+  display: inline-block;
+  margin-bottom: 0.4rem;
+}
+
+.ue-workflow-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+}
+
+.ue-workflow-status-pill {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: rgba(34, 197, 94, 0.2);
+  color: #4ade80;
+  border: 1px solid rgba(74, 222, 128, 0.3);
+  padding: 0.35rem 0.8rem;
+  border-radius: 9999px;
+}
+
+.ue-workflow-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1.6rem;
+}
+
+.ue-workflow-data-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 0.85rem 1.1rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.ue-data-label {
+  font-size: 0.85rem;
+  color: #94a3b8;
+}
+
+.ue-data-val {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #f8fafc;
+}
+
+.ue-workflow-footer {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 1.1rem;
+  font-size: 0.85rem;
+  color: #94a3b8;
+  line-height: 1.5;
+}
+
+/* ------------------------------------------------------------
+   HOW IT WORKS
+   ------------------------------------------------------------ */
+.ue-steps-container {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2rem;
+}
+
+.ue-step-box {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 2.4rem;
+  box-shadow: var(--shadow-sm);
   transition: all 0.3s ease;
 }
-#roles .card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+
+.ue-step-box:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--primary-blue);
 }
 
-
-
-/* ------------------------- */
-/* FOOTER */
-/* ------------------------- */
-
-.ue-footer {
-  width: 100%;
-  background: #0A0F24;
-  padding: 50px 0 30px 0;
-  color: rgba(255,255,255,0.85);
-  margin-top: 0;
-  position: relative;
-  z-index: 2;
+.ue-step-number {
+  font-size: 2.8rem;
+  font-weight: 800;
+  color: rgba(51, 88, 255, 0.2);
+  line-height: 1;
+  margin-bottom: 0.8rem;
 }
 
-.footer-title {
-  font-size: 1.15rem;
+.ue-step-box-title {
+  font-size: 1.25rem;
   font-weight: 700;
-  margin-bottom: 1rem;
-  color: white;
+  color: var(--text-dark);
+  margin-bottom: 0.6rem;
 }
 
-.footer-text {
-  color: rgba(255,255,255,0.75);
-  max-width: 480px;
+.ue-step-box-desc {
+  font-size: 0.95rem;
+  color: var(--text-body);
+  line-height: 1.6;
 }
 
-.footer-links a {
-  color: rgba(255,255,255,0.85);
+/* ------------------------------------------------------------
+   FAQ ACCORDION
+   ------------------------------------------------------------ */
+.ue-faq-wrapper {
+  max-width: 860px;
+  margin: 0 auto;
+}
+
+.ue-faq-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  margin-bottom: 0.9rem;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  transition: border-color 0.2s ease;
+}
+
+.ue-faq-card.is-open {
+  border-color: var(--primary-blue);
+}
+
+.ue-faq-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.6rem;
+  background: transparent;
+  border: none;
+  color: var(--text-dark);
+  font-size: 1.05rem;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ue-faq-content {
+  padding: 0 1.6rem 1.4rem;
+  color: var(--text-body);
+  font-size: 0.96rem;
+  line-height: 1.65;
+}
+
+/* ------------------------------------------------------------
+   CTA BANNER
+   ------------------------------------------------------------ */
+.ue-cta-banner-box {
+  background: linear-gradient(135deg, #0a0f24 0%, #15224e 55%, #1e3bb8 100%);
+  border-radius: var(--radius-lg);
+  padding: 4.5rem 2rem;
+  text-align: center;
+  color: #ffffff;
+  box-shadow: var(--shadow-md);
+  margin-bottom: 5rem;
+}
+
+.ue-cta-heading {
+  font-size: 2.8rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin-bottom: 1.1rem;
+  letter-spacing: -0.02em;
+}
+
+.ue-cta-text {
+  font-size: 1.18rem;
+  color: #cbd5e1;
+  max-width: 640px;
+  margin: 0 auto 2.5rem;
+}
+
+.ue-cta-button-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.2rem;
+  flex-wrap: wrap;
+}
+
+/* ------------------------------------------------------------
+   FOOTER
+   ------------------------------------------------------------ */
+.ue-site-footer {
+  background: var(--dark-navy);
+  color: #94a3b8;
+  padding: 4.5rem 1.5rem 2.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.ue-footer-inner {
+  max-width: 1240px;
+  margin: 0 auto;
+}
+
+.ue-footer-columns {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: 3.5rem;
+  margin-bottom: 3.5rem;
+}
+
+.ue-footer-brand-title {
+  color: #ffffff;
+  font-size: 1.25rem;
+  font-weight: 800;
+  margin-bottom: 0.8rem;
+}
+
+.ue-footer-brand-text {
+  font-size: 0.92rem;
+  color: #94a3b8;
+  line-height: 1.6;
+  max-width: 320px;
+}
+
+.ue-footer-column-heading {
+  color: #ffffff;
+  font-size: 0.92rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 1.2rem;
+}
+
+.ue-footer-column-links {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.ue-footer-column-links a {
+  color: #94a3b8;
   text-decoration: none;
-}
-.footer-links a:hover {
-  color: #A3CEF1;
-}
-
-.footer-divider {
-  border-color: rgba(255,255,255,0.15);
+  font-size: 0.92rem;
+  transition: color 0.2s ease;
 }
 
-.footer-copy {
-  color: rgba(255,255,255,0.65);
+.ue-footer-column-links a:hover {
+  color: #ffffff;
 }
 
+.ue-footer-copyright {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.86rem;
+  color: #64748b;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
 
-
-/* ------------------------- */
-/* MOBILE */
-/* ------------------------- */
-
-@media (max-width: 768px) {
-  .hero {
-    height: 70vh;
+/* ------------------------------------------------------------
+   RESPONSIVE
+   ------------------------------------------------------------ */
+@media (max-width: 1024px) {
+  .ue-role-spotlight-card {
+    grid-template-columns: 1fr;
+    gap: 2.5rem;
+    padding: 2.5rem 2rem;
+  }
+  .ue-footer-columns {
+    grid-template-columns: 1fr 1fr;
+    gap: 2.5rem;
   }
 }
 
-
+@media (max-width: 768px) {
+  .ue-menu-links,
+  .ue-nav-buttons .ue-button-secondary,
+  .ue-nav-buttons .ue-button-outline {
+    display: none;
+  }
+  .ue-hamburger {
+    display: block;
+  }
+  .ue-hero-heading {
+    font-size: 2.4rem;
+  }
+  .ue-hero-subheading {
+    font-size: 1.05rem;
+  }
+  .ue-features-bento {
+    grid-template-columns: 1fr;
+  }
+  .ue-role-tabs-bar {
+    gap: 0.5rem;
+  }
+  .ue-role-tab-btn {
+    padding: 0.65rem 1.1rem;
+    font-size: 0.88rem;
+  }
+  .ue-role-spotlight-card {
+    padding: 1.8rem 1.4rem;
+  }
+  .ue-steps-container {
+    grid-template-columns: 1fr;
+  }
+  .ue-cta-heading {
+    font-size: 2rem;
+  }
+  .ue-footer-columns {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+}

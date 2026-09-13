@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { io } from "socket.io-client";
+import { resolveApiBaseUrl } from "../utils/apiBaseUrl";
 
 export const useSocket = (url = "", options = {}) => {
   const socketRef = useRef(null);
@@ -22,8 +23,9 @@ export const useSocket = (url = "", options = {}) => {
     }
 
     // Connect with token in auth object
-    console.log("🔗 Connecting to Socket.IO at:", url || "origin");
-    const s = io(url || window.location.origin, {
+    const targetUrl = url || resolveApiBaseUrl() || (typeof window !== "undefined" ? window.location.origin : "");
+    console.log("🔗 Connecting to Socket.IO at:", targetUrl || "origin");
+    const s = io(targetUrl, {
       withCredentials: true,
       transports: ["websocket", "polling"],
       auth: {

@@ -1,11 +1,29 @@
 # Dependency directories
 node_modules/
+Client/node_modules/
+Server/node_modules/
 
-# Environment variables
+# Production build outputs
+Client/dist/
+dist/
+
+# Environment variables (ignore real secrets, track templates)
 .env
+.env.*
+!.env.example
+!.env.docker.example
+Client/.env
+Client/.env.*
+!Client/.env.example
+Server/.env
+Server/.env.*
+!Server/.env.example
 
-#Uploaded picture
+# Uploaded pictures & assets
 uploads/
+Server/uploads/
 
-# Server logs
+# Server & debug logs
 Server/logs/
+logs/
+*.log

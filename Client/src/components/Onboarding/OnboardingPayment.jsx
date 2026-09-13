@@ -4,6 +4,7 @@ import axios from "axios";
 import { toast } from "react-toastify";
 import { openRazorpayCheckout } from "../../services/razorpay";
 import { Loader } from "../Loader";
+import logo from "../../imgs/URBAN_EASE.png";
 const OnboardingPayment = () => {
     const [searchParams] = useSearchParams();
     const token = searchParams.get("token");

@@ -75,6 +75,33 @@ mongoose
     process.exit(1);
   });
 
+// ---------------- ORIGIN CONFIGURATION ----------------
+const normalizeOrigin = (value) => {
+  if (!value) return "";
+  try {
+    const url = new URL(String(value).trim());
+    return `${url.protocol}//${url.host}`;
+  } catch {
+    return "";
+  }
+};
+
+const allowedOrigins = Array.from(
+  new Set(
+    [
+      "http://localhost:5173",
+      "http://localhost:3000",
+      "http://127.0.0.1:5173",
+      "http://127.0.0.1:3000",
+      "https://urbanease-client.onrender.com",
+      "https://urbaneasefinal.onrender.com",
+      normalizeOrigin(process.env.CLIENT_BASE_URL),
+      normalizeOrigin(process.env.FRONTEND_URL),
+      normalizeOrigin(process.env.APP_BASE_URL),
+    ].filter(Boolean)
+  )
+);
+
 // ---------------- APP & SOCKET INITIALIZATION ----------------
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
@@ -82,7 +109,13 @@ const server = http.createServer(app);
 
 export const io = new Server(server, {
   cors: {
-    origin: "http://localhost:5173",
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Socket CORS origin not allowed"));
+      }
+    },
     credentials: true,
   },
 });
@@ -133,29 +166,6 @@ app.use(
       sameSite: IS_PRODUCTION ? "none" : "lax",
     },
   })
-);
-
-const normalizeOrigin = (value) => {
-  if (!value) return "";
-  try {
-    const url = new URL(String(value).trim());
-    return `${url.protocol}//${url.host}`;
-  } catch {
-    return "";
-  }
-};
-
-const allowedOrigins = Array.from(
-  new Set(
-    [
-      "http://localhost:5173",
-      "https://urbanease-client.onrender.com",
-      "https://urbaneasefinal.onrender.com",
-      normalizeOrigin(process.env.CLIENT_BASE_URL),
-      normalizeOrigin(process.env.FRONTEND_URL),
-      normalizeOrigin(process.env.APP_BASE_URL),
-    ].filter(Boolean)
-  )
 );
 
 app.use(

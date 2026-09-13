@@ -65,10 +65,11 @@ function App() {
       .then(res => res.json())
       .then(data => {
         console.log("user fetched", data);
-        if (data.user) {
+        if (data && data.user) {
           dispatch(setUser(data.user));
         }
-      });
+      })
+      .catch(() => {});
   }, [dispatch]);
   const router = createBrowserRouter(
     createRoutesFromElements(
@@ -76,12 +77,8 @@ function App() {
         <Route path="/" element={<Landingpage />} />
         <Route path="/SignIn" element={<SignIn />} />
         <Route path="/SignUp" element={<SignUp />} />
+        <Route path="/residentRegister" element={<ResidentRegister />} />
         <Route path="/interestForm" element={<InterestForm />} />
-        <Route path='/' element={<Landingpage />} />
-        <Route path='/SignIn' element={<SignIn />} />
-        <Route path='/SignUp' element={<SignUp />} />
-        <Route path='/residentRegister' element={<ResidentRegister />} />
-        <Route path='/interestForm' element={<InterestForm />} />
         {/* Public Onboarding Route */}
         <Route path="/onboarding/payment" element={<OnboardingPayment />} />
         {/* Shared page when community subscription is inactive/expired */}
