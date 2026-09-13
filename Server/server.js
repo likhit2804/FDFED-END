@@ -108,6 +108,7 @@ const allowedOrigins = Array.from(
 
 const isOriginAllowed = (origin) => {
   if (!origin) return true;
+  if (!IS_PRODUCTION) return true; // In development, allow all local origins
   if (allowedOrigins.includes(origin)) return true;
   try {
     const parsed = new URL(origin);
@@ -129,7 +130,7 @@ export const io = new Server(server, {
       if (isOriginAllowed(origin)) {
         callback(null, true);
       } else {
-        callback(new Error("Socket CORS origin not allowed"));
+        callback(null, false);
       }
     },
     credentials: true,
@@ -190,7 +191,7 @@ app.use(
       if (isOriginAllowed(origin)) {
         callback(null, true);
       } else {
-        callback(new Error("Not allowed by CORS"));
+        callback(null, false);
       }
     },
     credentials: true,
@@ -319,6 +320,16 @@ app.get(/.*/, (req, res) => {
   } else {
     res.status(503).send("Frontend build not found. Run 'npm run build' first.");
   }
+});
+
+// ---------------- GLOBAL ERROR HANDLER ----------------
+app.use((err, req, res, next) => {
+  console.error("Global express error:", err);
+  const status = err.status || err.statusCode || 500;
+  res.status(status).json({
+    success: false,
+    message: err.message || "Internal Server Error",
+  });
 });
 
 // ---------------- START SERVER ----------------
