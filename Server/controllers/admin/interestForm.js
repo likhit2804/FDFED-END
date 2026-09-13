@@ -1,4 +1,4 @@
-﻿import Interest from '../../models/interestForm.js';
+import Interest from '../../models/interestForm.js';
 import CommunityManager from '../../models/cManager.js';
 import admin from '../../models/admin.js';
 import Community from '../../models/communities.js';
@@ -316,65 +316,82 @@ export const approveApplication = async (req, res) => {
   console.log("Params:", req.params);
   console.log("Body:", req.body);
   console.log("User:", req.user);
-  const session = await mongoose.startSession();
-  session.startTransaction();
+
   try {
+    const adminId = req.user?.id || req.user?._id;
     // 1. Generate onboarding token (secure hex string)
     const onboardingToken = crypto.randomBytes(32).toString('hex');
-    const onboardingTokenExpires = Date.now() + 7 * 24 * 60 * 60 * 1000; // Case: Valid for 7 days
-    // 2. Update interest status and set token
+    const onboardingTokenExpires = Date.now() + 7 * 24 * 60 * 60 * 1000; // Valid for 7 days
+
+    // 2. Update interest status and set token atomically
     const interest = await Interest.findByIdAndUpdate(
       req.params.id,
       {
         status: 'approved',
-        approvedBy: req.user.id,
+        approvedBy: adminId || null,
         approvedAt: Date.now(),
         paymentStatus: 'pending',
         onboardingToken,
         onboardingTokenExpires
       },
-      { new: true, session }
+      { new: true }
     );
+
     if (!interest) {
-      throw new Error('Application not found');
+      return res.status(404).json({
+        success: false,
+        message: 'Application not found'
+      });
     }
-    // 3. Commit transaction
-    await session.commitTransaction();
-    session.endSession();
-    // 4. Get admin name for email
-    const adminUser = await admin.findById(req.user.id);
-    const adminName = adminUser?.name || 'Admin';
-    // 5. Send Email with Payment Link
+
+    // 3. Get admin name for email
+    let adminName = 'Admin';
+    if (adminId) {
+      try {
+        const adminUser = await admin.findById(adminId);
+        if (adminUser?.name) adminName = adminUser.name;
+      } catch (e) {
+        console.warn("Could not lookup admin user name:", e.message);
+      }
+    }
+
+    // 4. Build Payment Link
     const clientUrl = resolveClientBaseUrl(req);
     const paymentLink = `${clientUrl}/onboarding/payment?token=${onboardingToken}`;
-    console.log("[Approval] Sending payment link to:", interest.email);
-    await sendApplicationApprovedEmail(
-      interest.email,
-      adminName,
-      paymentLink,
-      'Your application has been approved! Please complete your subscription payment to activate your account and receive your login credentials.'
-    );
-    res.json({
+    console.log(`\n========================================\n🔗 [Approval Payment Link] for ${interest.email}:\n${paymentLink}\n========================================\n`);
+
+    // 5. Non-blocking background email delivery: immediately resolves HTTP request
+    Promise.resolve().then(() => {
+      sendApplicationApprovedEmail(
+        interest.email,
+        adminName,
+        paymentLink,
+        'Your application has been approved! Please complete your subscription payment to activate your account and receive your login credentials.'
+      ).catch((err) => {
+        console.warn(`[Approval Email] Delivery failed for ${interest.email} (Payment link: ${paymentLink}):`, err.message);
+      });
+    });
+
+    return res.json({
       success: true,
       message: 'Application approved. Onboarding link sent to applicant.',
       data: {
         interestId: interest._id,
         status: interest.status,
-        paymentStatus: interest.paymentStatus
+        paymentStatus: interest.paymentStatus,
+        paymentLink
       }
     });
   } catch (error) {
     console.error("[ERROR] Approval process failed:", error);
-    // Rollback
-    await session.abortTransaction();
-    session.endSession();
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: 'Error approving application',
       error: error.message
     });
   }
 };
+
 export const rejectApplication = async (req, res) => {
   try {
     if (!req.body.reason || req.body.reason.trim().length <= 0) {
@@ -383,31 +400,49 @@ export const rejectApplication = async (req, res) => {
         message: 'Rejection reason must be provided'
       });
     }
+
+    const adminId = req.user?.id || req.user?._id;
     const interest = await Interest.findByIdAndUpdate(
       req.params.id,
       {
         status: 'rejected',
-        rejectedBy: req.user.id,
+        rejectedBy: adminId || null,
         rejectedAt: Date.now(),
         rejectionReason: validator.escape(req.body.reason.trim())
       },
       { new: true, runValidators: true }
     );
+
     if (!interest) {
       return res.status(404).json({
         success: false,
         message: 'Application not found'
       });
     }
+
     // Get admin name for email
-    const adminUser = await admin.findById(req.user.id);
-    const adminName = adminUser?.name || 'Admin';
-    await sendApplicationRejectedEmail(
-      interest.email,
-      adminName,
-      req.body.reason.trim()
-    );
-    res.json({
+    let adminName = 'Admin';
+    if (adminId) {
+      try {
+        const adminUser = await admin.findById(adminId);
+        if (adminUser?.name) adminName = adminUser.name;
+      } catch (e) {
+        console.warn("Could not lookup admin user name:", e.message);
+      }
+    }
+
+    // Non-blocking background email delivery
+    Promise.resolve().then(() => {
+      sendApplicationRejectedEmail(
+        interest.email,
+        adminName,
+        req.body.reason.trim()
+      ).catch((err) => {
+        console.warn(`[Rejection Email] Delivery failed for ${interest.email}:`, err.message);
+      });
+    });
+
+    return res.json({
       success: true,
       message: 'Application rejected successfully',
       data: {
@@ -417,7 +452,7 @@ export const rejectApplication = async (req, res) => {
     });
   } catch (error) {
     console.error('Rejection error:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: error.name === 'ValidationError'
         ? 'Invalid rejection data'
@@ -436,53 +471,56 @@ export const resendPaymentLink = async (req, res) => {
     if (!interest) {
       return res.status(404).json({ success: false, message: 'Application not found' });
     }
+
     if (interest.status !== 'approved' && interest.status !== 'onboarded') {
       return res.status(400).json({
         success: false,
         message: 'Cannot resend info. Application is rejected or pending.'
       });
     }
-    // CASE 1: ALREADY COMPLETED -> ERROR (Feature removed)
+
+    // CASE 1: ALREADY COMPLETED -> ERROR
     if (interest.paymentStatus === 'completed') {
       return res.status(400).json({
         success: false,
         message: 'Payment already completed. Account is active.'
       });
     }
+
     // CASE 2: PENDING -> RESEND PAYMENT LINK
-    // Generate new token
     const onboardingToken = crypto.randomBytes(32).toString('hex');
     const onboardingTokenExpires = Date.now() + 7 * 24 * 60 * 60 * 1000; // 7 days from now
     interest.onboardingToken = onboardingToken;
     interest.onboardingTokenExpires = onboardingTokenExpires;
     await interest.save();
-    // Send email
+
     const clientUrl = resolveClientBaseUrl(req);
     const paymentLink = `${clientUrl}/onboarding/payment?token=${onboardingToken}`;
-    console.log(`[Resend Payment Link] Sending to ${interest.email} with token: ${onboardingToken.substring(0, 8)}...`);
-    try {
-      await sendPaymentLinkEmail(
+    console.log(`\n========================================\n🔗 [Resend Payment Link] for ${interest.email}:\n${paymentLink}\n========================================\n`);
+
+    // Non-blocking background email delivery
+    Promise.resolve().then(() => {
+      sendPaymentLinkEmail(
         interest.email,
         paymentLink,
         7 // 7 days expiry
-      );
-      console.log(`[Resend Payment Link] Email sent successfully to ${interest.email}`);
-    } catch (emailError) {
-      console.error('[Resend Payment Link] Email send failed:', emailError);
-      throw new Error(`Failed to send email: ${emailError.message}`);
-    }
-    res.json({
+      ).catch((emailError) => {
+        console.warn(`[Resend Payment Link] Email delivery failed for ${interest.email}:`, emailError.message);
+      });
+    });
+
+    return res.json({
       success: true,
       message: 'Payment link resent successfully',
       data: {
         interestId: interest._id,
-        newExpiry: onboardingTokenExpires
+        newExpiry: onboardingTokenExpires,
+        paymentLink
       }
     });
   } catch (error) {
     console.error('[Resend Payment Link Error]:', error.message);
-    console.error('Stack:', error.stack);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: 'Error performing resend action',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined

@@ -7,7 +7,15 @@ import {
   ClipboardCheck,
   Clock,
   CheckCircle2,
-  XCircle
+  XCircle,
+  Mail,
+  Phone,
+  Building2,
+  MapPin,
+  Calendar,
+  AlertCircle,
+  Send,
+  Check
 } from "lucide-react";
 // Spinner component
 const Spinner = ({ size = 16 }) => (
@@ -39,6 +47,10 @@ const spinAnimation = `
     opacity: 1;
   }
 }
+@keyframes fadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
 `;
 // Inject CSS
 if (typeof document !== 'undefined') {
@@ -60,9 +72,11 @@ export default function ManagerApplications() {
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [actionLoading, setActionLoading] = useState(null);
-  const [actionType, setActionType] = useState(null); // 'approve' or 'reject'
+  const [actionType, setActionType] = useState(null); // 'approve', 'reject', or 'resend'
   const [rejectionReason, setRejectionReason] = useState("");
   const [showRejectModal, setShowRejectModal] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
+
   // ===== Fetch Applications =====
   useEffect(() => {
     const fetchApplications = async () => {
@@ -116,6 +130,7 @@ export default function ManagerApplications() {
     };
     fetchApplications();
   }, []);
+
   // ===== Approval Function =====
   const handleApprove = async (appId) => {
     try {
@@ -123,31 +138,38 @@ export default function ManagerApplications() {
       setActionType('approve');
       const res = await axios.post(`/admin/api/interests/${appId}/approve`);
       if (res.data?.success) {
-        const updatedApp = { ...selectedApp, status: "APPROVED", uiStatus: "AWAITING PAYMENT", paymentStatus: "pending" };
+        const paymentLink = res.data?.data?.paymentLink;
         setApplications(prev =>
           prev.map(app =>
             app.id === appId
-              ? updatedApp
+              ? { ...app, status: "APPROVED", uiStatus: "AWAITING PAYMENT", paymentStatus: "pending", paymentLink }
               : app
           )
         );
-        // Update the selected app to reflect changes in preview
         if (selectedApp && selectedApp.id === appId) {
-          setSelectedApp(updatedApp);
+          setSelectedApp(prev => ({
+            ...prev,
+            status: "APPROVED",
+            uiStatus: "AWAITING PAYMENT",
+            paymentStatus: "pending",
+            paymentLink
+          }));
         }
         setError("");
-        setSuccessMessage("Application approved! Payment link sent to applicant.");
-        setTimeout(() => setSuccessMessage(""), 5000);
+        setSuccessMessage("Application approved! Onboarding payment link generated and sent to applicant.");
+        setTimeout(() => setSuccessMessage(""), 6000);
       } else {
         setError(res.data?.message || "Failed to approve application");
       }
     } catch (err) {
-      setError(err.response?.data?.message || "Error approving application");
-      console.error(err);
+      console.error("Approve error:", err);
+      setError(err.response?.data?.message || err.message || "Error approving application");
     } finally {
       setActionLoading(null);
+      setActionType(null);
     }
   };
+
   // ===== Rejection Function =====
   const handleReject = async (appId) => {
     if (!rejectionReason.trim()) {
@@ -157,31 +179,34 @@ export default function ManagerApplications() {
     try {
       setActionLoading(appId);
       setActionType('reject');
-      const res = await axios.post(`/admin/api/interests/${appId}/reject`, { reason: rejectionReason });
+      const res = await axios.post(`/admin/api/interests/${appId}/reject`, { reason: rejectionReason.trim() });
       if (res.data?.success) {
-        const updatedApp = { ...selectedApp, status: "REJECTED", rejectionReason };
         setApplications(prev =>
           prev.map(app =>
             app.id === appId
-              ? updatedApp
+              ? { ...app, status: "REJECTED", uiStatus: "REJECTED", rejectionReason: rejectionReason.trim() }
               : app
           )
         );
-        // Update the selected app to reflect changes in preview
         if (selectedApp && selectedApp.id === appId) {
-          setSelectedApp(updatedApp);
+          setSelectedApp(prev => ({
+            ...prev,
+            status: "REJECTED",
+            uiStatus: "REJECTED",
+            rejectionReason: rejectionReason.trim()
+          }));
         }
         setShowRejectModal(false);
         setRejectionReason("");
         setError("");
-        setSuccessMessage("Application rejected successfully! Rejection email sent to applicant.");
-        setTimeout(() => setSuccessMessage(""), 5000);
+        setSuccessMessage("Application rejected successfully! Rejection notice sent to applicant.");
+        setTimeout(() => setSuccessMessage(""), 6000);
       } else {
         setError(res.data?.message || "Failed to reject application");
       }
     } catch (err) {
-      setError(err.response?.data?.message || "Error rejecting application");
-      console.error(err);
+      console.error("Reject error:", err);
+      setError(err.response?.data?.message || err.message || "Error rejecting application");
     } finally {
       setActionLoading(null);
       setActionType(null);
@@ -234,11 +259,73 @@ export default function ManagerApplications() {
     },
     name: { fontWeight: 600, fontSize: "15px", color: "#0f172a" },
   };
+
   return (
     <div style={styles.container}>
       {/* Header */}
       <Header title="Community Manager Applications" />
-      {/* ===== Left Pane ===== */}
+
+      {/* Success Notification Banner */}
+      {successMessage && (
+        <div
+          style={{
+            backgroundColor: "#ecfdf5",
+            border: "1px solid #6ee7b7",
+            borderRadius: "10px",
+            padding: "12px 18px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            color: "#065f46",
+            fontSize: "14px",
+            fontWeight: "500",
+            animation: "slideInDown 0.3s ease",
+            boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.05)",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <CheckCircle2 size={20} color="#10b981" />
+            <span>{successMessage}</span>
+          </div>
+          <X
+            size={18}
+            style={{ cursor: "pointer", opacity: 0.7 }}
+            onClick={() => setSuccessMessage("")}
+          />
+        </div>
+      )}
+
+      {/* Error Notification Banner */}
+      {error && !loading && (
+        <div
+          style={{
+            backgroundColor: "#fef2f2",
+            border: "1px solid #fca5a5",
+            borderRadius: "10px",
+            padding: "12px 18px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            color: "#991b1b",
+            fontSize: "14px",
+            fontWeight: "500",
+            animation: "slideInDown 0.3s ease",
+            boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.05)",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <AlertCircle size={20} color="#ef4444" />
+            <span>{error}</span>
+          </div>
+          <X
+            size={18}
+            style={{ cursor: "pointer", opacity: 0.7 }}
+            onClick={() => setError("")}
+          />
+        </div>
+      )}
+
+      {/* ===== Applications List Section ===== */}
       <div style={styles.listPane}>
         {/* === Summary Cards (Occupy full horizontal width) === */}
         <div
@@ -269,19 +356,39 @@ export default function ManagerApplications() {
             borderColor="#fbbf24"
           />
         </div>
+
         {/* === Tabs === */}
         <Tabs
           options={["All", "Pending", "Awaiting Payment", "Completed", "Rejected"]}
           active={activeTab}
           onChange={setActiveTab}
         />
+
         {/* === Applications List === */}
         {loading ? (
           <div className="text-center py-5 text-muted fw-semibold">
-            Loading applications...
+            <Spinner size={24} />
+            <div style={{ marginTop: "12px" }}>Loading applications...</div>
           </div>
-        ) : error ? (
-          <div className="text-center text-danger py-5">{error}</div>
+        ) : filteredApps.length === 0 ? (
+          <div
+            style={{
+              backgroundColor: "#ffffff",
+              borderRadius: "12px",
+              padding: "48px 24px",
+              textAlign: "center",
+              border: "1px dashed #cbd5e1",
+              color: "#64748b",
+            }}
+          >
+            <ClipboardCheck size={40} style={{ opacity: 0.4, marginBottom: "12px" }} />
+            <h4 style={{ fontSize: "16px", fontWeight: "600", color: "#334155", margin: 0 }}>
+              No applications found
+            </h4>
+            <p style={{ fontSize: "14px", margin: "6px 0 0 0" }}>
+              There are no applications matching the "{activeTab}" filter.
+            </p>
+          </div>
         ) : (
           filteredApps.map((app) => (
             <div
@@ -299,346 +406,646 @@ export default function ManagerApplications() {
               }}
               onClick={() => {
                 setSelectedApp(app);
-                setActivePhoto(app.photos[0]);
+                setActivePhoto(app.photos?.[0] || null);
               }}
             >
               <div style={styles.headerRow}>
-                <div style={styles.name}>{app.name}</div>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <div
+                    style={{
+                      width: "32px",
+                      height: "32px",
+                      borderRadius: "8px",
+                      backgroundColor: "#e0e7ff",
+                      color: "#3730a3",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontWeight: "700",
+                      fontSize: "14px",
+                    }}
+                  >
+                    {app.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div style={styles.name}>{app.name}</div>
+                </div>
                 <Status status={app.uiStatus || app.status} />
               </div>
-              <div style={{ fontSize: "14px", color: "#64748b" }}>
+
+              <div style={{ fontSize: "14px", color: "#64748b", margin: "4px 0" }}>
                 {app.email} · {app.phone}
               </div>
-              <div style={{ fontSize: "14px", color: "#475569" }}>
-                {app.community} — {app.location}
+              <div style={{ fontSize: "14px", color: "#334155", fontWeight: "500" }}>
+                {app.communityName} — <span style={{ color: "#64748b", fontWeight: "400" }}>{app.location}</span>
               </div>
+
               <div
                 style={{
-                  marginTop: "10px",
+                  marginTop: "12px",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "space-between",
+                  borderTop: "1px solid #f8fafc",
+                  paddingTop: "8px",
                 }}
               >
                 <div style={{ fontSize: "13px", color: "#94a3b8" }}>
                   Applied on {app.appliedOn}
                 </div>
-                <Eye size={18} color="#3b82f6" />
+
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }} onClick={(e) => e.stopPropagation()}>
+                  {app.status === "PENDING" && (
+                    <button
+                      onClick={() => handleApprove(app.id)}
+                      disabled={actionLoading === app.id}
+                      style={{
+                        backgroundColor: "#22c55e",
+                        color: "#ffffff",
+                        border: "none",
+                        borderRadius: "6px",
+                        padding: "6px 14px",
+                        fontSize: "12px",
+                        fontWeight: "600",
+                        cursor: actionLoading === app.id ? "not-allowed" : "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        transition: "background 0.15s ease",
+                      }}
+                    >
+                      {actionLoading === app.id && actionType === 'approve' ? (
+                        <>
+                          <Spinner size={12} />
+                          Approving...
+                        </>
+                      ) : (
+                        "Approve"
+                      )}
+                    </button>
+                  )}
+
+                  <button
+                    onClick={() => {
+                      setSelectedApp(app);
+                      setActivePhoto(app.photos?.[0] || null);
+                    }}
+                    style={{
+                      background: "#f1f5f9",
+                      border: "1px solid #cbd5e1",
+                      borderRadius: "6px",
+                      padding: "6px 12px",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      fontSize: "12px",
+                      color: "#1e293b",
+                      cursor: "pointer",
+                      fontWeight: "500",
+                    }}
+                  >
+                    <Eye size={14} color="#2563eb" />
+                    View Details
+                  </button>
+                </div>
               </div>
             </div>
           ))
         )}
       </div>
-      {/* ===== Right Pane (Preview) ===== */}
+
+      {/* ===== Application Details Modal ===== */}
       {selectedApp && (
-        <div style={styles.previewPane}>
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(15, 23, 42, 0.65)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1050,
+            padding: "16px",
+            animation: "fadeIn 0.2s ease",
+          }}
+          onClick={() => setSelectedApp(null)}
+        >
           <div
             style={{
+              backgroundColor: "#ffffff",
+              borderRadius: "16px",
+              maxWidth: "700px",
+              width: "100%",
+              maxHeight: "90vh",
               display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: "16px",
+              flexDirection: "column",
+              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+              border: "1px solid #e2e8f0",
+              overflow: "hidden",
             }}
+            onClick={(e) => e.stopPropagation()}
           >
-            <h4 style={{ fontWeight: 700, color: "#0f172a", margin: 0 }}>
-              {selectedApp.name}
-            </h4>
-            <X
-              size={22}
-              style={{ cursor: "pointer", color: "#64748b" }}
-              onClick={() => setSelectedApp(null)}
-            />
-          </div>
-          <div style={{ marginBottom: "8px", color: "#475569" }}>
-            <strong>Email:</strong> {selectedApp.email}
-          </div>
-          <div style={{ marginBottom: "8px", color: "#475569" }}>
-            <strong>Phone:</strong> {selectedApp.phone}
-          </div>
-          <div style={{ marginBottom: "8px", color: "#475569" }}>
-            <strong>Community:</strong> {selectedApp.communityName}
-          </div>
-          <div style={{ marginBottom: "8px", color: "#475569" }}>
-            <strong>Location:</strong> {selectedApp.location}
-          </div>
-          <div style={{ marginBottom: "8px", color: "#475569" }}>
-            <strong>Status:</strong> <Status status={selectedApp.uiStatus || selectedApp.status} />
-          </div>
-          <div style={{ marginBottom: "16px", color: "#475569" }}>
-            <strong>Description:</strong> {selectedApp.description}
-          </div>
-          {/* Photos Section */}
-          {selectedApp.photos && selectedApp.photos.length > 0 && (
-            <div style={{ marginBottom: "16px" }}>
-              <div style={{ marginBottom: "8px", fontWeight: "500", color: "#374151" }}>
-                Photos ({selectedApp.photos.length})
-              </div>
-              <div style={{
+            {/* Modal Header */}
+            <div
+              style={{
+                padding: "18px 24px",
+                borderBottom: "1px solid #f1f5f9",
                 display: "flex",
-                gap: "8px",
-                flexWrap: "wrap",
-                marginBottom: "12px"
-              }}>
-                {selectedApp.photos.map((photoUrl, index) => (
+                justifyContent: "space-between",
+                alignItems: "center",
+                backgroundColor: "#f8fafc",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <div
+                  style={{
+                    width: "44px",
+                    height: "44px",
+                    borderRadius: "10px",
+                    backgroundColor: "#2563eb",
+                    color: "#ffffff",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontWeight: "700",
+                    fontSize: "18px",
+                  }}
+                >
+                  {selectedApp.name.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: "18px", fontWeight: "700", color: "#0f172a" }}>
+                    {selectedApp.name}
+                  </h3>
+                  <div style={{ fontSize: "13px", color: "#64748b", marginTop: "2px" }}>
+                    Applied on {selectedApp.appliedOn}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <Status status={selectedApp.uiStatus || selectedApp.status} />
+                <button
+                  onClick={() => setSelectedApp(null)}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    color: "#64748b",
+                    padding: "6px",
+                    borderRadius: "6px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <X size={20} />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div style={{ padding: "24px", overflowY: "auto", flex: 1 }}>
+              {/* Information Cards Grid */}
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+                  gap: "14px",
+                  marginBottom: "20px",
+                }}
+              >
+                <div
+                  style={{
+                    backgroundColor: "#f8fafc",
+                    padding: "14px 16px",
+                    borderRadius: "10px",
+                    border: "1px solid #f1f5f9",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#64748b", fontSize: "12px", fontWeight: "600", textTransform: "uppercase", marginBottom: "6px" }}>
+                    <Mail size={14} color="#3b82f6" /> Email Address
+                  </div>
+                  <a
+                    href={`mailto:${selectedApp.email}`}
+                    style={{ color: "#0f172a", fontSize: "14px", fontWeight: "500", textDecoration: "none" }}
+                  >
+                    {selectedApp.email}
+                  </a>
+                </div>
+
+                <div
+                  style={{
+                    backgroundColor: "#f8fafc",
+                    padding: "14px 16px",
+                    borderRadius: "10px",
+                    border: "1px solid #f1f5f9",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#64748b", fontSize: "12px", fontWeight: "600", textTransform: "uppercase", marginBottom: "6px" }}>
+                    <Phone size={14} color="#3b82f6" /> Phone Number
+                  </div>
+                  <a
+                    href={`tel:${selectedApp.phone}`}
+                    style={{ color: "#0f172a", fontSize: "14px", fontWeight: "500", textDecoration: "none" }}
+                  >
+                    {selectedApp.phone}
+                  </a>
+                </div>
+
+                <div
+                  style={{
+                    backgroundColor: "#f8fafc",
+                    padding: "14px 16px",
+                    borderRadius: "10px",
+                    border: "1px solid #f1f5f9",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#64748b", fontSize: "12px", fontWeight: "600", textTransform: "uppercase", marginBottom: "6px" }}>
+                    <Building2 size={14} color="#3b82f6" /> Proposed Community
+                  </div>
+                  <div style={{ color: "#0f172a", fontSize: "14px", fontWeight: "600" }}>
+                    {selectedApp.communityName}
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    backgroundColor: "#f8fafc",
+                    padding: "14px 16px",
+                    borderRadius: "10px",
+                    border: "1px solid #f1f5f9",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#64748b", fontSize: "12px", fontWeight: "600", textTransform: "uppercase", marginBottom: "6px" }}>
+                    <MapPin size={14} color="#3b82f6" /> Location
+                  </div>
+                  <div style={{ color: "#0f172a", fontSize: "14px", fontWeight: "500" }}>
+                    {selectedApp.location}
+                  </div>
+                </div>
+              </div>
+
+              {/* Description Section */}
+              {selectedApp.description && (
+                <div style={{ marginBottom: "20px" }}>
+                  <div style={{ fontSize: "13px", fontWeight: "600", color: "#475569", marginBottom: "8px" }}>
+                    Community Overview & Requirements
+                  </div>
                   <div
-                    key={index}
-                    onClick={() => setActivePhoto(photoUrl)}
                     style={{
-                      width: "60px",
-                      height: "60px",
-                      borderRadius: "8px",
-                      overflow: "hidden",
-                      cursor: "pointer",
-                      border: activePhoto === photoUrl ? "3px solid #3b82f6" : "2px solid #e5e7eb",
-                      transition: "all 0.2s ease"
+                      backgroundColor: "#f8fafc",
+                      border: "1px solid #e2e8f0",
+                      borderRadius: "10px",
+                      padding: "14px 16px",
+                      fontSize: "14px",
+                      lineHeight: "1.6",
+                      color: "#334155",
+                      whiteSpace: "pre-wrap",
                     }}
                   >
-                    <img
-                      src={photoUrl}
-                      alt={`Photo ${index + 1}`}
+                    {selectedApp.description}
+                  </div>
+                </div>
+              )}
+
+              {/* Photos Section */}
+              {selectedApp.photos && selectedApp.photos.length > 0 && (
+                <div style={{ marginBottom: "20px" }}>
+                  <div style={{ fontSize: "13px", fontWeight: "600", color: "#475569", marginBottom: "8px" }}>
+                    Community Photos ({selectedApp.photos.length})
+                  </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "10px",
+                      flexWrap: "wrap",
+                      marginBottom: "12px",
+                    }}
+                  >
+                    {selectedApp.photos.map((photoUrl, index) => (
+                      <div
+                        key={index}
+                        onClick={() => setActivePhoto(photoUrl)}
+                        style={{
+                          width: "70px",
+                          height: "70px",
+                          borderRadius: "8px",
+                          overflow: "hidden",
+                          cursor: "pointer",
+                          border: activePhoto === photoUrl ? "3px solid #3b82f6" : "2px solid #e2e8f0",
+                          transition: "all 0.15s ease",
+                        }}
+                      >
+                        <img
+                          src={photoUrl}
+                          alt={`Community Photo ${index + 1}`}
+                          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Active Photo Preview */}
+                  {activePhoto && (
+                    <div
                       style={{
                         width: "100%",
-                        height: "100%",
-                        objectFit: "cover"
+                        maxHeight: "320px",
+                        overflow: "hidden",
+                        borderRadius: "12px",
+                        border: "1px solid #e2e8f0",
+                        backgroundColor: "#000",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
                       }}
-                    />
+                    >
+                      <img
+                        src={activePhoto}
+                        alt="Enlarged preview"
+                        style={{ maxWidth: "100%", maxHeight: "320px", objectFit: "contain" }}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Approval/Payment Details */}
+              {selectedApp.status === "APPROVED" && (
+                <div
+                  style={{
+                    backgroundColor: "#f0fdf4",
+                    border: "1px solid #bbf7d0",
+                    borderRadius: "10px",
+                    padding: "14px 18px",
+                    marginBottom: "16px",
+                  }}
+                >
+                  <div style={{ color: "#166534", fontSize: "14px", fontWeight: "600", display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
+                    <CheckCircle2 size={16} /> Application Approved
+                    {selectedApp.approvedBy ? ` by ${selectedApp.approvedBy}` : ""}
+                    {selectedApp.approvedAt ? ` on ${selectedApp.approvedAt}` : ""}
                   </div>
-                ))}
-              </div>
-              {/* Large photo preview */}
-              {activePhoto && (
-                <div style={{
-                  width: "100%",
-                  maxHeight: "300px",
-                  overflow: "hidden",
-                  borderRadius: "12px",
-                  border: "1px solid #e5e7eb",
-                  marginBottom: "16px"
-                }}>
-                  <img
-                    src={activePhoto}
-                    alt="Preview"
-                    style={{
-                      width: "100%",
-                      height: "auto",
-                      display: "block"
+                  <div style={{ color: "#15803d", fontSize: "13px" }}>
+                    Status: <strong>{selectedApp.uiStatus}</strong> (Payment: {selectedApp.paymentStatus})
+                  </div>
+                </div>
+              )}
+
+              {/* Rejection Details */}
+              {selectedApp.status === "REJECTED" && (
+                <div
+                  style={{
+                    backgroundColor: "#fef2f2",
+                    border: "1px solid #fecaca",
+                    borderRadius: "10px",
+                    padding: "14px 18px",
+                    marginBottom: "16px",
+                  }}
+                >
+                  <div style={{ color: "#991b1b", fontSize: "14px", fontWeight: "600", display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
+                    <XCircle size={16} /> Application Rejected
+                    {selectedApp.rejectedBy ? ` by ${selectedApp.rejectedBy}` : ""}
+                    {selectedApp.rejectedAt ? ` on ${selectedApp.rejectedAt}` : ""}
+                  </div>
+                  {selectedApp.rejectionReason && (
+                    <div style={{ color: "#7f1d1d", fontSize: "13px", marginTop: "6px" }}>
+                      <strong>Reason:</strong> {selectedApp.rejectionReason}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer Actions */}
+            <div
+              style={{
+                padding: "16px 24px",
+                borderTop: "1px solid #f1f5f9",
+                backgroundColor: "#f8fafc",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: "12px",
+              }}
+            >
+              <button
+                onClick={() => setSelectedApp(null)}
+                style={{
+                  backgroundColor: "#ffffff",
+                  color: "#475569",
+                  border: "1px solid #cbd5e1",
+                  padding: "9px 18px",
+                  borderRadius: "8px",
+                  cursor: "pointer",
+                  fontSize: "14px",
+                  fontWeight: "500",
+                }}
+              >
+                Close
+              </button>
+
+              <div style={{ display: "flex", gap: "10px" }}>
+                {selectedApp.status === "PENDING" && (
+                  <>
+                    <button
+                      onClick={() => setShowRejectModal(true)}
+                      disabled={actionLoading === selectedApp.id}
+                      style={{
+                        backgroundColor: "#ef4444",
+                        color: "white",
+                        border: "none",
+                        padding: "9px 18px",
+                        borderRadius: "8px",
+                        cursor: actionLoading === selectedApp.id ? "not-allowed" : "pointer",
+                        fontSize: "14px",
+                        fontWeight: "600",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px",
+                      }}
+                    >
+                      <XCircle size={16} />
+                      Reject
+                    </button>
+
+                    <button
+                      onClick={() => handleApprove(selectedApp.id)}
+                      disabled={actionLoading === selectedApp.id}
+                      style={{
+                        backgroundColor: "#22c55e",
+                        color: "white",
+                        border: "none",
+                        padding: "9px 22px",
+                        borderRadius: "8px",
+                        cursor: actionLoading === selectedApp.id ? "not-allowed" : "pointer",
+                        fontSize: "14px",
+                        fontWeight: "600",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                      }}
+                    >
+                      {actionLoading === selectedApp.id && actionType === 'approve' ? (
+                        <>
+                          <Spinner size={16} />
+                          Approving...
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 size={16} />
+                          Approve Application
+                        </>
+                      )}
+                    </button>
+                  </>
+                )}
+
+                {selectedApp.uiStatus === "AWAITING PAYMENT" && (
+                  <button
+                    onClick={async () => {
+                      try {
+                        setActionLoading(selectedApp.id);
+                        setActionType('resend');
+                        const res = await axios.post(`/admin/api/interests/${selectedApp.id}/resend-link`);
+                        if (res.data?.success) {
+                          setSuccessMessage("Onboarding payment link resent successfully!");
+                          setTimeout(() => setSuccessMessage(""), 6000);
+                        } else {
+                          setError(res.data?.message || "Failed to resend link");
+                        }
+                      } catch (err) {
+                        setError(err.response?.data?.message || err.message || "Error resending link");
+                      } finally {
+                        setActionLoading(null);
+                        setActionType(null);
+                      }
                     }}
-                  />
-                </div>
-              )}
-            </div>
-          )}
-          {/* Resend Link Button */}
-          {selectedApp.uiStatus === "AWAITING PAYMENT" && (
-            <div style={{ display: "flex", gap: "12px", marginTop: "16px" }}>
-              <button
-                onClick={async () => {
-                  try {
-                    setActionLoading(selectedApp.id);
-                    setActionType('resend');
-                    const res = await axios.post(`/admin/api/interests/${selectedApp.id}/resend-link`);
-                    if (res.data?.success) {
-                      setSuccessMessage("Payment link resent successfully!");
-                      setTimeout(() => setSuccessMessage(""), 5000);
-                    } else {
-                      setError(res.data?.message || "Failed to resend link");
-                    }
-                  } catch (err) {
-                    setError(err.response?.data?.message || "Error resending link");
-                  } finally {
-                    setActionLoading(null);
-                  }
-                }}
-                disabled={actionLoading === selectedApp.id}
-                style={{
-                  backgroundColor: "#3b82f6",
-                  color: "white",
-                  border: "none",
-                  padding: "10px 20px",
-                  borderRadius: "8px",
-                  cursor: actionLoading === selectedApp.id ? "not-allowed" : "pointer",
-                  fontSize: "14px",
-                  fontWeight: "500",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  minWidth: "140px",
-                  justifyContent: "center",
-                }}
-              >
-                {actionLoading === selectedApp.id && actionType === 'resend' ? (
-                  <>
-                    <Spinner size={14} />
-                    Sending...
-                  </>
-                ) : (
-                  "Resend Payment Link"
+                    disabled={actionLoading === selectedApp.id}
+                    style={{
+                      backgroundColor: "#2563eb",
+                      color: "white",
+                      border: "none",
+                      padding: "9px 18px",
+                      borderRadius: "8px",
+                      cursor: actionLoading === selectedApp.id ? "not-allowed" : "pointer",
+                      fontSize: "14px",
+                      fontWeight: "600",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                    }}
+                  >
+                    {actionLoading === selectedApp.id && actionType === 'resend' ? (
+                      <>
+                        <Spinner size={16} />
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        <Send size={16} />
+                        Resend Payment Link
+                      </>
+                    )}
+                  </button>
                 )}
-              </button>
-            </div>
-          )}
-          {/* Action Buttons */}
-          {selectedApp.status === "PENDING" && (
-            <div style={{ display: "flex", gap: "12px", marginTop: "16px" }}>
-              <button
-                onClick={() => handleApprove(selectedApp.id)}
-                disabled={actionLoading === selectedApp.id}
-                style={{
-                  backgroundColor: actionLoading === selectedApp.id && actionType === 'approve' ? "var(--success-500)" : "#22c55e",
-                  color: "white",
-                  border: "none",
-                  padding: "10px 20px",
-                  borderRadius: "8px",
-                  cursor: actionLoading === selectedApp.id ? "not-allowed" : "pointer",
-                  fontSize: "14px",
-                  fontWeight: "500",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  minWidth: "100px",
-                  justifyContent: "center",
-                }}
-              >
-                {actionLoading === selectedApp.id && actionType === 'approve' ? (
-                  <>
-                    <Spinner size={14} />
-                    Approving
-                  </>
-                ) : (
-                  "Approve"
-                )}
-              </button>
-              <button
-                onClick={() => setShowRejectModal(true)}
-                disabled={actionLoading === selectedApp.id}
-                style={{
-                  backgroundColor: "#ef4444",
-                  color: "white",
-                  border: "none",
-                  padding: "10px 20px",
-                  borderRadius: "8px",
-                  cursor: actionLoading === selectedApp.id ? "not-allowed" : "pointer",
-                  fontSize: "14px",
-                  fontWeight: "500",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  minWidth: "100px",
-                  justifyContent: "center",
-                }}
-              >
-                Reject
-              </button>
-            </div>
-          )}
-          {/* Show approval/rejection details */}
-          {selectedApp.status === "APPROVED" && selectedApp.approvedBy && (
-            <div style={{ marginTop: "16px", color: "#22c55e", fontSize: "14px", display: "flex", alignItems: "center", gap: "6px" }}>
-              <CheckCircle2 size={16} /> Approved by {selectedApp.approvedBy} on {selectedApp.approvedAt}
-            </div>
-          )}
-          {selectedApp.status === "REJECTED" && (
-            <div style={{ marginTop: "16px" }}>
-              <div style={{ color: "#ef4444", fontSize: "14px", marginBottom: "4px", display: "flex", alignItems: "center", gap: "6px" }}>
-                <XCircle size={16} /> Rejected{selectedApp.rejectedBy ? ` by ${selectedApp.rejectedBy}` : ""}{selectedApp.rejectedAt ? ` on ${selectedApp.rejectedAt}` : ""}
               </div>
-              {selectedApp.rejectionReason && (
-                <div style={{ color: "#475569", fontSize: "13px", backgroundColor: "#fef2f2", padding: "8px", borderRadius: "6px", border: "1px solid #fecaca" }}>
-                  <strong>Reason:</strong> {selectedApp.rejectionReason}
-                </div>
-              )}
             </div>
-          )}
+          </div>
         </div>
       )}
-      {/* Rejection Modal */}
+
+      {/* ===== Rejection Modal ===== */}
       {showRejectModal && selectedApp && (
-        <div style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: "rgba(0,0,0,0.5)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          zIndex: 1000,
-        }}>
-          <div style={{
-            backgroundColor: "white",
-            padding: "24px",
-            borderRadius: "12px",
-            width: "500px",
-            maxWidth: "90vw",
-            boxShadow: "0 10px 30px rgba(0,0,0,0.3)",
-          }}>
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(15, 23, 42, 0.75)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1100,
+            padding: "16px",
+            animation: "fadeIn 0.2s ease",
+          }}
+          onClick={() => {
+            setShowRejectModal(false);
+            setRejectionReason("");
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: "white",
+              padding: "24px",
+              borderRadius: "14px",
+              width: "500px",
+              maxWidth: "92vw",
+              boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.2)",
+              border: "1px solid #e2e8f0",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-              <h3 style={{ margin: 0, color: "#0f172a", fontSize: "18px", fontWeight: "600" }}>
-                Reject Application
-              </h3>
-              <X
-                size={20}
-                style={{ cursor: "pointer", color: "#64748b" }}
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <AlertCircle size={20} color="#ef4444" />
+                <h3 style={{ margin: 0, color: "#0f172a", fontSize: "17px", fontWeight: "700" }}>
+                  Reject Application
+                </h3>
+              </div>
+              <button
                 onClick={() => {
                   setShowRejectModal(false);
                   setRejectionReason("");
-                  setError("");
                 }}
-              />
+                style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b" }}
+              >
+                <X size={18} />
+              </button>
             </div>
-            <div style={{ marginBottom: "16px", color: "#475569" }}>
-              <strong>Applicant:</strong> {selectedApp.name}
-            </div>
-            <div style={{ marginBottom: "16px", color: "#475569" }}>
-              <strong>Community:</strong> {selectedApp.communityName}
-            </div>
+
+            <p style={{ fontSize: "14px", color: "#475569", margin: "0 0 16px 0", lineHeight: "1.5" }}>
+              You are about to reject the application for <strong>{selectedApp.name}</strong> ({selectedApp.communityName}).
+              Please provide a clear reason for the applicant.
+            </p>
+
             <div style={{ marginBottom: "16px" }}>
-              <label style={{ display: "block", marginBottom: "8px", fontWeight: "500", color: "#374151" }}>
+              <label style={{ display: "block", marginBottom: "8px", fontWeight: "600", fontSize: "13px", color: "#334155" }}>
                 Rejection Reason *
               </label>
               <textarea
                 value={rejectionReason}
                 onChange={(e) => setRejectionReason(e.target.value)}
-                placeholder="Please provide a detailed reason for rejection..."
+                placeholder="Explain why this community application cannot be approved at this time..."
+                rows={4}
                 style={{
                   width: "100%",
-                  minHeight: "100px",
                   padding: "12px",
-                  border: "2px solid #e5e7eb",
+                  border: "1px solid #cbd5e1",
                   borderRadius: "8px",
                   resize: "vertical",
                   fontFamily: "inherit",
                   fontSize: "14px",
                   outline: "none",
+                  boxSizing: "border-box",
                 }}
               />
             </div>
-            {error && (
-              <div style={{
-                backgroundColor: "#fef2f2",
-                border: "1px solid #fecaca",
-                color: "var(--danger-500)",
-                padding: "12px",
-                borderRadius: "6px",
-                marginBottom: "16px",
-                fontSize: "14px",
-              }}>
-                {error}
-              </div>
-            )}
-            <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end" }}>
+
+            <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
               <button
                 onClick={() => {
                   setShowRejectModal(false);
                   setRejectionReason("");
-                  setError("");
                 }}
                 style={{
-                  backgroundColor: "#f3f4f6",
-                  color: "#374151",
-                  border: "none",
-                  padding: "10px 20px",
+                  backgroundColor: "#f1f5f9",
+                  color: "#475569",
+                  border: "1px solid #cbd5e1",
+                  padding: "9px 18px",
                   borderRadius: "8px",
                   cursor: "pointer",
                   fontSize: "14px",
@@ -654,25 +1061,23 @@ export default function ManagerApplications() {
                   backgroundColor: actionLoading === selectedApp.id || !rejectionReason.trim() ? "#9ca3af" : "#ef4444",
                   color: "white",
                   border: "none",
-                  padding: "10px 20px",
+                  padding: "9px 20px",
                   borderRadius: "8px",
                   cursor: actionLoading === selectedApp.id || !rejectionReason.trim() ? "not-allowed" : "pointer",
                   fontSize: "14px",
-                  fontWeight: "500",
+                  fontWeight: "600",
                   display: "flex",
                   alignItems: "center",
                   gap: "8px",
-                  minWidth: "140px",
-                  justifyContent: "center",
                 }}
               >
                 {actionLoading === selectedApp.id && actionType === 'reject' ? (
                   <>
                     <Spinner size={14} />
-                    Rejecting
+                    Rejecting...
                   </>
                 ) : (
-                  "Reject Application"
+                  "Confirm Rejection"
                 )}
               </button>
             </div>
