@@ -298,7 +298,11 @@ app.use(
 
 app.get(/.*/, (req, res) => {
   res.setHeader("Cache-Control", "no-cache");
-  res.sendFile(CLIENT_INDEX_PATH);
+  if (fs.existsSync(CLIENT_INDEX_PATH)) {
+    res.sendFile(CLIENT_INDEX_PATH);
+  } else {
+    res.status(503).send("Frontend build not found. Run 'npm run build' first.");
+  }
 });
 
 // ---------------- START SERVER ----------------

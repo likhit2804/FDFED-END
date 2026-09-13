@@ -3,8 +3,8 @@
   "private": true,
   "scripts": {
     "install-all": "npm install && npm install --prefix Server && npm install --prefix Client",
-    "postinstall": "npm install --prefix Server",
-    "start": "npm run start:server",
+    "build": "cd Client && npm install && npm run build && cd ../Server && npm install",
+    "start": "node Server/server.js",
     "start:server": "npm run start --prefix Server",
     "start:server:dev": "npm run dev --prefix Server",
     "start:client": "npm run dev --prefix Client",
