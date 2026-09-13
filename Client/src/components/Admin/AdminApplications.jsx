@@ -46,6 +46,7 @@ if (typeof document !== 'undefined') {
   style.textContent = spinAnimation;
   document.head.appendChild(style);
 }
+import Header from "./Header";
 import Card from "./Card";
 import Tabs from "./Tabs";
 import Status from "./Status";
