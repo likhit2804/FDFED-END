@@ -296,7 +296,7 @@ authRouter.post("/logout", (req, res) => {
  *       401:
  *         description: Invalid OTP or expired session
  */
-authRouter.post("/api/verify-otp", async (req, res) => {
+authRouter.post(["/api/verify-otp", "/verify-otp"], async (req, res) => {
   try {
     const { otp, tempToken } = req.body;
 
@@ -386,7 +386,7 @@ authRouter.post("/api/verify-otp", async (req, res) => {
  *       401:
  *         description: Invalid or expired session
  */
-authRouter.post("/api/resend-otp", async (req, res) => {
+authRouter.post(["/api/resend-otp", "/resend-otp"], async (req, res) => {
   try {
     const { tempToken } = req.body;
 
