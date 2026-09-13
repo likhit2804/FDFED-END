@@ -36,6 +36,7 @@ const authLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   skipSuccessfulRequests: false,
+  validate: { xForwardedForHeader: false },
   handler: (req, res) => {
     console.warn(`Rate limit exceeded for IP: ${req.ip}`, {
       path: req.path,
@@ -50,7 +51,8 @@ const authLimiter = rateLimit({
 
 const otpLimiter = rateLimit({
   windowMs: 10 * 60 * 1000, // 5 minutes
-  max: 3, // 3 OTP requests per window
+  max: 10,
+  validate: { xForwardedForHeader: false },
   message: {
     success: false,
     message: "Too many OTP requests, please try again after 5 minutes",
@@ -61,7 +63,8 @@ const otpLimiter = rateLimit({
 
 const forgotPasswordLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 3, // 3 attempts per window
+  max: 10,
+  validate: { xForwardedForHeader: false },
   message: {
     success: false,
     message: "Too many password reset requests, please try again after 15 minutes",

@@ -44,11 +44,15 @@ export async function sendLoginOtp(email, context = {}) {
   const code = generateOTP();
   setOtp(email, code);
   console.log(`\n========================================\n🔑 [2FA OTP] Code for ${email}: ${code}\n========================================\n`);
-  try {
-    await sendOTPEmail(email, code, 5, "login", context);
-  } catch (err) {
-    console.warn(`[OTP] Email delivery failed for ${email} (Use console OTP: ${code}):`, err.message);
-  }
+  
+  // Non-blocking background email delivery: immediately resolves the HTTP request
+  // so the OTP form displays instantly in the browser without waiting for SMTP delays
+  Promise.resolve().then(() => {
+    sendOTPEmail(email, code, 5, "login", context).catch((err) => {
+      console.warn(`[OTP] Email delivery failed for ${email} (Use console OTP: ${code}):`, err.message);
+    });
+  });
+
   return true;
 }
 
@@ -62,11 +66,13 @@ export async function sendOtp(email, context = {}) {
   const code = generateOTP();
   setOtp(email, code);
   console.log(`\n========================================\n🔑 [Registration OTP] Code for ${email}: ${code}\n========================================\n`);
-  try {
-    await sendOTPEmail(email, code, 5, "registration", context);
-  } catch (err) {
-    console.warn(`[OTP] Email delivery failed for ${email} (Use console OTP: ${code}):`, err.message);
-  }
+
+  Promise.resolve().then(() => {
+    sendOTPEmail(email, code, 5, "registration", context).catch((err) => {
+      console.warn(`[OTP] Email delivery failed for ${email} (Use console OTP: ${code}):`, err.message);
+    });
+  });
+
   return code;
 }
 
@@ -160,6 +166,10 @@ export async function sendPassword({ email }) {
  * @returns {Promise<boolean>}
  */
 export async function sendTemporaryPassword(email, password) {
-  await sendTemporaryPasswordEmail(email, password);
+  Promise.resolve().then(() => {
+    sendTemporaryPasswordEmail(email, password).catch((err) => {
+      console.warn(`[TemporaryPassword] Email delivery failed for ${email}:`, err.message);
+    });
+  });
   return true;
 }
