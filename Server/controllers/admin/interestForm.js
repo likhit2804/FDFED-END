@@ -275,7 +275,9 @@ export const getAllApplications = async (req, res) => {
       approvedAt: app.approvedAt,
       rejectedAt: app.rejectedAt,
       rejectionReason: app.rejectionReason,
-      paymentStatus: app.paymentStatus || 'pending'
+      paymentStatus: app.paymentStatus || 'pending',
+      onboardingToken: app.onboardingToken || null,
+      paymentLink: app.onboardingToken ? `${resolveClientBaseUrl(req)}/onboarding/payment?token=${app.onboardingToken}` : null
     }));
     // 3️⃣ Send JSON response
     res.json({

@@ -107,6 +107,7 @@ export default function ManagerApplications() {
             approvedAt: app.approvedAt ? new Date(app.approvedAt).toLocaleDateString("en-IN") : null,
             rejectedAt: app.rejectedAt ? new Date(app.rejectedAt).toLocaleDateString("en-IN") : null,
             paymentStatus: app.paymentStatus || 'pending',
+            paymentLink: app.paymentLink || (app.onboardingToken ? `${window.location.origin}/onboarding/payment?token=${app.onboardingToken}` : null),
             // Computed status for UI
             uiStatus: (app.status?.toUpperCase() === 'APPROVED' && (!app.paymentStatus || app.paymentStatus === 'pending'))
               ? 'AWAITING PAYMENT'
@@ -777,19 +778,101 @@ export default function ManagerApplications() {
                   style={{
                     backgroundColor: "#f0fdf4",
                     border: "1px solid #bbf7d0",
-                    borderRadius: "10px",
-                    padding: "14px 18px",
+                    borderRadius: "12px",
+                    padding: "16px 18px",
                     marginBottom: "16px",
                   }}
                 >
-                  <div style={{ color: "#166534", fontSize: "14px", fontWeight: "600", display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
-                    <CheckCircle2 size={16} /> Application Approved
+                  <div style={{ color: "#166534", fontSize: "15px", fontWeight: "700", display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
+                    <CheckCircle2 size={18} /> Application Approved
                     {selectedApp.approvedBy ? ` by ${selectedApp.approvedBy}` : ""}
                     {selectedApp.approvedAt ? ` on ${selectedApp.approvedAt}` : ""}
                   </div>
                   <div style={{ color: "#15803d", fontSize: "13px" }}>
                     Status: <strong>{selectedApp.uiStatus}</strong> (Payment: {selectedApp.paymentStatus})
                   </div>
+
+                  {selectedApp.paymentLink && (
+                    <div style={{ marginTop: "12px", paddingTop: "12px", borderTop: "1px solid #dcfce7" }}>
+                      <div style={{ fontSize: "12px", fontWeight: "600", color: "#166534", textTransform: "uppercase", marginBottom: "6px" }}>
+                        Direct Onboarding & Payment Link:
+                      </div>
+                      <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
+                        <input
+                          type="text"
+                          readOnly
+                          value={selectedApp.paymentLink}
+                          style={{
+                            flex: 1,
+                            minWidth: "220px",
+                            backgroundColor: "#ffffff",
+                            border: "1px solid #86efac",
+                            borderRadius: "6px",
+                            padding: "8px 12px",
+                            fontSize: "13px",
+                            color: "#1e293b",
+                            fontFamily: "monospace",
+                            outline: "none",
+                          }}
+                          onClick={(e) => e.target.select()}
+                        />
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(selectedApp.paymentLink);
+                            setCopiedLink(true);
+                            setTimeout(() => setCopiedLink(false), 3000);
+                          }}
+                          style={{
+                            backgroundColor: copiedLink ? "#15803d" : "#16a34a",
+                            color: "#ffffff",
+                            border: "none",
+                            borderRadius: "6px",
+                            padding: "8px 14px",
+                            fontSize: "13px",
+                            fontWeight: "600",
+                            cursor: "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "6px",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {copiedLink ? (
+                            <>
+                              <Check size={14} />
+                              Copied!
+                            </>
+                          ) : (
+                            "Copy Link"
+                          )}
+                        </button>
+                        <a
+                          href={selectedApp.paymentLink}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{
+                            backgroundColor: "#ffffff",
+                            color: "#166534",
+                            border: "1px solid #86efac",
+                            borderRadius: "6px",
+                            padding: "8px 12px",
+                            fontSize: "13px",
+                            fontWeight: "600",
+                            textDecoration: "none",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "4px",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          Open Link ↗
+                        </a>
+                      </div>
+                      <div style={{ fontSize: "12px", color: "#166534", marginTop: "6px" }}>
+                        💡 You can copy this link and share it directly with the manager via email or WhatsApp.
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 

@@ -41,21 +41,23 @@ if (missingVars.length > 0) {
  * Singleton pattern - reuse the same transporter across all email sends
  */
 const createTransporter = () => {
-  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+  const user = (process.env.EMAIL_USER || '').trim();
+  const pass = (process.env.EMAIL_PASS || '').replace(/\s+/g, '');
+  if (!user || !pass) {
     throw new Error('Email credentials not configured. Check EMAIL_USER and EMAIL_PASS in .env');
   }
   return nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 587,
-    secure: false, // Use TLS
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    port: Number(process.env.SMTP_PORT) || 587,
+    secure: process.env.SMTP_SECURE === 'true',
     auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
+      user,
+      pass,
     },
     tls: {
       rejectUnauthorized: false
     },
-    pool: true, // Use pooled connections for better performance
+    pool: true,
     maxConnections: 5,
     maxMessages: 100
   });
@@ -84,8 +86,10 @@ const getTransporter = () => {
 async function sendEmail({ to, subject, html, text = '', attachments = [] }) {
   try {
     const transporter = getTransporter();
+    const fromName = process.env.EMAIL_FROM_NAME || 'UrbanEase';
+    const fromUser = process.env.EMAIL_USER || 'urbanease.team@gmail.com';
     const mailOptions = {
-      from: process.env.EMAIL_FROM || '"Urban Ease" <no-reply@urbaneaseapp.com>',
+      from: `"${fromName}" <${fromUser}>`,
       to,
       subject,
       html,
@@ -97,6 +101,9 @@ async function sendEmail({ to, subject, html, text = '', attachments = [] }) {
     return true;
   } catch (error) {
     console.error(`❌ Failed to send email to ${to}:`, error.message);
+    if (error.message && (error.message.includes('WebLoginRequired') || error.message.includes('534'))) {
+      console.warn(`\n⚠️ [GMAIL AUTHENTICATION NOTICE]: Google has blocked smtp.gmail.com with 534 5.7.9 (WebLoginRequired).\nTo unlock email delivery:\n1. Generate an App Password at: https://myaccount.google.com/apppasswords\n2. Or unlock device access at: https://accounts.google.com/DisplayUnlockCaptcha while logged into ${process.env.EMAIL_USER}.\n`);
+    }
     throw error;
   }
 }
