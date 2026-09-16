@@ -1,7 +1,9 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate, NavLink } from "react-router-dom";
+import '../assets/css/SignIn.css';
 import showPass from '../imgs/showPass.svg';
 import hidePass from '../imgs/hidePass.svg';
+import logo from '../imgs/Logo copy.png';
 import { useSelector, useDispatch } from "react-redux";
 import { ToastContainer, toast } from "react-toastify";
 import { loginUser, verifyOtp } from "../slices/authSlice.js";

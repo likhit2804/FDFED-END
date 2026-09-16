@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import axios from "axios";
+import '../../assets/css/SignIn.css';
+import logo from "../../imgs/Logo copy.png";
 export const ResidentRegister = () => {
   const navigate = useNavigate();
   // Step 1: code entry / Step 2: personal details

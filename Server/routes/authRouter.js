@@ -36,6 +36,7 @@ const authLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   skipSuccessfulRequests: false,
+  validate: { xForwardedForHeader: false },
   handler: (req, res) => {
     console.warn(`Rate limit exceeded for IP: ${req.ip}`, {
       path: req.path,
@@ -50,7 +51,8 @@ const authLimiter = rateLimit({
 
 const otpLimiter = rateLimit({
   windowMs: 10 * 60 * 1000, // 5 minutes
-  max: 3, // 3 OTP requests per window
+  max: 10,
+  validate: { xForwardedForHeader: false },
   message: {
     success: false,
     message: "Too many OTP requests, please try again after 5 minutes",
@@ -61,7 +63,8 @@ const otpLimiter = rateLimit({
 
 const forgotPasswordLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 3, // 3 attempts per window
+  max: 10,
+  validate: { xForwardedForHeader: false },
   message: {
     success: false,
     message: "Too many password reset requests, please try again after 15 minutes",
@@ -179,16 +182,16 @@ authRouter.post("/api/AdminLogin", authLimiter, async (req, res) => {
  */
 authRouter.post("/login", authLimiter, async (req, res) => {
   try {
-    const { email, password, userType } = req.body;
-
+    const { email, password, userType } = req.body || {};
+    const normalizedRole = String(userType || "").trim().toLowerCase();
     let verified;
-    if (userType === "Resident") verified = await VerifyR(email, password);
-    else if (userType === "Security") verified = await VerifyS(email, password);
-    else if (userType === "Worker") verified = await VerifyW(email, password);
-    else if (userType === "communityManager") {
+    if (normalizedRole === "resident") verified = await VerifyR(email, password);
+    else if (normalizedRole === "security") verified = await VerifyS(email, password);
+    else if (normalizedRole === "worker") verified = await VerifyW(email, password);
+    else if (normalizedRole === "communitymanager" || normalizedRole === "manager") {
       console.log(email, password, userType);
       verified = await VerifyC(email, password);
-    } else if (userType === "Admin") {
+    } else if (normalizedRole === "admin") {
       verified = await VerifyA(email, password);
     } else {
       return res.status(400).json({ message: "Invalid user type" });
@@ -296,7 +299,7 @@ authRouter.post("/logout", (req, res) => {
  *       401:
  *         description: Invalid OTP or expired session
  */
-authRouter.post("/api/verify-otp", async (req, res) => {
+authRouter.post(["/api/verify-otp", "/verify-otp"], async (req, res) => {
   try {
     const { otp, tempToken } = req.body;
 
@@ -386,7 +389,7 @@ authRouter.post("/api/verify-otp", async (req, res) => {
  *       401:
  *         description: Invalid or expired session
  */
-authRouter.post("/api/resend-otp", async (req, res) => {
+authRouter.post(["/api/resend-otp", "/resend-otp"], async (req, res) => {
   try {
     const { tempToken } = req.body;
 
@@ -553,28 +556,34 @@ authRouter.post("/forgot-password", forgotPasswordLimiter, async (req, res) => {
  *         description: Unauthorized — no valid token
  */
 authRouter.get("/api/auth/getUser", auth, cacheRoute(180), async (req, res) => {
-  const cookie = req.cookies.token;
-
   try {
-    const data = jwt.verify(cookie, process.env.JWT_SECRET);
+    const data = req.user;
+    if (!data) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
 
     let subscriptionStatus = "active";
     let hasStructure = true; // Default to true for non-managers to avoid redirect loops
 
     if (data.community) {
-      const community = await Community.findById(data.community).select(
-        "subscriptionStatus hasStructure"
-      );
-      if (community) {
-        if (community.subscriptionStatus)
-          subscriptionStatus = community.subscriptionStatus;
-        if (community.hasStructure !== undefined)
-          hasStructure = community.hasStructure;
+      try {
+        const community = await Community.findById(data.community).select(
+          "subscriptionStatus hasStructure"
+        ).lean();
+        if (community) {
+          if (community.subscriptionStatus)
+            subscriptionStatus = community.subscriptionStatus;
+          if (community.hasStructure !== undefined)
+            hasStructure = community.hasStructure;
+        }
+      } catch (communityErr) {
+        console.warn("Error fetching community for getUser:", communityErr?.message);
       }
     }
 
     return res.json({ user: { ...data, subscriptionStatus, hasStructure } });
   } catch (err) {
+    console.error("Error in /api/auth/getUser:", err);
     return res.status(401).json({ message: "Unauthorized" });
   }
 });

@@ -75,14 +75,65 @@ mongoose
     process.exit(1);
   });
 
+// ---------------- ORIGIN CONFIGURATION ----------------
+const normalizeOrigin = (value) => {
+  if (!value) return "";
+  try {
+    const url = new URL(String(value).trim());
+    return `${url.protocol}//${url.host}`;
+  } catch {
+    return "";
+  }
+};
+
+const allowedOrigins = Array.from(
+  new Set(
+    [
+      "http://localhost:5173",
+      "http://localhost:5174",
+      "http://localhost:5175",
+      "http://localhost:3000",
+      "http://127.0.0.1:5173",
+      "http://127.0.0.1:5174",
+      "http://127.0.0.1:5175",
+      "http://127.0.0.1:3000",
+      "https://urbanease-client.onrender.com",
+      "https://urbaneasefinal.onrender.com",
+      normalizeOrigin(process.env.CLIENT_BASE_URL),
+      normalizeOrigin(process.env.FRONTEND_URL),
+      normalizeOrigin(process.env.APP_BASE_URL),
+    ].filter(Boolean)
+  )
+);
+
+const isOriginAllowed = (origin) => {
+  if (!origin) return true;
+  if (!IS_PRODUCTION) return true; // In development, allow all local origins
+  if (allowedOrigins.includes(origin)) return true;
+  try {
+    const parsed = new URL(origin);
+    if (parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1") {
+      return true;
+    }
+  } catch {}
+  return false;
+};
+
 // ---------------- APP & SOCKET INITIALIZATION ----------------
 const app = express();
+app.set("trust proxy", 1);
 const PORT = Number(process.env.PORT) || 3000;
 const server = http.createServer(app);
 
 export const io = new Server(server, {
   cors: {
-    origin: "http://localhost:5173",
+    origin: (origin, callback) => {
+      if (isOriginAllowed(origin)) {
+        callback(null, true);
+      } else {
+        callback(null, false);
+      }
+    },
     credentials: true,
   },
 });
@@ -135,36 +186,13 @@ app.use(
   })
 );
 
-const normalizeOrigin = (value) => {
-  if (!value) return "";
-  try {
-    const url = new URL(String(value).trim());
-    return `${url.protocol}//${url.host}`;
-  } catch {
-    return "";
-  }
-};
-
-const allowedOrigins = Array.from(
-  new Set(
-    [
-      "http://localhost:5173",
-      "https://urbanease-client.onrender.com",
-      "https://urbaneasefinal.onrender.com",
-      normalizeOrigin(process.env.CLIENT_BASE_URL),
-      normalizeOrigin(process.env.FRONTEND_URL),
-      normalizeOrigin(process.env.APP_BASE_URL),
-    ].filter(Boolean)
-  )
-);
-
 app.use(
   cors({
     origin: function (origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
+      if (isOriginAllowed(origin)) {
         callback(null, true);
       } else {
-        callback(new Error("Not allowed by CORS"));
+        callback(null, false);
       }
     },
     credentials: true,
@@ -288,7 +316,21 @@ app.use(
 
 app.get(/.*/, (req, res) => {
   res.setHeader("Cache-Control", "no-cache");
-  res.sendFile(CLIENT_INDEX_PATH);
+  if (fs.existsSync(CLIENT_INDEX_PATH)) {
+    res.sendFile(CLIENT_INDEX_PATH);
+  } else {
+    res.status(503).send("Frontend build not found. Run 'npm run build' first.");
+  }
+});
+
+// ---------------- GLOBAL ERROR HANDLER ----------------
+app.use((err, req, res, next) => {
+  console.error("Global express error:", err);
+  const status = err.status || err.statusCode || 500;
+  res.status(status).json({
+    success: false,
+    message: err.message || "Internal Server Error",
+  });
 });
 
 // ---------------- START SERVER ----------------
