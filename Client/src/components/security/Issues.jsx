@@ -11,7 +11,7 @@ import {
   Trash2
 } from "lucide-react";
 import axios from "axios";
-import { toast, ToastContainer } from "react-toastify";
+import { toast } from "react-toastify";
 
 import { Loader } from "../Loader";
 import {
@@ -226,8 +226,6 @@ export const SecurityIssues = () => {
       description="View, monitor, and log incoming intercom calls, phone complaints, and walk-in maintenance tickets."
       chips={[`${deskCount} gate call tickets`, `${pendingCount} pending dispatch`, `${inProgressCount} in progress`]}
     >
-      <ToastContainer position="top-center" />
-
       <ManagerSection
         eyebrow="Ticket Management"
         title="Gate Call Logbook"

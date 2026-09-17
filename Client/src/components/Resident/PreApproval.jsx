@@ -1,3 +1,4 @@
+import "../../assets/css/Resident/preapproval.css";
 import {
   Suspense,
   lazy,

@@ -1,3 +1,4 @@
+import "../../assets/css/Manager/managerSetup.css";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";

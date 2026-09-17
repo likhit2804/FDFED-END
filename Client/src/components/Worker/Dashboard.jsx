@@ -1,3 +1,4 @@
+import "../../assets/css/Worker/Dashboard.css";
 /**
  * @license Proprietary
  * @fileoverview Worker Dashboard Component

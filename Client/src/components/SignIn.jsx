@@ -5,7 +5,7 @@ import showPass from '../imgs/showPass.svg';
 import hidePass from '../imgs/hidePass.svg';
 import logo from '../imgs/Logo copy.png';
 import { useSelector, useDispatch } from "react-redux";
-import { ToastContainer, toast } from "react-toastify";
+import { toast } from "react-toastify";
 import { loginUser, verifyOtp } from "../slices/authSlice.js";
 import axios from 'axios';
 import { Loader } from "./Loader.jsx";
@@ -124,7 +124,6 @@ export const SignIn = () => {
           <Loader /><div style={{ marginTop: 12, color: '#333', fontWeight: 500 }}>{isResending ? 'Resending OTP…' : 'Sending OTP…'}</div>
         </div>
       )}
-      <ToastContainer />
       {alertMessage && <div className={`alert ${alertMessage.type}`}>{alertMessage.text}</div>}
       <div className="signin-container">
         <div className="left-panel">

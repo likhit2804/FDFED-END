@@ -24,38 +24,64 @@ import { setUser } from "./slices/authSlice";
 import OnboardingPayment from "./components/Onboarding/OnboardingPayment";
 import { Loader } from "./components/Loader";
 import { withApiBase } from "./utils/apiBaseUrl";
+import RouteErrorBoundary from "./components/RouteErrorBoundary";
+
+// Helper to gracefully retry and reload when a chunk is not found due to a new deployment
+const lazyWithRetry = (factory) =>
+  lazy(async () => {
+    try {
+      return await factory();
+    } catch (error) {
+      const isDynamicImportError =
+        error?.message?.includes("Failed to fetch dynamically imported module") ||
+        error?.message?.includes("dynamically imported module") ||
+        error?.name === "TypeError";
+
+      const key = "vite_chunk_retry_" + window.location.pathname;
+      const alreadyTried = sessionStorage.getItem(key);
+
+      if (isDynamicImportError && !alreadyTried) {
+        sessionStorage.setItem(key, "true");
+        window.location.reload();
+        return new Promise(() => {});
+      }
+      sessionStorage.removeItem(key);
+      throw error;
+    }
+  });
+
 // --> LAZY LOADED ROUTE CHUNKS <--
 // Manager Routes
-const ManagerDashboard = lazy(() => import('./components/Manager/Dashboard').then(m => ({ default: m.ManagerDashboard })));
-const CommonSpace = lazy(() => import('./components/Manager/CommonSpace').then(m => ({ default: m.CommonSpace })));
-const ManagerProfile = lazy(() => import('./components/Manager/Profile').then(m => ({ default: m.ManagerProfile })));
-const IssueResolving = lazy(() => import('./components/Manager/IssueResolving').then(m => ({ default: m.IssueResolving })));
-const Payments = lazy(() => import('./components/Manager/Payments').then(m => ({ default: m.Payments })));
-const UserManagement = lazy(() => import('./components/Manager/UserManagement.jsx'));
-const Subscription = lazy(() => import('./components/Manager/Subscription.jsx'));
-const ManagerSetup = lazy(() => import('./components/Manager/ManagerSetup.jsx'));
-const ManagerLeaveList = lazy(() => import('./components/ManagerLeaveList'));
+const ManagerDashboard = lazyWithRetry(() => import('./components/Manager/Dashboard').then(m => ({ default: m.ManagerDashboard })));
+const CommonSpace = lazyWithRetry(() => import('./components/Manager/CommonSpace').then(m => ({ default: m.CommonSpace })));
+const ManagerProfile = lazyWithRetry(() => import('./components/Manager/Profile').then(m => ({ default: m.ManagerProfile })));
+const IssueResolving = lazyWithRetry(() => import('./components/Manager/IssueResolving').then(m => ({ default: m.IssueResolving })));
+const Payments = lazyWithRetry(() => import('./components/Manager/Payments').then(m => ({ default: m.Payments })));
+const UserManagement = lazyWithRetry(() => import('./components/Manager/UserManagement.jsx'));
+const Subscription = lazyWithRetry(() => import('./components/Manager/Subscription.jsx'));
+const ManagerSetup = lazyWithRetry(() => import('./components/Manager/ManagerSetup.jsx'));
+const ManagerLeaveList = lazyWithRetry(() => import('./components/ManagerLeaveList'));
 // Resident Routes
-const CommonSpaceBooking = lazy(() => import('./components/Resident/CommonSpace').then(m => ({ default: m.CommonSpaceBooking })));
-const IssueRaising = lazy(() => import('./components/Resident/IssueRaising').then(m => ({ default: m.IssueRaising })));
-const ResidentDashboard = lazy(() => import('./components/Resident/Dashboard').then(m => ({ default: m.ResidentDashboard })));
-const PreApproval = lazy(() => import('./components/Resident/PreApproval').then(m => ({ default: m.PreApproval })));
-const ResidentProfile = lazy(() => import('./components/Resident/Profile').then(m => ({ default: m.ResidentProfile })));
-const ResidentPayments = lazy(() => import('./components/Resident/ResidentPayments.jsx').then(m => ({ default: m.ResidentPayments })));
-const ResidentRegister = lazy(() => import('./components/Resident/ResidentRegister.jsx').then(m => ({ default: m.ResidentRegister })));
+const CommonSpaceBooking = lazyWithRetry(() => import('./components/Resident/CommonSpace').then(m => ({ default: m.CommonSpaceBooking })));
+const IssueRaising = lazyWithRetry(() => import('./components/Resident/IssueRaising').then(m => ({ default: m.IssueRaising })));
+const ResidentDashboard = lazyWithRetry(() => import('./components/Resident/Dashboard').then(m => ({ default: m.ResidentDashboard })));
+const PreApproval = lazyWithRetry(() => import('./components/Resident/PreApproval').then(m => ({ default: m.PreApproval })));
+const ResidentProfile = lazyWithRetry(() => import('./components/Resident/Profile').then(m => ({ default: m.ResidentProfile })));
+const ResidentPayments = lazyWithRetry(() => import('./components/Resident/ResidentPayments.jsx').then(m => ({ default: m.ResidentPayments })));
+const ResidentRegister = lazyWithRetry(() => import('./components/Resident/ResidentRegister.jsx').then(m => ({ default: m.ResidentRegister })));
 // Worker Routes
-const WorkerDashboard = lazy(() => import("./components/Worker/Dashboard").then(m => ({ default: m.WorkerDashboard })));
-const Tasks = lazy(() => import("./components/Worker/Tasks").then(m => ({ default: m.Tasks })));
-const History = lazy(() => import("./components/Worker/History").then(m => ({ default: m.History })));
-const WorkerProfile = lazy(() => import("./components/Worker/Profile").then(m => ({ default: m.WorkerProfile })));
-const WorkerLeaveList = lazy(() => import("./components/Worker/WorkerLeaveList"));
+const WorkerDashboard = lazyWithRetry(() => import("./components/Worker/Dashboard").then(m => ({ default: m.WorkerDashboard })));
+const Tasks = lazyWithRetry(() => import("./components/Worker/Tasks").then(m => ({ default: m.Tasks })));
+const History = lazyWithRetry(() => import("./components/Worker/History").then(m => ({ default: m.History })));
+const WorkerProfile = lazyWithRetry(() => import("./components/Worker/Profile").then(m => ({ default: m.WorkerProfile })));
+const WorkerLeaveList = lazyWithRetry(() => import("./components/Worker/WorkerLeaveList"));
 // Security Routes
-const SecurityDashboard = lazy(() => import("./components/security/Dashboard.jsx").then(m => ({ default: m.SecurityDashboard })));
-const VisitorManagement = lazy(() => import("./components/security/visitorManagement.jsx").then(m => ({ default: m.VisitorManagement })));
-const SecurityPreApproval = lazy(() => import("./components/security/preapproval.jsx").then(m => ({ default: m.SecurityPreApproval })));
-const SecurityIssues = lazy(() => import("./components/security/Issues.jsx").then(m => ({ default: m.SecurityIssues })));
-const SecurityProfile = lazy(() => import("./components/security/profile.jsx").then(m => ({ default: m.SecurityProfile })));
-const SubscriptionExpired = lazy(() => import("./components/SubscriptionExpired.jsx"));
+const SecurityDashboard = lazyWithRetry(() => import("./components/security/Dashboard.jsx").then(m => ({ default: m.SecurityDashboard })));
+const VisitorManagement = lazyWithRetry(() => import("./components/security/visitorManagement.jsx").then(m => ({ default: m.VisitorManagement })));
+const SecurityPreApproval = lazyWithRetry(() => import("./components/security/preapproval.jsx").then(m => ({ default: m.SecurityPreApproval })));
+const SecurityIssues = lazyWithRetry(() => import("./components/security/Issues.jsx").then(m => ({ default: m.SecurityIssues })));
+const SecurityProfile = lazyWithRetry(() => import("./components/security/profile.jsx").then(m => ({ default: m.SecurityProfile })));
+const SubscriptionExpired = lazyWithRetry(() => import("./components/SubscriptionExpired.jsx"));
 function App() {
   const dispatch = useDispatch();
   useEffect(() => {
@@ -73,7 +99,7 @@ function App() {
   }, [dispatch]);
   const router = createBrowserRouter(
     createRoutesFromElements(
-      <>
+      <Route errorElement={<RouteErrorBoundary />}>
         <Route path="/" element={<Landingpage />} />
         <Route path="/SignIn" element={<SignIn />} />
         <Route path="/SignUp" element={<SignUp />} />
@@ -137,13 +163,22 @@ function App() {
             <Route path="profile" element={<SecurityProfile />} />
           </Route>
         </Route>
-      </>
+      </Route>
     )
   );
   return (
     <AdminAuthProvider>
       <ErrorBoundary>
-        <ToastContainer />
+        <ToastContainer
+          position="top-right"
+          autoClose={2500}
+          hideProgressBar={false}
+          newestOnTop
+          closeOnClick
+          pauseOnHover
+          theme="colored"
+          style={{ zIndex: 999999 }}
+        />
         <Suspense fallback={<Loader />}>
           <RouterProvider router={router} />
         </Suspense>

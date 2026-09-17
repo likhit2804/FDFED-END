@@ -80,7 +80,12 @@ export const getResolvedIssues = (issues = [], search = "", sortBy = "date_desc"
   const normalizedSearch = String(search || "").trim().toLowerCase();
 
   const filtered = issues.filter((issue) => {
-    if (issue.status !== "Resolved") return false;
+    const s = String(issue?.status || "").trim();
+    // Exclude active or pending tasks
+    if (["Assigned", "Pending", "In Progress", "Pending Assignment"].includes(s)) {
+      return false;
+    }
+
     if (!normalizedSearch) return true;
 
     const titleMatch = issue.title?.toLowerCase().includes(normalizedSearch);
@@ -93,8 +98,8 @@ export const getResolvedIssues = (issues = [], search = "", sortBy = "date_desc"
   });
 
   return filtered.sort((a, b) => {
-    const dateA = toTime(a.resolvedAt || a.createdAt);
-    const dateB = toTime(b.resolvedAt || b.createdAt);
+    const dateA = toTime(a.resolvedAt || a.updatedAt || a.createdAt);
+    const dateB = toTime(b.resolvedAt || b.updatedAt || b.createdAt);
     const ratingA = typeof a.rating === "number" ? a.rating : -Infinity;
     const ratingB = typeof b.rating === "number" ? b.rating : -Infinity;
 

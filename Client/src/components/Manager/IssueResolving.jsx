@@ -7,7 +7,7 @@ import {
 } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { AlertCircle, BarChart3, Building2, CheckCircle, RefreshCw, Users } from "lucide-react";
-import { toast, ToastContainer } from "react-toastify";
+import { toast } from "react-toastify";
 import {
   assignManagerIssue,
   clearIssueDetails,
@@ -183,7 +183,6 @@ export const IssueResolving = () => {
   };
   return (
     <>
-      <ToastContainer position="top-center" autoClose={1500} />
       <ManagerPageShell
         eyebrow="Issue Resolution"
         title="Run the service desk with the same manager operations language."

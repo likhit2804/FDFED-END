@@ -29,8 +29,8 @@ export const PERMISSIONS = {
  * @returns {boolean} - Whether role has permission
  */
 export function hasPermission(role, permission) {
-  const rolePermissions = PERMISSIONS[role] || [];
-
+  const roleKey = String(role || 'admin').toLowerCase();
+  const rolePermissions = PERMISSIONS[roleKey] || (roleKey === 'admin' ? ['*'] : []);
 
   if (rolePermissions.includes('*')) {
     return true;
@@ -42,7 +42,7 @@ export function hasPermission(role, permission) {
   }
 
   // Check for wildcard permission (e.g., 'read:*' matches 'read:communities')
-  const [action, resource] = permission.split(':');
+  const [action] = String(permission).split(':');
   const wildcardPermission = `${action}:*`;
   if (rolePermissions.includes(wildcardPermission)) {
     return true;
@@ -58,7 +58,7 @@ export function hasPermission(role, permission) {
  */
 export function requirePermission(permission) {
   return (req, res, next) => {
-    const userRole = req.user?.role || 'admin'; // Default to 'admin' for backward compatibility
+    const userRole = String(req.user?.role || req.user?.userType || 'admin').toLowerCase();
 
     if (!hasPermission(userRole, permission)) {
       console.warn(`Permission denied: ${userRole} attempted ${permission}`, {
@@ -86,7 +86,7 @@ export function requirePermission(permission) {
  */
 export function requireAnyPermission(permissions) {
   return (req, res, next) => {
-    const userRole = req.user?.role || 'admin';
+    const userRole = String(req.user?.role || req.user?.userType || 'admin').toLowerCase();
 
     const hasAnyPermission = permissions.some(permission =>
       hasPermission(userRole, permission)

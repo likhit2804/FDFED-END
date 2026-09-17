@@ -19,6 +19,7 @@ import {
   ManagerToolbar,
   ManagerToolbarGrow
 } from "./ui";
+import "../../assets/css/Manager/Payments.css";
 const formatCurrency = (amount) => {
   if (amount === null || amount === undefined || amount === "") return "-";
   return `₹${amount}`;

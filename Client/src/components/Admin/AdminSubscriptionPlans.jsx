@@ -25,7 +25,8 @@ export default function AdminSubscriptionPlans() {
       const res = await axios.get("/admin/api/subscription-plans");
       const json = res.data;
       if (json.success) {
-        const sorted = [...json.data].sort((a, b) => a.price - b.price);
+        const list = Array.isArray(json.data) ? json.data : (Array.isArray(json.plans) ? json.plans : []);
+        const sorted = [...list].sort((a, b) => (Number(a.price) || 0) - (Number(b.price) || 0));
         setPlans(sorted);
       } else {
         toast.error("Failed to fetch plans");

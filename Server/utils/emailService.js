@@ -46,6 +46,23 @@ const createTransporter = () => {
   if (!user || !pass) {
     throw new Error('Email credentials not configured. Check EMAIL_USER and EMAIL_PASS in .env');
   }
+
+  const host = (process.env.SMTP_HOST || '').toLowerCase();
+  const isGmail = host.includes('gmail') || (!host && user.includes('@gmail.com'));
+
+  if (isGmail) {
+    return nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user,
+        pass,
+      },
+      connectionTimeout: 10000,
+      greetingTimeout: 10000,
+      socketTimeout: 15000,
+    });
+  }
+
   return nodemailer.createTransport({
     host: process.env.SMTP_HOST || 'smtp.gmail.com',
     port: Number(process.env.SMTP_PORT) || 587,
@@ -57,9 +74,9 @@ const createTransporter = () => {
     tls: {
       rejectUnauthorized: false
     },
-    pool: true,
-    maxConnections: 5,
-    maxMessages: 100
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 15000,
   });
 };
 // Single transporter instance
@@ -84,22 +101,90 @@ const getTransporter = () => {
  * @returns {Promise<boolean>} Success status
  */
 async function sendEmail({ to, subject, html, text = '', attachments = [] }) {
+  const fromName = process.env.EMAIL_FROM_NAME || 'UrbanEase Support';
+  const fromUser = process.env.BREVO_SENDER_EMAIL || process.env.EMAIL_USER || 'likhit.2804@gmail.com';
+
+  // 1. If Brevo HTTP API Key is provided, use HTTPS port 443 (Never blocked by Render)
+  if (process.env.BREVO_API_KEY) {
+    try {
+      console.log(`📨 [BREVO API DISPATCH] Sending "${subject}" to ${to}...`);
+      const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: {
+          'api-key': process.env.BREVO_API_KEY.trim(),
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({
+          sender: { name: fromName, email: fromUser },
+          to: [{ email: to }],
+          subject,
+          htmlContent: html,
+          textContent: text || subject,
+        }),
+      });
+
+      const data = await response.json();
+      if (response.ok && data.messageId) {
+        console.log(`✅ [BREVO] Email sent to ${to}: ${subject} (ID: ${data.messageId})`);
+        return true;
+      }
+
+      console.error(`❌ [BREVO ERROR]:`, data.message || JSON.stringify(data));
+      // If Brevo fails, fall through to fallback
+    } catch (err) {
+      console.error(`❌ [BREVO NETWORK ERROR]:`, err.message);
+    }
+  }
+
+  // 2. If Resend HTTP API Key is provided, use HTTPS port 443
+  if (process.env.RESEND_API_KEY) {
+    try {
+      console.log(`📨 [RESEND API DISPATCH] Sending "${subject}" to ${to}...`);
+      const response = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.RESEND_API_KEY.trim()}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          from: `${fromName} <onboarding@resend.dev>`,
+          to: [to],
+          subject,
+          html,
+          text: text || subject,
+        }),
+      });
+
+      const data = await response.json();
+      if (response.ok && data.id) {
+        console.log(`✅ [RESEND] Email sent to ${to}: ${subject} (ID: ${data.id})`);
+        return true;
+      }
+
+      console.error(`❌ [RESEND ERROR]:`, data.message || JSON.stringify(data));
+    } catch (err) {
+      console.error(`❌ [RESEND NETWORK ERROR]:`, err.message);
+    }
+  }
+
+  // 3. Fallback to Nodemailer SMTP
   try {
     const transporter = getTransporter();
-    const fromName = process.env.EMAIL_FROM_NAME || 'UrbanEase';
-    const fromUser = process.env.EMAIL_USER || 'noreply.urbanease@gmail.com';
     const mailOptions = {
       from: `"${fromName}" <${fromUser}>`,
       to,
       subject,
       html,
-      text: text || subject, // Fallback to subject if no text provided
+      text: text || subject,
       attachments,
     };
+    console.log(`📨 [SMTP DISPATCH] Sending "${subject}" to ${to}...`);
     const info = await transporter.sendMail(mailOptions);
     console.log(`✅ Email sent to ${to}: ${subject} (ID: ${info.messageId})`);
     return true;
   } catch (error) {
+    transporter = null;
     console.error(`❌ Failed to send email to ${to}:`, error.message);
     if (error.message && (error.message.includes('WebLoginRequired') || error.message.includes('534'))) {
       console.warn(`\n⚠️ [GMAIL AUTHENTICATION NOTICE]: Google has blocked smtp.gmail.com with 534 5.7.9 (WebLoginRequired).\nTo unlock email delivery:\n1. Generate an App Password at: https://myaccount.google.com/apppasswords\n2. Or unlock device access at: https://accounts.google.com/DisplayUnlockCaptcha while logged into ${process.env.EMAIL_USER}.\n`);
@@ -165,11 +250,13 @@ export async function sendOTPEmail(
  * @param {string} email - Recipient email
  * @param {string} password - Temporary password
  */
-export async function sendTemporaryPasswordEmail(email, password) {
+export async function sendTemporaryPasswordEmail(email, password, options = {}) {
+  const userType = typeof options === 'string' ? options : (options.userType || 'Resident');
+  const username = typeof options === 'object' ? (options.username || '') : '';
   const loginUrl = process.env.CLIENT_BASE_URL 
     ? `${process.env.CLIENT_BASE_URL}/SignIn` 
     : 'http://localhost:5173/SignIn';
-  const html = createTemporaryPasswordTemplate({ email, password, loginUrl });
+  const html = createTemporaryPasswordTemplate({ email, password, loginUrl, userType, username });
   return sendEmail({
     to: email,
     subject: 'Welcome to Urban Ease - Temporary Password',

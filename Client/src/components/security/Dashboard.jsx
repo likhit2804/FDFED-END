@@ -8,7 +8,7 @@ import {
   CheckCircle2
 } from "lucide-react";
 import axios from "axios";
-import { toast, ToastContainer } from "react-toastify";
+import { toast } from "react-toastify";
 
 import { useNavigate } from "react-router-dom";
 
@@ -174,8 +174,6 @@ export const SecurityDashboard = () => {
       description="Track visitor flow, manage gate entries, and log incoming phone/intercom complaints for immediate technician dispatch."
       chips={[`${stats?.Visitor || 0} visitors tracked`, `${stats?.Pending || 0} pending approvals`]}
     >
-      <ToastContainer position="top-center" />
-
       {/* Quick Action Banner for Phone / Intercom Logging */}
       <div
         className="mb-4 p-3 rounded-3 d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3"

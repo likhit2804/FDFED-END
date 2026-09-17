@@ -1,3 +1,4 @@
+import "../../assets/css/Resident/Dashboard.css";
 import { useEffect, useMemo, useState } from "react";
 import { AlertCircle, Bell, CalendarCheck2, Clock3 } from "lucide-react";
 import axios from "axios";

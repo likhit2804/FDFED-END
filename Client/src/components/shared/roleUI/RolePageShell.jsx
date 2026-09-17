@@ -1,5 +1,6 @@
 
 import { getCardFieldPresentation } from "../cardFieldUtils";
+import "../../../assets/css/role/shell.css";
 function joinClassNames(...classNames) {
   return classNames.filter(Boolean).join(" ");
 }

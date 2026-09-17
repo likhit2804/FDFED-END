@@ -150,7 +150,10 @@ residentRegisterRouter.post("/complete", async (req, res) => {
     // Save the flat directly
     await foundFlat.save();
 
-    await sendTemporaryPassword(email, tempPassword);
+    await sendTemporaryPassword(email, tempPassword, {
+      userType: "Resident",
+      username: `${residentFirstname} ${residentLastname}`.trim(),
+    });
 
     return res.json({
       success: true,

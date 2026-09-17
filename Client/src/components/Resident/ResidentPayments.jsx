@@ -62,14 +62,28 @@ const PaymentsHistory = ({ onStats, filters = {} }) => {
     useEffect(() => {
         setLoading(true);
         setError(null);
-        axios.get("/resident/payments")
-            .then((res) => {
+        const fetchPayments = async () => {
+            try {
+                let res;
+                try {
+                    res = await axios.get("/resident/payments/api");
+                } catch {
+                    res = await axios.get("/resident/payments");
+                }
                 return res.data;
-            })
+            } catch (err) {
+                throw err;
+            }
+        };
+        fetchPayments()
             .then((data) => {
-                const list = data.payments || [];
+                const list = Array.isArray(data?.payments)
+                    ? data.payments
+                    : Array.isArray(data)
+                    ? data
+                    : [];
                 setPayments(list);
-                if (onStats) onStats(data.stats || computePaymentStats(list));
+                if (onStats) onStats(data?.stats || computePaymentStats(list));
             })
             .catch((err) => {
                 console.error("Failed to load resident payments", err);
@@ -170,6 +184,8 @@ const PaymentsHistory = ({ onStats, filters = {} }) => {
                 <div className="text-center text-danger p-4">{error}</div>
             ) : payments.length === 0 ? (
                 <EmptyState icon={<DollarSign size={48} />} title="No payments found" sub="You do not have any payment records yet." />
+            ) : filteredPayments.length === 0 ? (
+                <EmptyState icon={<DollarSign size={48} />} title="No matching payments" sub="Try selecting a different filter or clearing your search." />
             ) : (
                 <div className="ue-entity-grid mt-3">
                     {filteredPayments.map((p, i) => {

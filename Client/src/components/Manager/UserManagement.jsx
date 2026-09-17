@@ -1,10 +1,12 @@
+import "../../assets/css/Manager/userManagement.css";
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Briefcase, Key, Pencil, Shield, Trash2, Users } from "lucide-react";
 import { toast } from "react-toastify";
 import axios from "axios";
 import { Loader } from "../Loader";
 import { ConfirmModal, Input, Modal, StatCard, Tabs, Textarea } from "../shared";
-import { RegistrationCodesModal } from "./UserManagement/RegistrationCodesModal";
+import { RegistrationCodesModal, RegistrationCodesView } from "./UserManagement/RegistrationCodesModal";
 import {
   ManagerActionButton,
   ManagerPageShell,
@@ -165,6 +167,7 @@ const ENTITY_CONFIG = {
 };
 const TAB_TO_ENTITY = { residents: "resident", security: "security", workers: "worker" };
 export default function UserManagement() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("residents");
   const [lists, setLists] = useState({ resident: [], security: [], worker: [] });
   const [modalVisible, setModalVisible] = useState(false);
@@ -179,16 +182,17 @@ export default function UserManagement() {
   const [codesSearch, setCodesSearch] = useState("");
   const [selectedFlats, setSelectedFlats] = useState(new Set());
   const [isRegenerating, setIsRegenerating] = useState(false);
-  const currentEntity = TAB_TO_ENTITY[activeTab];
-  const config = ENTITY_CONFIG[currentEntity];
+  const currentEntity = TAB_TO_ENTITY[activeTab] || "resident";
+  const config = ENTITY_CONFIG[currentEntity] || ENTITY_CONFIG.resident;
   const stats = useMemo(
     () => ({
       residents: lists.resident.length,
       security: lists.security.length,
       workers: lists.worker.length,
+      residentCodes: codesList.length,
       total: lists.resident.length + lists.security.length + lists.worker.length,
     }),
-    [lists]
+    [lists, codesList]
   );
   const fetchLists = async () => {
     try {
@@ -206,6 +210,7 @@ export default function UserManagement() {
   };
   useEffect(() => {
     fetchLists();
+    fetchRegistrationCodes();
   }, []);
   const fetchRegistrationCodes = async () => {
     setCodesLoading(true);
@@ -342,30 +347,36 @@ export default function UserManagement() {
       eyebrow="User Management"
       title="Manage residents, gate staff, and operations teams from one place."
       description="Keep community people records aligned with the same manager dashboard language, instead of separate page-specific card styles."
-      chips={[`${stats.total} total people records`, `${config.label} tab in focus`]}
+      chips={[`${stats.total} people records`, `${codesList.length} resident codes`, `${activeTab === "residentCodes" ? "Resident Codes" : config.label} in view`]}
     >
       <div className="ue-stat-grid">
         <StatCard label="Residents" value={stats.residents} icon={<Users size={22} />} iconColor="var(--brand-500)" iconBg="var(--info-soft)" />
+        <StatCard label="Resident Codes" value={stats.residentCodes} icon={<Key size={22} />} iconColor="var(--warning-500, #f59e0b)" iconBg="var(--warning-soft, rgba(245, 158, 11, 0.1))" />
         <StatCard label="Security" value={stats.security} icon={<Shield size={22} />} iconColor="var(--info-600)" iconBg="var(--surface-2)" />
         <StatCard label="Workers" value={stats.workers} icon={<Briefcase size={22} />} iconColor="var(--text-subtle)" iconBg="var(--surface-2)" />
-        <StatCard label="Total Records" value={stats.total} icon={<Users size={22} />} iconColor="var(--danger-500)" iconBg="var(--danger-soft)" />
       </div>
       <ManagerSection
         eyebrow="Directory"
         title="Community people records"
-        description="Switch roles, add new entries, and open registration code tools for resident onboarding."
+        description="Switch roles, add new entries, and view registration codes for resident onboarding."
         actions={
-          <>
-            <ManagerActionButton variant="secondary" onClick={openAdd}>
-              Add {config.label}
+          activeTab === "residentCodes" ? (
+            <ManagerActionButton variant="secondary" onClick={() => navigate("/manager/setup")}>
+              Setup Flats
             </ManagerActionButton>
-            {activeTab === "residents" ? (
-              <ManagerActionButton variant="primary" onClick={openCodesModal}>
-                <Key size={16} />
-                Registration Codes
+          ) : (
+            <>
+              <ManagerActionButton variant="secondary" onClick={openAdd}>
+                Add {config.label}
               </ManagerActionButton>
-            ) : null}
-          </>
+              {activeTab === "residents" ? (
+                <ManagerActionButton variant="primary" onClick={() => setActiveTab("residentCodes")}>
+                  <Key size={16} />
+                  View Codes ({codesList.length})
+                </ManagerActionButton>
+              ) : null}
+            </>
+          )
         }
       >
         <ManagerToolbar>
@@ -373,6 +384,7 @@ export default function UserManagement() {
             variant="underline"
             tabs={[
               { label: "Residents", value: "residents", count: lists.resident.length },
+              { label: "Resident Codes", value: "residentCodes", count: codesList.length },
               { label: "Security", value: "security", count: lists.security.length },
               { label: "Workers", value: "workers", count: lists.worker.length },
             ]}
@@ -380,7 +392,24 @@ export default function UserManagement() {
             onChange={setActiveTab}
           />
         </ManagerToolbar>
-        {currentList.length > 0 ? (
+        {activeTab === "residentCodes" ? (
+          <div style={{ marginTop: 16 }}>
+            <RegistrationCodesView
+              communityName={communityNameForCodes}
+              codesList={codesList}
+              codesLoading={codesLoading}
+              codesSearch={codesSearch}
+              setCodesSearch={setCodesSearch}
+              selectedFlats={selectedFlats}
+              toggleSelectFlat={toggleSelectFlat}
+              toggleSelectAll={toggleSelectAll}
+              regenerateCode={regenerateCode}
+              isRegenerating={isRegenerating}
+              copyToClipboard={copyToClipboard}
+              onNavigateSetup={() => navigate("/manager/setup")}
+            />
+          </div>
+        ) : currentList.length > 0 ? (
           <ManagerRecordGrid>
             {currentList.map((item) => (
               <ManagerRecordCard

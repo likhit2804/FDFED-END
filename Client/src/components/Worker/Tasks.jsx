@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
-import { toast, ToastContainer } from "react-toastify";
+import { toast } from "react-toastify";
 import { AnimatePresence } from "framer-motion";
 import axios from "axios";
 import { useSocket } from "../../hooks/useSocket";
@@ -99,9 +99,7 @@ export const Tasks = () => {
     setActionLoading(false);
   };
   return (
-    <>
-      <ToastContainer position="top-center" autoClose={1500} />
-      <ManagerPageShell
+    <ManagerPageShell
         eyebrow="Worker Desk"
         title="Execute assigned tasks with clean status control."
         description="Filter tasks, update status quickly, and keep progress visible from one task workbench."
@@ -146,6 +144,5 @@ export const Tasks = () => {
         </ManagerSection>
         <TaskDetailsModal task={tasks?.find((t) => t._id === selectedTask?._id) || selectedTask} isOpen={isDetailModalOpen} onClose={closeTaskModal} estimatedCost={estimatedCost} setEstimatedCost={setEstimatedCost} actionLoading={actionLoading} onUpdateStatus={updateTaskStatus} onMisassigned={handleMisassigned} />
       </ManagerPageShell>
-    </>
   );
 };

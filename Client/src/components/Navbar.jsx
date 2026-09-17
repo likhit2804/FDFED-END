@@ -9,6 +9,7 @@ import { ChevronDown, LogOut, Menu, User, X } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import logo from "../imgs/Logo.png";
 import { logout } from "../slices/authSlice";
+import "../assets/css/Navbar.css";
 const NAV_ITEMS = {
   admin: [
     { to: "/admin/dashboard", label: "Dashboard" },

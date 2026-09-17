@@ -1,3 +1,4 @@
+import "../../assets/css/Resident/CommonSpace.css";
 import {
   Suspense,
   lazy,
@@ -8,7 +9,7 @@ import {
 import { createPortal } from "react-dom";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
-import { ToastContainer, toast } from "react-toastify";
+import { toast } from "react-toastify";
 import { useDispatch, useSelector } from "react-redux";
 import { Building2, Calendar, Clock } from "lucide-react";
 import {
@@ -405,7 +406,6 @@ export const CommonSpaceBooking = () => {
   };
   return (
     <>
-      <ToastContainer position="top-center" />
       <ManagerPageShell
         eyebrow="Common Spaces"
         title="Book and track common space usage in one desk."
@@ -435,14 +435,17 @@ export const CommonSpaceBooking = () => {
           title="Recent bookings"
           description="Open details or cancel active slot bookings."
         >
-      <div className="ue-entity-grid">
-        {bookingLoading && <div className="col-12 d-flex justify-content-center py-5"><Loader /></div>}
-        {!bookingLoading && bookings?.filter(Boolean).length > 0
-          ? bookings.filter(Boolean).map((b) => <BookingCard key={b._id} booking={b} onViewDetails={showDetails} onCancel={cancelBooking} />)
-          : !bookingLoading && (
-            <EmptyState icon={<Calendar size={42} />} title="No bookings found" sub="Create a new booking to get started." />
-          )}
-      </div>
+        {bookingLoading && <div className="d-flex justify-content-center py-5 w-100"><Loader /></div>}
+        {!bookingLoading && bookings?.filter(Boolean).length > 0 ? (
+          <div className="ue-entity-grid">
+            {bookings.filter(Boolean).map((b) => (
+              <BookingCard key={b._id} booking={b} onViewDetails={showDetails} onCancel={cancelBooking} />
+            ))}
+          </div>
+        ) : !bookingLoading && (
+          <EmptyState icon={<Calendar size={42} />} title="No bookings found" sub="Create a new booking to get started." />
+        )}
+
         </ManagerSection>
       </ManagerPageShell>
       {/* Booking Form Modal */}
@@ -533,7 +536,7 @@ export const CommonSpaceBooking = () => {
                             isBlackoutDay,
                           ]}
                           showOutsideDays
-                          captionLayout="dropdown"
+                          captionLayout="label"
                           startMonth={todayDate}
                           endMonth={maxBookableDate}
                         />

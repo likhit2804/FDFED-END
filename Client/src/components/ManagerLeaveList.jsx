@@ -1,17 +1,20 @@
+import "../assets/css/Leave.css";
 import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import { CheckCircle, Clock, FileText, XCircle } from "lucide-react";
 import { approveLeave, fetchLeaves, rejectLeave } from "../slices/leaveSlice";
 import { useSocket } from "../hooks/useSocket";
-import { EmptyState, StatCard, StatusBadge, Textarea } from "./shared";
+import { EmptyState, StatCard, StatusBadge, Tabs, Textarea } from "./shared";
 import {
   ManagerActionButton,
   ManagerPageShell,
   ManagerRecordCard,
   ManagerRecordGrid,
-  ManagerSection
+  ManagerSection,
+  ManagerToolbar
 } from "./shared/roleUI";
+
 const formatDate = (value) => {
   if (!value) return "-";
   return new Date(value).toLocaleDateString("en-IN", {
@@ -20,6 +23,7 @@ const formatDate = (value) => {
     year: "numeric",
   });
 };
+
 const formatDateTime = (value) => {
   if (!value) return "-";
   return new Date(value).toLocaleString("en-IN", {
@@ -30,37 +34,44 @@ const formatDateTime = (value) => {
     minute: "2-digit",
   });
 };
+
 export default function ManagerLeaveList() {
   const dispatch = useDispatch();
   const leaves = useSelector((state) => state.leave?.leaves || []);
   const [loading, setLoading] = useState(false);
   const [notes, setNotes] = useState({});
   const [filter, setFilter] = useState("all");
+
   useEffect(() => {
     dispatch(fetchLeaves());
   }, [dispatch]);
+
   // Real-time synchronization when a worker applies for leave
   useSocket("leave:applied", (payload) => {
     console.log("⚡ [ManagerLeaveList] Received leave:applied event:", payload);
     dispatch(fetchLeaves());
     toast.info("A worker has submitted a new leave application.");
   });
+
   const stats = useMemo(() => ({
     total: leaves.length,
     pending: leaves.filter((leave) => leave.status === "pending").length,
     approved: leaves.filter((leave) => leave.status === "approved").length,
     rejected: leaves.filter((leave) => leave.status === "rejected").length,
   }), [leaves]);
+
   const filteredLeaves = useMemo(() => {
     if (filter === "all") return leaves;
     return leaves.filter((leave) => String(leave.status).toLowerCase() === filter);
   }, [leaves, filter]);
+
   const calculateDays = (start, end) => {
     if (!start || !end) return 0;
     const startDate = new Date(start);
     const endDate = new Date(end);
-    return Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+    return Math.max(1, Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1);
   };
+
   const updateLeave = async (mode, id) => {
     setLoading(true);
     try {
@@ -78,46 +89,37 @@ export default function ManagerLeaveList() {
       setLoading(false);
     }
   };
+
+  const tabs = [
+    { label: "All", value: "all", count: stats.total },
+    { label: "Pending", value: "pending", count: stats.pending },
+    { label: "Approved", value: "approved", count: stats.approved },
+    { label: "Rejected", value: "rejected", count: stats.rejected },
+  ];
+
   return (
     <ManagerPageShell
       eyebrow="Leaves"
       title="Review and manage worker leave requests."
-      description="Approve or reject requests from one desk without digging through long stacked Bootstrap cards."
+      description="Approve or reject requests from one desk with clear worker context and decision notes."
       chips={[`${stats.total} requests`, `${stats.pending} pending decisions`]}
     >
       <div className="ue-stat-grid">
         <StatCard label="Total Requests" value={stats.total} icon={<FileText size={22} />} iconColor="var(--info-600)" iconBg="var(--info-soft)" />
         <StatCard label="Pending" value={stats.pending} icon={<Clock size={22} />} iconColor="var(--warning-700)" iconBg="var(--warning-soft)" />
         <StatCard label="Approved" value={stats.approved} icon={<CheckCircle size={22} />} iconColor="var(--success-500)" iconBg="var(--success-soft)" />
+        <StatCard label="Rejected" value={stats.rejected} icon={<XCircle size={22} />} iconColor="var(--danger-500)" iconBg="var(--danger-soft)" />
       </div>
-      <div className="d-flex align-items-center gap-2 mb-3">
-        {["all", "pending", "approved", "rejected"].map((tab) => (
-          <button
-            key={tab}
-            type="button"
-            onClick={() => setFilter(tab)}
-            style={{
-              padding: "6px 14px",
-              borderRadius: "20px",
-              border: filter === tab ? "1px solid #2563eb" : "1px solid #e2e8f0",
-              background: filter === tab ? "#eff6ff" : "#fff",
-              color: filter === tab ? "#1d4ed8" : "#64748b",
-              fontWeight: 600,
-              fontSize: "0.85rem",
-              textTransform: "capitalize",
-              cursor: "pointer",
-              transition: "all 0.15s ease",
-            }}
-          >
-            {tab} {tab !== "all" && stats[tab] !== undefined ? `(${stats[tab]})` : ""}
-          </button>
-        ))}
-      </div>
+
       <ManagerSection
         eyebrow="Requests"
         title="Leave approvals"
         description="Open each request, review the worker context, and record notes alongside the final decision."
       >
+        <ManagerToolbar>
+          <Tabs tabs={tabs} active={filter} onChange={setFilter} variant="pill" />
+        </ManagerToolbar>
+
         {filteredLeaves.length === 0 ? (
           <EmptyState
             icon={<FileText size={48} />}
@@ -137,7 +139,7 @@ export default function ManagerLeaveList() {
                 subtitle={`Work ID: ${leave.worker?._id || "N/A"}`}
                 status={<StatusBadge status={leave.status} />}
                 meta={[
-                  { label: "Type", value: leave.type || "-" },
+                  { label: "Type", value: leave.type ? leave.type.charAt(0).toUpperCase() + leave.type.slice(1) : "-" },
                   { label: "Days", value: `${calculateDays(leave.startDate, leave.endDate)} days` },
                   { label: "Period", value: `${formatDate(leave.startDate)} - ${formatDate(leave.endDate)}` },
                   { label: "Applied", value: formatDateTime(leave.appliedAt) },

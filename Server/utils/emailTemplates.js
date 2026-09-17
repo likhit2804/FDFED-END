@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Unified Email Templates for Urban Ease
  * 
  * This module provides consistent, branded email templates for all email communications.
@@ -383,43 +383,20 @@ export function createOTPEmailTemplate({ otp, expiryMinutes = 5 }) {
 </html>`;
 }
 
+import { createTemporaryPasswordEmailTemplate } from "./otpEmailTemplates.js";
+
 /**
- * Temporary Password Email Template
+ * Temporary Password Email Template (Unified with Urban Ease OTP/auth template)
  * @param {Object} params
  * @param {string} params.email - User email
  * @param {string} params.password - Temporary password
  * @param {string} params.loginUrl - URL to login page
+ * @param {string} [params.userType] - User type / role
+ * @param {string} [params.username] - User display name
  * @returns {string} HTML email template
  */
-export function createTemporaryPasswordTemplate({ email, password, loginUrl }) {
-  const content = `
-    <p>Hello,</p>
-    <p>Welcome to <strong>Urban Ease</strong>! Your account has been created successfully. Please use the temporary credentials below to sign in:</p>
-    
-    <div class="credentials-box">
-      <h3>🔑 Login Credentials</h3>
-      <p><strong>Email:</strong> ${email}</p>
-      <p><strong>Temporary Password:</strong> <span class="credential-value">${password}</span></p>
-    </div>
-    
-    <div class="highlight-box warning">
-      <p><strong>⚠️ Action Required:</strong> For security reasons, please change your password immediately after your first login.</p>
-      <p style="margin-bottom: 0;"><strong>🔒 Keep It Safe:</strong> Never share your password with anyone.</p>
-    </div>
-    
-    <div class="btn-container">
-      <a href="${loginUrl}" class="btn">Login to Your Account</a>
-    </div>
-    
-    <p style="margin-top: 24px;">If you did not expect this email or need assistance, please contact our support team.</p>
-  `;
-
-  return createBaseEmailTemplate({
-    headerTitle: 'Welcome to Urban Ease',
-    headerIcon: '🎉',
-    headerClass: 'info',
-    content
-  });
+export function createTemporaryPasswordTemplate({ email, password, loginUrl, userType = "Resident", username = "" }) {
+  return createTemporaryPasswordEmailTemplate({ email, password, loginUrl, userType, username });
 }
 
 /**

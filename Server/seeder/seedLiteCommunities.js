@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
 import bcrypt from "bcrypt";
+import crypto from "crypto";
 import { faker } from "@faker-js/faker";
 
 import Community from "../models/communities.js";
@@ -117,6 +118,7 @@ async function createStructure(communityId) {
           floor,
           status: "Vacant",
           residentId: null,
+          registrationCode: `UE-${crypto.randomBytes(4).toString('hex')}`,
           block: block._id,
           community: communityId,
         });

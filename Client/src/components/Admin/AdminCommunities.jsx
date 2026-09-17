@@ -49,22 +49,23 @@ export default function Communities() {
         setLoading(true);
         setError("");
         const json = await adminApiClient.getCommunities();
-        if (json.success && json.data?.allCommunities) {
+        const list = json.data?.allCommunities || json.communities || (Array.isArray(json.data) ? json.data : []);
+        if (json.success && Array.isArray(list)) {
           // Store raw data for manager lookup
-          setRawCommunities(json.data.allCommunities);
-          const formatted = json.data.allCommunities.map((c) => ({
+          setRawCommunities(list);
+          const formatted = list.map((c) => ({
             id: c._id,
             name: c.name,
             location: c.location,
             members: c.totalMembers || 0,
             date: new Date(c.createdAt).toLocaleDateString("en-IN"),
             status: c.subscriptionStatus?.toUpperCase() || "PENDING",
-            manager: c.communityManager ? c.communityManager.name : "Unassigned",
+            manager: c.communityManager ? (c.communityManager.name || c.communityManager) : "Unassigned",
           }));
           setData(formatted);
           setLocations([
             "All Locations",
-            ...new Set(formatted.map((c) => c.location)),
+            ...new Set(formatted.map((c) => c.location).filter(Boolean)),
           ]);
         } else {
           setError("No communities data received");

@@ -4,8 +4,9 @@ import { getResidentProfile, updateProfile, changePassword } from "../controller
 
 const profileResidentRouter = express.Router();
 
-// GET /resident/profile
+// GET /resident/profile and /resident/profile/api
 profileResidentRouter.get("/profile", getResidentProfile);
+profileResidentRouter.get("/profile/api", getResidentProfile);
 // POST /resident/profile  (with optional image upload)
 profileResidentRouter.post("/profile", memoryUpload.single("image"), updateProfile);
 // POST /resident/change-password

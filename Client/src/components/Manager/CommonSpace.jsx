@@ -7,7 +7,7 @@ import {
 } from "react";
 import { useForm } from "react-hook-form";
 import { useDispatch, useSelector } from "react-redux";
-import { ToastContainer, toast } from "react-toastify";
+import { toast } from "react-toastify";
 import { BarChart3, Building2, Calendar, CheckCircle, Eye, Plus, Trash2 } from "lucide-react";
 import {
   AddSpace,
@@ -40,6 +40,7 @@ import {
   ManagerToolbar,
   ManagerToolbarGrow
 } from "./ui";
+import "../../assets/css/Manager/commonSpace.css";
 import { UE_CHART_COLORS, UE_CHART_PALETTE } from "../shared/chartPalette";
 import {
   canCancelBooking,
@@ -394,9 +395,7 @@ export const CommonSpace = () => {
   const maxControlDate = new Date(minControlDate);
   maxControlDate.setDate(maxControlDate.getDate() + 365);
   return (
-    <>
-      <ToastContainer position="top-center" autoClose={1500} />
-      <ManagerPageShell
+    <ManagerPageShell
         eyebrow="Common Spaces"
         title="Manage amenities, booking requests, and usage visibility from one desk."
         description="The booking surface now follows the same manager shell, panels, and record cards as the rest of the manager workspace."
@@ -988,6 +987,5 @@ export const CommonSpace = () => {
           </div>
         </Modal>
       </ManagerPageShell>
-    </>
   );
 };

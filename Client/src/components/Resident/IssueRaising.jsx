@@ -5,7 +5,7 @@ import {
   useState
 } from "react";
 import { useForm } from "react-hook-form";
-import { toast, ToastContainer } from "react-toastify";
+import { toast } from "react-toastify";
 import { useDispatch, useSelector } from "react-redux";
 import axios from "axios";
 import { fetchIssues, raiseIssue, submitFeedback } from "../../slices/IssueSlice";
@@ -121,7 +121,6 @@ export const IssueRaising = () => {
       chips={[`${issues?.length || 0} issues tracked`, `${pendingCount} pending`]}
       className="resident-ui-page resident-issues-page"
     >
-      <ToastContainer position="top-center" />
       <ManagerSection
         eyebrow="Issue Desk"
         title="Issue management"
@@ -199,22 +198,21 @@ export const IssueRaising = () => {
             <Clock size={13} /> SLA Targets: Urgent (30m) • High (4h) • Normal (24h)
           </span>
         </div>
-      <ManagerRecordGrid>
         {loading ? (
-          <div className="manager-ui-empty manager-ui-grid-span-all">
+          <div className="manager-ui-empty" style={{ width: "100%", display: "flex", justifyContent: "center", padding: "40px 0" }}>
             <Loader />
           </div>
-        ) : null}
-        {!loading && filteredIssues?.filter(Boolean).length > 0
-          ? filteredIssues.filter(Boolean).map((issue, index) => (
-            <ResidentIssueCard key={issue._id} issue={issue} index={index} onViewDetails={showDetails} />
-          ))
-          : !loading && (
-            <div className="manager-ui-grid-span-all">
-              <EmptyState icon={<AlertCircle size={42} />} title="No issues found" sub="Raise an issue to begin tracking updates." />
-            </div>
-          )}
-      </ManagerRecordGrid>
+        ) : filteredIssues?.filter(Boolean).length > 0 ? (
+          <ManagerRecordGrid>
+            {filteredIssues.filter(Boolean).map((issue, index) => (
+              <ResidentIssueCard key={issue._id} issue={issue} index={index} onViewDetails={showDetails} />
+            ))}
+          </ManagerRecordGrid>
+        ) : (
+          <div style={{ width: "100%", display: "flex", justifyContent: "center", padding: "30px 0" }}>
+            <EmptyState icon={<AlertCircle size={42} />} title="No issues found" sub="Raise an issue to begin tracking updates." />
+          </div>
+        )}
       </ManagerSection>
       {/* Raise Issue Modal */}
       <Modal isOpen={isIssueFormOpen} onClose={closeIssueForm} title="Raise an Issue" size="md"

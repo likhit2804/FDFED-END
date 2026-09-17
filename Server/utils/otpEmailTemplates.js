@@ -182,3 +182,92 @@ export function createRegistrationOtpEmailTemplate({
     userType,
   });
 }
+
+export function createTemporaryPasswordEmailTemplate({
+  email,
+  password,
+  loginUrl,
+  userType = "Resident",
+  username,
+  logoSrc = "",
+}) {
+  const brandHtml = logoSrc
+    ? `<img src="${logoSrc}" alt="Urban Ease" style="display:block;height:30px;width:auto;max-width:220px;" />`
+    : `<div style="font-size:12px;letter-spacing:1px;font-weight:700;text-transform:uppercase;opacity:.95;">Urban Ease</div>`;
+  const details = [
+    { label: "Account Email", value: email || "Not provided" },
+    { label: "Role", value: userType || "Resident" },
+    { label: "Issued At", value: formatTimestamp(new Date()) },
+    { label: "Status", value: "Action Required" },
+  ];
+  const detailRowsHtml = details
+    .map(
+      ({ label, value }) => `
+      <tr>
+        <td style="padding:8px 0;font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.4px;">${escapeHtml(
+          label
+        )}</td>
+        <td style="padding:8px 0;font-size:13px;font-weight:600;color:#0f172a;text-align:right;">${escapeHtml(
+          value
+        )}</td>
+      </tr>`
+    )
+    .join("");
+
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Welcome to Urban Ease - Temporary Password</title>
+  </head>
+  <body style="margin:0;padding:0;background:#f4f6fb;font-family:Segoe UI,Arial,sans-serif;color:#1f2937;">
+    <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="padding:28px 12px;background:#f4f6fb;">
+      <tr>
+        <td align="center">
+          <table width="560" cellpadding="0" cellspacing="0" role="presentation" style="max-width:560px;width:100%;background:#ffffff;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden;">
+            <tr>
+              <td style="padding:22px 24px;background:linear-gradient(135deg,#6d28d9,#7c3aed);color:#ffffff;">
+                ${brandHtml}
+                <div style="margin-top:6px;font-size:22px;line-height:1.3;font-weight:700;">Welcome to Urban Ease</div>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:24px;">
+                <p style="margin:0 0 14px;font-size:15px;line-height:1.65;color:#475569;">
+                  Hello${username ? ` ${escapeHtml(username)}` : ""},<br/>
+                  Your resident account has been registered successfully. Use the temporary credentials below to sign in.
+                </p>
+                <div style="margin:16px 0 10px;padding:20px 14px;border:1px dashed #c4b5fd;border-radius:12px;background:#faf5ff;text-align:center;">
+                  <div style="font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Temporary Password</div>
+                  <div style="font-size:28px;line-height:1.2;font-weight:800;letter-spacing:1px;color:#4c1d95;font-family:Consolas,Monaco,monospace;user-select:all;-webkit-user-select:all;">${escapeHtml(password)}</div>
+                </div>
+                <div style="margin:14px 0 8px;padding:12px 14px;border:1px solid #e2e8f0;border-radius:10px;background:#f8fafc;">
+                  <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
+                    ${detailRowsHtml}
+                  </table>
+                </div>
+                <div style="margin:20px 0 16px;text-align:center;">
+                  <a href="${escapeHtml(loginUrl)}" style="display:inline-block;padding:12px 28px;background:linear-gradient(135deg,#6d28d9,#7c3aed);color:#ffffff;text-decoration:none;font-weight:600;font-size:14px;border-radius:8px;box-shadow:0 2px 8px rgba(109,40,217,0.35);">
+                    Sign In to Urban Ease &rarr;
+                  </a>
+                </div>
+                <p style="margin:16px 0 0;font-size:13px;line-height:1.6;color:#6b7280;">
+                  ⚠️ <strong>Security Notice:</strong> For your security, please change your password immediately upon your first sign in. Never share your credentials with anyone.
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:16px 24px;background:#f8fafc;border-top:1px solid #e5e7eb;">
+                <p style="margin:0;font-size:12px;line-height:1.6;color:#64748b;">
+                  This is an automated security email from Urban Ease. Please do not reply.
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`;
+}

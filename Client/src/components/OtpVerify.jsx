@@ -2,8 +2,7 @@ import { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { verifyOtp } from "../slices/authSlice";
-import { ToastContainer, toast } from "react-toastify";
-import 'react-toastify/dist/ReactToastify.css';
+import { toast } from "react-toastify";
 const OtpVerify = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -38,7 +37,6 @@ const OtpVerify = () => {
   };
   return (
     <div className="SignInCon" style={{ display:'flex', alignItems:'center', justifyContent:'center', minHeight:'60vh' }}>
-      <ToastContainer />
       <form onSubmit={onSubmit} style={{ background:'#fff', padding:24, borderRadius:12, boxShadow:'0 6px 24px rgba(0,0,0,0.08)', minWidth:320 }}>
         <h3 style={{ marginBottom:8 }}>Two-Factor Verification</h3>
         <p style={{ marginTop:0, color:'#666' }}>We sent a 6-digit code to <strong>{pending2fa.email}</strong></p>

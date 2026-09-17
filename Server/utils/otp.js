@@ -165,9 +165,9 @@ export async function sendPassword({ email }) {
  * @param {string} password
  * @returns {Promise<boolean>}
  */
-export async function sendTemporaryPassword(email, password) {
+export async function sendTemporaryPassword(email, password, options = {}) {
   Promise.resolve().then(() => {
-    sendTemporaryPasswordEmail(email, password).catch((err) => {
+    sendTemporaryPasswordEmail(email, password, options).catch((err) => {
       console.warn(`[TemporaryPassword] Email delivery failed for ${email}:`, err.message);
     });
   });

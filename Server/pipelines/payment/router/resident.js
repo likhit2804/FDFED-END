@@ -1,4 +1,4 @@
-﻿import express from "express";
+import express from "express";
 import {
   getResidentPayments,
   createResidentPayment,
@@ -11,6 +11,7 @@ import {
 const paymentResidentRouter = express.Router();
 // GET /resident/payments — list all my payments
 paymentResidentRouter.get("/payments", getResidentPayments);
+paymentResidentRouter.get("/payments/api", getResidentPayments);
 // POST /resident/payment — self-pay
 paymentResidentRouter.post("/payment", createResidentPayment);
 // PATCH /resident/payment/:id — mark payment complete

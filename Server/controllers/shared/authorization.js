@@ -9,10 +9,12 @@ const handleForbidden = (req, res, redirectPath) => {
     return res.redirect(redirectPath);
 };
 
-// Factory to build single-role authorizers (keeps existing behaviour)
+// Factory to build single-role authorizers (keeps existing behaviour, case-insensitive)
 const buildAuthorize = (requiredUserType, redirectPath) => {
     return (req, res, next) => {
-        if (req.user?.userType !== requiredUserType) {
+        const currentUserType = String(req.user?.userType || req.user?.role || "").toLowerCase();
+        const targetUserType = String(requiredUserType || "").toLowerCase();
+        if (currentUserType !== targetUserType) {
             return handleForbidden(req, res, redirectPath);
         }
         next();
@@ -27,16 +29,13 @@ const authorizeC = buildAuthorize("CommunityManager", "/login");
 const authorizeA = buildAuthorize("admin", "/AdminLogin");
 
 // New: generic role-based authorizer for specific routes
-// Usage examples:
-//   router.get('/api/admin-or-manager', auth, authorizeRoles(['admin', 'CommunityManager']), handler);
-//   router.post('/api/admin-only', auth, authorizeRoles('admin', '/AdminLogin'), handler);
 const authorizeRoles = (roles, redirectPath = "/login") => {
-    const allowed = Array.isArray(roles) ? roles : [roles];
+    const allowed = (Array.isArray(roles) ? roles : [roles]).map(r => String(r).toLowerCase());
 
     return (req, res, next) => {
-        const userType = req.user?.userType;
+        const currentUserType = String(req.user?.userType || req.user?.role || "").toLowerCase();
 
-        if (!userType || !allowed.includes(userType)) {
+        if (!currentUserType || !allowed.includes(currentUserType)) {
             return handleForbidden(req, res, redirectPath);
         }
 

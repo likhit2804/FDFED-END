@@ -35,12 +35,13 @@ export const getHistory = async (req, res) => {
 
         const issueQuery = withDateRangeMatch({
             workerAssigned: req.user.id,
-            status: { $nin: ["Assigned", "Pending"] },
+            status: { $nin: ["Assigned", "Pending", "In Progress", "Pending Assignment"] },
         }, "createdAt", dateRange.range);
 
         const issues = await Issue.find(issueQuery)
             .populate("workerAssigned")
             .populate("resident")
+            .sort({ resolvedAt: -1, updatedAt: -1, createdAt: -1 })
             .lean();
         return res.json({
             success: true,

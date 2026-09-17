@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import axios from "axios";
 import { Building2, User } from "lucide-react";
 import { toast } from "react-toastify";
 import { Loader } from "../Loader";
@@ -6,55 +7,81 @@ import { PasswordChangeForm, ProfileHeader } from "../shared";
 import { ProfileEditPanels } from "../shared/nonAdmin/ProfileEditPanels";
 import { buildDisplayName, getInitials } from "../shared/nonAdmin/profileUtils";
 import { ManagerPageShell, ManagerSection } from "../shared/roleUI";
+
 const mapResidentProfile = (resident = {}) => ({
-  firstname: resident.firstname || "",
-  lastname: resident.lastname || "",
+  firstname: resident.firstname || resident.residentFirstname || "",
+  lastname: resident.lastname || resident.residentLastname || "",
   email: resident.email || "",
   contact: resident.contact || "",
   uCode: resident.uCode || "",
-  communityName: resident.communityName || "",
+  communityName: resident.communityName || resident.community?.name || "",
   image: resident.image || "",
 });
+
 export const ResidentProfile = () => {
+  const cachedUser = (() => {
+    try {
+      return JSON.parse(localStorage.getItem("user") || "{}");
+    } catch {
+      return {};
+    }
+  })();
+
   const [formData, setFormData] = useState({
-    firstname: "",
-    lastname: "",
-    email: "",
-    contact: "",
-    uCode: "",
-    communityName: "",
-    image: "",
+    firstname: cachedUser?.firstname || cachedUser?.residentFirstname || cachedUser?.name?.split(" ")[0] || "",
+    lastname: cachedUser?.lastname || cachedUser?.residentLastname || cachedUser?.name?.split(" ").slice(1).join(" ") || "",
+    email: cachedUser?.email || "",
+    contact: cachedUser?.contact || "",
+    uCode: cachedUser?.uCode || "",
+    communityName: cachedUser?.communityName || "",
+    image: cachedUser?.image || "",
   });
   const [selectedImage, setSelectedImage] = useState(null);
   const [isPassword, setIsPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(!cachedUser?.email);
   const [error, setError] = useState("");
-  useEffect(() => {
-    const loadProfile = async () => {
+
+  const loadProfile = async () => {
+    try {
+      let response;
       try {
-        const response = await fetch("/resident/profile", {
-          method: "GET",
-          credentials: "include",
-        });
-        const data = await response.json();
-        if (!data.success || !data.resident) {
-          setError(data.message || "Failed to load profile");
-          return;
-        }
-        setFormData(mapResidentProfile(data.resident));
-      } catch (requestError) {
-        console.error("Resident profile fetch error:", requestError);
-        setError("Failed to load profile");
-      } finally {
-        setIsLoading(false);
+        response = await axios.get("/resident/profile/api");
+      } catch {
+        response = await axios.get("/resident/profile");
       }
-    };
+      const data = response.data;
+      if (!data?.success || !data?.resident) {
+        if (cachedUser?.email) {
+          setFormData(mapResidentProfile(cachedUser));
+        } else {
+          setError(data?.message || "Failed to load profile");
+        }
+        return;
+      }
+      setError("");
+      setFormData(mapResidentProfile(data.resident));
+    } catch (requestError) {
+      console.error("Resident profile fetch error:", requestError);
+      if (cachedUser?.email) {
+        setFormData(mapResidentProfile(cachedUser));
+      } else {
+        setError(requestError.response?.data?.message || "Failed to load profile");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
     loadProfile();
   }, []);
+
+
   const handleChange = (event) => {
     const { id, name, value } = event.target;
     setFormData((previous) => ({ ...previous, [id || name]: value }));
   };
+
   const handleImageChange = (file) => {
     if (!file) return;
     setSelectedImage(file);
@@ -62,6 +89,7 @@ export const ResidentProfile = () => {
     reader.onload = () => setFormData((previous) => ({ ...previous, image: reader.result }));
     reader.readAsDataURL(file);
   };
+
   const handleSaveProfile = async () => {
     try {
       const body = new FormData();
@@ -71,12 +99,11 @@ export const ResidentProfile = () => {
       body.append("email", formData.email);
       body.append("uCode", formData.uCode);
       if (selectedImage) body.append("image", selectedImage);
-      const response = await fetch("/resident/profile", {
-        method: "POST",
-        credentials: "include",
-        body,
+
+      const response = await axios.post("/resident/profile", body, {
+        headers: { "Content-Type": "multipart/form-data" },
       });
-      const data = await response.json();
+      const data = response.data;
       if (!data.success) {
         toast.error(data.message || "Update failed");
         return;
@@ -84,32 +111,33 @@ export const ResidentProfile = () => {
       toast.success("Profile updated successfully");
     } catch (requestError) {
       console.error(requestError);
-      toast.error("Error updating profile");
+      toast.error(requestError.response?.data?.message || "Error updating profile");
     }
   };
+
   const handlePasswordSubmit = async ({ cp, np, cnp }) => {
     if (np !== cnp) {
       toast.error("New password and confirm password do not match");
       return;
     }
     try {
-      const response = await fetch("/resident/change-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ currentPassword: cp, newPassword: np }),
+      const response = await axios.post("/resident/change-password", {
+        currentPassword: cp,
+        newPassword: np,
       });
-      const data = await response.json();
+      const data = response.data;
       if (!data.success && !data.ok) {
         toast.error(data.message || "Password update failed");
         return;
       }
       toast.success("Password updated successfully");
+      setIsPassword(false);
     } catch (requestError) {
       console.error(requestError);
-      toast.error("Something went wrong while updating password");
+      toast.error(requestError.response?.data?.message || "Something went wrong while updating password");
     }
   };
+
   const residentName = buildDisplayName(formData.firstname, formData.lastname) || "Resident";
   if (isLoading) {
     return (
@@ -124,17 +152,31 @@ export const ResidentProfile = () => {
       </ManagerPageShell>
     );
   }
-  if (error) {
+  if (error && !formData.email) {
     return (
       <ManagerPageShell
         eyebrow="Resident Desk"
         title="Resident profile is unavailable."
         description="The profile could not be loaded right now."
       >
-        <div className="manager-ui-empty text-danger">{error}</div>
+        <div className="manager-ui-empty text-danger">
+          <p className="mb-2">{error}</p>
+          <button
+            type="button"
+            className="manager-ui-button manager-ui-button--primary"
+            onClick={() => {
+              setIsLoading(true);
+              setError("");
+              loadProfile();
+            }}
+          >
+            Retry
+          </button>
+        </div>
       </ManagerPageShell>
     );
   }
+
   return (
     <ManagerPageShell
       eyebrow="Resident Desk"

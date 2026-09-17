@@ -1,4 +1,4 @@
-﻿import Community from "../../../models/communities.js";
+import Community from "../../../models/communities.js";
 import CommunityManager from "../../../models/cManager.js";
 import crypto from "crypto";
 import Block from "../../../models/blocks.js";
@@ -178,9 +178,27 @@ export const setupCommunityStructure = async (req, res) => {
 // ---- Get Registration Codes (manager view / print) ----
 export const getRegistrationCodes = async (req, res) => {
     try {
-        const community = req.community;
+        let community = req.community;
+        if (!community) {
+            const manager = await CommunityManager.findById(req.user?.id);
+            if (manager?.assignedCommunity) {
+                community = await Community.findById(manager.assignedCommunity);
+            }
+        }
+
+        if (!community) {
+            return sendError(res, 404, "Community not found for manager");
+        }
 
         const allFlats = await Flat.find({ community: community._id }).populate("block", "name");
+
+        // Auto-heal: ensure every vacant flat has an active registrationCode
+        for (const flat of allFlats) {
+            if (flat.status === "Vacant" && !flat.registrationCode) {
+                flat.registrationCode = generateRegCode();
+                await flat.save();
+            }
+        }
 
         const rows = allFlats.map(flat => ({
             block: flat.block ? flat.block.name : "Unknown",
@@ -205,8 +223,17 @@ export const getRegistrationCodes = async (req, res) => {
 export const regenerateRegistrationCodes = async (req, res) => {
     try {
         const { flatNumber, flatNumbers } = req.body;
-        const managerId = req.user.id;
-        const community = req.community;
+        let community = req.community;
+        if (!community) {
+            const manager = await CommunityManager.findById(req.user?.id);
+            if (manager?.assignedCommunity) {
+                community = await Community.findById(manager.assignedCommunity);
+            }
+        }
+
+        if (!community) {
+            return sendError(res, 404, "Community not found for manager");
+        }
 
         let regenerated = 0;
         let newCode = null;

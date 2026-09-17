@@ -70,7 +70,8 @@ async function verifyCredentials(model, email, password) {
     const userPayload = {
         id: user._id,
         email: user.email,
-        userType
+        userType,
+        role: user.role || (userType.toLowerCase() === 'admin' ? 'admin' : userType.toLowerCase())
     };
 
     if (userType === 'Resident' || userType === 'Security' || userType === 'Worker') {

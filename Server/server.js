@@ -288,6 +288,35 @@ app.use("/", authRouter);
 app.use("/resident-register", residentRegisterRouter);
 app.use("/api/cache", cacheRouter);
 
+// SPA navigation bypass:
+// When a browser requests HTML navigation (e.g. direct URL visit or refresh on /resident/payments, /resident/profile, etc.),
+// serve the SPA index.html so React Router handles the route on the client.
+// API calls (XHR / fetch with Accept containing application/json) proceed to the backend routers below.
+app.use((req, res, next) => {
+  const accept = req.headers["accept"] || "";
+  const secFetchDest = req.headers["sec-fetch-dest"];
+  const isDocumentNav =
+    secFetchDest === "document" ||
+    (accept.includes("text/html") && !accept.includes("application/json"));
+
+  if (
+    req.method === "GET" &&
+    isDocumentNav &&
+    !req.xhr &&
+    !req.path.startsWith("/api") &&
+    !req.path.startsWith("/uploads") &&
+    !req.path.startsWith("/socket.io") &&
+    !req.path.startsWith("/api-docs")
+  ) {
+    const isStaticFile = /\.(js|css|png|jpg|jpeg|gif|svg|ico|json|woff2?|map|txt)$/i.test(req.path);
+    if (!isStaticFile && fs.existsSync(CLIENT_INDEX_PATH)) {
+      res.setHeader("Cache-Control", "no-cache");
+      return res.sendFile(CLIENT_INDEX_PATH);
+    }
+  }
+  next();
+});
+
 app.use("/admin", auth, authorizeA, AdminRouter);
 app.use("/resident", auth, authorizeR, attachCommunity, residentRouter);
 app.use("/security", auth, authorizeS, attachCommunity, securityRouter);

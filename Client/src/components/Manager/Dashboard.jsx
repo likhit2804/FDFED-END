@@ -31,6 +31,7 @@ import { useNavigate } from "react-router-dom";
 import { Loader } from "../Loader";
 import { DateRangeFilter } from "../shared";
 import { useSocket } from "../../hooks/useSocket";
+import "../../assets/css/Manager/Dashboard.css";
 const CURRENCY_FORMATTER = new Intl.NumberFormat("en-IN", {
   maximumFractionDigits: 0,
 });

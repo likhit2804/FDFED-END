@@ -328,18 +328,37 @@ html {
 
 /* ── Empty State ───────────────────────────────────────── */
 .ue-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  grid-column: 1 / -1 !important;
+  width: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
   padding: var(--ue-space-2xl) var(--ue-space-xl);
   color: var(--ue-text-muted);
-  text-align: center;
+  text-align: center !important;
+  margin: 0 auto !important;
 }
 
-.ue-empty__icon { opacity: 0.35; margin-bottom: var(--ue-space-md); }
-.ue-empty__title { font-size: 1.05rem; font-weight: 600; color: var(--ue-text-mid); margin: 0 0 var(--ue-space-xs) 0; }
-.ue-empty__sub  { font-size: 0.85rem; margin: 0; }
+.ue-empty__icon {
+  opacity: 0.35;
+  margin-bottom: var(--ue-space-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ue-empty__title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--ue-text-mid);
+  margin: 0 0 var(--ue-space-xs) 0;
+  text-align: center;
+}
+.ue-empty__sub {
+  font-size: 0.85rem;
+  margin: 0;
+  text-align: center;
+}
 
 /* ── ProfileHeader ─────────────────────────────────────── */
 .ue-profile-header {
@@ -527,51 +546,120 @@ html {
   .ue-entity-grid { grid-template-columns: 1fr; }
 }
 
-/* Shared DayPicker theme */
+/* Shared DayPicker v9 theme */
 .ue-calendar {
-  --rdp-accent-color: var(--brand-500);
-  --rdp-accent-background-color: var(--info-soft);
-  --rdp-background-color: var(--surface-1);
-  --rdp-outline: 2px solid var(--brand-500);
-  --rdp-outline-selected: 2px solid var(--brand-500);
-  --rdp-selected-border: 1px solid var(--brand-500);
+  --rdp-accent-color: var(--brand-600, #7c3aed);
+  --rdp-accent-background-color: var(--info-soft, #f5f3ff);
+  --rdp-day-height: 40px;
+  --rdp-day-width: 40px;
+  --rdp-day_button-height: 38px;
+  --rdp-day_button-width: 38px;
+  --rdp-day_button-border-radius: 10px;
+  --rdp-selected-border: 2px solid var(--brand-600, #7c3aed);
+  --rdp-disabled-opacity: 0.35;
+  --rdp-outside-opacity: 0.4;
   margin: 0;
-  color: var(--text-subtle);
+  color: var(--text-subtle, #334155);
+}
+
+.ue-calendar .rdp-month_caption {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-main, #0f172a);
 }
 
 .ue-calendar .rdp-caption_label {
-  color: var(--text-main);
+  font-size: 15px;
   font-weight: 700;
+  color: var(--text-main, #0f172a);
 }
 
-.ue-calendar .rdp-dropdown {
-  color: var(--text-subtle);
+.ue-calendar .rdp-button_next,
+.ue-calendar .rdp-button_previous {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle, #e2e8f0);
+  background: var(--surface-1, #f8fafc);
+  color: var(--text-subtle, #475569);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.ue-calendar .rdp-button_next:hover:not(:disabled),
+.ue-calendar .rdp-button_previous:hover:not(:disabled) {
+  background: var(--surface-2, #e2e8f0);
+  color: var(--text-main, #0f172a);
+  border-color: var(--border-subtle, #cbd5e1);
+}
+
+.ue-calendar .rdp-month_grid {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 2px;
 }
 
 .ue-calendar .rdp-weekday {
-  color: var(--text-muted);
+  font-size: 11px;
   font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted, #94a3b8);
+  text-align: center;
+  padding: 6px 0;
 }
 
 .ue-calendar .rdp-day {
-  color: var(--text-subtle);
+  text-align: center;
+  padding: 1px;
+}
+
+.ue-calendar .rdp-day_button {
+  width: 38px;
+  height: 38px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-main, #1e293b);
   border-radius: 10px;
+  border: 1px solid transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
 }
 
-.ue-calendar .rdp-day:hover:not([disabled]):not(.rdp-day_selected) {
-  background: var(--surface-2);
-  color: var(--brand-700);
+.ue-calendar .rdp-day_button:hover:not(:disabled) {
+  background: var(--surface-2, #f1f5f9);
+  color: var(--brand-700, #5b21b6);
 }
 
-.ue-calendar .rdp-day_selected {
-  background: var(--brand-500);
-  border-color: var(--brand-500);
-  color: var(--surface-0);
+.ue-calendar .rdp-selected .rdp-day_button,
+.ue-calendar .rdp-day_button[aria-selected="true"] {
+  background: linear-gradient(135deg, #6d28d9, #7c3aed) !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  box-shadow: 0 4px 10px rgba(109, 40, 217, 0.35) !important;
+  border-color: transparent !important;
 }
 
-.ue-calendar .rdp-day_today:not(.rdp-day_selected) {
-  background: var(--info-soft);
-  color: var(--brand-700);
-  font-weight: 700;
+.ue-calendar .rdp-today:not(.rdp-selected) .rdp-day_button {
+  border: 1.5px solid var(--brand-500, #8b5cf6) !important;
+  color: var(--brand-700, #5b21b6) !important;
+  font-weight: 700 !important;
+}
+
+.ue-calendar .rdp-day_button:disabled {
+  color: var(--text-disabled, #cbd5e1) !important;
+  cursor: not-allowed !important;
+  opacity: 0.35 !important;
 }
 
