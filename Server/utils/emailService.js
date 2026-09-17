@@ -270,9 +270,11 @@ export async function sendTemporaryPasswordEmail(email, password, options = {}) 
  * @param {string} adminName - Name of approving admin
  * @param {string} paymentLink - URL to payment page
  * @param {string} message - Custom message (optional)
+ * @param {Object} [options] - Additional options (e.g. applicantName)
  */
-export async function sendApplicationApprovedEmail(email, adminName, paymentLink, message = '') {
-  const html = createApplicationApprovedTemplate({ adminName, paymentLink, message });
+export async function sendApplicationApprovedEmail(email, adminName, paymentLink, message = '', options = {}) {
+  const applicantName = typeof options === 'object' ? (options.applicantName || '') : '';
+  const html = createApplicationApprovedTemplate({ adminName, paymentLink, message, applicantName });
   return sendEmail({
     to: email,
     subject: 'Application Approved - Complete Your Payment',
@@ -285,9 +287,11 @@ export async function sendApplicationApprovedEmail(email, adminName, paymentLink
  * @param {string} email - Recipient email
  * @param {string} adminName - Name of rejecting admin
  * @param {string} reason - Rejection reason
+ * @param {Object} [options] - Additional options (e.g. applicantName)
  */
-export async function sendApplicationRejectedEmail(email, adminName, reason) {
-  const html = createApplicationRejectedTemplate({ adminName, reason });
+export async function sendApplicationRejectedEmail(email, adminName, reason, options = {}) {
+  const applicantName = typeof options === 'object' ? (options.applicantName || '') : '';
+  const html = createApplicationRejectedTemplate({ adminName, reason, applicantName });
   return sendEmail({
     to: email,
     subject: 'Application Status Update - Urban Ease',
@@ -299,12 +303,14 @@ export async function sendApplicationRejectedEmail(email, adminName, reason) {
  * Send account activated email with credentials
  * @param {string} email - Recipient email
  * @param {string} password - Account password
+ * @param {Object} [options] - Additional options (e.g. applicantName)
  */
-export async function sendAccountActivatedEmail(email, password) {
+export async function sendAccountActivatedEmail(email, password, options = {}) {
+  const applicantName = typeof options === 'object' ? (options.applicantName || '') : '';
   const loginUrl = process.env.CLIENT_BASE_URL 
     ? `${process.env.CLIENT_BASE_URL}/SignIn` 
     : 'http://localhost:5173/SignIn';
-  const html = createAccountActivatedTemplate({ email, password, loginUrl });
+  const html = createAccountActivatedTemplate({ email, password, loginUrl, applicantName });
   return sendEmail({
     to: email,
     subject: 'Account Activated - Welcome to Urban Ease!',
@@ -317,9 +323,11 @@ export async function sendAccountActivatedEmail(email, password) {
  * @param {string} email - Recipient email
  * @param {string} paymentLink - URL to payment page
  * @param {number} expiryDays - Days until link expires (default: 7)
+ * @param {Object} [options] - Additional options (e.g. applicantName)
  */
-export async function sendPaymentLinkEmail(email, paymentLink, expiryDays = 7) {
-  const html = createPaymentLinkTemplate({ paymentLink, expiryDays });
+export async function sendPaymentLinkEmail(email, paymentLink, expiryDays = 7, options = {}) {
+  const applicantName = typeof options === 'object' ? (options.applicantName || '') : '';
+  const html = createPaymentLinkTemplate({ paymentLink, expiryDays, applicantName });
   return sendEmail({
     to: email,
     subject: 'Reminder: Complete Your Payment - Urban Ease',

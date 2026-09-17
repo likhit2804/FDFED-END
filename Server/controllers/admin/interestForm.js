@@ -368,7 +368,8 @@ export const approveApplication = async (req, res) => {
         interest.email,
         adminName,
         paymentLink,
-        'Your application has been approved! Please complete your subscription payment to activate your account and receive your login credentials.'
+        'Your application has been approved! Please complete your subscription payment to activate your account and receive your login credentials.',
+        { applicantName: interest.name }
       ).catch((err) => {
         console.warn(`[Approval Email] Delivery failed for ${interest.email} (Payment link: ${paymentLink}):`, err.message);
       });
@@ -770,7 +771,8 @@ export const completeOnboardingPayment = async (req, res) => {
     const communityCode = newCommunity[0].communityCode;
     await sendAccountActivatedEmail(
       interest.email,
-      randomPassword
+      randomPassword,
+      { applicantName: interest.name }
     );
     res.json({
       success: true,
