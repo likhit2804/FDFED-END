@@ -87,7 +87,7 @@ async function sendEmail({ to, subject, html, text = '', attachments = [] }) {
   try {
     const transporter = getTransporter();
     const fromName = process.env.EMAIL_FROM_NAME || 'UrbanEase';
-    const fromUser = process.env.EMAIL_USER || 'urbanease.team@gmail.com';
+    const fromUser = process.env.EMAIL_USER || 'noreply.urbanease@gmail.com';
     const mailOptions = {
       from: `"${fromName}" <${fromUser}>`,
       to,
