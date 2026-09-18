@@ -158,6 +158,11 @@ export const SignIn = () => {
                 <button type="button" onClick={() => setShowForgotPassword(true)} className="login-link" style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}>Forgot Password?</button>
                 <NavLink to="/interestForm" className="login-link">New? Register here</NavLink>
               </div>
+              <div style={{ marginTop: '12px', textAlign: 'center', paddingTop: '10px', borderTop: '1px solid #e5e7eb' }}>
+                <NavLink to="/guide" className="login-link" style={{ fontSize: '13px', color: '#0284c7', fontWeight: 600 }}>
+                  New to UrbanEase? View Registration Guide &rarr;
+                </NavLink>
+              </div>
             </>
           ) : (
             <>

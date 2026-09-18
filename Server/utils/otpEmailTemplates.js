@@ -222,10 +222,37 @@ export function createTemporaryPasswordEmailTemplate({
   password,
   loginUrl = "http://localhost:5173/SignIn",
   username = "",
+  role = "Resident",
   logoSrc = "",
 }) {
   const greeting = username ? `Hello ${escapeHtml(username)},` : "Hello,";
-  const subtitle = `${greeting}<br/>Your resident account has been created successfully. Use the temporary credentials below to sign in:`;
+  const normalizedRole = String(role || "Resident").toLowerCase();
+
+  let roleTitle = "resident";
+  let featuresHtml = `
+    <tr><td style="padding:3px 0;vertical-align:top;width:14px;color:#18181b;">&bull;</td><td style="padding:3px 0;"><strong>Digital Gate Passes:</strong> Generate 6-digit visitor codes for guests, food deliveries, and cabs.</td></tr>
+    <tr><td style="padding:3px 0;vertical-align:top;width:14px;color:#18181b;">&bull;</td><td style="padding:3px 0;"><strong>Issue Desk:</strong> Report plumbing or electrical issues with photos and track repairs live.</td></tr>
+    <tr><td style="padding:3px 0;vertical-align:top;width:14px;color:#18181b;">&bull;</td><td style="padding:3px 0;"><strong>Common Spaces:</strong> Book clubhouse, tennis court, and party spaces online.</td></tr>
+    <tr><td style="padding:3px 0;vertical-align:top;width:14px;color:#18181b;">&bull;</td><td style="padding:3px 0;"><strong>Maintenance Bills:</strong> Pay society dues securely via Razorpay and get receipts.</td></tr>
+  `;
+
+  if (normalizedRole.includes("worker")) {
+    roleTitle = "maintenance staff";
+    featuresHtml = `
+      <tr><td style="padding:3px 0;vertical-align:top;width:14px;color:#18181b;">&bull;</td><td style="padding:3px 0;"><strong>Duty Task Feed:</strong> Receive assigned plumbing, electrical, and repair work orders.</td></tr>
+      <tr><td style="padding:3px 0;vertical-align:top;width:14px;color:#18181b;">&bull;</td><td style="padding:3px 0;"><strong>Proof of Work:</strong> Upload completion photos directly from your phone to resolve tickets.</td></tr>
+      <tr><td style="padding:3px 0;vertical-align:top;width:14px;color:#18181b;">&bull;</td><td style="padding:3px 0;"><strong>Leave Management:</strong> Apply for leaves and track manager approval status.</td></tr>
+    `;
+  } else if (normalizedRole.includes("security")) {
+    roleTitle = "gate security";
+    featuresHtml = `
+      <tr><td style="padding:3px 0;vertical-align:top;width:14px;color:#18181b;">&bull;</td><td style="padding:3px 0;"><strong>Gate Pass Verification:</strong> Validate 6-digit resident visitor codes for instant barrier clearance.</td></tr>
+      <tr><td style="padding:3px 0;vertical-align:top;width:14px;color:#18181b;">&bull;</td><td style="padding:3px 0;"><strong>Visitor Check-In:</strong> Log unannounced visitors, cabs, and delivery executives.</td></tr>
+      <tr><td style="padding:3px 0;vertical-align:top;width:14px;color:#18181b;">&bull;</td><td style="padding:3px 0;"><strong>Issues Desk:</strong> Report parking violations or gate incidents directly to management.</td></tr>
+    `;
+  }
+
+  const subtitle = `${greeting}<br/>Your ${roleTitle} account has been created successfully. Use the temporary credentials below to sign in:`;
 
   const mainBlock = `
     <div style="
@@ -249,6 +276,19 @@ export function createTemporaryPasswordEmailTemplate({
         user-select:all;
         -webkit-user-select:all;
       ">${escapeHtml(password)}</div>
+    </div>
+    <div style="
+      background:#fafafa;
+      border:1px solid #e4e4e7;
+      border-radius:8px;
+      padding:16px 20px;
+      margin-bottom:20px;
+      text-align:left;
+    ">
+      <div style="font-size:12px;font-weight:600;color:#71717a;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Portal Features Available to You</div>
+      <table width="100%" cellpadding="0" cellspacing="0" style="font-size:13px;color:#3f3f46;line-height:1.6;">
+        ${featuresHtml}
+      </table>
     </div>
     <div style="text-align:center;margin-top:16px;">
       <a href="${escapeHtml(loginUrl)}" style="
@@ -372,6 +412,22 @@ export function createAccountActivatedEmailTemplate({
         user-select:all;
         -webkit-user-select:all;
       ">${escapeHtml(password)}</div>
+    </div>
+    <div style="
+      background:#fafafa;
+      border:1px solid #e4e4e7;
+      border-radius:8px;
+      padding:16px 20px;
+      margin-bottom:20px;
+      text-align:left;
+    ">
+      <div style="font-size:12px;font-weight:600;color:#71717a;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Manager Portal Capabilities</div>
+      <table width="100%" cellpadding="0" cellspacing="0" style="font-size:13px;color:#3f3f46;line-height:1.6;">
+        <tr><td style="padding:3px 0;vertical-align:top;width:14px;color:#18181b;">&bull;</td><td style="padding:3px 0;"><strong>Society Setup:</strong> Configure blocks, floors, and flat inventory in minutes.</td></tr>
+        <tr><td style="padding:3px 0;vertical-align:top;width:14px;color:#18181b;">&bull;</td><td style="padding:3px 0;"><strong>Resident Codes:</strong> Generate flat codes (UE-XXXX) to invite residents to register.</td></tr>
+        <tr><td style="padding:3px 0;vertical-align:top;width:14px;color:#18181b;">&bull;</td><td style="padding:3px 0;"><strong>Work Order Dispatch:</strong> Assign incoming resident complaints directly to duty workers.</td></tr>
+        <tr><td style="padding:3px 0;vertical-align:top;width:14px;color:#18181b;">&bull;</td><td style="padding:3px 0;"><strong>Financial Control:</strong> Issue maintenance invoices and monitor Razorpay dues collections.</td></tr>
+      </table>
     </div>
     <div style="text-align:center;margin-top:16px;">
       <a href="${escapeHtml(loginUrl)}" style="

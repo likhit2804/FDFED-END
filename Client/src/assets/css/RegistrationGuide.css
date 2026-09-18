@@ -1,0 +1,287 @@
+/* UrbanEase Authentic User Guide Styles - Matching Main Landing Page Theme */
+.ue-guide-page {
+  font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: #f8fafc;
+  color: #334155;
+  line-height: 1.6;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.ue-guide-hero {
+  text-align: center;
+  padding: 5rem 1.5rem 2.5rem;
+  max-width: 860px;
+  margin: 0 auto;
+}
+
+.ue-guide-pill {
+  display: inline-block;
+  padding: 0.35rem 1rem;
+  background: rgba(21, 94, 117, 0.08);
+  color: #155e75;
+  border: 1px solid rgba(21, 94, 117, 0.2);
+  border-radius: 999px;
+  font-size: 0.825rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 1.25rem;
+}
+
+.ue-guide-hero h1 {
+  font-size: 2.75rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+  margin-bottom: 1rem;
+}
+
+.ue-guide-hero p {
+  font-size: 1.125rem;
+  color: #64748b;
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+/* Role Switcher Tabs */
+.ue-guide-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  margin: 1.5rem auto 3rem;
+  flex-wrap: wrap;
+  padding: 0 1rem;
+}
+
+.ue-guide-tab {
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  color: #475569;
+  padding: 0.85rem 1.75rem;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+}
+
+.ue-guide-tab:hover {
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+.ue-guide-tab.active {
+  background: #155e75;
+  border-color: #155e75;
+  color: #ffffff;
+  box-shadow: 0 4px 16px rgba(21, 94, 117, 0.25);
+}
+
+/* Container */
+.ue-guide-container {
+  max-width: 1200px;
+  margin: 0 auto 5rem;
+  padding: 0 1.5rem;
+  width: 100%;
+}
+
+.ue-guide-role-intro {
+  text-align: center;
+  margin-bottom: 2.5rem;
+}
+
+.ue-guide-role-intro h2 {
+  font-size: 1.65rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 0.5rem;
+}
+
+.ue-guide-role-intro p {
+  font-size: 1rem;
+  color: #64748b;
+}
+
+/* 4-Step Roadmap Cards */
+.ue-roadmap-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 3.5rem;
+}
+
+.ue-step-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 2rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+}
+
+.ue-step-card:hover {
+  border-color: #155e75;
+  transform: translateY(-4px);
+  box-shadow: 0 12px 28px rgba(21, 94, 117, 0.12);
+}
+
+.ue-step-num {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #f1f5f9;
+  border: 2px solid #155e75;
+  color: #155e75;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.ue-step-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 0.65rem;
+}
+
+.ue-step-body {
+  font-size: 0.925rem;
+  line-height: 1.6;
+  color: #475569;
+  flex: 1;
+}
+
+.ue-step-badge {
+  margin-top: 1.25rem;
+  padding: 0.35rem 0.85rem;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #155e75;
+  display: inline-block;
+  align-self: flex-start;
+}
+
+.ue-step-action {
+  margin-top: 1.25rem;
+  display: inline-block;
+  padding: 0.65rem 1.25rem;
+  background: #155e75;
+  color: #ffffff;
+  border-radius: 8px;
+  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-align: center;
+  transition: background-color 0.2s ease;
+}
+
+.ue-step-action:hover {
+  background: #0f4f68;
+}
+
+/* Features Preview Card */
+.ue-features-panel {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  padding: 2.5rem;
+  margin-bottom: 3.5rem;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
+}
+
+.ue-features-panel h3 {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 0.5rem;
+}
+
+.ue-features-panel p.sub {
+  font-size: 0.95rem;
+  color: #64748b;
+  margin-bottom: 2rem;
+}
+
+.ue-features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.5rem;
+}
+
+.ue-feature-item {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1.5rem;
+}
+
+.ue-feature-item h4 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #155e75;
+  margin-bottom: 0.5rem;
+}
+
+.ue-feature-item p {
+  font-size: 0.875rem;
+  color: #475569;
+  line-height: 1.6;
+}
+
+/* FAQ Box */
+.ue-faq-panel {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.ue-faq-panel h3 {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: #0f172a;
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.ue-faq-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);
+}
+
+.ue-faq-card h4 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 0.5rem;
+}
+
+.ue-faq-card p {
+  font-size: 0.9rem;
+  color: #64748b;
+  line-height: 1.6;
+}
+
+@media (max-width: 768px) {
+  .ue-guide-hero h1 {
+    font-size: 2rem;
+  }
+  .ue-guide-hero {
+    padding: 3rem 1rem 2rem;
+  }
+}

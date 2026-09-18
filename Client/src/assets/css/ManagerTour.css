@@ -1,0 +1,319 @@
+/* ===================================================================
+   URBANEASE MANAGER WALKTHROUGH STYLES
+   Clean Enterprise Design - No AI Glow, High Contrast, Always Visible
+   =================================================================== */
+
+/* Ensure Navbar sits cleanly above scrim */
+.app-navbar {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 99995 !important;
+}
+
+/* Active tab highlight in navbar (Clean, bold, NO green dot) */
+.app-navbar__link.ue-tour-nav-active {
+  background: #0e7490 !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  box-shadow: 0 0 0 2px #38bdf8, 0 4px 14px rgba(14, 116, 144, 0.35) !important;
+  border-radius: 8px !important;
+  position: relative !important;
+  z-index: 99996 !important;
+  transition: all 0.2s ease-in-out !important;
+}
+
+/* Non-blocking Dim Scrim below Navbar */
+.ue-tour-scrim,
+.ue-tour-backdrop {
+  position: fixed;
+  inset: 0;
+  top: 64px; /* below navbar */
+  background: rgba(15, 23, 42, 0.42);
+  z-index: 99990;
+  pointer-events: none; /* User can still interact and scroll */
+  transition: opacity 0.25s ease;
+}
+
+/* Target Spotlight outline (Target element is prominently spotlighted above scrim) */
+.ue-tour-highlight-target {
+  position: relative !important;
+  z-index: 99994 !important;
+  outline: 3px solid #0e7490 !important;
+  outline-offset: 6px !important;
+  box-shadow: 0 0 0 6px rgba(14, 116, 144, 0.25), 0 20px 48px rgba(15, 23, 42, 0.35) !important;
+  border-radius: 14px !important;
+  animation: ueTourPulseRing 2.4s infinite ease-in-out !important;
+  background-clip: padding-box !important;
+}
+
+@keyframes ueTourPulseRing {
+  0%, 100% {
+    outline-color: #0e7490;
+    box-shadow: 0 0 0 6px rgba(14, 116, 144, 0.2), 0 16px 36px rgba(15, 23, 42, 0.22);
+  }
+  50% {
+    outline-color: #0284c7;
+    box-shadow: 0 0 0 10px rgba(2, 132, 199, 0.28), 0 20px 44px rgba(15, 23, 42, 0.3);
+  }
+}
+
+/* Target Pointer Arrow connecting Popover to Highlighted Element */
+.ue-tour-card__arrow {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  transform: rotate(45deg);
+  z-index: -1;
+}
+
+.ue-tour-card__arrow--top {
+  top: -8px;
+  border-bottom: none;
+  border-right: none;
+}
+
+.ue-tour-card__arrow--bottom {
+  bottom: -8px;
+  border-top: none;
+  border-left: none;
+}
+
+/* Rock-Solid Tour Popover (Dynamically positioned near target or docked) */
+.ue-tour-card {
+  position: fixed;
+  width: 390px;
+  max-width: calc(100vw - 32px);
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 14px;
+  box-shadow: 0 16px 40px -8px rgba(15, 23, 42, 0.28), 0 0 0 1px rgba(15, 23, 42, 0.06);
+  box-sizing: border-box;
+  z-index: 100000; /* ALWAYS on top */
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-family: inherit;
+  color: #0f172a;
+  transition: top 0.2s ease, left 0.2s ease;
+  pointer-events: auto;
+  overflow: visible;
+}
+
+/* Card Header */
+.ue-tour-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ue-tour-card__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #0e7490;
+  background: #ecfeff;
+  border: 1px solid #a5f3fc;
+  padding: 4px 10px;
+  border-radius: 9999px;
+}
+
+/* Step Progress Dots */
+.ue-tour-card__dots {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.ue-tour-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #cbd5e1;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  padding: 0;
+}
+
+.ue-tour-dot:hover {
+  background: #94a3b8;
+  transform: scale(1.15);
+}
+
+.ue-tour-dot.is-active {
+  width: 20px;
+  border-radius: 6px;
+  background: #0e7490;
+}
+
+.ue-tour-dot.is-completed {
+  background: #0284c7;
+}
+
+/* Current Tab Chip Row (NO green dot) */
+.ue-tour-card__tab-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 6px 12px;
+}
+
+.ue-tour-card__tab-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.ue-tour-tab-label {
+  color: #64748b;
+  font-weight: 600;
+  font-size: 11px;
+}
+
+.ue-tour-tab-name {
+  color: #0e7490;
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.ue-tour-step-counter {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+/* Title & Body */
+.ue-tour-card__title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+  line-height: 1.35;
+}
+
+.ue-tour-card__desc {
+  font-size: 13px;
+  color: #475569;
+  line-height: 1.55;
+  margin: 0;
+}
+
+/* Target Item Indicator Chip */
+.ue-tour-card__target-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #0369a1;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 6px;
+  padding: 3px 8px;
+  width: fit-content;
+}
+
+/* Footer Actions */
+.ue-tour-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 10px;
+  border-top: 1px solid #f1f5f9;
+  margin-top: 2px;
+}
+
+.ue-tour-btn-skip {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+}
+
+.ue-tour-btn-skip:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.ue-tour-card__nav-btns {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ue-tour-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: 1px solid transparent;
+}
+
+.ue-tour-btn-back {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #334155;
+}
+
+.ue-tour-btn-back:hover:not(:disabled) {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+.ue-tour-btn-back:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.ue-tour-btn-next {
+  background: #0e7490;
+  border-color: #0e7490;
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(14, 116, 144, 0.25);
+}
+
+.ue-tour-btn-next:hover {
+  background: #0891b2;
+  border-color: #0891b2;
+  box-shadow: 0 4px 10px rgba(14, 116, 144, 0.35);
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  .ue-tour-card {
+    top: auto !important;
+    bottom: 16px !important;
+    right: 16px !important;
+    left: 16px !important;
+    width: auto !important;
+    max-width: none !important;
+    padding: 16px 18px;
+  }
+  .ue-tour-card__arrow {
+    display: none;
+  }
+}

@@ -5,7 +5,7 @@ import {
   useState
 } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
-import { ChevronDown, LogOut, Menu, User, X } from "lucide-react";
+import { ChevronDown, Compass, LogOut, Menu, User, X } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import logo from "../imgs/Logo.png";
 import { logout } from "../slices/authSlice";
@@ -73,6 +73,11 @@ export const Navbar = ({ userType }) => {
   }, [user]);
   const avatarSrc = user?.image || user?.profilePic || user?.avatar || user?.photo || "";
   const avatarFallback = (displayName || "P").trim().charAt(0).toUpperCase();
+  const isManager = userType === "manager" || userType === "CommunityManager" || user?.userType === "CommunityManager";
+  const isResident = userType === "Resident" || userType === "resident" || user?.userType === "Resident";
+  const isSecurity = userType === "security" || userType === "Security" || user?.userType === "Security";
+  const isWorker = userType === "Worker" || userType === "worker" || user?.userType === "Worker";
+
   useEffect(() => {
     setMenuOpen(false);
     setProfileOpen(false);
@@ -128,7 +133,7 @@ export const Navbar = ({ userType }) => {
               <span className="app-navbar__empty">No links available</span>
             )}
           </nav>
-          <div className="app-navbar__profile" ref={profileRef}>
+          <div className="app-navbar__profile" ref={profileRef} style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <button
               type="button"
               className="app-navbar__profile-toggle"
@@ -160,6 +165,58 @@ export const Navbar = ({ userType }) => {
                 <User size={16} />
                 <span>Profile</span>
               </button>
+              {isManager && (
+                <button
+                  type="button"
+                  className="app-navbar__profile-item"
+                  onClick={() => {
+                    setProfileOpen(false);
+                    window.dispatchEvent(new CustomEvent("ue:start-manager-tour"));
+                  }}
+                >
+                  <Compass size={16} />
+                  <span>Manager Walkthrough</span>
+                </button>
+              )}
+              {isResident && (
+                <button
+                  type="button"
+                  className="app-navbar__profile-item"
+                  onClick={() => {
+                    setProfileOpen(false);
+                    window.dispatchEvent(new CustomEvent("ue:start-resident-tour"));
+                  }}
+                >
+                  <Compass size={16} />
+                  <span>Resident Walkthrough</span>
+                </button>
+              )}
+              {isSecurity && (
+                <button
+                  type="button"
+                  className="app-navbar__profile-item"
+                  onClick={() => {
+                    setProfileOpen(false);
+                    window.dispatchEvent(new CustomEvent("ue:start-security-tour"));
+                  }}
+                >
+                  <Compass size={16} />
+                  <span>Security Walkthrough</span>
+                </button>
+              )}
+              {isWorker && (
+                <button
+                  type="button"
+                  className="app-navbar__profile-item"
+                  onClick={() => {
+                    setProfileOpen(false);
+                    window.dispatchEvent(new CustomEvent("ue:start-worker-tour"));
+                  }}
+                >
+                  <Compass size={16} />
+                  <span>Worker Walkthrough</span>
+                </button>
+              )}
               <button
                 type="button"
                 className="app-navbar__profile-item app-navbar__profile-item--danger"

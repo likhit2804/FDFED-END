@@ -1,6 +1,22 @@
 /* ============================================================
    URBANEASE - CLEAN AUTHENTIC LANDING PAGE STYLESHEET
    Signature Royal Blue & Midnight Navy Palette
+
+   LAYOUT RULES
+   1) Every top-level section (hero, features, roles, how-it-works,
+      guide, faq) occupies EXACTLY 100vh INCLUDING the navbar.
+      --nav-height is the single source of truth for the navbar's
+      height; every section's height is calc(100vh - var(--nav-height)).
+   2) NO internal scrolling anywhere (overflow: hidden on every
+      section) — the only scroll is the normal page scroll moving
+      from one full-viewport section to the next.
+   3) Because #2 means content can never spill out and reveal
+      itself later, every font-size / padding / gap below is a
+      clamp() tied to vh, so components shrink automatically on
+      short viewports instead of getting cropped.
+   4) The navbar is position: sticky, top: 0, on an element with no
+      overflow/transform ancestor between it and the page — so it
+      stays visible through every section as you scroll.
    ============================================================ */
 
 :root {
@@ -27,14 +43,32 @@
   --shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.04);
   --shadow-md: 0 8px 24px rgba(15, 23, 42, 0.08);
   --shadow-hover: 0 16px 36px rgba(21, 94, 117, 0.16);
+
+  --nav-height: 68px;
+  --nav-height-mobile: 58px;
+
+  /* Consistent left/right breathing room for the whole page —
+     grows on wide screens, shrinks on narrow ones. */
+  --page-gutter: clamp(2.5rem, 9vw, 7.5rem);
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
 }
 
 .ue-root {
   font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   background-color: var(--bg-page);
   color: var(--text-body);
-  line-height: 1.6;
+  line-height: 1.5;
+  height: 100vh;
+  overflow-y: scroll;
   overflow-x: hidden;
+  scroll-snap-type: y proximity;
+  scroll-behavior: smooth;
 }
 
 .ue-root * {
@@ -42,13 +76,13 @@
 }
 
 /* ------------------------------------------------------------
-   NAVBAR (Midnight Navy with Royal Blue Accent)
+   NAVBAR — sticky, fixed height, always visible while scrolling
    ------------------------------------------------------------ */
 .ue-header {
   position: sticky;
   top: 0;
   z-index: 1000;
-  background: rgba(10, 15, 36, 0.96);
+  background: rgba(10, 15, 36, 0.97);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
@@ -56,9 +90,10 @@
 }
 
 .ue-nav-inner {
-  max-width: 1240px;
+  height: var(--nav-height);
+  max-width: 1100px;
   margin: 0 auto;
-  padding: 0.85rem 1.5rem;
+  padding: 0 var(--page-gutter);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -67,12 +102,12 @@
 .ue-logo-wrap {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.6rem;
   text-decoration: none;
 }
 
 .ue-logo-img {
-  height: 42px;
+  height: 30px;
   width: auto;
   object-fit: contain;
 }
@@ -80,7 +115,7 @@
 .ue-menu-links {
   display: flex;
   align-items: center;
-  gap: 2rem;
+  gap: 1.5rem;
   list-style: none;
   margin: 0;
   padding: 0;
@@ -89,7 +124,7 @@
 .ue-menu-link {
   color: #cbd5e1;
   text-decoration: none;
-  font-size: 0.95rem;
+  font-size: 0.86rem;
   font-weight: 500;
   transition: all 0.2s ease;
 }
@@ -101,7 +136,7 @@
 .ue-nav-buttons {
   display: flex;
   align-items: center;
-  gap: 0.8rem;
+  gap: 0.55rem;
 }
 
 /* Buttons */
@@ -109,27 +144,28 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
+  gap: 0.35rem;
   font-weight: 600;
-  font-size: 0.92rem;
+  font-size: 0.8rem;
   border-radius: var(--radius-sm);
-  padding: 0.58rem 1.25rem;
+  padding: 0.42rem 0.9rem;
   text-decoration: none;
   transition: all 0.25s ease;
   cursor: pointer;
   border: none;
+  white-space: nowrap;
 }
 
 .ue-button-primary {
-  background: var(--primary-gradient);
+  background: var(--primary-blue);
   color: #ffffff;
-  box-shadow: 0 4px 14px rgba(51, 88, 255, 0.35);
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.12);
 }
 
 .ue-button-primary:hover {
-  background: var(--primary-gradient-hover);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(51, 88, 255, 0.45);
+  background: var(--primary-blue-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.16);
   color: #ffffff;
 }
 
@@ -161,7 +197,7 @@
   background: transparent;
   border: 1px solid rgba(255, 255, 255, 0.2);
   color: #ffffff;
-  padding: 0.4rem 0.6rem;
+  padding: 0.35rem 0.55rem;
   border-radius: var(--radius-sm);
   cursor: pointer;
 }
@@ -169,26 +205,42 @@
 .ue-mobile-dropdown {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  padding: 1.2rem 1.5rem 1.5rem;
+  gap: 0.7rem;
+  padding: 0.85rem var(--page-gutter) 1.1rem;
   background: var(--dark-navy);
   border-top: 1px solid rgba(255, 255, 255, 0.1);
+  /* Overlays below the fixed-height nav bar instead of growing it,
+     so --nav-height (and every section height derived from it)
+     never changes when the mobile menu opens. */
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  max-height: calc(100vh - var(--nav-height));
+  overflow-y: auto;
+  z-index: 999;
 }
 
 /* ------------------------------------------------------------
-   HERO SECTION
+   HERO SECTION — exactly 100vh together with the navbar
    ------------------------------------------------------------ */
 .ue-hero-section {
   position: relative;
-  min-height: 84vh;
+  height: calc(100vh - var(--nav-height));
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   background: url("https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=1920&q=80")
     center/cover no-repeat;
   color: #ffffff;
   text-align: center;
-  padding: 5rem 1.5rem;
+  padding: clamp(0.75rem, 2vh, 1.5rem) var(--page-gutter);
+  box-sizing: border-box;
+  overflow: hidden;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  scroll-margin-top: var(--nav-height);
 }
 
 .ue-hero-overlay {
@@ -206,116 +258,125 @@
 .ue-hero-container {
   position: relative;
   z-index: 2;
-  max-width: 880px;
+  max-width: 760px;
   margin: 0 auto;
 }
 
 .ue-hero-tag {
   display: inline-block;
-  font-size: 0.84rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: #a3ceff;
-  background: rgba(51, 88, 255, 0.2);
-  border: 1px solid rgba(77, 124, 255, 0.4);
-  padding: 0.35rem 0.9rem;
+  font-size: clamp(0.68rem, 1.4vh, 0.78rem);
+  font-weight: 600;
+  color: #e2e8f0;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 0.28rem 0.75rem;
   border-radius: 9999px;
-  margin-bottom: 1.5rem;
+  margin-bottom: clamp(0.5rem, 1.4vh, 0.85rem);
 }
 
 .ue-hero-heading {
-  font-size: 3.4rem;
+  font-size: clamp(1.4rem, 4.2vh, 2.3rem);
   font-weight: 800;
   line-height: 1.15;
   color: #ffffff;
   letter-spacing: -0.02em;
-  margin-bottom: 1.4rem;
+  margin-bottom: clamp(0.5rem, 1.4vh, 0.85rem);
 }
 
 .ue-hero-highlight {
-  color: #60a5fa;
-  background: linear-gradient(135deg, #93c5fd 0%, #3b82f6 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: #7dd3fc;
 }
 
 .ue-hero-subheading {
-  font-size: 1.2rem;
+  font-size: clamp(0.8rem, 1.9vh, 0.96rem);
   color: #e2e8f0;
-  line-height: 1.7;
-  max-width: 760px;
-  margin: 0 auto 2.4rem;
+  line-height: 1.55;
+  max-width: 640px;
+  margin: 0 auto clamp(0.85rem, 2vh, 1.3rem);
 }
 
 .ue-hero-actions {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 1.2rem;
+  gap: 0.85rem;
   flex-wrap: wrap;
   margin-bottom: 0;
 }
 
 /* ------------------------------------------------------------
-   SECTIONS
+   SECTIONS — each is exactly 100vh together with the navbar,
+   never scrolls, content is fluid-sized to always fit.
    ------------------------------------------------------------ */
 .ue-section {
-  padding: 5.5rem 1.5rem;
-  max-width: 1240px;
+  height: calc(100vh - var(--nav-height));
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: clamp(0.75rem, 2vh, 1.5rem) var(--page-gutter);
+  max-width: 1100px;
   margin: 0 auto;
+  box-sizing: border-box;
+  overflow: hidden;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  scroll-margin-top: var(--nav-height);
 }
 
 .ue-section-title-wrap {
   text-align: center;
-  max-width: 700px;
-  margin: 0 auto 3.5rem;
+  max-width: 680px;
+  margin: 0 auto clamp(0.5rem, 1.6vh, 0.85rem);
+  flex-shrink: 0;
 }
 
 .ue-section-kicker {
-  font-size: 0.82rem;
+  font-size: clamp(0.62rem, 1.2vh, 0.7rem);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--primary-blue);
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.2rem;
   display: block;
 }
 
 .ue-section-heading {
-  font-size: 2.5rem;
+  font-size: clamp(1.1rem, 2.8vh, 1.45rem);
   font-weight: 800;
   color: var(--text-dark);
-  margin-bottom: 0.8rem;
+  margin-bottom: 0.25rem;
   letter-spacing: -0.02em;
 }
 
 .ue-section-paragraph {
-  font-size: 1.08rem;
+  font-size: clamp(0.76rem, 1.6vh, 0.85rem);
   color: var(--text-body);
 }
 
-/* ------------------------------------------------------------
-   FEATURES GRID (Clean, high-contrast cards)
-   ------------------------------------------------------------ */
 /* ------------------------------------------------------------
    FEATURES BENTO GRID (2x2 Asymmetric Capability Layout)
    ------------------------------------------------------------ */
 .ue-features-bento {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 1.8rem;
+  gap: clamp(0.75rem, 1.8vh, 1.1rem);
+  width: 100%;
+  max-width: 1040px;
+  margin: 0 auto;
+  min-height: 0;
 }
 
 .ue-feature-card {
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
-  padding: 2.2rem 2.2rem;
+  padding: clamp(0.9rem, 2vh, 1.25rem) clamp(1rem, 2vw, 1.35rem);
   box-shadow: var(--shadow-sm);
   transition: all 0.28s ease;
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 .ue-feature-card:hover {
@@ -328,52 +389,54 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 1.25rem;
+  margin-bottom: clamp(0.5rem, 1.2vh, 0.75rem);
 }
 
 .ue-feature-icon-box {
-  width: 52px;
-  height: 52px;
-  border-radius: 12px;
+  width: clamp(32px, 4.4vh, 38px);
+  height: clamp(32px, 4.4vh, 38px);
+  border-radius: 10px;
   background: rgba(21, 94, 117, 0.1);
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--primary-blue);
+  flex-shrink: 0;
 }
 
 .ue-feature-badge {
-  font-size: 0.76rem;
+  font-size: clamp(0.62rem, 1.25vh, 0.68rem);
   font-weight: 700;
   letter-spacing: 0.04em;
-  padding: 0.35rem 0.8rem;
+  padding: 0.24rem 0.6rem;
   border-radius: 9999px;
   background: rgba(21, 94, 117, 0.08);
   color: var(--primary-blue);
   border: 1px solid rgba(21, 94, 117, 0.15);
+  white-space: nowrap;
 }
 
 .ue-feature-category {
-  font-size: 0.78rem;
+  font-size: clamp(0.62rem, 1.2vh, 0.68rem);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--primary-blue);
-  margin-bottom: 0.35rem;
+  margin-bottom: 0.22rem;
 }
 
 .ue-feature-card-title {
-  font-size: 1.35rem;
+  font-size: clamp(0.88rem, 2vh, 1.02rem);
   font-weight: 700;
   color: var(--text-dark);
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.4rem;
 }
 
 .ue-feature-card-desc {
-  font-size: 0.95rem;
+  font-size: clamp(0.7rem, 1.5vh, 0.8rem);
   color: var(--text-body);
-  line-height: 1.6;
-  margin-bottom: 1.25rem;
+  line-height: 1.5;
+  margin-bottom: clamp(0.5rem, 1.2vh, 0.75rem);
 }
 
 .ue-feature-points {
@@ -382,16 +445,16 @@
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
+  gap: clamp(0.35rem, 1vh, 0.5rem);
   border-top: 1px solid #e2e8f0;
-  padding-top: 1.1rem;
+  padding-top: clamp(0.5rem, 1.2vh, 0.7rem);
 }
 
 .ue-feature-points li {
   display: flex;
   align-items: center;
-  gap: 0.65rem;
-  font-size: 0.92rem;
+  gap: 0.5rem;
+  font-size: clamp(0.68rem, 1.4vh, 0.78rem);
   color: var(--text-body);
 }
 
@@ -404,29 +467,30 @@
    ROLES SECTION (Interactive Tabbed Experience)
    ------------------------------------------------------------ */
 .ue-roles-section {
-  padding-top: 1rem;
+  padding-top: clamp(0.75rem, 2vh, 1.5rem);
 }
 
 .ue-role-tabs-bar {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.85rem;
+  gap: 0.5rem;
   flex-wrap: wrap;
-  margin-bottom: 2.2rem;
+  margin-bottom: clamp(0.6rem, 1.8vh, 1rem);
+  flex-shrink: 0;
 }
 
 .ue-role-tab-btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.65rem;
-  padding: 0.8rem 1.4rem;
+  gap: 0.4rem;
+  padding: clamp(0.4rem, 1.1vh, 0.5rem) clamp(0.7rem, 1.8vw, 1rem);
   border-radius: 9999px;
   border: 1px solid var(--border-color);
   background: var(--bg-surface);
   color: var(--text-body);
   font-weight: 600;
-  font-size: 0.95rem;
+  font-size: clamp(0.74rem, 1.5vh, 0.82rem);
   cursor: pointer;
   transition: all 0.2s ease;
   box-shadow: var(--shadow-sm);
@@ -449,59 +513,63 @@
 }
 
 .ue-role-spotlight-card {
+  width: 100%;
+  max-width: 1040px;
+  margin: 0 auto;
+  min-height: 0;
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
-  padding: 3.2rem 3rem;
+  padding: clamp(1.1rem, 2.6vh, 1.6rem) clamp(1.25rem, 2.6vw, 1.8rem);
   box-shadow: var(--shadow-md);
   display: grid;
   grid-template-columns: 1.25fr 1fr;
-  gap: 3.5rem;
+  gap: clamp(1.2rem, 2.6vw, 2rem);
   align-items: center;
 }
 
 .ue-role-pill-badge {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.4rem;
   background: rgba(21, 94, 117, 0.08);
   color: var(--primary-blue);
-  font-size: 0.85rem;
+  font-size: clamp(0.68rem, 1.3vh, 0.75rem);
   font-weight: 700;
-  padding: 0.45rem 1rem;
+  padding: 0.32rem 0.75rem;
   border-radius: 9999px;
-  margin-bottom: 1.25rem;
+  margin-bottom: clamp(0.5rem, 1.2vh, 0.7rem);
   border: 1px solid rgba(21, 94, 117, 0.15);
 }
 
 .ue-role-spotlight-headline {
-  font-size: 1.95rem;
+  font-size: clamp(1.02rem, 2.6vh, 1.3rem);
   font-weight: 800;
   color: var(--text-dark);
-  line-height: 1.3;
-  margin-bottom: 1rem;
+  line-height: 1.28;
+  margin-bottom: clamp(0.5rem, 1.3vh, 0.7rem);
   letter-spacing: -0.01em;
 }
 
 .ue-role-spotlight-summary {
-  font-size: 1.05rem;
+  font-size: clamp(0.78rem, 1.6vh, 0.86rem);
   color: var(--text-body);
-  line-height: 1.65;
-  margin-bottom: 1.8rem;
+  line-height: 1.55;
+  margin-bottom: clamp(0.75rem, 1.8vh, 1.1rem);
 }
 
 .ue-role-highlights-list {
   display: flex;
   flex-direction: column;
-  gap: 0.9rem;
-  margin-bottom: 2.2rem;
+  gap: clamp(0.45rem, 1.2vh, 0.65rem);
+  margin-bottom: clamp(0.85rem, 2vh, 1.2rem);
 }
 
 .ue-role-highlight-row {
   display: flex;
   align-items: flex-start;
-  gap: 0.75rem;
-  font-size: 0.96rem;
+  gap: 0.6rem;
+  font-size: clamp(0.75rem, 1.5vh, 0.84rem);
   color: var(--text-body);
 }
 
@@ -519,88 +587,90 @@
 
 /* Right-side Authentic Live Workflow Preview */
 .ue-workflow-preview-card {
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
   border-radius: var(--radius-md);
-  padding: 2.4rem 2.2rem;
-  color: #ffffff;
-  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.22);
+  padding: clamp(0.85rem, 2vh, 1.2rem) clamp(0.95rem, 2vw, 1.3rem);
+  color: #0f172a;
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.08), 0 0 0 1px rgba(15, 23, 42, 0.04);
 }
 
 .ue-workflow-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 1.5rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  padding-bottom: 1.25rem;
+  margin-bottom: clamp(0.5rem, 1.4vh, 0.75rem);
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: clamp(0.45rem, 1.2vh, 0.65rem);
 }
 
 .ue-workflow-code {
-  font-family: monospace;
-  font-size: 0.8rem;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: clamp(0.62rem, 1.2vh, 0.7rem);
   font-weight: 700;
-  color: #38bdf8;
-  background: rgba(56, 189, 248, 0.15);
-  padding: 0.2rem 0.6rem;
-  border-radius: 4px;
+  color: #155e75;
+  background: #f1f5f9;
+  padding: 0.2rem 0.55rem;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
   display: inline-block;
-  margin-bottom: 0.4rem;
+  margin-bottom: 0.3rem;
 }
 
 .ue-workflow-title {
-  font-size: 1.25rem;
+  font-size: clamp(0.85rem, 1.9vh, 1rem);
   font-weight: 700;
-  color: #ffffff;
+  color: #0f172a;
   margin: 0;
 }
 
 .ue-workflow-status-pill {
-  font-size: 0.75rem;
+  font-size: clamp(0.6rem, 1.15vh, 0.66rem);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  background: rgba(34, 197, 94, 0.2);
-  color: #4ade80;
-  border: 1px solid rgba(74, 222, 128, 0.3);
-  padding: 0.35rem 0.8rem;
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+  padding: 0.26rem 0.6rem;
   border-radius: 9999px;
+  white-space: nowrap;
 }
 
 .ue-workflow-body {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  margin-bottom: 1.6rem;
+  gap: clamp(0.4rem, 1.1vh, 0.55rem);
+  margin-bottom: clamp(0.5rem, 1.4vh, 0.75rem);
 }
 
 .ue-workflow-data-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: rgba(255, 255, 255, 0.04);
-  padding: 0.85rem 1.1rem;
+  background: #f8fafc;
+  padding: clamp(0.4rem, 1vh, 0.5rem) 0.7rem;
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid #e2e8f0;
 }
 
 .ue-data-label {
-  font-size: 0.85rem;
-  color: #94a3b8;
+  font-size: clamp(0.7rem, 1.4vh, 0.78rem);
+  color: #64748b;
 }
 
 .ue-data-val {
-  font-size: 0.95rem;
+  font-size: clamp(0.78rem, 1.5vh, 0.86rem);
   font-weight: 600;
-  color: #f8fafc;
+  color: #0f172a;
 }
 
 .ue-workflow-footer {
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  padding-top: 1.1rem;
-  font-size: 0.85rem;
-  color: #94a3b8;
-  line-height: 1.5;
+  border-top: 1px solid #f1f5f9;
+  padding-top: clamp(0.45rem, 1.1vh, 0.6rem);
+  font-size: clamp(0.68rem, 1.3vh, 0.76rem);
+  color: #64748b;
+  line-height: 1.45;
 }
 
 /* ------------------------------------------------------------
@@ -609,14 +679,18 @@
 .ue-steps-container {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 2rem;
+  gap: clamp(0.85rem, 2.2vh, 1.35rem);
+  width: 100%;
+  max-width: 1040px;
+  margin: 0 auto;
+  min-height: 0;
 }
 
 .ue-step-box {
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
-  padding: 2.4rem;
+  padding: clamp(1.1rem, 2.6vh, 1.6rem) clamp(1.1rem, 2vw, 1.5rem);
   box-shadow: var(--shadow-sm);
   transition: all 0.3s ease;
 }
@@ -628,24 +702,24 @@
 }
 
 .ue-step-number {
-  font-size: 2.8rem;
+  font-size: clamp(1.3rem, 3.4vh, 1.8rem);
   font-weight: 800;
-  color: rgba(51, 88, 255, 0.2);
+  color: #cbd5e1;
   line-height: 1;
-  margin-bottom: 0.8rem;
+  margin-bottom: clamp(0.5rem, 1.2vh, 0.75rem);
 }
 
 .ue-step-box-title {
-  font-size: 1.25rem;
+  font-size: clamp(0.9rem, 2vh, 1.05rem);
   font-weight: 700;
   color: var(--text-dark);
-  margin-bottom: 0.6rem;
+  margin-bottom: clamp(0.45rem, 1vh, 0.6rem);
 }
 
 .ue-step-box-desc {
-  font-size: 0.95rem;
+  font-size: clamp(0.74rem, 1.6vh, 0.82rem);
   color: var(--text-body);
-  line-height: 1.6;
+  line-height: 1.55;
 }
 
 /* ------------------------------------------------------------
@@ -653,14 +727,16 @@
    ------------------------------------------------------------ */
 .ue-faq-wrapper {
   max-width: 860px;
+  width: 100%;
   margin: 0 auto;
+  min-height: 0;
 }
 
 .ue-faq-card {
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
   border-radius: 12px;
-  margin-bottom: 0.9rem;
+  margin-bottom: clamp(0.5rem, 1.2vh, 0.75rem);
   overflow: hidden;
   box-shadow: var(--shadow-sm);
   transition: border-color 0.2s ease;
@@ -675,57 +751,74 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1.25rem 1.6rem;
+  padding: clamp(0.75rem, 1.8vh, 1rem) 1.25rem;
   background: transparent;
   border: none;
   color: var(--text-dark);
-  font-size: 1.05rem;
+  font-size: clamp(0.82rem, 1.7vh, 0.9rem);
   font-weight: 700;
   text-align: left;
   cursor: pointer;
 }
 
 .ue-faq-content {
-  padding: 0 1.6rem 1.4rem;
+  padding: 0 1.25rem clamp(0.75rem, 1.8vh, 1rem);
   color: var(--text-body);
-  font-size: 0.96rem;
-  line-height: 1.65;
+  font-size: clamp(0.76rem, 1.5vh, 0.84rem);
+  line-height: 1.55;
 }
 
 /* ------------------------------------------------------------
-   CTA BANNER
+   CTA BANNER (outside the 100vh sections, natural height)
    ------------------------------------------------------------ */
 .ue-cta-banner-box {
-  background: linear-gradient(135deg, #0a0f24 0%, #15224e 55%, #1e3bb8 100%);
+  background: #0f172a;
+  border: 1px solid #1e293b;
   border-radius: var(--radius-lg);
-  padding: 4.5rem 2rem;
+  padding: 2.5rem 1.75rem;
   text-align: center;
   color: #ffffff;
-  box-shadow: var(--shadow-md);
-  margin-bottom: 5rem;
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.12);
+  margin-bottom: 3rem;
 }
 
 .ue-cta-heading {
-  font-size: 2.8rem;
+  font-size: 1.85rem;
   font-weight: 800;
   color: #ffffff;
-  margin-bottom: 1.1rem;
+  margin-bottom: 0.75rem;
   letter-spacing: -0.02em;
 }
 
 .ue-cta-text {
-  font-size: 1.18rem;
+  font-size: 0.95rem;
   color: #cbd5e1;
-  max-width: 640px;
-  margin: 0 auto 2.5rem;
+  max-width: 600px;
+  margin: 0 auto 1.5rem;
 }
 
 .ue-cta-button-row {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 1.2rem;
+  gap: 1rem;
   flex-wrap: wrap;
+}
+
+/* ------------------------------------------------------------
+   FOOTER
+   ------------------------------------------------------------ */
+/* Final section wrapping CTA banner + footer into a single snap target */
+.ue-final-section {
+  min-height: calc(100vh - var(--nav-height));
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  scroll-margin-top: var(--nav-height);
+  background: var(--bg-page);
+  padding-top: clamp(1rem, 3vh, 2rem);
 }
 
 /* ------------------------------------------------------------
@@ -734,43 +827,53 @@
 .ue-site-footer {
   background: var(--dark-navy);
   color: #94a3b8;
-  padding: 4.5rem 1.5rem 2.5rem;
+  padding: clamp(1.5rem, 3vh, 2.5rem) var(--page-gutter) clamp(1rem, 2vh, 1.75rem);
   border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin-top: clamp(1rem, 2.5vh, 2rem);
+}
+
+/* Wraps the CTA banner inside the final snap section */
+.ue-page-container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 var(--page-gutter);
+  box-sizing: border-box;
+  width: 100%;
 }
 
 .ue-footer-inner {
-  max-width: 1240px;
+  max-width: 1100px;
   margin: 0 auto;
 }
 
 .ue-footer-columns {
   display: grid;
   grid-template-columns: 2fr 1fr 1fr 1fr;
-  gap: 3.5rem;
-  margin-bottom: 3.5rem;
+  gap: 2rem;
+  margin-bottom: 2rem;
 }
 
 .ue-footer-brand-title {
   color: #ffffff;
-  font-size: 1.25rem;
+  font-size: 1.05rem;
   font-weight: 800;
-  margin-bottom: 0.8rem;
+  margin-bottom: 0.6rem;
 }
 
 .ue-footer-brand-text {
-  font-size: 0.92rem;
+  font-size: 0.82rem;
   color: #94a3b8;
-  line-height: 1.6;
+  line-height: 1.55;
   max-width: 320px;
 }
 
 .ue-footer-column-heading {
   color: #ffffff;
-  font-size: 0.92rem;
+  font-size: 0.8rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  margin-bottom: 1.2rem;
+  margin-bottom: 0.85rem;
 }
 
 .ue-footer-column-links {
@@ -779,13 +882,13 @@
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.55rem;
 }
 
 .ue-footer-column-links a {
   color: #94a3b8;
   text-decoration: none;
-  font-size: 0.92rem;
+  font-size: 0.82rem;
   transition: color 0.2s ease;
 }
 
@@ -795,32 +898,455 @@
 
 .ue-footer-copyright {
   border-top: 1px solid rgba(255, 255, 255, 0.1);
-  padding-top: 2rem;
+  padding-top: 1.25rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 0.86rem;
+  font-size: 0.78rem;
   color: #64748b;
   flex-wrap: wrap;
   gap: 1rem;
 }
 
 /* ------------------------------------------------------------
+   USER GUIDE — SPLIT LAYOUT (also exactly 100vh with navbar)
+   ------------------------------------------------------------ */
+.ue-guide-section {
+  height: calc(100vh - var(--nav-height));
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e2e8f0;
+  padding: clamp(0.75rem, 2vh, 1.25rem) var(--page-gutter);
+  box-sizing: border-box;
+  overflow: hidden;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  scroll-margin-top: var(--nav-height);
+}
+
+.ue-guide-grid {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: clamp(0.85rem, 2vw, 1.5rem);
+  max-width: 1040px;
+  width: 100%;
+  margin: 0 auto;
+  align-items: center;
+  min-height: 0;
+}
+
+.ue-guide-hub-col {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+}
+
+/* ── Hub diagram (card / row based — matches the markup) ── */
+.ue-hub-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: clamp(0.65rem, 1.8vh, 1rem) 0.75rem 0.75rem;
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.03);
+  box-sizing: border-box;
+}
+
+/* ── Hub diagram — triangular radial layout ──
+   Manager sits at the centre; Residents, Security and Workers sit
+   at the three corners of a triangle around it, each joined to the
+   centre by a line. Node positions are all in %, and the SVG uses
+   viewBox="0 0 100 100" with preserveAspectRatio="none" so the line
+   endpoints always land under the nodes regardless of the actual
+   pixel size of the box. */
+.ue-hub-tri {
+  position: relative;
+  width: 100%;
+  max-width: 340px;
+  height: clamp(190px, 30vh, 260px);
+  margin: 0 auto;
+}
+
+.ue-hub-tri-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.ue-hub-line {
+  stroke: #cbd5e1;
+  stroke-width: 1.6;
+  vector-effect: non-scaling-stroke;
+  stroke-dasharray: 5 4;
+  transition: stroke 0.25s ease, stroke-width 0.25s ease;
+}
+
+.ue-hub-line-active {
+  stroke: #0e7490;
+  stroke-width: 2.1;
+  stroke-dasharray: none;
+}
+
+.ue-hub-tri-node {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  background: #ffffff;
+  border: 2px solid #e2e8f0;
+  border-radius: 11px;
+  padding: clamp(0.4rem, 1.1vh, 0.55rem) 0.35rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.04);
+  font-family: inherit;
+  text-align: center;
+  width: clamp(66px, 9vw, 82px);
+  box-sizing: border-box;
+  z-index: 2;
+}
+
+.ue-hub-tri-node:hover {
+  border-color: #0e7490;
+  box-shadow: 0 6px 18px rgba(14, 116, 144, 0.15);
+  transform: translate(-50%, -50%) translateY(-3px);
+}
+
+.ue-hub-tri-node.active {
+  background: #0e7490;
+  border-color: #0e7490;
+  box-shadow: 0 6px 20px rgba(14, 116, 144, 0.3);
+}
+
+.ue-hub-tri-top {
+  top: 4%;
+  left: 50%;
+  transform: translate(-50%, 0);
+}
+.ue-hub-tri-top:hover {
+  transform: translate(-50%, -3px);
+}
+
+.ue-hub-tri-left {
+  bottom: 2%;
+  left: 6%;
+  transform: translate(0, 0);
+}
+.ue-hub-tri-left:hover {
+  transform: translateY(-3px);
+}
+
+.ue-hub-tri-right {
+  bottom: 2%;
+  right: 6%;
+  transform: translate(0, 0);
+}
+.ue-hub-tri-right:hover {
+  transform: translateY(-3px);
+}
+
+.ue-hub-tri-center {
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: clamp(76px, 10vw, 92px);
+  border-radius: 13px;
+  background: #0f172a;
+  border-color: #0f172a;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.18);
+}
+.ue-hub-tri-center:hover {
+  background: #1e293b;
+  border-color: #1e293b;
+  transform: translate(-50%, -50%) translateY(-3px);
+}
+.ue-hub-tri-center.active {
+  background: #0e7490;
+  border-color: #0e7490;
+  box-shadow: 0 8px 24px rgba(14, 116, 144, 0.35);
+}
+
+.ue-hub-tri-node-icon {
+  color: #0e7490;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+}
+.ue-hub-tri-node.active .ue-hub-tri-node-icon { color: #ffffff; }
+.ue-hub-tri-center .ue-hub-tri-node-icon      { color: #7dd3fc; }
+.ue-hub-tri-center.active .ue-hub-tri-node-icon { color: #ffffff; }
+
+.ue-hub-tri-node-name {
+  font-size: clamp(0.62rem, 1.3vh, 0.7rem);
+  font-weight: 700;
+  color: #334155;
+  line-height: 1.2;
+  transition: color 0.2s;
+}
+.ue-hub-tri-node:hover .ue-hub-tri-node-name  { color: #0e7490; }
+.ue-hub-tri-node.active .ue-hub-tri-node-name { color: #ffffff; }
+.ue-hub-tri-center .ue-hub-tri-node-name      { color: #e2e8f0; font-size: clamp(0.64rem, 1.3vh, 0.72rem); }
+.ue-hub-tri-center.active .ue-hub-tri-node-name { color: #ffffff; }
+
+.ue-hub-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  font-size: clamp(0.66rem, 1.3vh, 0.72rem);
+  color: #94a3b8;
+  font-weight: 500;
+  margin-top: clamp(0.35rem, 1vh, 0.55rem);
+}
+
+/* Detail panel to the right of the hub */
+.ue-guide-detail-card {
+  width: 100%;
+  min-width: 0;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  padding: clamp(1.1rem, 2.6vh, 1.5rem) clamp(1.1rem, 2.4vw, 1.5rem);
+  box-shadow: 0 4px 24px rgba(15, 23, 42, 0.05);
+  box-sizing: border-box;
+}
+
+.ue-guide-detail-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.85rem;
+  margin-bottom: clamp(0.4rem, 1vh, 0.55rem);
+  flex-wrap: wrap;
+}
+
+.ue-guide-role-badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.28rem 0.7rem;
+  background: #ecfeff;
+  color: #0e7490;
+  border: 1px solid #a5f3fc;
+  border-radius: 9999px;
+  font-size: clamp(0.62rem, 1.2vh, 0.68rem);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0;
+}
+
+.ue-guide-top-cta {
+  padding: 0.4rem 0.9rem;
+  font-size: clamp(0.68rem, 1.3vh, 0.74rem);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  border-radius: 9px;
+}
+
+.ue-guide-role-tagline {
+  font-size: clamp(0.95rem, 2.2vh, 1.08rem);
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 0.35rem;
+}
+
+.ue-guide-role-summary {
+  font-size: clamp(0.74rem, 1.5vh, 0.8rem);
+  color: #64748b;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* 4-Step Roadmap Cards */
+.ue-guide-steps-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: clamp(0.65rem, 1.6vh, 0.85rem);
+  margin-bottom: 0.3rem;
+  margin-top: clamp(0.75rem, 1.8vh, 1.1rem);
+  min-height: 0;
+}
+
+.ue-guide-step-card {
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 13px;
+  padding: clamp(0.75rem, 1.8vh, 1rem) clamp(0.85rem, 1.8vw, 1.1rem);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  transition: all 0.25s ease;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+  min-width: 0;
+}
+
+.ue-guide-step-card:hover {
+  border-color: #0e7490;
+  transform: translateY(-3px);
+  box-shadow: 0 10px 24px rgba(14, 116, 144, 0.1);
+}
+
+.ue-guide-step-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: clamp(0.4rem, 1vh, 0.55rem);
+}
+
+.ue-guide-step-num {
+  font-size: clamp(0.78rem, 1.6vh, 0.86rem);
+  font-weight: 800;
+  color: #0e7490;
+  background: #ecfeff;
+  border: 1.5px solid #a5f3fc;
+  width: clamp(24px, 3.4vh, 28px);
+  height: clamp(24px, 3.4vh, 28px);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ue-guide-step-tag {
+  font-size: clamp(0.6rem, 1.1vh, 0.64rem);
+  font-weight: 700;
+  color: #475569;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  padding: 0.18rem 0.45rem;
+  border-radius: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.ue-guide-step-title {
+  font-size: clamp(0.84rem, 1.7vh, 0.94rem);
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 0.35rem;
+}
+
+.ue-guide-step-desc {
+  font-size: clamp(0.7rem, 1.4vh, 0.78rem);
+  color: #475569;
+  line-height: 1.5;
+  margin: 0 0 0.65rem;
+  flex-grow: 1;
+}
+
+.ue-guide-step-action {
+  margin-top: auto;
+}
+
+.ue-guide-step-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: #0e7490;
+  font-weight: 700;
+  font-size: clamp(0.7rem, 1.4vh, 0.78rem);
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+.ue-guide-step-link:hover {
+  color: #155e75;
+  gap: 0.5rem;
+}
+
+/* Post-login capability checklist (optional block, not currently rendered) */
+.ue-guide-capabilities-box {
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 0.9rem 1.25rem;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
+}
+
+.ue-guide-cap-title {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #0e7490;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.55rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.ue-guide-cap-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.7rem;
+}
+
+.ue-guide-cap-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: #334155;
+  font-weight: 500;
+}
+
+.ue-guide-cap-check {
+  color: #0e7490;
+  flex-shrink: 0;
+}
+
+.ue-guide-detail {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* ------------------------------------------------------------
    RESPONSIVE
+   Below 768px the desktop nav row (links + 3 buttons) collapses
+   to a logo + hamburger row, so --nav-height switches to the
+   shorter --nav-height-mobile; every 100vh section recalculates
+   off that same variable automatically.
    ------------------------------------------------------------ */
 @media (max-width: 1024px) {
   .ue-role-spotlight-card {
     grid-template-columns: 1fr;
-    gap: 2.5rem;
-    padding: 2.5rem 2rem;
+    gap: 0.85rem;
+  }
+  .ue-guide-grid {
+    grid-template-columns: 1fr 1.6fr;
   }
   .ue-footer-columns {
     grid-template-columns: 1fr 1fr;
-    gap: 2.5rem;
+    gap: 1.5rem;
   }
 }
 
 @media (max-width: 768px) {
+  :root {
+    --nav-height: var(--nav-height-mobile);
+  }
   .ue-menu-links,
   .ue-nav-buttons .ue-button-secondary,
   .ue-nav-buttons .ue-button-outline {
@@ -829,33 +1355,37 @@
   .ue-hamburger {
     display: block;
   }
-  .ue-hero-heading {
-    font-size: 2.4rem;
-  }
-  .ue-hero-subheading {
-    font-size: 1.05rem;
-  }
   .ue-features-bento {
     grid-template-columns: 1fr;
   }
   .ue-role-tabs-bar {
-    gap: 0.5rem;
+    gap: 0.35rem;
   }
-  .ue-role-tab-btn {
-    padding: 0.65rem 1.1rem;
-    font-size: 0.88rem;
-  }
-  .ue-role-spotlight-card {
-    padding: 1.8rem 1.4rem;
+  .ue-role-tab-btn .ue-role-tab-text {
+    display: none; /* icon-only tabs to save width on phones */
   }
   .ue-steps-container {
     grid-template-columns: 1fr;
+    gap: 0.5rem;
   }
-  .ue-cta-heading {
-    font-size: 2rem;
+  .ue-guide-grid {
+    grid-template-columns: 1fr;
+  }
+  .ue-guide-hub-col {
+    display: none; /* hub diagram gives the detail panel the room it
+                       needs to fit one phone-height viewport */
+  }
+  .ue-guide-steps-grid {
+    grid-template-columns: 1fr;
   }
   .ue-footer-columns {
     grid-template-columns: 1fr;
-    gap: 2rem;
+    gap: 1.25rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .ue-guide-detail-card {
+    padding: 0.9rem;
   }
 }
