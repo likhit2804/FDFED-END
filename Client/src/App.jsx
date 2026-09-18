@@ -69,7 +69,6 @@ const PreApproval = lazyWithRetry(() => import('./components/Resident/PreApprova
 const ResidentProfile = lazyWithRetry(() => import('./components/Resident/Profile').then(m => ({ default: m.ResidentProfile })));
 const ResidentPayments = lazyWithRetry(() => import('./components/Resident/ResidentPayments.jsx').then(m => ({ default: m.ResidentPayments })));
 const ResidentRegister = lazyWithRetry(() => import('./components/Resident/ResidentRegister.jsx').then(m => ({ default: m.ResidentRegister })));
-const RegistrationGuide = lazyWithRetry(() => import('./components/RegistrationGuide.jsx').then(m => ({ default: m.RegistrationGuide })));
 // Worker Routes
 const WorkerDashboard = lazyWithRetry(() => import("./components/Worker/Dashboard").then(m => ({ default: m.WorkerDashboard })));
 const Tasks = lazyWithRetry(() => import("./components/Worker/Tasks").then(m => ({ default: m.Tasks })));
@@ -104,7 +103,6 @@ function App() {
         <Route path="/" element={<Landingpage />} />
         <Route path="/SignIn" element={<SignIn />} />
         <Route path="/SignUp" element={<SignUp />} />
-        <Route path="/guide" element={<RegistrationGuide />} />
         <Route path="/residentRegister" element={<ResidentRegister />} />
         <Route path="/interestForm" element={<InterestForm />} />
         {/* Public Onboarding Route */}

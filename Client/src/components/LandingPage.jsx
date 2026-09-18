@@ -878,7 +878,6 @@ export const Landingpage = () => {
                 <ul className="ue-footer-column-links">
                   <li><NavLink to="/SignIn">Resident &amp; Staff Login</NavLink></li>
                   <li><NavLink to="/residentRegister">Resident Code Registration</NavLink></li>
-                  <li><NavLink to="/guide">Registration Guide</NavLink></li>
                   <li><NavLink to="/interestForm">Society Onboarding</NavLink></li>
                   <li><NavLink to="/adminLogin">Platform Admin</NavLink></li>
                 </ul>

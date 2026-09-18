@@ -3,7 +3,7 @@ import { Outlet, useLocation } from "react-router-dom";
 import { Navbar } from "./components/Navbar";
 import { ManagerTour } from "./components/Manager/ManagerTour";
 import { ResidentTour } from "./components/Resident/ResidentTour";
-import { SecurityTour } from "./components/Security/SecurityTour";
+import { SecurityTour } from "./components/security/SecurityTour";
 import { WorkerTour } from "./components/Worker/WorkerTour";
 import "./assets/css/Layout.css";
 
